@@ -172,6 +172,10 @@ Thumbs.db
 *.sln
 *.sw?
 
+# Keep .claude and .cursor directories
+!.claude/
+!.cursor/
+
 # Logs
 logs
 *.log
