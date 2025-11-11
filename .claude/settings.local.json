@@ -29,9 +29,8 @@
       "Bash(podman build:*)",
       "Bash(podman logs:*)",
       "Bash(backend/requirements.txt)",
-      "Bash(netstat:*)",
-      "Bash(findstr:*)",
-      "Bash(taskkill:*)"
+      "Bash(podman stop:*)",
+      "Bash(podman rm:*)"
     ],
     "deny": [],
     "ask": []
