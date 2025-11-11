@@ -1,0 +1,14 @@
+# Git Aliases for Easy Sync
+# Add these to your ~/.gitconfig or .git/config file
+# Or run: git config --global alias.sync '!f() { git add . && git commit -m "$1" && git push; }; f'
+
+[alias]
+    # Quick sync: git sync "your commit message"
+    sync = "!f() { git add . && git commit -m \"$1\" && git push; }; f"
+    
+    # Quick commit and push
+    cp = "!f() { git commit -m \"$1\" && git push; }; f"
+    
+    # Add, commit, push
+    acp = "!f() { git add . && git commit -m \"$1\" && git push; }; f"
+
