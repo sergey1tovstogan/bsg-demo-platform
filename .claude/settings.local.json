@@ -27,7 +27,8 @@
       "Bash(./test-db-connection.sh:*)",
       "Bash(winget list:*)",
       "Bash(podman build:*)",
-      "Bash(podman logs:*)"
+      "Bash(podman logs:*)",
+      "Bash(backend/requirements.txt)"
     ],
     "deny": [],
     "ask": []

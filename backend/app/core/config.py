@@ -124,9 +124,9 @@ class Settings(BaseSettings):
         return v
 
     @field_validator("JWT_SECRET_KEY")
-    def validate_jwt_secret(cls, v, values):
+    def validate_jwt_secret(cls, v, info):
         """Ensure JWT secret is set in production."""
-        if values.get("ENVIRONMENT") == "production" and len(v) < 32:
+        if info.data.get("ENVIRONMENT") == "production" and len(v) < 32:
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters in production")
         return v
 
