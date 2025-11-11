@@ -1,0 +1,293 @@
+> **Note**: This file is synchronized with `claude.md`. Keep both files in sync (except for this first line which references the other file).
+
+# BSG Demo Platform - Development Context
+
+## Project Overview
+
+The **BSG Demo Platform** is a modular, component-based application designed to deliver interactive demonstrations across multiple technical domains. Each component operates independently while sharing common infrastructure, enabling parallel development and flexible deployment.
+
+## Technology Stack
+
+### Frontend
+- **Framework**: React 18+
+- **State Management**: React Context API / Redux
+- **HTTP Client**: Axios
+- **Routing**: React Router
+- **UI Framework**: Material-UI / Tailwind CSS
+- **Language**: JavaScript/TypeScript
+
+### Backend
+- **Framework**: Python FastAPI (recommended) or Flask
+- **API Documentation**: OpenAPI/Swagger
+- **ORM**: SQLAlchemy 2.0+
+- **Migration Tool**: Alembic
+- **Validation**: Pydantic (FastAPI) or Marshmallow (Flask)
+- **Authentication**: python-jose (JWT)
+- **Password Hashing**: bcrypt
+- **Database Driver**: psycopg2 (PostgreSQL)
+- **Python Version**: 3.9+
+
+### Database
+- **Primary Database**: PostgreSQL 15+
+- **Container**: Docker
+- **Data Persistence**: Volume mapped to codebase directory
+
+### Storage
+- **Video Storage**: Local file system (videos directory in codebase)
+- **Content Storage**: PostgreSQL + JSON fields
+- **Static Assets**: File system with CDN-ready structure
+
+### Optional Services
+- **Caching**: Redis (redis-py)
+- **Monitoring**: prometheus-client
+- **Tracing**: OpenTelemetry
+
+## Architecture
+
+### Component-Based Design
+- Each component is independent with its own service module
+- No direct inter-component dependencies
+- Shared infrastructure through common services layer
+- Independent database schemas (separate tables per component)
+
+### Component Structure
+Each demo component consists of four sub-modules:
+1. **Content Module**: Manages presentation content (slides, explanations, benefits)
+2. **Demo Module**: Provides web frame interface to external demo systems
+3. **Video Module**: Serves demonstration videos
+4. **Chatbot Module**: Interfaces with external knowledge base API
+
+### Components
+- `integration` - Integration, APIs and Events
+- `data-architecture` - Data Architecture
+- `deployment` - Deployment and Cloud
+- `security` - Security
+- `observability` - Observability
+- `design-time` - Design Time
+
+## API Design
+
+### Base URL
+- Production: `https://api.bsg-demo.com`
+- Development: `http://localhost:8000`
+
+### API Versioning
+- URL-based versioning: `/api/v1/*`
+- Current version: v1
+
+### Component API Pattern
+All components follow the same API structure:
+```
+/api/v1/components/{component-id}/content
+/api/v1/components/{component-id}/demo
+/api/v1/components/{component-id}/videos
+/api/v1/components/{component-id}/chatbot
+```
+
+### Common Endpoints
+- `GET /api/v1/health` - System health status
+- `GET /api/v1/ready` - Kubernetes readiness probe
+- `GET /api/v1/live` - Kubernetes liveness probe
+- `GET /api/v1/components` - List all available components
+
+### Authentication
+- JWT-based authentication
+- Token format: `Authorization: Bearer <jwt-token>`
+- Access tokens: 1 hour expiration
+- Refresh tokens: 7 days expiration
+
+### Response Format
+```json
+{
+  "success": true,
+  "data": { /* response payload */ },
+  "metadata": {
+    "timestamp": "2025-01-01T00:00:00Z",
+    "request_id": "uuid"
+  }
+}
+```
+
+## Design Documentation
+
+All design documents are located in the `design/` directory:
+
+### Core Architecture Documents
+- **`design/architecture-overview.md`** - High-level system architecture, technology stack, component structure, data architecture, deployment architecture
+- **`design/common-infrastructure.md`** - Shared services (authentication, logging, configuration), API middleware, database service, video storage, common utilities
+- **`design/api-specifications.md`** - Complete API reference, authentication endpoints, component API patterns, error handling, rate limiting, WebSocket endpoints
+- **`design/development-guide.md`** - Git branching strategy, team assignments, development workflow, code standards, testing strategy, local setup instructions
+
+### Component Requirements
+- **`design/components/integration-apis-events.md`** - Integration, APIs and Events component requirements
+- **`design/components/data-architecture.md`** - Data Architecture component requirements
+- **`design/components/deployment-cloud.md`** - Deployment and Cloud component requirements
+- **`design/components/security.md`** - Security component requirements
+- **`design/components/observability.md`** - Observability component requirements
+- **`design/components/design-time.md`** - Design Time component requirements
+
+### Design Index
+- **`design/README.md`** - Complete index of all design documents
+
+## Git Workflow
+
+### Branch Structure
+- **`main`** - Production-ready code (protected, requires PR reviews)
+- **`develop`** - Integration branch for all features (protected, requires PR reviews)
+- **`feature/frontend`** - React application development
+- **`feature/infrastructure`** - Common backend services
+- **`feature/component-integration`** - Integration component
+- **`feature/component-data-architecture`** - Data Architecture component
+- **`feature/component-deployment`** - Deployment component
+- **`feature/component-security`** - Security component
+- **`feature/component-observability`** - Observability component
+- **`feature/component-design-time`** - Design Time component
+
+### Development Workflow
+1. Checkout your feature branch: `git checkout feature/<your-branch>`
+2. Make changes and commit: `git commit -m "feat(scope): description"`
+3. Push to remote: `git push origin feature/<your-branch>`
+4. Create pull request to `develop` branch
+5. Address review comments and merge after approval
+
+### Staying Up-to-Date
+```bash
+git checkout develop
+git pull origin develop
+git checkout feature/<your-branch>
+git merge develop
+```
+
+## Code Standards
+
+### Python (Backend)
+- Follow PEP 8
+- Use type hints
+- Write docstrings
+- Minimum 70% test coverage
+- Use pylint and black
+
+### JavaScript/React (Frontend)
+- Follow ESLint configuration
+- Use TypeScript (optional but recommended)
+- Write JSDoc comments
+- Use Prettier for formatting
+- Component-based architecture
+
+### Git Commit Messages
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+**Types**: feat, fix, docs, style, refactor, test, chore
+
+## Directory Structure
+
+```
+bsg-demo-platform/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── integration/
+│   │   │   ├── data-architecture/
+│   │   │   ├── deployment/
+│   │   │   ├── security/
+│   │   │   ├── observability/
+│   │   │   └── design-time/
+│   │   ├── services/
+│   │   ├── common/
+│   │   └── App.js
+│   └── package.json
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── v1/
+│   │   │   │   ├── integration/
+│   │   │   │   ├── data_architecture/
+│   │   │   │   ├── deployment/
+│   │   │   │   ├── security/
+│   │   │   │   ├── observability/
+│   │   │   │   └── design_time/
+│   │   ├── models/
+│   │   ├── services/
+│   │   ├── common/
+│   │   └── main.py
+│   ├── requirements.txt
+│   └── Dockerfile
+├── videos/
+│   ├── integration/
+│   ├── data-architecture/
+│   ├── deployment/
+│   ├── security/
+│   ├── observability/
+│   └── design-time/
+├── data/
+│   └── postgres/
+├── design/
+│   ├── architecture-overview.md
+│   ├── common-infrastructure.md
+│   ├── api-specifications.md
+│   ├── development-guide.md
+│   └── components/
+├── docker-compose.yml
+├── claude.md
+└── README.md
+```
+
+## Key Principles
+
+### Component Independence
+- Each component has its own service module
+- No direct inter-component dependencies
+- Shared infrastructure through common services layer
+- Independent database schemas
+
+### API Design Principles
+- RESTful API structure
+- Consistent response format
+- Comprehensive error handling
+- Rate limiting on all endpoints
+- OpenAPI documentation
+
+### Security
+- JWT-based authentication
+- Role-based access control (RBAC)
+- Input validation and sanitization
+- SQL injection prevention (ORM)
+- CORS configuration
+- Secrets management via environment variables
+- HTTPS enforcement in production
+
+### Observability
+- Structured logging (JSON format)
+- Correlation IDs for request tracing
+- Health check endpoints
+- Prometheus-compatible metrics
+- Distributed tracing support (OpenTelemetry)
+
+## Development Context
+
+When developing:
+1. **Always refer to design documents** in `design/` directory for requirements and specifications
+2. **Follow the component-based architecture** - keep components independent
+3. **Use the established API patterns** - follow the component API structure
+4. **Maintain code standards** - follow PEP 8 for Python, ESLint for JavaScript
+5. **Write tests** - minimum 70% coverage for backend, comprehensive frontend tests
+6. **Update documentation** - keep design docs synchronized with implementation
+7. **Use proper git workflow** - commit to feature branches, PR to develop
+
+## Important Files to Reference
+
+- **Architecture**: `design/architecture-overview.md`
+- **API Specs**: `design/api-specifications.md`
+- **Development Guide**: `design/development-guide.md`
+- **Common Infrastructure**: `design/common-infrastructure.md`
+- **Component Requirements**: `design/components/`
+
+---
+
+**Remember**: Always consult the design documents before implementing features. They contain detailed functional and non-functional requirements for each component.
+

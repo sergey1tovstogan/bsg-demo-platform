@@ -1,0 +1,34 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  cacheDir: '.vite',
+  server: {
+    port: 3000,
+    host: true,
+    strictPort: false,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            // Only log non-connection errors
+            if (err.code !== 'ECONNRESET' && err.code !== 'ECONNREFUSED') {
+              console.log('Proxy error:', err.code, err.message);
+            }
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            proxyReq.setTimeout(900000);
+          });
+        },
+        timeout: 900000
+      }
+    }
+  }
+})
+
