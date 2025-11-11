@@ -1,0 +1,209 @@
+import axios, { AxiosInstance, AxiosError } from 'axios'
+import type {
+  ApiResponse,
+  PaginatedResponse,
+  Component,
+  Content,
+  Video,
+  DemoConfig,
+  DemoSession,
+  ChatSession,
+  ChatMessage,
+  ChatHistory,
+  ComponentId
+} from '../types'
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
+
+class ApiService {
+  private client: AxiosInstance
+
+  constructor() {
+    this.client = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    // Request interceptor for auth token
+    this.client.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem('access_token')
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+        }
+        return config
+      },
+      (error) => Promise.reject(error)
+    )
+
+    // Response interceptor for error handling
+    this.client.interceptors.response.use(
+      (response) => response,
+      async (error: AxiosError) => {
+        if (error.response?.status === 401) {
+          // Try to refresh token
+          const refreshToken = localStorage.getItem('refresh_token')
+          if (refreshToken) {
+            try {
+              const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+                refresh_token: refreshToken,
+              })
+              const { access_token } = response.data.data
+              localStorage.setItem('access_token', access_token)
+              // Retry original request
+              if (error.config) {
+                error.config.headers.Authorization = `Bearer ${access_token}`
+                return this.client.request(error.config)
+              }
+            } catch (refreshError) {
+              // Refresh failed, redirect to login
+              localStorage.removeItem('access_token')
+              localStorage.removeItem('refresh_token')
+              window.location.href = '/login'
+            }
+          }
+        }
+        return Promise.reject(error)
+      }
+    )
+  }
+
+  // Health Check
+  async getHealth() {
+    const response = await this.client.get<ApiResponse<{ status: string; timestamp: string; checks: any }>>('/health')
+    return response.data
+  }
+
+  // Components
+  async getComponents() {
+    const response = await this.client.get<ApiResponse<Component[]>>('/components')
+    return response.data
+  }
+
+  // Content APIs
+  async getContent(componentId: ComponentId, page = 1, pageSize = 20, type?: string) {
+    const params = new URLSearchParams({ page: page.toString(), page_size: pageSize.toString() })
+    if (type) params.append('type', type)
+    const response = await this.client.get<PaginatedResponse<Content>>(
+      `/components/${componentId}/content?${params.toString()}`
+    )
+    return response.data
+  }
+
+  async getContentItem(componentId: ComponentId, contentId: string) {
+    const response = await this.client.get<ApiResponse<Content>>(
+      `/components/${componentId}/content/${contentId}`
+    )
+    return response.data
+  }
+
+  // Video APIs
+  async getVideos(componentId: ComponentId, page = 1, pageSize = 20) {
+    const params = new URLSearchParams({ page: page.toString(), page_size: pageSize.toString() })
+    const response = await this.client.get<PaginatedResponse<Video>>(
+      `/components/${componentId}/videos?${params.toString()}`
+    )
+    return response.data
+  }
+
+  async getVideo(componentId: ComponentId, videoId: string) {
+    const response = await this.client.get<ApiResponse<Video>>(
+      `/components/${componentId}/videos/${videoId}`
+    )
+    return response.data
+  }
+
+  getVideoStreamUrl(componentId: ComponentId, videoId: string) {
+    return `${API_BASE_URL}/components/${componentId}/videos/${videoId}/stream`
+  }
+
+  // Demo APIs
+  async getDemoConfig(componentId: ComponentId) {
+    const response = await this.client.get<ApiResponse<DemoConfig>>(`/components/${componentId}/demo`)
+    return response.data
+  }
+
+  async connectDemo(componentId: ComponentId, scenario: string, parameters?: Record<string, any>) {
+    const response = await this.client.post<ApiResponse<DemoSession>>(
+      `/components/${componentId}/demo/connect`,
+      { scenario, parameters }
+    )
+    return response.data
+  }
+
+  async executeDemo(componentId: ComponentId, sessionId: string, action: string, parameters?: Record<string, any>) {
+    const response = await this.client.post<ApiResponse<any>>(
+      `/components/${componentId}/demo/execute`,
+      { session_id: sessionId, action, parameters }
+    )
+    return response.data
+  }
+
+  async getDemoStatus(componentId: ComponentId, sessionId: string) {
+    const response = await this.client.get<ApiResponse<DemoSession>>(
+      `/components/${componentId}/demo/status?session_id=${sessionId}`
+    )
+    return response.data
+  }
+
+  async disconnectDemo(componentId: ComponentId, sessionId: string) {
+    await this.client.post(`/components/${componentId}/demo/disconnect`, { session_id: sessionId })
+  }
+
+  // Chatbot APIs
+  async createChatSession(componentId: ComponentId, context?: { topic?: string; user_level?: string }) {
+    const response = await this.client.post<ApiResponse<ChatSession>>(
+      `/components/${componentId}/chatbot/session`,
+      { context }
+    )
+    return response.data
+  }
+
+  async sendChatMessage(componentId: ComponentId, sessionId: string, message: string) {
+    const response = await this.client.post<ApiResponse<ChatMessage>>(
+      `/components/${componentId}/chatbot/query`,
+      { session_id: sessionId, message }
+    )
+    return response.data
+  }
+
+  async getChatHistory(componentId: ComponentId, sessionId: string) {
+    const response = await this.client.get<ApiResponse<ChatHistory>>(
+      `/components/${componentId}/chatbot/history/${sessionId}`
+    )
+    return response.data
+  }
+
+  async deleteChatSession(componentId: ComponentId, sessionId: string) {
+    await this.client.delete(`/components/${componentId}/chatbot/session/${sessionId}`)
+  }
+
+  // Auth APIs
+  async login(email: string, password: string) {
+    const response = await this.client.post<ApiResponse<{ access_token: string; refresh_token: string; token_type: string; expires_in: number }>>(
+      '/auth/login',
+      { email, password }
+    )
+    return response.data
+  }
+
+  async register(email: string, password: string, name: string) {
+    const response = await this.client.post<ApiResponse<any>>('/auth/register', {
+      email,
+      password,
+      name,
+    })
+    return response.data
+  }
+
+  async logout() {
+    await this.client.post('/auth/logout')
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+  }
+}
+
+export const apiService = new ApiService()
+

@@ -115,6 +115,7 @@ node_modules/
 /dist
 .next/
 out/
+.vite/
 
 # Misc
 .DS_Store
