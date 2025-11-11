@@ -6,7 +6,7 @@ Supports environment variables, .env files, and secret injection.
 """
 
 from typing import List, Optional
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import secrets
 
@@ -99,7 +99,7 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    @validator("ENVIRONMENT")
+    @field_validator("ENVIRONMENT")
     def validate_environment(cls, v):
         """Validate environment value."""
         allowed = ["development", "staging", "production"]
@@ -107,7 +107,7 @@ class Settings(BaseSettings):
             raise ValueError(f"ENVIRONMENT must be one of {allowed}")
         return v
 
-    @validator("LOG_LEVEL")
+    @field_validator("LOG_LEVEL")
     def validate_log_level(cls, v):
         """Validate log level."""
         allowed = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -116,14 +116,14 @@ class Settings(BaseSettings):
             raise ValueError(f"LOG_LEVEL must be one of {allowed}")
         return v
 
-    @validator("CORS_ORIGINS", pre=True)
+    @field_validator("CORS_ORIGINS", mode="before")
     def parse_cors_origins(cls, v):
         """Parse CORS origins from string or list."""
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
         return v
 
-    @validator("JWT_SECRET_KEY")
+    @field_validator("JWT_SECRET_KEY")
     def validate_jwt_secret(cls, v, values):
         """Ensure JWT secret is set in production."""
         if values.get("ENVIRONMENT") == "production" and len(v) < 32:
