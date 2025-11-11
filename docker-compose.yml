@@ -19,20 +19,6 @@ services:
     networks:
       - bsg-network
 
-  # Redis Cache (Optional)
-  redis:
-    image: redis:7-alpine
-    container_name: bsg-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - bsg-network
-
   # Backend API
   backend:
     build:
@@ -50,9 +36,8 @@ services:
       # JWT
       JWT_SECRET_KEY: dev-secret-key-change-in-production
 
-      # Redis (Optional)
-      REDIS_URL: redis://redis:6379/0
-      CACHE_ENABLED: "True"
+      # Caching (Disabled - using in-memory fallback)
+      CACHE_ENABLED: "False"
 
       # CORS
 
@@ -75,8 +60,6 @@ services:
       - video_uploads:/app/uploads/videos
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - bsg-network
