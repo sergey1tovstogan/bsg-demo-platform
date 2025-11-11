@@ -28,7 +28,10 @@
       "Bash(winget list:*)",
       "Bash(podman build:*)",
       "Bash(podman logs:*)",
-      "Bash(backend/requirements.txt)"
+      "Bash(backend/requirements.txt)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []
