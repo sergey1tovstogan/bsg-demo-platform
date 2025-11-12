@@ -180,6 +180,50 @@ class ApiService {
     await this.client.delete(`/components/${componentId}/chatbot/session/${sessionId}`)
   }
 
+  // Security Component - Slide Search APIs
+  async searchSecuritySlides(query: string) {
+    const response = await this.client.get<ApiResponse<{
+      slides: Array<{
+        slide_number: number
+        slide_content: string
+        content_type: string
+      }>
+      total_results: number
+      query: string
+    }>>(`/components/security/slides/search?q=${encodeURIComponent(query)}`)
+    return response.data
+  }
+
+  async getSecuritySlide(slideNumber: number) {
+    const response = await this.client.get<ApiResponse<{
+      slide_number: number
+      slide_content: string
+      content_type: string
+    }>>(`/components/security/slides/${slideNumber}`)
+    return response.data
+  }
+
+  // Security Component - Paragraph Search APIs
+  async searchSecurityParagraphs(query: string) {
+    const response = await this.client.get<ApiResponse<{
+      paragraphs: Array<{
+        paragraph_number: number
+        paragraph_content: string
+      }>
+      total_results: number
+      query: string
+    }>>(`/components/security/paragraphs/search?q=${encodeURIComponent(query)}`)
+    return response.data
+  }
+
+  async getSecurityParagraph(paragraphNumber: number) {
+    const response = await this.client.get<ApiResponse<{
+      paragraph_number: number
+      paragraph_content: string
+    }>>(`/components/security/paragraphs/${paragraphNumber}`)
+    return response.data
+  }
+
   // Auth APIs
   async login(email: string, password: string) {
     const response = await this.client.post<ApiResponse<{ access_token: string; refresh_token: string; token_type: string; expires_in: number }>>(

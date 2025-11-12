@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { Content, ComponentId } from '../types'
+import { SecurityContentViewer } from './SecurityContentViewer'
 
 interface ContentViewerProps {
   componentId: ComponentId
 }
 
 export function ContentViewer({ componentId }: ContentViewerProps) {
+  // Use SecurityContentViewer for security component
+  if (componentId === 'security') {
+    return <SecurityContentViewer />
+  }
   const [contents, setContents] = useState<Content[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)

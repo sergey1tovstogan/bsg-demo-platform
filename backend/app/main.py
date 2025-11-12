@@ -14,7 +14,7 @@ from app.core.database import engine, Base
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
-from app.api import health, auth
+from app.api import health, auth, security
 
 # Setup logging
 setup_logging()
@@ -77,6 +77,7 @@ register_error_handlers(app)
 # Include routers
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
+app.include_router(security.router, prefix=settings.API_V1_PREFIX)
 
 # Root endpoint
 @app.get("/")
