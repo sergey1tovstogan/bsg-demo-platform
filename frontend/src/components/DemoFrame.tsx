@@ -1,13 +1,20 @@
-import { useState } from 'react'
-import { Code2, Radio, Database as DatabaseIcon } from 'lucide-react'
-import type { ComponentId } from '../types'
+import { useState, useEffect } from 'react'
+import { Code2, Radio, Database as DatabaseIcon, Loader2, ExternalLink, Power } from 'lucide-react'
+import { apiService } from '../services/api'
+import type { ComponentId, DemoConfig, DemoSession } from '../types'
 import { DatabaseRecords } from './DatabaseRecords'
+import { ObservabilityDemo } from './observability/ObservabilityDemo'
 
 interface DemoFrameProps {
   componentId: ComponentId
 }
 
 export function DemoFrame({ componentId }: DemoFrameProps) {
+  // Use specialized component for observability
+  if (componentId === 'observability') {
+    return <ObservabilityDemo />
+  }
+
   // Only show Data Architecture specific content for data-architecture component
   if (componentId === 'data-architecture') {
     return (
@@ -59,6 +66,74 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
             <DatabaseRecords componentId={componentId} />
           </div>
         </div>
+      </div>
+    )
+  }
+
+  // For other components, try to load demo config
+  const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
+  const [session, setSession] = useState<DemoSession | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [connecting, setConnecting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadDemoConfig()
+  }, [componentId])
+
+  useEffect(() => {
+    return () => {
+      // Cleanup: disconnect on unmount
+      if (session?.session_id) {
+        apiService.disconnectDemo(componentId, session.session_id).catch(console.error)
+      }
+    }
+  }, [session, componentId])
+
+  const loadDemoConfig = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await apiService.getDemoConfig(componentId)
+      setDemoConfig(response.data)
+    } catch (err: any) {
+      // If demo config doesn't exist, that's okay - show placeholder
+      setError(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const connectDemo = async () => {
+    if (!demoConfig) return
+
+    try {
+      setConnecting(true)
+      setError(null)
+      const response = await apiService.connectDemo(componentId, 'default', {})
+      setSession(response.data)
+    } catch (err: any) {
+      setError(err.message || 'Failed to connect to demo system')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  const disconnectDemo = async () => {
+    if (!session?.session_id) return
+
+    try {
+      await apiService.disconnectDemo(componentId, session.session_id)
+      setSession(null)
+    } catch (err: any) {
+      console.error('Failed to disconnect:', err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     )
   }

@@ -39,13 +39,14 @@ export interface Component {
 export interface Content {
   content_id: string
   title: string
-  type: 'slide' | 'document' | 'tutorial'
+  type: 'slide' | 'document' | 'tutorial' | 'html'
   order: number
   body?: {
     heading?: string
     bullets?: string[]
     code_examples?: string[]
     description?: string
+    html?: string
   }
   metadata?: {
     duration_minutes?: number
