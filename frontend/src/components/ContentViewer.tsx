@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Info } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { Content, ComponentId } from '../types'
+import { ApiOverview } from './ApiOverview'
 
 interface ContentViewerProps {
   componentId: ComponentId
@@ -12,6 +13,8 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showTooltip, setShowTooltip] = useState(false)
+  const [activeTooltipIndex, setActiveTooltipIndex] = useState<number | null>(null)
 
   useEffect(() => {
     loadContents()
@@ -26,7 +29,11 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
       setContents(sortedContents)
       setCurrentIndex(0)
     } catch (err: any) {
-      setError(err.message || 'Failed to load content')
+      // For integration component, don't show error - just show empty state
+      if (componentId !== 'integration') {
+        setError(err.message || 'Failed to load content')
+      }
+      setContents([])
     } finally {
       setLoading(false)
     }
@@ -48,7 +55,7 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
     )
   }
 
-  if (error) {
+  if (error && componentId !== 'integration') {
     return (
       <div className="card">
         <p className="text-red-600">{error}</p>
@@ -57,6 +64,11 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
   }
 
   if (contents.length === 0) {
+    // Show API Overview native HTML component for integration component
+    if (componentId === 'integration') {
+      return <ApiOverview />
+    }
+
     return (
       <div className="card">
         <p className="text-[#4A5568]">No content available for this component.</p>
@@ -68,38 +80,73 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
 
   return (
     <div className="card">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold mb-2">{currentContent.title}</h2>
-          <p className="text-sm text-[#4A5568]">
-            Slide {currentIndex + 1} of {contents.length}
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={goToPrevious}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            disabled={contents.length === 0}
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={goToNext}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            disabled={contents.length === 0}
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold mb-2">{currentContent.title}</h2>
       </div>
 
       <div className="prose max-w-none">
         {currentContent.body?.heading && (
           <h3 className="text-xl font-semibold mb-4">{currentContent.body.heading}</h3>
         )}
-        
+
         {currentContent.body?.description && (
           <p className="text-[#4A5568] mb-4">{currentContent.body.description}</p>
+        )}
+
+        {/* Image content with interactive areas */}
+        {currentContent.type === 'document' && currentContent.body?.image_url && (
+          <>
+            {/* Use native HTML component for API Overview, otherwise use image */}
+            {componentId === 'integration' && currentContent.title === 'API Overview' ? (
+              <ApiOverview />
+            ) : (
+              <div className="relative mb-4">
+                <img
+                  src={currentContent.body.image_url}
+                  alt={currentContent.title}
+                  className="w-full h-auto rounded-lg shadow-md"
+                />
+                {currentContent.body.interactive_areas?.map((area, idx) => (
+                  <div
+                    key={idx}
+                    className="absolute cursor-help"
+                    style={{
+                      top: area.position.top,
+                      left: area.position.left,
+                      width: area.position.width,
+                      height: area.position.height,
+                    }}
+                    onMouseEnter={() => setActiveTooltipIndex(idx)}
+                    onMouseLeave={() => setActiveTooltipIndex(null)}
+                  >
+                    <div className="w-full h-full hover:bg-blue-100 hover:bg-opacity-20 rounded transition-colors" />
+                    {activeTooltipIndex === idx && (
+                      <div className="absolute z-50 w-96 p-4 bg-white border-2 border-blue-500 rounded-lg shadow-xl text-sm left-0" style={{ bottom: '100%', marginBottom: '12px' }}>
+                        <div className="flex items-start space-x-2">
+                          <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <h4 className="font-bold mb-1 text-blue-600">{area.title}</h4>
+                            <p className="text-gray-800 leading-relaxed">{area.description}</p>
+                            {area.url && (
+                              <a
+                                href={area.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block mt-2 text-blue-600 hover:text-blue-800 underline font-medium"
+                              >
+                                Visit Portal →
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <div className="absolute left-8 w-4 h-4 bg-white border-b-2 border-r-2 border-blue-500 transform rotate-45" style={{ bottom: '-8px' }} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {currentContent.body?.bullets && currentContent.body.bullets.length > 0 && (
@@ -137,6 +184,23 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="flex items-center justify-center space-x-2 mt-6 pt-4 border-t border-gray-200">
+        <button
+          onClick={goToPrevious}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          disabled={contents.length === 0}
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button
+          onClick={goToNext}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          disabled={contents.length === 0}
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
       </div>
     </div>
   )
