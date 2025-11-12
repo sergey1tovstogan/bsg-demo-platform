@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     DB_POOL_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
     DB_ECHO: bool = Field(default=False, description="Echo SQL statements")
 
+    # MSSQL External Database
+    MSSQL_HOST: str = Field(default="10.1.4.135", description="MSSQL server host")
+    MSSQL_PORT: int = Field(default=1433, description="MSSQL server port")
+    MSSQL_USER: str = Field(default="dist1", description="MSSQL username")
+    MSSQL_PASSWORD: str = Field(default="dist1", description="MSSQL password")
+    MSSQL_DATABASE: str = Field(default="ODS", description="MSSQL database name")
+    MSSQL_SCHEMA: str = Field(default="ODS", description="MSSQL default schema")
+
     # JWT Authentication
     JWT_SECRET_KEY: str = Field(
         default_factory=lambda: secrets.token_urlsafe(32),

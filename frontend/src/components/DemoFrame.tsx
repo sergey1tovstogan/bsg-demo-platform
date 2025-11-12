@@ -1,195 +1,78 @@
-import { useState, useEffect } from 'react'
-import { Loader2, ExternalLink, Power } from 'lucide-react'
-import { apiService } from '../services/api'
-import type { ComponentId, DemoConfig, DemoSession } from '../types'
+import { useState } from 'react'
+import { Code2, Radio, Database as DatabaseIcon } from 'lucide-react'
+import type { ComponentId } from '../types'
+import { DatabaseRecords } from './DatabaseRecords'
 
 interface DemoFrameProps {
   componentId: ComponentId
 }
 
 export function DemoFrame({ componentId }: DemoFrameProps) {
-  const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
-  const [session, setSession] = useState<DemoSession | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [connecting, setConnecting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    loadDemoConfig()
-  }, [componentId])
-
-  useEffect(() => {
-    return () => {
-      // Cleanup: disconnect on unmount
-      if (session?.session_id) {
-        apiService.disconnectDemo(componentId, session.session_id).catch(console.error)
-      }
-    }
-  }, [session, componentId])
-
-  const loadDemoConfig = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await apiService.getDemoConfig(componentId)
-      setDemoConfig(response.data)
-    } catch (err: any) {
-      setError(err.message || 'Failed to load demo configuration')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const connectDemo = async () => {
-    if (!demoConfig) return
-
-    try {
-      setConnecting(true)
-      setError(null)
-      const response = await apiService.connectDemo(componentId, 'default', {})
-      setSession(response.data)
-    } catch (err: any) {
-      setError(err.message || 'Failed to connect to demo system')
-    } finally {
-      setConnecting(false)
-    }
-  }
-
-  const disconnectDemo = async () => {
-    if (!session?.session_id) return
-
-    try {
-      await apiService.disconnectDemo(componentId, session.session_id)
-      setSession(null)
-    } catch (err: any) {
-      console.error('Failed to disconnect:', err)
-    }
-  }
-
-  if (loading) {
+  // Only show Data Architecture specific content for data-architecture component
+  if (componentId === 'data-architecture') {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#283054]" />
-      </div>
-    )
-  }
-
-  if (error && !demoConfig) {
-    return (
-      <div className="card">
-        <p className="text-red-600">{error}</p>
-      </div>
-    )
-  }
-
-  if (!demoConfig) {
-    return (
-      <div className="card">
-        <p className="text-[#4A5568]">No demo configuration available for this component.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Demo Controls */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-xl font-bold mb-1">{demoConfig.name}</h3>
-            <p className="text-sm text-[#4A5568]">
-              Connection Type: {demoConfig.connection_type}
-            </p>
-          </div>
-          {!session ? (
-            <button
-              onClick={connectDemo}
-              disabled={connecting}
-              className="btn-primary flex items-center space-x-2"
-            >
-              {connecting ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Connecting...</span>
-                </>
-              ) : (
-                <>
-                  <Power className="w-5 h-5" />
-                  <span>Connect</span>
-                </>
-              )}
-            </button>
-          ) : (
-            <button
-              onClick={disconnectDemo}
-              className="btn-secondary flex items-center space-x-2"
-            >
-              <Power className="w-5 h-5" />
-              <span>Disconnect</span>
-            </button>
-          )}
-        </div>
-
-        {session && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800">
-              <strong>Status:</strong> {session.status}
-            </p>
-            {session.connected_at && (
-              <p className="text-sm text-green-700 mt-1">
-                Connected at: {new Date(session.connected_at).toLocaleString()}
-              </p>
-            )}
-          </div>
-        )}
-
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-            {error}
-          </div>
-        )}
-      </div>
-
-      {/* Demo Frame */}
-      {session && session.connection_url && (
-        <div className="card p-0 overflow-hidden">
-          <div className="aspect-video bg-gray-100">
-            {demoConfig.connection_type === 'iframe' ? (
-              <iframe
-                src={session.connection_url}
-                className="w-full h-full border-0"
-                title="Demo Frame"
-                allow="fullscreen"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-center">
-                  <ExternalLink className="w-12 h-12 mx-auto mb-4 text-[#283054]" />
-                  <p className="text-[#4A5568] mb-2">Demo System</p>
-                  <a
-                    href={session.connection_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    Open in new window
-                  </a>
-                </div>
+      <div className="space-y-6">
+        {/* Top Tier - APIs and Events */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* APIs Section */}
+          <div className="card min-h-[400px] flex flex-col">
+            <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-200">
+              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                <Code2 className="w-6 h-6 text-white" />
               </div>
-            )}
+              <h3 className="text-xl font-bold text-[#283054]">APIs</h3>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-gray-400">
+                <Code2 className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">API content will appear here</p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
 
-      {!session && (
-        <div className="card">
-          <div className="text-center py-12">
-            <Power className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <p className="text-[#4A5568]">Click Connect to start the demo</p>
+          {/* Events Section */}
+          <div className="card min-h-[400px] flex flex-col">
+            <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-200">
+              <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                <Radio className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-[#283054]">Events</h3>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center text-gray-400">
+                <Radio className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Event content will appear here</p>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Bottom Tier - Database Records */}
+        <div className="card min-h-[500px] flex flex-col">
+          <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-200">
+            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+              <DatabaseIcon className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-[#283054]">Database Records</h3>
+          </div>
+          <div className="flex-1">
+            <DatabaseRecords componentId={componentId} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // For all other components, show a generic demo placeholder
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-center text-gray-400">
+        <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+          <Code2 className="w-12 h-12 opacity-30" />
+        </div>
+        <p className="text-lg font-medium text-gray-500 mb-2">Demo Coming Soon</p>
+        <p className="text-sm">Interactive demo content will be available here</p>
+      </div>
     </div>
   )
 }
-
