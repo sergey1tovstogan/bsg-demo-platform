@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react'
 import { Loader2, ExternalLink, Power } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { ComponentId, DemoConfig, DemoSession } from '../types'
+import { ObservabilityDemo } from './observability/ObservabilityDemo'
 
 interface DemoFrameProps {
   componentId: ComponentId
 }
 
 export function DemoFrame({ componentId }: DemoFrameProps) {
+  // Use specialized component for observability
+  if (componentId === 'observability') {
+    return <ObservabilityDemo />
+  }
   const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
   const [session, setSession] = useState<DemoSession | null>(null)
   const [loading, setLoading] = useState(true)

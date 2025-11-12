@@ -4,6 +4,7 @@ import { ContentViewer } from '../components/ContentViewer'
 import { VideoPlayer } from '../components/VideoPlayer'
 import { Chatbot } from '../components/Chatbot'
 import { DemoFrame } from '../components/DemoFrame'
+import { ObservabilityContent } from '../components/observability/ObservabilityContent'
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
@@ -47,7 +48,13 @@ export function ComponentPage({ componentId }: ComponentPageProps) {
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'content' && <ContentViewer componentId={componentId} />}
+        {activeTab === 'content' && (
+          componentId === 'observability' ? (
+            <ObservabilityContent />
+          ) : (
+            <ContentViewer componentId={componentId} />
+          )
+        )}
         {activeTab === 'video' && <VideoPlayer componentId={componentId} />}
         {activeTab === 'demo' && <DemoFrame componentId={componentId} />}
         {activeTab === 'chatbot' && <Chatbot componentId={componentId} />}

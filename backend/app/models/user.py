@@ -5,7 +5,7 @@ Database models for user authentication and authorization.
 """
 
 from datetime import datetime
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, Enum as SQLEnum
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, Enum as SQLEnum, ForeignKey
 from sqlalchemy.orm import relationship
 import enum
 
@@ -93,7 +93,7 @@ class UserSession(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     # Foreign key
-    user_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     # Session fields
     refresh_token = Column(String(255), unique=True, index=True, nullable=False)
