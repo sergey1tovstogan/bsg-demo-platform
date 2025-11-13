@@ -11,7 +11,9 @@ async def create_collections():
     collections_to_create = [
         "videos",
         "security_docs",  # MongoDB collection names can't have spaces, using underscore
-        "presentations"
+        "presentations",
+        "security_items",
+        "security_presentation"
     ]
     
     try:
@@ -68,6 +70,16 @@ async def create_collections():
         await db["presentations"].create_index("title")
         await db["presentations"].create_index("component_id")
         print("  [OK] Indexes created for 'presentations' collection")
+        
+        # Security items collection indexes
+        await db["security_items"].create_index("document_number", unique=True)
+        await db["security_items"].create_index("document_name")
+        print("  [OK] Indexes created for 'security_items' collection")
+        
+        # Security presentation collection indexes
+        await db["security_presentation"].create_index("presentation_number", unique=True)
+        await db["security_presentation"].create_index("presentation_name")
+        print("  [OK] Indexes created for 'security_presentation' collection")
         
         # List all collections
         print(f"\nAll collections in database:")

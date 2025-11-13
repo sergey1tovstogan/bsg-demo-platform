@@ -40,18 +40,33 @@ async def init_db() -> AsyncIOMotorDatabase:
     """
     Initialize MongoDB connection and return database instance.
     
+    This function:
+    - Creates a MongoDB client with connection pooling
+    - Tests the connection with a ping command
+    - Returns the database instance for use in the application
+    
     Returns:
         AsyncIOMotorDatabase instance
+        
+    Raises:
+        ConnectionFailure: If connection to MongoDB fails
+        ServerSelectionTimeoutError: If server selection times out
+        Exception: For other unexpected errors
     """
     global _client, _database
     
     if _database is not None:
+        logger.debug("Database already initialized, returning existing instance")
         return _database
     
     try:
-        logger.info(f"Connecting to MongoDB: {settings.DATABASE_URL.split('@')[-1] if '@' in settings.DATABASE_URL else 'localhost'}")
+        # Extract host info for logging (mask credentials)
+        host_info = settings.DATABASE_URL.split('@')[-1] if '@' in settings.DATABASE_URL else 'localhost'
+        logger.info(f"Connecting to MongoDB: {host_info}")
+        logger.debug(f"Database name: {settings.DATABASE_NAME}")
+        logger.debug(f"Connection pool: min={settings.DB_MIN_POOL_SIZE}, max={settings.DB_MAX_POOL_SIZE}")
         
-        # Create MongoDB client
+        # Create MongoDB client with connection pooling
         _client = AsyncIOMotorClient(
             settings.DATABASE_URL,
             maxPoolSize=settings.DB_MAX_POOL_SIZE,
@@ -59,22 +74,37 @@ async def init_db() -> AsyncIOMotorDatabase:
             serverSelectionTimeoutMS=settings.DB_CONNECT_TIMEOUT * 1000,
             connectTimeoutMS=settings.DB_CONNECT_TIMEOUT * 1000,
             socketTimeoutMS=settings.DB_CONNECT_TIMEOUT * 1000,
+            retryWrites=True,  # Enable retry writes for better reliability
         )
         
-        # Test connection
+        # Test connection with ping command
+        logger.debug("Testing MongoDB connection...")
         await _client.admin.command('ping')
+        logger.debug("MongoDB ping successful")
         
-        # Get database
+        # Get database instance
         _database = _client[settings.DATABASE_NAME]
         
+        # Verify database is accessible
+        collections = await _database.list_collection_names()
         logger.info(f"Connected to MongoDB database: {settings.DATABASE_NAME}")
+        logger.debug(f"Found {len(collections)} existing collection(s)")
+        
         return _database
         
     except (ConnectionFailure, ServerSelectionTimeoutError) as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
+        logger.error(f"Connection string: {settings.DATABASE_URL[:50]}...")
+        logger.error("Please check:")
+        logger.error("  1. MongoDB server is running and accessible")
+        logger.error("  2. Connection string is correct")
+        logger.error("  3. Network connectivity and firewall rules")
+        logger.error("  4. For Azure Cosmos DB: IP address is whitelisted")
         raise
     except Exception as e:
         logger.error(f"Unexpected error connecting to MongoDB: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise
 
 
