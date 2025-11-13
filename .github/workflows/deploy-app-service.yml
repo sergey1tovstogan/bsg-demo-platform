@@ -55,6 +55,8 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+        continue-on-error: false
+        id: azure-login
       
       - name: Copy frontend build to backend static
         run: |
@@ -65,11 +67,17 @@ jobs:
         working-directory: ./backend
         run: |
           # Remove files that shouldn't be deployed
-          rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/
-          find . -type d -name "__pycache__" -exec rm -r {} + 2>/dev/null || true
+          rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/ || true
+          # Find and remove all __pycache__ directories (handle both Unix and Windows paths)
+          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find . -type d -name "*__pycache__*" -exec rm -rf {} + 2>/dev/null || true
+          # Remove Python cache files
           find . -type f -name "*.pyc" -delete 2>/dev/null || true
           find . -type f -name "*.pyo" -delete 2>/dev/null || true
           find . -type f -name "*.log" -delete 2>/dev/null || true
+          # Remove any Windows-style paths that might have been created
+          find . -type f -path "*\\*" -delete 2>/dev/null || true
+          find . -type d -path "*\\*" -exec rm -rf {} + 2>/dev/null || true
       
       - name: Create startup script
         run: |
@@ -89,20 +97,46 @@ jobs:
       
       - name: Configure App Settings
         run: |
-          az webapp config appsettings set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --settings \
-              SCM_DO_BUILD_DURING_DEPLOYMENT=false \
-              ENABLE_ORYX_BUILD=false \
+          # Copy app settings JSON to backend directory for deployment
+          cp infrastructure/app-settings.json backend/app-settings.json || echo "App settings JSON not found, will set manually"
+          
+          # Set build settings and environment variables using JSON file
+          if [ -f backend/app-settings.json ]; then
+            az webapp config appsettings set \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --settings @backend/app-settings.json \
               --output none
+          else
+            # Fallback: set settings manually (for GitHub Actions)
+            az webapp config appsettings set \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --settings \
+                SCM_DO_BUILD_DURING_DEPLOYMENT=false \
+                ENABLE_ORYX_BUILD=false \
+                ENVIRONMENT=production \
+                DEBUG=False \
+                DATABASE_NAME=bsg_demo \
+              --output none
+            echo "Note: DATABASE_URL should be set manually via Azure Portal or using JSON file"
+          fi
           
           # Set startup command
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "gunicorn app.main:app --bind 0.0.0.0:8000 --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120" \
+            --startup-file "gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120" \
             --output none
+          
+          # Enable Always On (critical for App Service to prevent sleep)
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --always-on true \
+            --output none
+          
+          echo "App settings configured successfully"
       
       - name: Health Check
         run: |

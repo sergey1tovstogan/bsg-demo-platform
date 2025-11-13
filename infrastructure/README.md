@@ -2,7 +2,24 @@
 
 This directory contains scripts and configurations for deploying the BSG Demo Platform to Azure.
 
-## Azure VM Deployment
+## Current Deployment: Azure Static Web Apps
+
+**Frontend URL**: https://kind-beach-01c0a990f.3.azurestaticapps.net
+
+**App Details:**
+- **Name**: `bsg-demo-platform-4077`
+- **Type**: Azure Static Web Apps (Free tier)
+- **Location**: `eastus2`
+- **Resource Group**: `bsg-demo-platform`
+
+**Why Static Web Apps:**
+- ✅ Free tier available (no quota restrictions)
+- ✅ Automatic HTTPS and unique URL
+- ✅ No SSH/policy restrictions
+- ✅ Perfect for React frontend
+- ✅ Auto-deployment from GitHub
+
+## Azure VM Deployment (Alternative - Currently Blocked)
 
 ### Prerequisites
 
