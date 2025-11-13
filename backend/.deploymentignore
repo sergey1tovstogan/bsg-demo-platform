@@ -1,0 +1,57 @@
+# Files and directories to exclude from Azure App Service deployment
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Development files
+*.md
+Dockerfile
+docker-compose.yml
+start-backend.ps1
+*.ps1
+
+# Scripts (not needed in production)
+scripts/
+
+# Infrastructure
+infrastructure/
+
+# Uploads (should be empty or use Azure Storage)
+uploads/
+
+# Logs
+*.log
+logs/
+
+# Environment files (use App Settings instead)
+.env
+.env.local
+
+# Git
+.git/
+.gitignore
+
+# Other
+*.zip
+deploy.zip
+
