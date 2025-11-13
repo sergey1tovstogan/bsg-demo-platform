@@ -192,38 +192,66 @@ class AKSService:
             
             kubeconfig_path = creds.get("kubeconfig_path")
             
-            # Get namespaces first
+            # Get namespaces first - use async subprocess for better timeout handling
+            import asyncio
             cmd = ["kubectl", "get", "namespaces", "-o", "json", f"--kubeconfig={kubeconfig_path}"]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
             
-            if result.returncode != 0:
-                logger.warning(f"Failed to get namespaces from {cluster_name}: {result.stderr}")
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
+                
+                if process.returncode != 0:
+                    error_msg = stderr.decode() if stderr else "Unknown error"
+                    logger.warning(f"Failed to get namespaces from {cluster_name}: {error_msg}")
+                    return pods
+                
+                result_stdout = stdout.decode() if stdout else "{}"
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout getting namespaces from {cluster_name} (30s)")
+                return pods
+            except Exception as e:
+                logger.warning(f"Error executing kubectl for namespaces: {e}")
                 return pods
             
             try:
-                namespaces_data = json.loads(result.stdout)
+                namespaces_data = json.loads(result_stdout)
                 namespaces = []
                 
                 for ns in namespaces_data.get("items", []):
                     ns_name = ns.get("metadata", {}).get("name", "")
+                    
+                    # Skip system namespaces
+                    if ns_name in ["kube-system", "kube-public", "kube-node-lease", "default"]:
+                        continue
+                    
                     # Filter by Temenos-related namespaces if provided
                     if temenos_namespaces:
                         if any(tns.lower() in ns_name.lower() for tns in temenos_namespaces):
                             namespaces.append(ns_name)
+                            logger.debug(f"Including namespace '{ns_name}' (matched filter)")
                     else:
-                        # Auto-detect Temenos namespaces
+                        # Auto-detect Temenos namespaces - use comprehensive patterns
                         temenos_patterns = [
                             r"transact", r"eventstore", r"adapter", r"genericconfig",
                             r"holdings", r"party", r"modular", r"temenos", r"tap",
-                            r"stmtgen", r"notification", r"audit", r"file", r"workflow"
+                            r"stmtgen", r"notification", r"audit", r"file", r"workflow",
+                            r"deposits", r"lending", r"webingress", r"ingress"
                         ]
                         if any(re.search(pattern, ns_name, re.IGNORECASE) for pattern in temenos_patterns):
                             namespaces.append(ns_name)
+                            logger.debug(f"Including namespace '{ns_name}' (matched Temenos pattern)")
+                        else:
+                            logger.debug(f"Skipping namespace '{ns_name}' (doesn't match Temenos patterns)")
                 
-                logger.info(f"Found {len(namespaces)} Temenos-related namespaces in {cluster_name}")
+                logger.info(f"Found {len(namespaces)} Temenos-related namespaces in {cluster_name}: {namespaces}")
                 
-                # Get pods from each namespace
+                # Get pods from each namespace - use async subprocess
                 for namespace in namespaces:
+                    logger.info(f"Querying pods from namespace '{namespace}' in cluster '{cluster_name}'")
                     cmd_pods = [
                         "kubectl", "get", "pods",
                         "-n", namespace,
@@ -231,42 +259,61 @@ class AKSService:
                         f"--kubeconfig={kubeconfig_path}"
                     ]
                     
-                    pods_result = subprocess.run(cmd_pods, capture_output=True, text=True, timeout=15)
-                    
-                    if pods_result.returncode == 0:
-                        try:
-                            pods_data = json.loads(pods_result.stdout)
-                            for pod in pods_data.get("items", []):
-                                pod_metadata = pod.get("metadata", {})
-                                pod_status = pod.get("status", {})
+                    try:
+                        process = await asyncio.create_subprocess_exec(
+                            *cmd_pods,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE
+                        )
+                        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
+                        
+                        if process.returncode == 0:
+                            try:
+                                pods_data = json.loads(stdout.decode() if stdout else "{}")
+                                namespace_pod_count = 0
+                                for pod in pods_data.get("items", []):
+                                    pod_metadata = pod.get("metadata", {})
+                                    pod_status = pod.get("status", {})
+                                    
+                                    pod_name = pod_metadata.get("name", "")
+                                    pod_labels = pod_metadata.get("labels", {})
+                                    
+                                    # Get container names
+                                    containers = []
+                                    for container in pod.get("spec", {}).get("containers", []):
+                                        containers.append(container.get("name", ""))
+                                    
+                                    # Get pod status
+                                    phase = pod_status.get("phase", "Unknown")
+                                    
+                                    pods.append(AKSPod(
+                                        name=pod_name,
+                                        namespace=namespace,
+                                        cluster_name=cluster_name,
+                                        cluster_resource_group=resource_group,
+                                        status=phase,
+                                        labels=pod_labels,
+                                        containers=containers
+                                    ))
+                                    namespace_pod_count += 1
                                 
-                                pod_name = pod_metadata.get("name", "")
-                                pod_labels = pod_metadata.get("labels", {})
-                                
-                                # Get container names
-                                containers = []
-                                for container in pod.get("spec", {}).get("containers", []):
-                                    containers.append(container.get("name", ""))
-                                
-                                # Get pod status
-                                phase = pod_status.get("phase", "Unknown")
-                                
-                                pods.append(AKSPod(
-                                    name=pod_name,
-                                    namespace=namespace,
-                                    cluster_name=cluster_name,
-                                    cluster_resource_group=resource_group,
-                                    status=phase,
-                                    labels=pod_labels,
-                                    containers=containers
-                                ))
-                        except json.JSONDecodeError:
-                            logger.warning(f"Failed to parse pods JSON for namespace {namespace}")
-                            continue
-                    else:
-                        logger.warning(f"Failed to get pods from namespace {namespace}: {pods_result.stderr}")
+                                logger.info(f"Found {namespace_pod_count} pods in namespace '{namespace}'")
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"Failed to parse pods JSON for namespace {namespace}: {e}")
+                                logger.debug(f"Response: {(stdout.decode() if stdout else '')[:200]}")
+                                continue
+                        else:
+                            error_msg = stderr.decode() if stderr else "Unknown error"
+                            logger.warning(f"Failed to get pods from namespace {namespace}: {error_msg}")
+                            logger.debug(f"Command: {' '.join(cmd_pods)}")
+                    except asyncio.TimeoutError:
+                        logger.warning(f"Timeout getting pods from namespace '{namespace}' (30s) - skipping")
+                        continue
+                    except Exception as e:
+                        logger.warning(f"Error getting pods from namespace '{namespace}': {e}")
+                        continue
                 
-                logger.info(f"Found {len(pods)} pods in {cluster_name}")
+                logger.info(f"Found total {len(pods)} pods across {len(namespaces)} namespaces in cluster '{cluster_name}'")
                 return pods
                 
             except json.JSONDecodeError:

@@ -276,6 +276,44 @@ To add a new RAG adapter:
 
 ---
 
+## Deployment
+
+### Production Deployment (Azure VM)
+
+The application is automatically deployed to an Azure VM when code is pushed to the `develop` branch.
+
+**VM Details:**
+- **Name**: `bsg-demo-platform-vm`
+- **Resource Group**: `bsg-demo-platform`
+- **Location**: `eastus`
+- **Size**: Standard_B2s (2 vCPUs, 4GB RAM)
+- **OS**: Ubuntu 22.04 LTS
+
+**Deployment Process:**
+1. GitHub Actions workflow triggers on push to `develop`
+2. Frontend is built and packaged
+3. Backend dependencies are installed
+4. Code is deployed to VM via SSH
+5. Nginx is configured as reverse proxy
+6. Backend runs as systemd service
+7. Health checks verify deployment
+
+**Access URLs (after deployment):**
+- **Frontend**: http://<VM_IP>
+- **Backend API**: http://<VM_IP>/api/v1
+- **API Docs**: http://<VM_IP>/docs
+- **Health Check**: http://<VM_IP>/api/v1/health
+
+**To get VM IP:**
+```bash
+az vm show -d -g bsg-demo-platform -n bsg-demo-platform-vm --query publicIps -o tsv
+```
+
+**Setup Instructions:**
+See `infrastructure/README.md` for detailed setup and configuration instructions.
+
+---
+
 **Last Updated**: November 13, 2025
 **Maintained By**: BSG Team
 

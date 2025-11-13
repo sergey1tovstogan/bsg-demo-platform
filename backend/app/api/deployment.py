@@ -218,18 +218,17 @@ async def get_resources(request: ResourcesRequest):
         # Discover pods from AKS clusters
         try:
             aks_service = AKSService(subscription_id)
-            # Common Temenos namespace patterns
-            temenos_namespaces = [
-                "transact", "eventstore", "adapterservice", "genericconfig",
-                "holdings", "partyv2", "modular-banking", "temenos"
-            ]
-            aks_pods = await aks_service.discover_pods_from_resources(resources, temenos_namespaces)
+            # Don't filter by specific namespaces - let auto-detection find all Temenos namespaces
+            # This will discover: eventstore, adapterservice, genericconfig, holdings, partyv2, transact, etc.
+            aks_pods = await aks_service.discover_pods_from_resources(resources, temenos_namespaces=None)
             
             if aks_pods:
-                logger.info(f"Adding {len(aks_pods)} AKS pods to resources")
+                logger.info(f"Adding {len(aks_pods)} AKS pods to resources from discovered namespaces")
                 resources.extend(aks_pods)
+            else:
+                logger.info("No AKS pods discovered (this is normal if no AKS clusters found)")
         except Exception as e:
-            logger.warning(f"Failed to discover AKS pods (this is optional): {e}")
+            logger.warning(f"Failed to discover AKS pods (this is optional): {e}", exc_info=True)
             # Don't fail the whole request if AKS discovery fails
         
         return {
