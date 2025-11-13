@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search } from 'lucide-react'
 import { apiService } from '../../services/api'
 
-type Step = 'subscription' | 'resourceGroups' | 'analysis'
+type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
 interface AzureResourceGroup {
   id: string
@@ -51,9 +51,11 @@ interface AnalysisResult {
 export function DeploymentAnalyzer() {
   const [currentStep, setCurrentStep] = useState<Step>('subscription')
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
-  const [_selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
+  const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
   const [services, setServices] = useState<AzureResource[]>([])
+  const [clusterNamespaces, setClusterNamespaces] = useState<Array<{cluster_name: string, resource_group: string, namespaces: string[]}>>([])
+  const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([])
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -104,33 +106,63 @@ export function DeploymentAnalyzer() {
       setSelectedResourceGroups(selected)
       setAnalysisResults([]) // Clear previous results
       
+      // Get Azure resources first
       const response = await apiService.getAzureResources(subscriptionId, selected)
       const servicesData = (response.data as any)?.data || response.data || []
       setServices(Array.isArray(servicesData) ? servicesData : [])
       
-      if (Array.isArray(servicesData) && servicesData.length > 0) {
-        // Set step first to show the analysis UI immediately
+      // Check if there are AKS clusters - if so, get namespaces for selection
+      const hasAKS = servicesData.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
+      
+      if (hasAKS) {
+        // Get namespaces from AKS clusters
+        try {
+          const namespacesResponse = await apiService.getAKSNamespaces(subscriptionId, selected)
+          const namespacesData = (namespacesResponse.data as any)?.data || namespacesResponse.data || []
+          setClusterNamespaces(namespacesData)
+          setCurrentStep('namespaces')
+        } catch (nsErr: any) {
+          console.warn('Failed to get namespaces, proceeding without namespace selection:', nsErr)
+          // Continue to analysis without namespace selection
+          setCurrentStep('analysis')
+          analyzeServices(servicesData).catch(err => {
+            console.error('Analysis error:', err)
+            setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
+            setLoading(false)
+          })
+        }
+      } else {
+        // No AKS clusters, proceed directly to analysis
         setCurrentStep('analysis')
-        setLoading(true) // Keep loading true for analysis
-        
-        // Start analysis in background
         analyzeServices(servicesData).catch(err => {
           console.error('Analysis error:', err)
           setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
           setLoading(false)
         })
-      } else {
-        setError('No services found in selected resource groups')
-        setLoading(false)
       }
     } catch (err: any) {
       console.error('Resource groups selection error:', err)
       setError(err.response?.data?.detail?.error || err.message || 'Failed to load resources')
       setLoading(false)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const analyzeServices = async (servicesToAnalyze: AzureResource[]) => {
+  const handleNamespacesSelected = async (selected: string[]) => {
+    setSelectedNamespaces(selected)
+    setCurrentStep('analysis')
+    setLoading(true)
+    
+    // Start analysis with selected namespaces
+    analyzeServices(services, selected).catch(err => {
+      console.error('Analysis error:', err)
+      setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
+      setLoading(false)
+    })
+  }
+
+  const analyzeServices = async (servicesToAnalyze: AzureResource[], namespaces?: string[]) => {
     try {
       setLoading(true)
       setError(null)
@@ -151,7 +183,7 @@ export function DeploymentAnalyzer() {
       
       try {
         const analysisId = `analysis_${Date.now()}`
-        const response = await apiService.analyzeAzureServices(servicesToAnalyze, analysisId)
+        const response = await apiService.analyzeAzureServices(servicesToAnalyze, analysisId, namespaces)
         setAnalysisResults((response.data as any)?.data || response.data || [])
         setAnalysisProgress({ current: servicesToAnalyze.length, total: servicesToAnalyze.length, message: 'Analysis complete!' })
       } finally {
@@ -168,9 +200,12 @@ export function DeploymentAnalyzer() {
 
   const handleBack = () => {
     if (currentStep === 'analysis') {
-      setCurrentStep('resourceGroups')
+      setCurrentStep('namespaces')
       setAnalysisResults([])
-      setServices([])
+    } else if (currentStep === 'namespaces') {
+      setCurrentStep('resourceGroups')
+      setSelectedNamespaces([])
+      setClusterNamespaces([])
     } else if (currentStep === 'resourceGroups') {
       setCurrentStep('subscription')
       setSelectedResourceGroups([])
@@ -197,6 +232,15 @@ export function DeploymentAnalyzer() {
           onBack={handleBack}
           loading={loading}
           error={error}
+        />
+      )}
+      
+      {currentStep === 'namespaces' && (
+        <NamespaceSelector
+          clusterNamespaces={clusterNamespaces}
+          onSelected={handleNamespacesSelected}
+          onBack={() => setCurrentStep('resourceGroups')}
+          loading={loading}
         />
       )}
       
@@ -452,6 +496,143 @@ function ResourceGroupSelector({
   )
 }
 
+// Namespace Selector Component
+function NamespaceSelector({
+  clusterNamespaces,
+  onSelected,
+  onBack,
+  loading
+}: {
+  clusterNamespaces: Array<{cluster_name: string, resource_group: string, namespaces: string[], error?: string}>
+  onSelected: (selected: string[]) => void
+  onBack: () => void
+  loading: boolean
+}) {
+  const [selected, setSelected] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const allNamespaces = clusterNamespaces.flatMap(c => c.namespaces)
+  const filteredNamespaces = allNamespaces.filter(ns => 
+    ns.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const toggleSelection = (namespace: string) => {
+    setSelected(prev => 
+      prev.includes(namespace)
+        ? prev.filter(n => n !== namespace)
+        : [...prev, namespace]
+    )
+  }
+
+  const handleSelectAll = () => {
+    if (selected.length === filteredNamespaces.length) {
+      setSelected([])
+    } else {
+      setSelected([...filteredNamespaces])
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Select AKS Namespaces</h2>
+          <p className="text-gray-600 mt-1">Select which Kubernetes namespaces to analyze for Temenos components</p>
+        </div>
+      </div>
+
+      {clusterNamespaces.length === 0 ? (
+        <div className="card text-center py-8">
+          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">No AKS clusters found or failed to retrieve namespaces</p>
+        </div>
+      ) : (
+        <>
+          {clusterNamespaces.map((cluster, idx) => (
+            <div key={idx} className="card">
+              <h3 className="font-semibold text-gray-900 mb-2">Cluster: {cluster.cluster_name}</h3>
+              <p className="text-sm text-gray-500 mb-4">Resource Group: {cluster.resource_group}</p>
+              {cluster.error ? (
+                <div className="text-red-600 text-sm">{cluster.error}</div>
+              ) : cluster.namespaces.length === 0 ? (
+                <div className="text-gray-500 text-sm">No namespaces found</div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {cluster.namespaces.map((ns) => {
+                    const isSelected = selected.includes(ns)
+                    return (
+                      <div
+                        key={ns}
+                        onClick={() => toggleSelection(ns)}
+                        className={`p-2 rounded border cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-purple-50 border-purple-500'
+                            : 'bg-gray-50 border-gray-300 hover:border-purple-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{ns}</span>
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-purple-600" />}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search namespaces..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+              <button
+                onClick={handleSelectAll}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                {selected.length === filteredNamespaces.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <div className="text-sm text-gray-600">
+              {selected.length > 0 && (
+                <span className="font-medium text-purple-600">{selected.length} selected</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            <button onClick={onBack} className="btn-secondary">
+              Back
+            </button>
+            <button
+              onClick={() => onSelected(selected)}
+              disabled={selected.length === 0 || loading}
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <span>Analyze {selected.length} Namespace{selected.length !== 1 ? 's' : ''}</span>
+              )}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // Service Analysis Component
 function ServiceAnalysis({
   services,
@@ -663,4 +844,5 @@ function ComponentCard({
     </div>
   )
 }
+
 

@@ -419,6 +419,93 @@ class AKSService:
             logger.error(f"Error getting pods from cluster {cluster.name}: {e}", exc_info=True)
             return pods
 
+    async def list_cluster_namespaces(
+        self,
+        cluster: AzureResource
+    ) -> List[str]:
+        """
+        List all namespaces in an AKS cluster (excluding system namespaces).
+        
+        Args:
+            cluster: AKS cluster resource
+            
+        Returns:
+            List of namespace names
+        """
+        namespaces = []
+        
+        try:
+            # Extract resource group and cluster name
+            id_parts = cluster.id.split("/")
+            resource_group = id_parts[id_parts.index("resourceGroups") + 1] if "resourceGroups" in id_parts else cluster.resource_group
+            cluster_name = cluster.name
+            
+            # Get credentials
+            creds = await self.get_cluster_credentials(resource_group, cluster_name)
+            
+            import os
+            default_kubeconfig = os.path.expanduser("~/.kube/config")
+            
+            if not creds:
+                if os.path.exists(default_kubeconfig):
+                    kubeconfig_path = default_kubeconfig
+                    # Try to switch context
+                    import asyncio
+                    loop = asyncio.get_event_loop()
+                    def _set_context():
+                        import shutil
+                        kubectl_cmd = shutil.which("kubectl") or "kubectl"
+                        return subprocess.run(
+                            [kubectl_cmd, "config", "use-context", cluster_name],
+                            capture_output=True,
+                            text=True,
+                            timeout=5
+                        )
+                    await loop.run_in_executor(None, _set_context)
+                else:
+                    logger.warning(f"Could not get credentials for cluster {cluster_name}")
+                    return namespaces
+            else:
+                kubeconfig_path = creds.get("kubeconfig_path")
+                if not kubeconfig_path:
+                    kubeconfig_path = default_kubeconfig if os.path.exists(default_kubeconfig) else None
+                    if not kubeconfig_path:
+                        return namespaces
+            
+            # Get namespaces
+            import asyncio
+            import shutil
+            kubectl_cmd = shutil.which("kubectl") or "kubectl"
+            cmd = [kubectl_cmd, "get", "namespaces", "-o", "json", f"--kubeconfig={kubeconfig_path}"]
+            
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
+            
+            if process.returncode != 0:
+                error_msg = stderr.decode() if stderr else "Unknown error"
+                logger.warning(f"Failed to get namespaces from {cluster_name}: {error_msg}")
+                return namespaces
+            
+            result_stdout = stdout.decode() if stdout else "{}"
+            namespaces_data = json.loads(result_stdout)
+            
+            for ns in namespaces_data.get("items", []):
+                ns_name = ns.get("metadata", {}).get("name", "")
+                # Skip system namespaces
+                if ns_name not in ["kube-system", "kube-public", "kube-node-lease", "default"]:
+                    namespaces.append(ns_name)
+            
+            logger.info(f"Found {len(namespaces)} namespaces in cluster {cluster_name}")
+            return sorted(namespaces)
+            
+        except Exception as e:
+            logger.error(f"Error listing namespaces for cluster {cluster.name}: {e}")
+            return namespaces
+
     async def discover_pods_from_resources(
         self,
         resources: List[AzureResource],
