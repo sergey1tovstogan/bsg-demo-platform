@@ -57,6 +57,9 @@ export function ApiOverview() {
 
   return (
     <div className="card">
+      {/* Title */}
+      <h2 className="text-2xl font-bold text-[#283054] mb-6">API Overview</h2>
+
       {/* API Framework Diagram */}
       <div
         className="relative rounded-lg overflow-hidden"
@@ -95,8 +98,8 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-[#1a1f3a] mb-1">Expose data & business</h3>
-                <p className="text-base text-purple-700 font-semibold">capabilities as REST APIs</p>
+                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Expose data & business</h3>
+                <p className="text-base font-bold text-purple-700 leading-tight">capabilities as REST APIs</p>
               </div>
             </div>
             {activeTooltip === 'expose-data' && (
@@ -124,8 +127,8 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-[#1a1f3a] mb-1">Public API Catalog for</h3>
-                <p className="text-base text-purple-700 font-semibold">documentation and reuse</p>
+                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Public API Catalog for</h3>
+                <p className="text-base font-bold text-purple-700 leading-tight">documentation and reuse</p>
               </div>
             </div>
             {activeTooltip === 'api-catalog' && (
@@ -153,7 +156,7 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-[#1a1f3a] mb-2">Open standards, and tooling</h3>
+                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight mb-2">Open standards and tooling</h3>
                 <div className="flex items-center space-x-3 mt-2">
                   <div className="text-[10px] font-bold text-gray-700 leading-tight">
                     THE <span className="text-purple-700">Berlin</span> GROUP<br/>
@@ -203,8 +206,8 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-[#1a1f3a] mb-1">Graphical wizards for better</h3>
-                <p className="text-base text-purple-700 font-semibold">productivity</p>
+                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Graphical wizards for better</h3>
+                <p className="text-base font-bold text-purple-700 leading-tight">productivity</p>
               </div>
             </div>
             {activeTooltip === 'graphical-wizards' && (
@@ -233,8 +236,8 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-[#1a1f3a] mb-1">Security standards ensuring data</h3>
-                <p className="text-base text-purple-700 font-semibold">privacy and authentication</p>
+                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Security standards ensuring data</h3>
+                <p className="text-base font-bold text-purple-700 leading-tight">privacy and authentication</p>
               </div>
             </div>
             {activeTooltip === 'security-standards' && (
@@ -264,7 +267,7 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-[#1a1f3a] mb-1">Upgradability and versioning</h3>
+                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Upgradability and versioning</h3>
               </div>
             </div>
             {activeTooltip === 'upgradability' && (
