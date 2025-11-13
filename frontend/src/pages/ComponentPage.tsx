@@ -5,6 +5,7 @@ import { VideoPlayer } from '../components/VideoPlayer'
 import { Chatbot } from '../components/Chatbot'
 import { DemoFrame } from '../components/DemoFrame'
 import { ObservabilityContent } from '../components/observability/ObservabilityContent'
+import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
@@ -51,6 +52,8 @@ export function ComponentPage({ componentId }: ComponentPageProps) {
         {activeTab === 'content' && (
           componentId === 'observability' ? (
             <ObservabilityContent />
+          ) : componentId === 'data-architecture' ? (
+            <DataArchitectureContent />
           ) : (
             <ContentViewer componentId={componentId} />
           )
