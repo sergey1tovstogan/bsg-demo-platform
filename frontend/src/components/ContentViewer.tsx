@@ -18,7 +18,6 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showTooltip, setShowTooltip] = useState(false)
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number | null>(null)
 
   useEffect(() => {
@@ -99,7 +98,7 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
         )}
 
         {/* Image content with interactive areas */}
-        {currentContent.type === 'document' && currentContent.body?.image_url && (
+        {currentContent.type === 'document' && (currentContent.body as any)?.image_url && (
           <>
             {/* Use native HTML component for API Overview, otherwise use image */}
             {componentId === 'integration' && currentContent.title === 'API Overview' ? (
@@ -107,11 +106,11 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
             ) : (
               <div className="relative mb-4">
                 <img
-                  src={currentContent.body.image_url}
+                  src={(currentContent.body as any).image_url}
                   alt={currentContent.title}
                   className="w-full h-auto rounded-lg shadow-md"
                 />
-                {currentContent.body.interactive_areas?.map((area, idx) => (
+                {(currentContent.body as any).interactive_areas?.map((area: any, idx: number) => (
                   <div
                     key={idx}
                     className="absolute cursor-help"

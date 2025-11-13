@@ -51,7 +51,7 @@ interface AnalysisResult {
 export function DeploymentAnalyzer() {
   const [currentStep, setCurrentStep] = useState<Step>('subscription')
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
-  const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
+  const [_selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
   const [services, setServices] = useState<AzureResource[]>([])
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
@@ -66,13 +66,13 @@ export function DeploymentAnalyzer() {
       // Save subscription ID to localStorage
       localStorage.setItem('lastAzureSubscriptionId', subId)
       const connectResponse = await apiService.connectAzureSubscription(subId)
-      if (connectResponse.status === 'success') {
+      if (connectResponse.data?.status === 'success' || (connectResponse as any).status === 'success') {
         setSubscriptionId(subId)
         const response = await apiService.getAzureResourceGroups(subId)
-        setResourceGroups(response.data || [])
+        setResourceGroups(response.data?.data || response.data || [])
         setCurrentStep('resourceGroups')
       } else {
-        setError(connectResponse.error || 'Failed to connect to Azure')
+        setError((connectResponse.data as any)?.error || (connectResponse as any).error || 'Failed to connect to Azure')
       }
     } catch (err: any) {
       // Handle different error formats
@@ -105,10 +105,10 @@ export function DeploymentAnalyzer() {
       setAnalysisResults([]) // Clear previous results
       
       const response = await apiService.getAzureResources(subscriptionId, selected)
-      const servicesData = response.data || []
-      setServices(servicesData)
+      const servicesData = (response.data as any)?.data || response.data || []
+      setServices(Array.isArray(servicesData) ? servicesData : [])
       
-      if (servicesData.length > 0) {
+      if (Array.isArray(servicesData) && servicesData.length > 0) {
         // Set step first to show the analysis UI immediately
         setCurrentStep('analysis')
         setLoading(true) // Keep loading true for analysis
@@ -152,7 +152,7 @@ export function DeploymentAnalyzer() {
       try {
         const analysisId = `analysis_${Date.now()}`
         const response = await apiService.analyzeAzureServices(servicesToAnalyze, analysisId)
-        setAnalysisResults(response.data || [])
+        setAnalysisResults((response.data as any)?.data || response.data || [])
         setAnalysisProgress({ current: servicesToAnalyze.length, total: servicesToAnalyze.length, message: 'Analysis complete!' })
       } finally {
         clearInterval(progressInterval)
@@ -307,7 +307,7 @@ function SubscriptionInput({
 
 // Resource Group Selector Component
 function ResourceGroupSelector({
-  subscriptionId,
+  subscriptionId: _subscriptionId,
   resourceGroups,
   onSelected,
   onBack,

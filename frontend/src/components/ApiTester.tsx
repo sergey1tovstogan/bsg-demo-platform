@@ -3,8 +3,6 @@ import {
   Send,
   Loader2,
   ChevronDown,
-  Plus,
-  Trash2,
   Copy,
   Check,
   AlertCircle
@@ -12,7 +10,6 @@ import {
 import type {
   SwaggerSpec,
   ApiEndpoint,
-  Parameter,
   ApiResponse as ApiResponseType
 } from '../types/swagger'
 
@@ -20,8 +17,8 @@ interface ApiTesterProps {
   componentId?: string
 }
 
-export function ApiTester({ componentId }: ApiTesterProps) {
-  const [swaggerSpec, setSwaggerSpec] = useState<SwaggerSpec | null>(null)
+export function ApiTester({ componentId: _componentId }: ApiTesterProps) {
+  const [_swaggerSpec, setSwaggerSpec] = useState<SwaggerSpec | null>(null)
   const [endpoints, setEndpoints] = useState<ApiEndpoint[]>([])
   const [selectedEndpoint, setSelectedEndpoint] = useState<ApiEndpoint | null>(null)
   const [loading, setLoading] = useState(true)
