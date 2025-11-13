@@ -1,4 +1,4 @@
-> **Note**: This file is synchronized with `claude.md`. Keep both files in sync (except for this first line which references the other file).
+> **Note**: This file is synchronized with `.cursor/rules`. Keep both files in sync (except for this first line which references the other file).
 
 # BSG Demo Platform - Development Context
 
@@ -338,3 +338,4 @@ bsg-demo-platform/
 
 **Last Updated**: November 13, 2025
 **Maintained By**: BSG Team
+
