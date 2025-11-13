@@ -51,7 +51,6 @@ interface AnalysisResult {
 export function DeploymentAnalyzer() {
   const [currentStep, setCurrentStep] = useState<Step>('subscription')
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
-  const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
   const [services, setServices] = useState<AzureResource[]>([])
   const [clusterNamespaces, setClusterNamespaces] = useState<Array<{cluster_name: string, resource_group: string, namespaces: string[]}>>([])
@@ -103,7 +102,6 @@ export function DeploymentAnalyzer() {
     try {
       setLoading(true)
       setError(null)
-      setSelectedResourceGroups(selected)
       setAnalysisResults([]) // Clear previous results
       
       // Get Azure resources first
@@ -208,7 +206,6 @@ export function DeploymentAnalyzer() {
       setClusterNamespaces([])
     } else if (currentStep === 'resourceGroups') {
       setCurrentStep('subscription')
-      setSelectedResourceGroups([])
       setResourceGroups([])
     }
   }

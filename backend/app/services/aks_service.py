@@ -472,26 +472,55 @@ class AKSService:
                     if not kubeconfig_path:
                         return namespaces
             
-            # Get namespaces
+            # Get namespaces - use environment variable for kubeconfig if using default
             import asyncio
             import shutil
+            import os
             kubectl_cmd = shutil.which("kubectl") or "kubectl"
-            cmd = [kubectl_cmd, "get", "namespaces", "-o", "json", f"--kubeconfig={kubeconfig_path}"]
+            
+            # Set KUBECONFIG environment variable if using default kubeconfig
+            env = os.environ.copy()
+            if kubeconfig_path == default_kubeconfig:
+                env["KUBECONFIG"] = default_kubeconfig
+                # Also try to switch context first
+                try:
+                    switch_cmd = [kubectl_cmd, "config", "use-context", cluster_name]
+                    switch_result = await asyncio.create_subprocess_exec(
+                        *switch_cmd,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        env=env
+                    )
+                    await asyncio.wait_for(switch_result.communicate(), timeout=5.0)
+                except Exception as e:
+                    logger.debug(f"Could not switch context (will try anyway): {e}")
+            
+            cmd = [kubectl_cmd, "get", "namespaces", "-o", "json"]
+            if kubeconfig_path != default_kubeconfig:
+                cmd.append(f"--kubeconfig={kubeconfig_path}")
             
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                env=env
             )
             stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
             
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown error"
                 logger.warning(f"Failed to get namespaces from {cluster_name}: {error_msg}")
+                logger.debug(f"Command: {' '.join(cmd)}")
+                logger.debug(f"Kubeconfig path: {kubeconfig_path}")
                 return namespaces
             
             result_stdout = stdout.decode() if stdout else "{}"
-            namespaces_data = json.loads(result_stdout)
+            try:
+                namespaces_data = json.loads(result_stdout)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse namespaces JSON: {e}")
+                logger.debug(f"Output: {result_stdout[:500]}")
+                return namespaces
             
             for ns in namespaces_data.get("items", []):
                 ns_name = ns.get("metadata", {}).get("name", "")
