@@ -41,6 +41,7 @@ Write-Host ''
 Remove-Item Env:\CORS_ORIGINS -ErrorAction SilentlyContinue
 Remove-Item Env:\CORS_METHODS -ErrorAction SilentlyContinue
 Remove-Item Env:\CORS_HEADERS -ErrorAction SilentlyContinue
+Remove-Item Env:\API_V1_PREFIX -ErrorAction SilentlyContinue
 
 cd '$PWD\backend'
 
