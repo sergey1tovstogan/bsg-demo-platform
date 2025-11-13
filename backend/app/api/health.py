@@ -1,13 +1,13 @@
 """
 Health Check API Endpoints
 
-Provides health, readiness, and liveness endpoints for monitoring.
+Provides health, readiness, and liveness endpoints for monitoring using MongoDB.
 """
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.core.database import get_db, get_db_health
+from app.core.database import get_database, get_db_health
 from app.core.config import settings
 from app.utils.datetime_utils import utc_now, format_iso8601
 
@@ -15,7 +15,7 @@ router = APIRouter(tags=["Health"])
 
 
 @router.get("/health", status_code=status.HTTP_200_OK)
-async def health_check(db: Session = Depends(get_db)):
+async def health_check(db: AsyncIOMotorDatabase = Depends(get_database)):
     """
     Comprehensive health check endpoint.
 
@@ -36,7 +36,7 @@ async def health_check(db: Session = Depends(get_db)):
     }
 
     # Check database
-    db_health = get_db_health()
+    db_health = await get_db_health()
     health_status["checks"]["database"] = db_health
 
     # Check video storage
@@ -71,7 +71,7 @@ async def health_check(db: Session = Depends(get_db)):
 
 
 @router.get("/ready", status_code=status.HTTP_200_OK)
-async def readiness_check(db: Session = Depends(get_db)):
+async def readiness_check(db: AsyncIOMotorDatabase = Depends(get_database)):
     """
     Kubernetes readiness probe endpoint.
 
@@ -81,18 +81,17 @@ async def readiness_check(db: Session = Depends(get_db)):
         Ready status
     """
     # Check database connection
-    from app.core.database import check_db_connection
-
-    if not check_db_connection():
+    try:
+        await db.client.admin.command('ping')
+        return {
+            "ready": True,
+            "timestamp": format_iso8601(utc_now())
+        }
+    except Exception as e:
         return {
             "ready": False,
-            "reason": "Database connection failed"
+            "reason": f"Database connection failed: {str(e)}"
         }
-
-    return {
-        "ready": True,
-        "timestamp": format_iso8601(utc_now())
-    }
 
 
 @router.get("/live", status_code=status.HTTP_200_OK)
@@ -112,7 +111,7 @@ async def liveness_check():
 
 
 @router.get("/metrics", status_code=status.HTTP_200_OK)
-async def metrics():
+async def metrics(db: AsyncIOMotorDatabase = Depends(get_database)):
     """
     Basic metrics endpoint.
 
@@ -121,23 +120,31 @@ async def metrics():
     Returns:
         Application metrics
     """
-    from app.core.database import engine
-
-    # Get database pool metrics
-    pool = engine.pool
-    pool_metrics = {
-        "size": pool.size(),
-        "checked_in": pool.checkedin(),
-        "checked_out": pool.checkedout(),
-        "overflow": pool.overflow(),
-        "total_connections": pool.size() + pool.overflow()
-    }
+    try:
+        # Get MongoDB server status
+        server_status = await db.client.admin.command('serverStatus')
+        
+        # Get database stats
+        db_stats = await db.command('dbStats')
+        
+        metrics_data = {
+            "connections": {
+                "current": server_status.get("connections", {}).get("current", 0),
+                "available": server_status.get("connections", {}).get("available", 0),
+            },
+            "database": {
+                "name": db_stats.get("db", "unknown"),
+                "collections": db_stats.get("collections", 0),
+                "data_size": db_stats.get("dataSize", 0),
+                "storage_size": db_stats.get("storageSize", 0),
+            }
+        }
+    except Exception as e:
+        metrics_data = {"error": str(e)}
 
     return {
         "timestamp": format_iso8601(utc_now()),
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
-        "metrics": {
-            "database_pool": pool_metrics
-        }
+        "metrics": metrics_data
     }

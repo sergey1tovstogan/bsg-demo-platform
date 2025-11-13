@@ -265,8 +265,21 @@ start_backend() {
 
     # Install dependencies if requirements.txt exists
     if [ -f "$BACKEND_DIR/requirements.txt" ]; then
-        print_info "Installing backend dependencies..."
-        pip install -q -r "$BACKEND_DIR/requirements.txt"
+        print_info "Checking and installing backend dependencies..."
+        
+        # Check if pip is available
+        local PIP_CMD="pip3"
+        if ! command_exists pip3; then
+            PIP_CMD="pip"
+        fi
+        
+        # Check for missing packages and install them
+        print_info "Installing/updating Python packages from requirements.txt..."
+        if $PIP_CMD install --upgrade -r "$BACKEND_DIR/requirements.txt" 2>&1 | grep -q "ERROR"; then
+            print_warning "Some packages may have failed to install. Check output above."
+        else
+            print_success "All backend dependencies are installed"
+        fi
     fi
 
     # Start the backend server

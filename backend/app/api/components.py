@@ -1,15 +1,14 @@
 """
 Component Content API Endpoints
 
-Provides endpoints for retrieving component content.
+Provides endpoints for retrieving component content using MongoDB.
 """
 
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.core.database import get_db, paginate_query, create_pagination_metadata
+from app.core.database import get_database
 from app.models.content import Content
 from app.core.logging import get_logger
 
@@ -18,13 +17,25 @@ logger = get_logger(__name__)
 router = APIRouter(tags=["Components"])
 
 
+def create_pagination_metadata(page: int, page_size: int, total_items: int, total_pages: int) -> dict:
+    """Create pagination metadata for API responses."""
+    return {
+        "page": page,
+        "page_size": page_size,
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_previous": page > 1,
+    }
+
+
 @router.get("/components/{component_id}/content", status_code=status.HTTP_200_OK)
 async def get_component_content(
     component_id: str,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     type: Optional[str] = Query(None, description="Filter by content type"),
-    db: Session = Depends(get_db)
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
     Get content for a specific component.
@@ -34,27 +45,30 @@ async def get_component_content(
         page: Page number (1-indexed)
         page_size: Items per page
         type: Optional content type filter
-        db: Database session
+        db: MongoDB database
 
     Returns:
         Paginated list of content items
     """
     try:
-        # Build query
-        query = db.query(Content).filter(Content.component_id == component_id)
-        
-        # Apply type filter if provided
+        # Build query filter
+        query_filter = {"component_id": component_id}
         if type:
-            query = query.filter(Content.type == type)
+            query_filter["type"] = type
         
-        # Order by order field
-        query = query.order_by(Content.order.asc())
+        # Get total count
+        total_count = await db.content.count_documents(query_filter)
+        total_pages = (total_count + page_size - 1) // page_size
         
-        # Paginate
-        items, total_count, total_pages = paginate_query(query, page, page_size)
+        # Calculate skip
+        skip = (page - 1) * page_size
         
-        # Convert to dict
-        content_list = [item.to_dict() for item in items]
+        # Fetch items
+        cursor = db.content.find(query_filter).sort("order", 1).skip(skip).limit(page_size)
+        items = await cursor.to_list(length=page_size)
+        
+        # Convert to Content models and then to dict
+        content_list = [Content(**item).to_dict() for item in items]
         
         # Create response
         return {
@@ -74,7 +88,7 @@ async def get_component_content(
 async def get_content_item(
     component_id: str,
     content_id: str,
-    db: Session = Depends(get_db)
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
     Get a specific content item.
@@ -82,25 +96,24 @@ async def get_content_item(
     Args:
         component_id: Component identifier
         content_id: Content identifier
-        db: Database session
+        db: MongoDB database
 
     Returns:
         Content item
     """
     try:
-        content = db.query(Content).filter(
-            and_(
-                Content.component_id == component_id,
-                Content.content_id == content_id
-            )
-        ).first()
+        content_doc = await db.content.find_one({
+            "component_id": component_id,
+            "content_id": content_id
+        })
         
-        if not content:
+        if not content_doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Content not found: {content_id}"
             )
         
+        content = Content(**content_doc)
         return {
             "success": True,
             "data": content.to_dict()

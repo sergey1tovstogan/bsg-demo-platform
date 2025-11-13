@@ -7,7 +7,7 @@ Provides consistent error responses and exception handling.
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import SQLAlchemyError
+from pymongo.errors import PyMongoError
 from typing import Union
 
 from app.core.logging import get_logger, get_request_id
@@ -169,7 +169,7 @@ async def authorization_error_handler(request: Request, exc: AuthorizationError)
     )
 
 
-async def database_error_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+async def database_error_handler(request: Request, exc: PyMongoError) -> JSONResponse:
     """Handle database errors."""
     logger.error(f"Database error: {str(exc)}", exc_info=True)
 
@@ -216,7 +216,7 @@ def register_error_handlers(app):
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(AuthenticationError, authentication_error_handler)
     app.add_exception_handler(AuthorizationError, authorization_error_handler)
-    app.add_exception_handler(SQLAlchemyError, database_error_handler)
+    app.add_exception_handler(PyMongoError, database_error_handler)
     app.add_exception_handler(Exception, generic_error_handler)
 
     logger.info("Registered error handlers")

@@ -94,6 +94,8 @@ venv.bak/
 *.sqlite
 *.sqlite3
 *.db-journal
+postgres_data/
+backend/postgres_data/
 
 # Alembic
 alembic/versions/*.pyc

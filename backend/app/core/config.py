@@ -27,13 +27,13 @@ class Settings(BaseSettings):
 
     # Database Settings
     DATABASE_URL: str = Field(
-        default="postgresql://postgres:postgres@localhost:5432/bsg_demo",
-        description="PostgreSQL connection string"
+        default="mongodb://localhost:27017/bsg_demo",
+        description="MongoDB connection string"
     )
-    DB_POOL_SIZE: int = Field(default=50, description="Database connection pool size")
-    DB_MAX_OVERFLOW: int = Field(default=10, description="Max overflow connections")
-    DB_POOL_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
-    DB_ECHO: bool = Field(default=False, description="Echo SQL statements")
+    DATABASE_NAME: str = Field(default="bsg_demo", description="MongoDB database name")
+    DB_MAX_POOL_SIZE: int = Field(default=50, description="Database connection pool size")
+    DB_MIN_POOL_SIZE: int = Field(default=10, description="Minimum connection pool size")
+    DB_CONNECT_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
 
     # MSSQL External Database
     MSSQL_HOST: str = Field(default="10.1.4.135", description="MSSQL server host")
@@ -150,8 +150,8 @@ class Settings(BaseSettings):
 
     @property
     def database_url_async(self) -> str:
-        """Get async database URL."""
-        return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+        """Get async database URL (same as DATABASE_URL for MongoDB)."""
+        return self.DATABASE_URL
 
 
 # Global settings instance

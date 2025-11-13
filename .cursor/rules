@@ -17,24 +17,23 @@ The **BSG Demo Platform** is a modular, component-based application designed to 
 - **Language**: JavaScript/TypeScript
 
 ### Backend
-- **Framework**: Python FastAPI (recommended) or Flask
+- **Framework**: Python FastAPI
 - **API Documentation**: OpenAPI/Swagger
-- **ORM**: SQLAlchemy 2.0+
-- **Migration Tool**: Alembic
-- **Validation**: Pydantic (FastAPI) or Marshmallow (Flask)
+- **Database Driver**: Motor (async MongoDB driver)
+- **Validation**: Pydantic (FastAPI)
 - **Authentication**: python-jose (JWT)
 - **Password Hashing**: bcrypt
-- **Database Driver**: psycopg2 (PostgreSQL)
 - **Python Version**: 3.9+
 
 ### Database
-- **Primary Database**: PostgreSQL 15+
-- **Container**: Docker
-- **Data Persistence**: Volume mapped to codebase directory
+- **Primary Database**: MongoDB (Azure Cosmos DB for MongoDB API)
+- **Connection**: Azure Cosmos DB or local MongoDB
+- **Driver**: Motor (async MongoDB driver)
+- **No migrations needed**: MongoDB is schema-less
 
 ### Storage
 - **Video Storage**: Local file system (videos directory in codebase)
-- **Content Storage**: PostgreSQL + JSON fields
+- **Content Storage**: MongoDB collections
 - **Static Assets**: File system with CDN-ready structure
 
 ### Optional Services
@@ -225,7 +224,6 @@ bsg-demo-platform/
 │   ├── observability/
 │   └── design-time/
 ├── data/
-│   └── postgres/
 ├── design/
 │   ├── architecture-overview.md
 │   ├── common-infrastructure.md

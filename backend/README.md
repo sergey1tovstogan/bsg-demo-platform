@@ -7,7 +7,7 @@ Backend API for the BSG Demo Platform, providing authentication, video managemen
 - **Authentication & Authorization**: JWT-based authentication with role-based access control (RBAC)
 - **User Management**: Registration, login, logout, and session management
 - **Video Storage & Streaming**: Efficient video upload, storage, and HTTP range-based streaming
-- **Database Management**: PostgreSQL with SQLAlchemy ORM and Alembic migrations
+- **Database Management**: MongoDB (Azure Cosmos DB) with Motor async driver
 - **Structured Logging**: JSON-formatted logs with correlation IDs and audit trails
 - **API Documentation**: Auto-generated OpenAPI/Swagger documentation
 - **Health Checks**: Kubernetes-compatible health, readiness, and liveness probes
@@ -17,9 +17,9 @@ Backend API for the BSG Demo Platform, providing authentication, video managemen
 ## Technology Stack
 
 - **Framework**: FastAPI 0.109+
-- **Database**: PostgreSQL 13+
-- **ORM**: SQLAlchemy 2.0+
-- **Migrations**: Alembic
+- **Database**: MongoDB (Azure Cosmos DB for MongoDB API)
+- **Driver**: Motor (async MongoDB driver)
+- **ODM**: Pydantic models with ObjectId
 - **Authentication**: JWT (python-jose)
 - **Password Hashing**: bcrypt
 - **Caching**: Redis (optional)
@@ -52,7 +52,6 @@ backend/
 │   │   ├── security.py       # Security utilities
 │   │   └── validators.py     # Validation utilities
 │   └── main.py        # FastAPI application
-├── alembic/           # Database migrations
 ├── tests/             # Test suites
 ├── uploads/           # Video uploads directory
 ├── Dockerfile         # Docker configuration
@@ -65,7 +64,7 @@ backend/
 
 - Docker or Podman
 - Python 3.11+ (for local development)
-- PostgreSQL 13+ (for local development without Docker)
+- MongoDB connection string (Azure Cosmos DB or local MongoDB)
 
 ### Using Docker/Podman (Recommended)
 
@@ -123,20 +122,19 @@ The platform automatically detects whether you have Docker or Podman installed.
    pip install -r requirements.txt
    ```
 
-3. **Set up PostgreSQL database**:
-   ```sql
-   CREATE DATABASE bsg_demo;
-   ```
+3. **Set up MongoDB connection**:
+   - For Azure Cosmos DB: Use the connection string from Azure portal
+   - For local MongoDB: Use `mongodb://localhost:27017/bsg_demo`
 
 4. **Configure environment**:
    ```bash
    cp ../.env.example ../.env
-   # Edit .env with your database credentials
+   # Edit .env with your MongoDB connection string
    ```
 
-5. **Run migrations**:
+5. **Seed database (optional)**:
    ```bash
-   alembic upgrade head
+   python app/db_seed.py
    ```
 
 6. **Start the server**:
@@ -144,25 +142,19 @@ The platform automatically detects whether you have Docker or Podman installed.
    uvicorn app.main:app --reload
    ```
 
-## Database Migrations
+## Database Setup
 
-### Create a new migration
+MongoDB is schema-less, so no migrations are needed. Collections are created automatically when data is inserted.
 
-```bash
-alembic revision --autogenerate -m "Description of changes"
-```
-
-### Apply migrations
+### Seed initial data
 
 ```bash
-alembic upgrade head
+python app/db_seed.py
 ```
 
-### Rollback migration
+### Create indexes
 
-```bash
-alembic downgrade -1
-```
+Indexes are created programmatically in the code. See `app/core/database.py` and `app/db_seed.py` for index creation.
 
 ## API Endpoints
 
@@ -188,7 +180,8 @@ Configuration is managed through environment variables. See [.env.example](../.e
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Required |
+| `DATABASE_URL` | MongoDB connection string | Required |
+| `DATABASE_NAME` | MongoDB database name | bsg_demo |
 | `JWT_SECRET_KEY` | Secret for JWT signing | Required |
 | `ENVIRONMENT` | Environment (development/staging/production) | development |
 | `LOG_LEVEL` | Logging level | INFO |
@@ -322,28 +315,18 @@ Logs are written to stdout/stderr in JSON format, compatible with:
 ### Database connection errors
 
 ```bash
-# Check if PostgreSQL is running
-docker compose ps db
+# Test MongoDB connection
+python -c "from motor.motor_asyncio import AsyncIOMotorClient; import asyncio; async def test(): client = AsyncIOMotorClient('YOUR_CONNECTION_STRING'); await client.admin.command('ping'); print('Connected!'); asyncio.run(test())"
 
-# View database logs
-docker compose logs db
-
-# Test connection
-docker compose exec backend psql $DATABASE_URL -c "SELECT 1"
+# Check database collections
+# Use MongoDB Compass or mongo shell to verify collections exist
 ```
 
-### Migration issues
+### Index creation
 
 ```bash
-# Check current migration version
-alembic current
-
-# View migration history
-alembic history
-
-# Reset database (development only!)
-alembic downgrade base
-alembic upgrade head
+# Indexes are created automatically, but you can verify them:
+# Connect to MongoDB and run: db.users.getIndexes()
 ```
 
 ## Contributing

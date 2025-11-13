@@ -1,16 +1,47 @@
 """
 User Models
 
-Database models for user authentication and authorization.
+Database models for user authentication and authorization using MongoDB.
 """
 
 from datetime import datetime
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, Enum as SQLEnum, ForeignKey
-from sqlalchemy.orm import relationship
+from typing import Optional
+from pydantic import BaseModel, Field, EmailStr
+from bson import ObjectId
 import enum
 
-from app.core.database import Base
 from app.utils.datetime_utils import utc_now
+
+
+class PyObjectId(ObjectId):
+    """Custom ObjectId type for Pydantic v2."""
+    
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        from pydantic_core import core_schema
+        return core_schema.json_or_python_schema(
+            json_schema=core_schema.str_schema(),
+            python_schema=core_schema.union_schema([
+                core_schema.is_instance_schema(ObjectId),
+                core_schema.chain_schema([
+                    core_schema.str_schema(),
+                    core_schema.no_info_plain_validator_function(cls.validate),
+                ])
+            ]),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda x: str(x) if x else None
+            ),
+        )
+    
+    @classmethod
+    def validate(cls, v):
+        if isinstance(v, ObjectId):
+            return v
+        if isinstance(v, str):
+            if ObjectId.is_valid(v):
+                return ObjectId(v)
+            raise ValueError("Invalid ObjectId string")
+        raise ValueError("Invalid ObjectId type")
 
 
 class UserRole(str, enum.Enum):
@@ -20,46 +51,38 @@ class UserRole(str, enum.Enum):
     GUEST = "guest"
 
 
-class User(Base):
+class User(BaseModel):
     """User model for authentication and authorization."""
+    
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    hashed_password: str
+    full_name: Optional[str] = None
+    role: UserRole = UserRole.USER
+    is_active: bool = True
+    is_verified: bool = False
+    is_superuser: bool = False
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+    last_login: Optional[datetime] = None
+    reset_token: Optional[str] = None
+    reset_token_expires: Optional[datetime] = None
+    verification_token: Optional[str] = None
+    verification_token_expires: Optional[datetime] = None
 
-    __tablename__ = "users"
-
-    # Primary key
-    id = Column(Integer, primary_key=True, index=True)
-
-    # Authentication fields
-    username = Column(String(50), unique=True, index=True, nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-
-    # Profile fields
-    full_name = Column(String(255), nullable=True)
-    role = Column(SQLEnum(UserRole), default=UserRole.USER, nullable=False)
-
-    # Status fields
-    is_active = Column(Boolean, default=True, nullable=False)
-    is_verified = Column(Boolean, default=False, nullable=False)
-    is_superuser = Column(Boolean, default=False, nullable=False)
-
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
-    last_login = Column(DateTime(timezone=True), nullable=True)
-
-    # Password reset
-    reset_token = Column(String(255), nullable=True)
-    reset_token_expires = Column(DateTime(timezone=True), nullable=True)
-
-    # Email verification
-    verification_token = Column(String(255), nullable=True)
-    verification_token_expires = Column(DateTime(timezone=True), nullable=True)
-
-    # Relationships
-    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
-
-    def __repr__(self):
-        return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+        json_schema_extra = {
+            "example": {
+                "username": "johndoe",
+                "email": "john@example.com",
+                "full_name": "John Doe",
+                "role": "user"
+            }
+        }
 
     def has_role(self, role: UserRole) -> bool:
         """Check if user has a specific role."""
@@ -72,7 +95,7 @@ class User(Base):
     def to_dict(self):
         """Convert user to dictionary (without sensitive fields)."""
         return {
-            "id": self.id,
+            "id": str(self.id) if self.id else None,
             "username": self.username,
             "email": self.email,
             "full_name": self.full_name,
@@ -84,36 +107,24 @@ class User(Base):
         }
 
 
-class UserSession(Base):
+class UserSession(BaseModel):
     """User session model for tracking active sessions."""
+    
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    user_id: PyObjectId
+    refresh_token: str
+    user_agent: Optional[str] = None
+    ip_address: Optional[str] = None
+    is_active: bool = True
+    remember_me: bool = False
+    created_at: datetime = Field(default_factory=utc_now)
+    expires_at: datetime
+    last_activity: datetime = Field(default_factory=utc_now)
 
-    __tablename__ = "user_sessions"
-
-    # Primary key
-    id = Column(Integer, primary_key=True, index=True)
-
-    # Foreign key
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-
-    # Session fields
-    refresh_token = Column(String(255), unique=True, index=True, nullable=False)
-    user_agent = Column(String(500), nullable=True)
-    ip_address = Column(String(50), nullable=True)
-
-    # Status
-    is_active = Column(Boolean, default=True, nullable=False)
-    remember_me = Column(Boolean, default=False, nullable=False)
-
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
-    last_activity = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-
-    # Relationship
-    user = relationship("User", back_populates="sessions")
-
-    def __repr__(self):
-        return f"<UserSession(id={self.id}, user_id={self.user_id}, active={self.is_active})>"
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
 
     def is_expired(self) -> bool:
         """Check if session is expired."""
@@ -123,8 +134,8 @@ class UserSession(Base):
     def to_dict(self):
         """Convert session to dictionary."""
         return {
-            "id": self.id,
-            "user_id": self.user_id,
+            "id": str(self.id) if self.id else None,
+            "user_id": str(self.user_id) if self.user_id else None,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,

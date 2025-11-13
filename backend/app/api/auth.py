@@ -1,17 +1,18 @@
 """
 Authentication API Endpoints
 
-Handles user registration, login, logout, and token refresh.
+Handles user registration, login, logout, and token refresh using MongoDB.
 """
 
 from fastapi import APIRouter, Depends, Request, Header
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
+from bson import ObjectId
 
-from app.core.database import get_db
+from app.core.database import get_database
 from app.core.logging import get_logger, audit_logger
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, PyObjectId
 from app.services.auth_service import AuthService, AuthenticationError
 from app.utils.security import hash_password
 from app.utils.validators import validate_password_strength, validate_username
@@ -55,7 +56,7 @@ class RefreshRequest(BaseModel):
 @router.post("/register", status_code=201)
 async def register(
     request_data: RegisterRequest,
-    db: Session = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_database),
     request: Request = None
 ):
     """
@@ -63,7 +64,7 @@ async def register(
 
     Args:
         request_data: Registration data
-        db: Database session
+        db: MongoDB database
         request: FastAPI request
 
     Returns:
@@ -84,35 +85,38 @@ async def register(
         raise ValidationError(error_msg)
 
     # Check if username already exists
-    existing_user = db.query(User).filter(User.username == request_data.username).first()
+    existing_user = await db.users.find_one({"username": request_data.username})
     if existing_user:
         raise ConflictError("Username already registered")
 
     # Check if email already exists
-    existing_email = db.query(User).filter(User.email == request_data.email).first()
+    existing_email = await db.users.find_one({"email": request_data.email})
     if existing_email:
         raise ConflictError("Email already registered")
 
     # Create new user
-    new_user = User(
-        username=request_data.username,
-        email=request_data.email,
-        hashed_password=hash_password(request_data.password),
-        full_name=request_data.full_name,
-        role=UserRole.USER,
-        is_active=True,
-        is_verified=False
-    )
+    new_user_dict = {
+        "username": request_data.username,
+        "email": request_data.email,
+        "hashed_password": hash_password(request_data.password),
+        "full_name": request_data.full_name,
+        "role": UserRole.USER.value,
+        "is_active": True,
+        "is_verified": False,
+        "is_superuser": False,
+        "created_at": utc_now(),
+        "updated_at": utc_now(),
+    }
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    result = await db.users.insert_one(new_user_dict)
+    new_user_dict["_id"] = result.inserted_id
+    new_user = User(**new_user_dict)
 
     # Log registration
     ip_address = request.client.host if request and request.client else None
     audit_logger.log_auth_event(
         "user_registered",
-        user_id=new_user.id,
+        user_id=str(new_user.id),
         username=new_user.username,
         ip_address=ip_address,
         success=True
@@ -135,7 +139,7 @@ async def register(
 @router.post("/login")
 async def login(
     request_data: LoginRequest,
-    db: Session = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_database),
     request: Request = None,
     user_agent: Optional[str] = Header(None)
 ):
@@ -144,7 +148,7 @@ async def login(
 
     Args:
         request_data: Login credentials
-        db: Database session
+        db: MongoDB database
         request: FastAPI request
         user_agent: User agent header
 
@@ -157,7 +161,7 @@ async def login(
     ip_address = request.client.host if request and request.client else None
 
     # Authenticate user
-    user = AuthService.authenticate_user(
+    user = await AuthService.authenticate_user(
         db,
         request_data.username,
         request_data.password,
@@ -169,18 +173,18 @@ async def login(
 
     # Create tokens
     access_token = AuthService.create_access_token(
-        user.id,
+        str(user.id),
         user.username,
         user.role.value
     )
 
     refresh_token = AuthService.create_refresh_token(
-        user.id,
+        str(user.id),
         user.username
     )
 
     # Create session
-    AuthService.create_session(
+    await AuthService.create_session(
         db,
         user,
         refresh_token,
@@ -209,14 +213,14 @@ async def login(
 @router.post("/refresh")
 async def refresh_token(
     request_data: RefreshRequest,
-    db: Session = Depends(get_db)
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
     Refresh access token using refresh token.
 
     Args:
         request_data: Refresh token
-        db: Database session
+        db: MongoDB database
 
     Returns:
         New access and refresh tokens
@@ -224,7 +228,7 @@ async def refresh_token(
     Raises:
         AuthenticationError: If refresh token is invalid
     """
-    new_access_token, new_refresh_token = AuthService.refresh_access_token(
+    new_access_token, new_refresh_token = await AuthService.refresh_access_token(
         db,
         request_data.refresh_token
     )
@@ -248,19 +252,19 @@ async def refresh_token(
 @router.post("/logout")
 async def logout(
     request_data: RefreshRequest,
-    db: Session = Depends(get_db)
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
     Logout user by invalidating refresh token.
 
     Args:
         request_data: Refresh token
-        db: Database session
+        db: MongoDB database
 
     Returns:
         Logout confirmation
     """
-    success = AuthService.invalidate_session(db, request_data.refresh_token)
+    success = await AuthService.invalidate_session(db, request_data.refresh_token)
 
     logger.info(f"User logged out (token invalidated: {success})")
 

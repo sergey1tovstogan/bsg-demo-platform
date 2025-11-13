@@ -113,8 +113,36 @@ if exist "%BACKEND_DIR%" (
 
         REM Install dependencies if requirements.txt exists
         if exist "%BACKEND_DIR%\requirements.txt" (
-            echo [INFO] Installing backend dependencies...
-            pip install -q -r "%BACKEND_DIR%\requirements.txt"
+            echo [INFO] Checking and installing backend dependencies...
+            
+            REM Check for pip
+            set PIP_CMD=pip
+            where pip >nul 2>&1
+            if errorlevel 1 (
+                where pip3 >nul 2>&1
+                if not errorlevel 1 (
+                    set PIP_CMD=pip3
+                ) else (
+                    echo [WARN] pip not found, skipping dependency installation
+                )
+            )
+            
+            REM Install/upgrade packages from requirements.txt if pip is available
+            if defined PIP_CMD (
+                echo [INFO] Installing/updating Python packages from requirements.txt...
+                %PIP_CMD% install --upgrade -r "%BACKEND_DIR%\requirements.txt" >nul 2>&1
+                if errorlevel 1 (
+                    echo [WARN] Some packages may have failed to install. Trying without --upgrade...
+                    %PIP_CMD% install -r "%BACKEND_DIR%\requirements.txt" >nul 2>&1
+                    if errorlevel 1 (
+                        echo [WARN] Package installation had errors. Check manually with: %PIP_CMD% install -r "%BACKEND_DIR%\requirements.txt"
+                    ) else (
+                        echo [OK] Backend dependencies installed
+                    )
+                ) else (
+                    echo [OK] All backend dependencies are installed/up-to-date
+                )
+            )
         )
 
         REM Start the backend server
@@ -132,7 +160,7 @@ if exist "%BACKEND_DIR%" (
             where uvicorn >nul 2>&1
             if not errorlevel 1 (
                 echo [INFO] Starting backend with uvicorn...
-                start /b cmd /c "uvicorn main:app --host 0.0.0.0 --port %BACKEND_PORT% --reload > ..\%LOG_DIR%\backend.log 2>&1"
+                start /b cmd /c "%PYTHON_CMD% -m uvicorn app.main:app --host 0.0.0.0 --port %BACKEND_PORT% --reload > ..\%LOG_DIR%\backend.log 2>&1"
                 set BACKEND_STARTED=1
             ) else (
                 echo [WARN] No known backend entry point found

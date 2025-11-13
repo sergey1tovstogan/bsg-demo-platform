@@ -2,17 +2,18 @@
 Authentication Service
 
 Handles JWT token generation, validation, user authentication,
-and session management.
+and session management using MongoDB.
 """
 
 from datetime import timedelta
 from typing import Optional, Dict, Any
 from jose import JWTError, jwt
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from bson import ObjectId
 
 from app.core.config import settings
 from app.core.logging import get_logger, audit_logger
-from app.models.user import User, UserSession, UserRole
+from app.models.user import User, UserSession, UserRole, PyObjectId
 from app.utils.security import verify_password, hash_password
 from app.utils.datetime_utils import utc_now, add_minutes, add_days
 
@@ -34,7 +35,7 @@ class AuthService:
 
     @staticmethod
     def create_access_token(
-        user_id: int,
+        user_id: str,
         username: str,
         role: str,
         expires_delta: Optional[timedelta] = None
@@ -43,7 +44,7 @@ class AuthService:
         Create JWT access token.
 
         Args:
-            user_id: User ID
+            user_id: User ID (as string)
             username: Username
             role: User role
             expires_delta: Token expiration time
@@ -76,7 +77,7 @@ class AuthService:
 
     @staticmethod
     def create_refresh_token(
-        user_id: int,
+        user_id: str,
         username: str,
         expires_delta: Optional[timedelta] = None
     ) -> str:
@@ -84,7 +85,7 @@ class AuthService:
         Create JWT refresh token.
 
         Args:
-            user_id: User ID
+            user_id: User ID (as string)
             username: Username
             expires_delta: Token expiration time
 
@@ -146,8 +147,8 @@ class AuthService:
             raise AuthenticationError("Invalid or expired token")
 
     @staticmethod
-    def authenticate_user(
-        db: Session,
+    async def authenticate_user(
+        db: AsyncIOMotorDatabase,
         username: str,
         password: str,
         ip_address: Optional[str] = None
@@ -156,7 +157,7 @@ class AuthService:
         Authenticate user with username and password.
 
         Args:
-            db: Database session
+            db: MongoDB database
             username: Username or email
             password: Plain text password
             ip_address: User's IP address for audit logging
@@ -165,12 +166,15 @@ class AuthService:
             User object if authentication successful, None otherwise
         """
         # Try to find user by username or email
-        user = db.query(User).filter(
-            (User.username == username) | (User.email == username)
-        ).first()
+        user_doc = await db.users.find_one({
+            "$or": [
+                {"username": username},
+                {"email": username}
+            ]
+        })
 
         # Log authentication attempt
-        if not user:
+        if not user_doc:
             audit_logger.log_auth_event(
                 "login_failed",
                 username=username,
@@ -180,11 +184,13 @@ class AuthService:
             )
             return None
 
+        user = User(**user_doc)
+
         # Verify password
         if not verify_password(password, user.hashed_password):
             audit_logger.log_auth_event(
                 "login_failed",
-                user_id=user.id,
+                user_id=str(user.id),
                 username=username,
                 ip_address=ip_address,
                 success=False,
@@ -196,7 +202,7 @@ class AuthService:
         if not user.is_active:
             audit_logger.log_auth_event(
                 "login_failed",
-                user_id=user.id,
+                user_id=str(user.id),
                 username=username,
                 ip_address=ip_address,
                 success=False,
@@ -205,13 +211,15 @@ class AuthService:
             return None
 
         # Update last login
-        user.last_login = utc_now()
-        db.commit()
+        await db.users.update_one(
+            {"_id": user.id},
+            {"$set": {"last_login": utc_now()}}
+        )
 
         # Log successful authentication
         audit_logger.log_auth_event(
             "login_success",
-            user_id=user.id,
+            user_id=str(user.id),
             username=username,
             ip_address=ip_address,
             success=True
@@ -221,8 +229,8 @@ class AuthService:
         return user
 
     @staticmethod
-    def create_session(
-        db: Session,
+    async def create_session(
+        db: AsyncIOMotorDatabase,
         user: User,
         refresh_token: str,
         user_agent: Optional[str] = None,
@@ -233,7 +241,7 @@ class AuthService:
         Create a new user session.
 
         Args:
-            db: Database session
+            db: MongoDB database
             user: User object
             refresh_token: Refresh token
             user_agent: User agent string
@@ -249,81 +257,89 @@ class AuthService:
         else:
             expires_at = add_days(utc_now(), settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
-        # Create session
-        session = UserSession(
-            user_id=user.id,
-            refresh_token=refresh_token,
-            user_agent=user_agent,
-            ip_address=ip_address,
-            remember_me=remember_me,
-            expires_at=expires_at
-        )
+        # Create session document
+        session_dict = {
+            "user_id": user.id,
+            "refresh_token": refresh_token,
+            "user_agent": user_agent,
+            "ip_address": ip_address,
+            "is_active": True,
+            "remember_me": remember_me,
+            "created_at": utc_now(),
+            "expires_at": expires_at,
+            "last_activity": utc_now(),
+        }
 
-        db.add(session)
-        db.commit()
-        db.refresh(session)
+        result = await db.user_sessions.insert_one(session_dict)
+        session_dict["_id"] = result.inserted_id
+        session = UserSession(**session_dict)
 
         logger.info(f"Created session for user {user.username} (ID: {user.id})")
         return session
 
     @staticmethod
-    def invalidate_session(db: Session, refresh_token: str) -> bool:
+    async def invalidate_session(db: AsyncIOMotorDatabase, refresh_token: str) -> bool:
         """
         Invalidate a user session.
 
         Args:
-            db: Database session
+            db: MongoDB database
             refresh_token: Refresh token to invalidate
 
         Returns:
             True if session was invalidated, False if not found
         """
-        session = db.query(UserSession).filter(
-            UserSession.refresh_token == refresh_token,
-            UserSession.is_active == True
-        ).first()
+        result = await db.user_sessions.update_one(
+            {
+                "refresh_token": refresh_token,
+                "is_active": True
+            },
+            {
+                "$set": {"is_active": False}
+            }
+        )
 
-        if not session:
+        if result.modified_count == 0:
             return False
 
-        session.is_active = False
-        db.commit()
-
-        logger.info(f"Invalidated session {session.id} for user {session.user_id}")
+        logger.info(f"Invalidated session with refresh token {refresh_token[:20]}...")
         return True
 
     @staticmethod
-    def invalidate_all_user_sessions(db: Session, user_id: int) -> int:
+    async def invalidate_all_user_sessions(db: AsyncIOMotorDatabase, user_id: ObjectId) -> int:
         """
         Invalidate all sessions for a user.
 
         Args:
-            db: Database session
+            db: MongoDB database
             user_id: User ID
 
         Returns:
             Number of sessions invalidated
         """
-        count = db.query(UserSession).filter(
-            UserSession.user_id == user_id,
-            UserSession.is_active == True
-        ).update({"is_active": False})
+        result = await db.user_sessions.update_many(
+            {
+                "user_id": user_id,
+                "is_active": True
+            },
+            {
+                "$set": {"is_active": False}
+            }
+        )
 
-        db.commit()
-
-        logger.info(f"Invalidated {count} sessions for user {user_id}")
-        return count
+        logger.info(f"Invalidated {result.modified_count} sessions for user {user_id}")
+        return result.modified_count
 
     @staticmethod
-    def refresh_access_token(
-        db: Session,
+    async def refresh_access_token(
+        db: AsyncIOMotorDatabase,
         refresh_token: str
     ) -> tuple[str, str]:
         """
         Refresh access token using refresh token.
 
         Args:
-            db: Database session
+            db: MongoDB database
             refresh_token: Refresh token
 
         Returns:
@@ -339,35 +355,49 @@ class AuthService:
             raise
 
         # Check if session exists and is active
-        session = db.query(UserSession).filter(
-            UserSession.refresh_token == refresh_token,
-            UserSession.is_active == True
-        ).first()
+        session_doc = await db.user_sessions.find_one({
+            "refresh_token": refresh_token,
+            "is_active": True
+        })
 
-        if not session or session.is_expired():
+        if not session_doc:
+            raise AuthenticationError("Session expired or invalid")
+
+        session = UserSession(**session_doc)
+        if session.is_expired():
             raise AuthenticationError("Session expired or invalid")
 
         # Get user
-        user = db.query(User).filter(User.id == session.user_id).first()
-        if not user or not user.is_active:
+        user_doc = await db.users.find_one({"_id": session.user_id})
+        if not user_doc:
+            raise AuthenticationError("User not found or inactive")
+
+        user = User(**user_doc)
+        if not user.is_active:
             raise AuthenticationError("User not found or inactive")
 
         # Create new tokens
         new_access_token = AuthService.create_access_token(
-            user.id,
+            str(user.id),
             user.username,
             user.role.value
         )
 
         new_refresh_token = AuthService.create_refresh_token(
-            user.id,
+            str(user.id),
             user.username
         )
 
         # Update session with new refresh token
-        session.refresh_token = new_refresh_token
-        session.last_activity = utc_now()
-        db.commit()
+        await db.user_sessions.update_one(
+            {"_id": session.id},
+            {
+                "$set": {
+                    "refresh_token": new_refresh_token,
+                    "last_activity": utc_now()
+                }
+            }
+        )
 
         logger.info(f"Refreshed tokens for user {user.username} (ID: {user.id})")
         return new_access_token, new_refresh_token
@@ -418,7 +448,7 @@ class AuthService:
             )
             audit_logger.log_auth_event(
                 "authorization_failed",
-                user_id=user.id,
+                user_id=str(user.id),
                 username=user.username,
                 success=False,
                 details={"required_role": required_role.value, "user_role": user.role.value}

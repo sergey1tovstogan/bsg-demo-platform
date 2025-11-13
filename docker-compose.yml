@@ -1,24 +1,4 @@
 services:
-  # PostgreSQL Database
-  db:
-    image: postgres:15-alpine
-    container_name: bsg-db
-    environment:
-      POSTGRES_DB: bsg_demo
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - bsg-network
-
   # Backend API
   backend:
     build:
@@ -30,8 +10,9 @@ services:
       ENVIRONMENT: development
       DEBUG: "True"
 
-      # Database
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/bsg_demo
+      # Database (MongoDB - Azure Cosmos DB)
+      DATABASE_URL: ${DATABASE_URL:-mongodb://localhost:27017/bsg_demo}
+      DATABASE_NAME: bsg_demo
 
       # JWT
       JWT_SECRET_KEY: dev-secret-key-change-in-production
@@ -58,16 +39,11 @@ services:
     volumes:
       - ./backend:/app
       - video_uploads:/app/uploads/videos
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - bsg-network
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-exclude "*.pyc" --reload-exclude "__pycache__"
 
 volumes:
-  postgres_data:
-    name: bsg-postgres-data
   video_uploads:
     name: bsg-video-uploads
 

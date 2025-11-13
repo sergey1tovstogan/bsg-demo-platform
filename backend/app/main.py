@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
-from app.core.database import engine, Base
+from app.core.database import init_db, close_db
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
@@ -33,8 +33,15 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Debug mode: {settings.DEBUG}")
 
+    # Initialize MongoDB connection
+    try:
+        await init_db()
+        logger.info(f"Database: {settings.DATABASE_NAME}")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        raise
+
     # Log configuration
-    logger.info(f"Database: {settings.DATABASE_URL.split('@')[-1]}")  # Hide credentials
     logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
     logger.info(f"Rate limiting: {'enabled' if settings.RATE_LIMIT_ENABLED else 'disabled'}")
 
@@ -42,7 +49,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down application")
-    engine.dispose()
+    await close_db()
     logger.info("Database connections closed")
 
 

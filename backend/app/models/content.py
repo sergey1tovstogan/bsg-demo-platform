@@ -1,47 +1,40 @@
 """
 Content Models
 
-Database models for component content.
+Database models for component content using MongoDB.
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON
-from sqlalchemy.orm import relationship
+from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field
+from bson import ObjectId
 
-from app.core.database import Base
+from app.models.user import PyObjectId
 from app.utils.datetime_utils import utc_now
 
 
-class Content(Base):
+class Content(BaseModel):
     """Content model for component content."""
+    
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    content_id: str = Field(..., max_length=255)
+    component_id: str = Field(..., max_length=50)
+    title: str = Field(..., max_length=255)
+    type: str = Field(..., max_length=50)  # 'slide', 'document', 'tutorial', 'html'
+    order: int = Field(default=0)
+    body_html: Optional[str] = None  # For HTML content
+    body_json: Optional[Dict[str, Any]] = None  # For structured content
+    content_metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
-    __tablename__ = "content"
-
-    # Primary key
-    id = Column(Integer, primary_key=True, index=True)
-
-    # Content identification
-    content_id = Column(String(255), unique=True, index=True, nullable=False)
-    component_id = Column(String(50), index=True, nullable=False)
-    
-    # Content fields
-    title = Column(String(255), nullable=False)
-    type = Column(String(50), nullable=False)  # 'slide', 'document', 'tutorial', 'html'
-    order = Column(Integer, default=0, nullable=False)
-    
-    # Content body - can store HTML, JSON, or text
-    body_html = Column(Text, nullable=True)  # For HTML content
-    body_json = Column(JSON, nullable=True)  # For structured content
-    
-    # Metadata (renamed to avoid SQLAlchemy reserved keyword)
-    content_metadata = Column(JSON, nullable=True)
-    
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
 
     def __repr__(self):
-        return f"<Content(id={self.id}, content_id='{self.content_id}', component_id='{self.component_id}', title='{self.title}')>"
+        return f"<Content(content_id='{self.content_id}', component_id='{self.component_id}', title='{self.title}')>"
 
     def to_dict(self):
         """Convert content to dictionary."""

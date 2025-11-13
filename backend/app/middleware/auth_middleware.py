@@ -1,15 +1,16 @@
 """
 Authentication Middleware
 
-Provides FastAPI dependencies for authentication and authorization.
+Provides FastAPI dependencies for authentication and authorization using MongoDB.
 """
 
 from fastapi import Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import Optional
+from bson import ObjectId
 
-from app.core.database import get_db
+from app.core.database import get_database
 from app.core.logging import get_logger
 from app.models.user import User, UserRole
 from app.services.auth_service import AuthService, AuthenticationError, AuthorizationError
@@ -22,14 +23,14 @@ security = HTTPBearer()
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ) -> User:
     """
     Get current authenticated user from JWT token.
 
     Args:
         credentials: Bearer token credentials
-        db: Database session
+        db: MongoDB database
 
     Returns:
         Current user
@@ -43,14 +44,20 @@ async def get_current_user(
     payload = AuthService.verify_token(token, token_type="access")
 
     # Get user ID from token
-    user_id = int(payload.get("sub"))
+    user_id_str = payload.get("sub")
+    try:
+        user_id = ObjectId(user_id_str)
+    except Exception:
+        raise AuthenticationError("Invalid user ID in token")
 
     # Get user from database
-    user = db.query(User).filter(User.id == user_id).first()
+    user_doc = await db.users.find_one({"_id": user_id})
 
-    if not user:
+    if not user_doc:
         logger.warning(f"User not found for token with user_id: {user_id}")
         raise AuthenticationError("User not found")
+
+    user = User(**user_doc)
 
     if not user.is_active:
         logger.warning(f"Inactive user attempted access: {user.username} (ID: {user.id})")
@@ -148,7 +155,7 @@ async def get_current_admin(
 
 async def get_optional_user(
     authorization: Optional[str] = Header(None),
-    db: Session = Depends(get_db)
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ) -> Optional[User]:
     """
     Get current user if authenticated, None otherwise.
@@ -156,7 +163,7 @@ async def get_optional_user(
 
     Args:
         authorization: Authorization header
-        db: Database session
+        db: MongoDB database
 
     Returns:
         Current user or None
@@ -167,8 +174,11 @@ async def get_optional_user(
     try:
         token = authorization.replace("Bearer ", "")
         payload = AuthService.verify_token(token, token_type="access")
-        user_id = int(payload.get("sub"))
-        user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
-        return user
+        user_id_str = payload.get("sub")
+        user_id = ObjectId(user_id_str)
+        user_doc = await db.users.find_one({"_id": user_id, "is_active": True})
+        if user_doc:
+            return User(**user_doc)
+        return None
     except Exception:
         return None
