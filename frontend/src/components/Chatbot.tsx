@@ -963,11 +963,58 @@ export function Chatbot({ componentId }: ChatbotProps) {
 
   return (
     <div className="card flex flex-col h-[600px]">
-      <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+      {/* Input at the top */}
+      <div className="mb-4 pb-4 border-b border-gray-200">
+        <div className="flex items-center space-x-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={`Ask about ${componentId === 'deployment' ? 'Temenos cloud deployment and architecture' : componentId}...`}
+            className="input-field flex-1"
+            disabled={loading || !sessionId}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() || loading || !sessionId}
+            className="btn-primary flex items-center space-x-2 px-6"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Querying RAG...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                <span>Send</span>
+              </>
+            )}
+          </button>
+        </div>
+        {loading && (
+          <div className="mt-3 flex items-center space-x-2 text-sm text-blue-600">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Retrieving information from RAG knowledge base...</span>
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto space-y-4">
         {messages.length === 0 ? (
           <div className="text-center text-[#4A5568] py-8">
             <Bot className="w-12 h-12 mx-auto mb-4 text-[#283054]" />
-            <p>Start a conversation about {componentId}</p>
+            <p className="text-lg font-medium mb-2">Welcome to BSG-Guru</p>
+            <p className="text-sm">Ask me anything about {componentId === 'deployment' ? 'Temenos cloud deployment, architecture, and best practices' : componentId}</p>
+            <p className="text-xs text-gray-500 mt-4">Powered by Temenos RAG Knowledge Base</p>
           </div>
         ) : (
           messages.map((message) => (
@@ -1013,43 +1060,15 @@ export function Chatbot({ componentId }: ChatbotProps) {
             </div>
           ))
         )}
-        {loading && (
+        {loading && messages.length > 0 && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg p-4">
+            <div className="bg-gray-100 rounded-lg p-4 flex items-center space-x-2">
               <Loader2 className="w-5 h-5 animate-spin text-[#283054]" />
+              <span className="text-sm text-gray-600">Retrieving information...</span>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
-      </div>
-
-      {chatError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-          {chatError}
-        </div>
-      )}
-
-      <div className="flex items-center space-x-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type your message..."
-          className="input-field flex-1"
-          disabled={loading || !sessionId}
-        />
-        <button
-          onClick={sendMessage}
-          disabled={!input.trim() || loading || !sessionId}
-          className="btn-primary flex items-center space-x-2"
-        >
-          {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Send className="w-5 h-5" />
-          )}
-        </button>
       </div>
     </div>
   )
