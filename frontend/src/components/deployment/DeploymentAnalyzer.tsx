@@ -54,7 +54,6 @@ export function DeploymentAnalyzer() {
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
   const [services, setServices] = useState<AzureResource[]>([])
   const [clusterNamespaces, setClusterNamespaces] = useState<Array<{cluster_name: string, resource_group: string, namespaces: string[]}>>([])
-  const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([])
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -148,7 +147,6 @@ export function DeploymentAnalyzer() {
   }
 
   const handleNamespacesSelected = async (selected: string[]) => {
-    setSelectedNamespaces(selected)
     setCurrentStep('analysis')
     setLoading(true)
     
@@ -202,7 +200,6 @@ export function DeploymentAnalyzer() {
       setAnalysisResults([])
     } else if (currentStep === 'namespaces') {
       setCurrentStep('resourceGroups')
-      setSelectedNamespaces([])
       setClusterNamespaces([])
     } else if (currentStep === 'resourceGroups') {
       setCurrentStep('subscription')
