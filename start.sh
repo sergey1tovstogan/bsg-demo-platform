@@ -160,71 +160,11 @@ check_dependencies() {
 ##############################################################################
 
 start_docker_services() {
-    if [ ! -f "docker-compose.yml" ]; then
-        return
-    fi
-
-    print_info "Starting database services (PostgreSQL, Redis)..."
-
-    local COMPOSE_CMD=""
-
-    # Try Podman first (preferred on systems with certificate issues)
-    if command_exists podman; then
-        if podman compose version >/dev/null 2>&1; then
-            COMPOSE_CMD="podman compose"
-            print_info "Using Podman Compose"
-        elif command_exists podman-compose; then
-            COMPOSE_CMD="podman-compose"
-            print_info "Using podman-compose"
-        fi
-    fi
-
-    # Fall back to Docker if Podman is not available
-    if [ -z "$COMPOSE_CMD" ] && command_exists docker; then
-        if docker compose version >/dev/null 2>&1; then
-            COMPOSE_CMD="docker compose"
-            print_info "Using Docker Compose"
-        elif command_exists docker-compose; then
-            COMPOSE_CMD="docker-compose"
-            print_info "Using docker-compose"
-        fi
-    fi
-
-    # If no compose tool found, warn and skip
-    if [ -z "$COMPOSE_CMD" ]; then
-        print_warning "Neither Podman nor Docker Compose found, skipping database services"
-        print_info "Install Podman or Docker to run PostgreSQL and Redis"
-        return 1
-    fi
-
-    # Start only database services (not the backend container)
-    print_info "Starting PostgreSQL and Redis containers..."
-    if $COMPOSE_CMD up -d db redis 2>&1; then
-        sleep 3
-
-        # Check if services are healthy
-        print_info "Waiting for database services to be ready..."
-        local retries=0
-        local max_retries=30
-
-        while [ $retries -lt $max_retries ]; do
-            if $COMPOSE_CMD ps db | grep -q "healthy\|Up"; then
-                print_success "Database services started successfully"
-                print_info "PostgreSQL: localhost:5432 (user: postgres, db: bsg_demo)"
-                print_info "Redis: localhost:6379"
-                return 0
-            fi
-            retries=$((retries + 1))
-            sleep 1
-        done
-
-        print_warning "Database services started but may not be fully ready yet"
-        return 0
-    else
-        print_error "Failed to start database services"
-        print_info "Try running: $COMPOSE_CMD up -d db redis"
-        return 1
-    fi
+    # The develop branch uses MongoDB (Azure Cosmos DB) which is expected to be running externally
+    # No separate database container is defined in docker-compose.yml
+    print_info "Database: Using external MongoDB (default: localhost:27017)"
+    print_info "Set DATABASE_URL environment variable to use a different MongoDB instance"
+    return 0
 }
 
 ##############################################################################
@@ -296,7 +236,7 @@ start_backend() {
         BACKEND_PID=$!
     elif command_exists uvicorn; then
         print_info "Starting backend with uvicorn..."
-        uvicorn main:app --host 0.0.0.0 --port "$BACKEND_PORT" --reload > "../$LOG_DIR/backend.log" 2>&1 &
+        uvicorn app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" --reload > "../$LOG_DIR/backend.log" 2>&1 &
         BACKEND_PID=$!
     else
         print_warning "No known backend entry point found (main.py, app.py, or uvicorn)"

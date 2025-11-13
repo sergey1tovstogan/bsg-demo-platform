@@ -5,18 +5,20 @@ from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 
 async def create_collections():
     """Create required collections in MongoDB."""
-    connection_string = "mongodb://bsg-demo-platform-mongodb:wC418aLYO4SazuhljALVOclZc48spvoHidWukgFDOoBCjO5Z4wjjKPziuJ44TAUyVlOs89HeL4a5ACDbdAs80w==@bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@bsg-demo-platform-mongodb@"
+    # Use local MongoDB for development
+    connection_string = "mongodb://localhost:27017"
     database_name = "bsg_demo"
-    
+
     collections_to_create = [
         "videos",
         "security_docs",  # MongoDB collection names can't have spaces, using underscore
-        "presentations"
+        "presentations",
+        "integration"  # Component/Collection convention: integration component uses integration collection
     ]
     
     try:
         print(f"Connecting to MongoDB...")
-        print(f"Host: bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255")
+        print(f"Host: localhost:27017")
         
         client = AsyncIOMotorClient(
             connection_string,
@@ -68,7 +70,13 @@ async def create_collections():
         await db["presentations"].create_index("title")
         await db["presentations"].create_index("component_id")
         print("  [OK] Indexes created for 'presentations' collection")
-        
+
+        # Integration collection indexes
+        await db["integration"].create_index("integration_id", unique=True)
+        await db["integration"].create_index("name")
+        await db["integration"].create_index("status")
+        print("  [OK] Indexes created for 'integration' collection")
+
         # List all collections
         print(f"\nAll collections in database:")
         all_collections = await db.list_collection_names()

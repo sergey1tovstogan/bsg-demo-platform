@@ -4,6 +4,7 @@ import { apiService } from '../services/api'
 import type { ComponentId, DemoConfig, DemoSession } from '../types'
 import { DatabaseRecords } from './DatabaseRecords'
 import { ObservabilityDemo } from './observability/ObservabilityDemo'
+import { IntegrationDemo } from './IntegrationDemo'
 
 interface DemoFrameProps {
   componentId: ComponentId
@@ -13,6 +14,11 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
   // Use specialized component for observability
   if (componentId === 'observability') {
     return <ObservabilityDemo />
+  }
+
+  // Use integration demo for integration component
+  if (componentId === 'integration') {
+    return <IntegrationDemo />
   }
 
   // Only show Data Architecture specific content for data-architecture component
