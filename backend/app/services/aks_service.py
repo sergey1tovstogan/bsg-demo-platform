@@ -198,12 +198,16 @@ class AKSService:
             # Verify kubectl can access the cluster
             def _check_kubectl():
                 import shutil
+                import os
                 kubectl_cmd = shutil.which("kubectl") or "kubectl"
+                env = os.environ.copy()
+                env["KUBECONFIG"] = kubeconfig_path
                 return subprocess.run(
-                    [kubectl_cmd, "version", "--client", f"--kubeconfig={kubeconfig_path}"],
+                    [kubectl_cmd, "version", "--client"],
                     capture_output=True,
                     text=True,
                     timeout=10,
+                    env=env,
                     shell=False
                 )
             
@@ -284,22 +288,29 @@ class AKSService:
                         logger.warning(f"No kubeconfig available for cluster {cluster_name}")
                         return pods
             
-            # Get namespaces first - use subprocess.run via executor for Windows compatibility
+            # Get namespaces first - use KUBECONFIG env var instead of --kubeconfig flag
             import asyncio
             import shutil
+            import os
             kubectl_cmd = shutil.which("kubectl") or "kubectl"
-            cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json", "--kubeconfig", kubeconfig_path]
             
-            logger.debug(f"Getting namespaces with command: {cmd_parts}")
+            # Use KUBECONFIG environment variable
+            env = os.environ.copy()
+            env["KUBECONFIG"] = kubeconfig_path
+            
+            cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
+            
+            logger.debug(f"Getting namespaces with command: {' '.join(cmd_parts)}")
+            logger.debug(f"KUBECONFIG={kubeconfig_path}")
             
             try:
                 def _run_kubectl():
-                    logger.debug(f"Executing: {' '.join(cmd_parts)}")
                     result = subprocess.run(
                         cmd_parts,
                         capture_output=True,
                         text=True,
                         timeout=30,
+                        env=env,
                         shell=False
                     )
                     logger.debug(f"kubectl return code: {result.returncode}")
@@ -313,8 +324,8 @@ class AKSService:
                 if result.returncode != 0:
                     error_msg = result.stderr if result.stderr else "Unknown error"
                     logger.warning(f"Failed to get namespaces from {cluster_name}: {error_msg}")
-                    logger.debug(f"Full command: {cmd_parts}")
-                    logger.debug(f"Kubeconfig path: {kubeconfig_path}")
+                    logger.debug(f"Full command: {' '.join(cmd_parts)}")
+                    logger.debug(f"KUBECONFIG: {env.get('KUBECONFIG')}")
                     return pods
                 
                 result_stdout = result.stdout if result.stdout else "{}"
@@ -357,27 +368,38 @@ class AKSService:
                 
                 logger.info(f"Found {len(namespaces)} Temenos-related namespaces in {cluster_name}: {namespaces}")
                 
-                # Get pods from each namespace - use async subprocess
+                # Get pods from each namespace - use subprocess.run via executor
                 for namespace in namespaces:
                     logger.info(f"Querying pods from namespace '{namespace}' in cluster '{cluster_name}'")
+                    import shutil
+                    kubectl_cmd = shutil.which("kubectl") or "kubectl"
+                    import os
+                    env = os.environ.copy()
+                    env["KUBECONFIG"] = kubeconfig_path
+                    
                     cmd_pods = [
-                        "kubectl", "get", "pods",
+                        kubectl_cmd, "get", "pods",
                         "-n", namespace,
-                        "-o", "json",
-                        f"--kubeconfig={kubeconfig_path}"
+                        "-o", "json"
                     ]
                     
                     try:
-                        process = await asyncio.create_subprocess_exec(
-                            *cmd_pods,
-                            stdout=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE
-                        )
-                        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
+                        def _get_pods():
+                            return subprocess.run(
+                                cmd_pods,
+                                capture_output=True,
+                                text=True,
+                                timeout=30,
+                                env=env,
+                                shell=False
+                            )
                         
-                        if process.returncode == 0:
+                        loop = asyncio.get_event_loop()
+                        result = await loop.run_in_executor(None, _get_pods)
+                        
+                        if result.returncode == 0:
                             try:
-                                pods_data = json.loads(stdout.decode() if stdout else "{}")
+                                pods_data = json.loads(result.stdout if result.stdout else "{}")
                                 namespace_pod_count = 0
                                 for pod in pods_data.get("items", []):
                                     pod_metadata = pod.get("metadata", {})
@@ -411,14 +433,11 @@ class AKSService:
                                 logger.debug(f"Response: {(stdout.decode() if stdout else '')[:200]}")
                                 continue
                         else:
-                            error_msg = stderr.decode() if stderr else "Unknown error"
-                            logger.warning(f"Failed to get pods from namespace {namespace}: {error_msg}")
+                            error_msg = result.stderr if result.stderr else "Unknown error"
+                            logger.warning(f"Failed to get pods from namespace '{namespace}': {error_msg}")
                             logger.debug(f"Command: {' '.join(cmd_pods)}")
-                    except asyncio.TimeoutError:
-                        logger.warning(f"Timeout getting pods from namespace '{namespace}' (30s) - skipping")
-                        continue
                     except Exception as e:
-                        logger.warning(f"Error getting pods from namespace '{namespace}': {e}")
+                        logger.warning(f"Error getting pods from namespace '{namespace}': {e}", exc_info=True)
                         continue
                 
                 logger.info(f"Found total {len(pods)} pods across {len(namespaces)} namespaces in cluster '{cluster_name}'")
@@ -453,71 +472,70 @@ class AKSService:
             resource_group = id_parts[id_parts.index("resourceGroups") + 1] if "resourceGroups" in id_parts else cluster.resource_group
             cluster_name = cluster.name
             
-            # Get credentials
-            creds = await self.get_cluster_credentials(resource_group, cluster_name)
-            
+            # Use default kubeconfig - skip credential retrieval to avoid errors
             import os
             default_kubeconfig = os.path.expanduser("~/.kube/config")
             
-            if not creds:
-                if os.path.exists(default_kubeconfig):
-                    kubeconfig_path = default_kubeconfig
-                    # Try to switch context
-                    import asyncio
-                    loop = asyncio.get_event_loop()
-                    def _set_context():
-                        import shutil
-                        kubectl_cmd = shutil.which("kubectl") or "kubectl"
-                        return subprocess.run(
-                            [kubectl_cmd, "config", "use-context", cluster_name],
-                            capture_output=True,
-                            text=True,
-                            timeout=5
-                        )
-                    await loop.run_in_executor(None, _set_context)
-                else:
-                    logger.warning(f"Could not get credentials for cluster {cluster_name}")
-                    return namespaces
-            else:
-                kubeconfig_path = creds.get("kubeconfig_path")
-                if not kubeconfig_path:
-                    kubeconfig_path = default_kubeconfig if os.path.exists(default_kubeconfig) else None
-                    if not kubeconfig_path:
-                        return namespaces
+            if not os.path.exists(default_kubeconfig):
+                logger.warning(f"Default kubeconfig not found at {default_kubeconfig}")
+                return namespaces
             
-            # Get namespaces - use environment variable for kubeconfig if using default
+            kubeconfig_path = default_kubeconfig
+            
+            # Try to switch to the correct context (non-blocking)
+            import asyncio
+            loop = asyncio.get_event_loop()
+            def _set_context():
+                import shutil
+                kubectl_cmd = shutil.which("kubectl") or "kubectl"
+                return subprocess.run(
+                    [kubectl_cmd, "config", "use-context", cluster_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    shell=False
+                )
+            try:
+                context_result = await loop.run_in_executor(None, _set_context)
+                if context_result.returncode != 0:
+                    logger.debug(f"Could not switch context to {cluster_name}, will try anyway")
+            except Exception as e:
+                logger.debug(f"Context switch error (will try anyway): {e}")
+            
+            # Get namespaces - use KUBECONFIG environment variable
             import asyncio
             import shutil
-            import os
             kubectl_cmd = shutil.which("kubectl") or "kubectl"
             
-            # Set KUBECONFIG environment variable if using default kubeconfig
+            # Set KUBECONFIG environment variable (preferred method)
             env = os.environ.copy()
-            if kubeconfig_path == default_kubeconfig:
-                env["KUBECONFIG"] = default_kubeconfig
-                # Also try to switch context first
-                try:
-                    switch_cmd = [kubectl_cmd, "config", "use-context", cluster_name]
-                    switch_result = await asyncio.create_subprocess_exec(
-                        *switch_cmd,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        env=env
+            env["KUBECONFIG"] = kubeconfig_path
+            
+            # Try to switch context first (non-blocking)
+            try:
+                def _switch_context():
+                    return subprocess.run(
+                        [kubectl_cmd, "config", "use-context", cluster_name],
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                        env=env,
+                        shell=False
                     )
-                    await asyncio.wait_for(switch_result.communicate(), timeout=5.0)
-                except Exception as e:
-                    logger.debug(f"Could not switch context (will try anyway): {e}")
+                loop = asyncio.get_event_loop()
+                switch_result = await loop.run_in_executor(None, _switch_context)
+                if switch_result.returncode != 0:
+                    logger.debug(f"Could not switch context to {cluster_name}, will try anyway")
+            except Exception as e:
+                logger.debug(f"Context switch error (will try anyway): {e}")
             
-            # Build command - ensure all arguments are separate strings
-            # Use -o json format (kubectl standard)
+            # Build command - use KUBECONFIG env var, don't use --kubeconfig flag
             cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
-            if kubeconfig_path != default_kubeconfig:
-                cmd_parts.extend(["--kubeconfig", kubeconfig_path])
             
-            logger.debug(f"Executing kubectl command: {' '.join(cmd_parts)}")
-            logger.debug(f"Kubeconfig: {kubeconfig_path}, Using env KUBECONFIG: {env.get('KUBECONFIG', 'not set')}")
+            logger.debug(f"Executing kubectl: {' '.join(cmd_parts)}")
+            logger.debug(f"KUBECONFIG={kubeconfig_path}")
             
-            # Use run_in_executor to avoid async subprocess issues on Windows
+            # Use run_in_executor for Windows compatibility
             def _run_kubectl():
                 return subprocess.run(
                     cmd_parts,
@@ -535,6 +553,7 @@ class AKSService:
                 error_msg = result.stderr if result.stderr else "Unknown error"
                 logger.warning(f"Failed to get namespaces from {cluster_name}: {error_msg}")
                 logger.debug(f"Command: {' '.join(cmd_parts)}")
+                logger.debug(f"KUBECONFIG: {env.get('KUBECONFIG')}")
                 logger.debug(f"Return code: {result.returncode}")
                 return namespaces
             
