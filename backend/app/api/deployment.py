@@ -242,18 +242,25 @@ async def get_aks_namespaces(request: NamespacesRequest):
         for cluster in aks_clusters:
             try:
                 namespaces = await aks_service.list_cluster_namespaces(cluster)
+                logger.info(f"Retrieved {len(namespaces)} namespaces from cluster {cluster.name}")
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
                     "resource_group": cluster.resource_group,
                     "namespaces": namespaces
                 }
+                if len(namespaces) == 0:
+                    logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
+                    logger.warning("  1. kubectl is not installed or not in PATH")
+                    logger.warning("  2. Cluster credentials are not configured")
+                    logger.warning("  3. No non-system namespaces exist in the cluster")
+                    logger.warning("  4. Backend is running in an environment without kubectl access")
             except Exception as e:
-                logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}")
+                logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}", exc_info=True)
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
                     "resource_group": cluster.resource_group,
                     "namespaces": [],
-                    "error": str(e)
+                    "error": f"Failed to retrieve namespaces: {str(e)}"
                 }
         
         return {
