@@ -217,18 +217,24 @@ async def get_resources(request: ResourcesRequest):
         
         # Discover pods from AKS clusters
         try:
+            logger.info(f"Starting AKS pod discovery for {len(resources)} resources...")
             aks_service = AKSService(subscription_id)
             # Don't filter by specific namespaces - let auto-detection find all Temenos namespaces
             # This will discover: eventstore, adapterservice, genericconfig, holdings, partyv2, transact, etc.
             aks_pods = await aks_service.discover_pods_from_resources(resources, temenos_namespaces=None)
             
             if aks_pods:
-                logger.info(f"Adding {len(aks_pods)} AKS pods to resources from discovered namespaces")
+                logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods from Temenos namespaces")
+                logger.info(f"Sample pod namespaces: {list(set([p.properties.get('namespace', 'unknown') for p in aks_pods[:5]]))}")
                 resources.extend(aks_pods)
+                logger.info(f"Total resources after adding pods: {len(resources)}")
             else:
-                logger.info("No AKS pods discovered (this is normal if no AKS clusters found)")
+                logger.warning("⚠ No AKS pods discovered - this might indicate:")
+                logger.warning("  1. No AKS clusters found in resource groups")
+                logger.warning("  2. AKS discovery failed (check logs above)")
+                logger.warning("  3. No Temenos namespaces found in clusters")
         except Exception as e:
-            logger.warning(f"Failed to discover AKS pods (this is optional): {e}", exc_info=True)
+            logger.error(f"❌ Failed to discover AKS pods: {e}", exc_info=True)
             # Don't fail the whole request if AKS discovery fails
         
         return {
@@ -287,6 +293,13 @@ async def analyze_services(request: AnalyzeRequest):
                 properties=svc_data.get("properties", {})
             ))
         
+        # Log what we're analyzing
+        pod_count = sum(1 for s in services if "managedclusters/pods" in s.type.lower())
+        logger.info(f"Analyzing {len(services)} services ({pod_count} AKS pods, {len(services) - pod_count} Azure resources)")
+        if pod_count > 0:
+            pod_namespaces = list(set([s.properties.get("namespace", "unknown") for s in services if "managedclusters/pods" in s.type.lower()]))
+            logger.info(f"Pod namespaces: {pod_namespaces}")
+        
         # Initialize Temenos service
         temenos_service = TemenosService()
         
@@ -316,7 +329,10 @@ async def analyze_services(request: AnalyzeRequest):
 
 
 def _deduplicate_components(results: List[TemenosAnalysisResult]) -> List[TemenosAnalysisResult]:
-    """Deduplicate components by grouping services with the same component name."""
+    """
+    Deduplicate components by grouping services with the same normalized component name.
+    For AKS pods, group by namespace/component rather than individual pod names.
+    """
     component_map: Dict[str, TemenosAnalysisResult] = {}
     unidentified: List[TemenosAnalysisResult] = []
     
@@ -325,17 +341,36 @@ def _deduplicate_components(results: List[TemenosAnalysisResult]) -> List[Temeno
             unidentified.append(result)
             continue
         
-        component_name = result.component_info.component_name
-        existing = component_map.get(component_name)
+        # Use normalized component name for grouping (not the individual service/pod name)
+        # This groups all pods from the same namespace/component together
+        normalized_name = result.component_info.component_name
+        
+        # For AKS pods, also consider namespace for better grouping
+        if "managedclusters/pods" in result.service.type.lower():
+            namespace = result.service.properties.get("namespace", "")
+            if namespace:
+                # Use namespace as the grouping key for pods
+                # This ensures all pods from the same namespace are grouped as one component
+                grouping_key = f"{normalized_name}::{namespace}"
+            else:
+                grouping_key = normalized_name
+        else:
+            grouping_key = normalized_name
+        
+        existing = component_map.get(grouping_key)
         
         if not existing:
-            component_map[component_name] = result
+            component_map[grouping_key] = result
         else:
-            # Merge services - simplified version
-            # In a full implementation, you'd merge related services here
-            pass
+            # Merge services - add related services list
+            # Keep the first result but note that there are multiple instances
+            if result.service.name not in existing.component_info.related_services:
+                existing.component_info.related_services.append(result.service.name)
     
-    return list(component_map.values()) + unidentified
+    # Return identified components first, then unidentified
+    identified = list(component_map.values())
+    logger.info(f"Deduplication: {len(identified)} unique components from {len(results)} results")
+    return identified + unidentified
 
 
 @router.get("/temenos/health")
