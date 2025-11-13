@@ -247,6 +247,103 @@ class ApiService {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
   }
+
+  // Deployment & Cloud APIs
+  async connectAzureSubscription(subscriptionId: string) {
+    try {
+      const response = await this.client.post<ApiResponse<{
+        status: string
+        message: string
+        subscriptionId: string
+      }>>('/deployment/azure/connect', { subscription_id: subscriptionId })
+      return response.data
+    } catch (error: any) {
+      // Re-throw with better error handling
+      if (error.response?.data?.detail) {
+        throw error.response.data.detail
+      }
+      throw error
+    }
+  }
+
+  async getAzureResourceGroups(subscriptionId: string) {
+    const response = await this.client.get<ApiResponse<{
+      data: Array<{
+        id: string
+        name: string
+        location: string
+        tags?: Record<string, string>
+      }>
+      count: number
+    }>>(`/deployment/azure/resource-groups?subscriptionId=${subscriptionId}`)
+    return response.data
+  }
+
+  async getAzureResources(subscriptionId: string, resourceGroupNames: string[]) {
+    const response = await this.client.post<ApiResponse<{
+      data: Array<{
+        id: string
+        name: string
+        type: string
+        location: string
+        resourceGroup: string
+        tags?: Record<string, string>
+        properties?: Record<string, any>
+      }>
+      count: number
+    }>>('/deployment/azure/resources', {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames
+    })
+    return response.data
+  }
+
+  async analyzeAzureServices(services: any[], analysisId?: string) {
+    const response = await this.client.post<ApiResponse<{
+      data: Array<{
+        service: any
+        componentInfo?: {
+          componentName: string
+          componentType: string
+          architecturalOverview: string
+          functionalOverview: string
+          capabilities: string[]
+          relatedServices: string[]
+          relationships?: Array<{
+            targetComponent: string
+            relationshipType: string
+            description: string
+          }>
+        }
+        error?: string
+      }>
+      count: number
+      processed: number
+      analysisId: string
+    }>>('/deployment/temenos/analyze', {
+      services,
+      analysis_id: analysisId
+    })
+    return response.data
+  }
+
+  async getDeploymentContent() {
+    const response = await this.client.get<ApiResponse<any>>('/components/deployment/content')
+    return response.data
+  }
+
+  async queryRAG(params: {
+    question: string
+    region: string
+    RAGmodelId: string
+    context?: string
+  }) {
+    const response = await this.client.post<ApiResponse<{
+      answer: string
+      sources?: Array<{ title?: string; url?: string }>
+    }>>('/deployment/temenos/query', params)
+    return response.data
+  }
 }
 
 export const apiService = new ApiService()

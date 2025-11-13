@@ -202,13 +202,77 @@ $env:DEBUG="True"
 
 ---
 
+## Architecture Patterns
+
+### Connection Adapter Pattern
+
+The backend uses an **Adapter Pattern** for external connections (database and RAG APIs) to enable easy swapping of implementations without affecting core application logic.
+
+#### Database Adapter
+
+**Location**: `backend/app/adapters/database/`
+
+- **Interface**: `DatabaseAdapter` (abstract base class)
+- **Current Implementation**: `MongoDBAdapter` (MongoDB via Motor)
+- **Factory**: `get_database_adapter()` - Returns adapter based on `DATABASE_TYPE` config
+
+**Benefits**:
+- Easy to switch from MongoDB to PostgreSQL or other databases
+- Core application code doesn't need changes when switching databases
+- Configuration-driven: Set `DATABASE_TYPE=mongodb` or `DATABASE_TYPE=postgresql` in `.env`
+
+**Usage**:
+```python
+from app.adapters.database import get_database_adapter
+
+adapter = get_database_adapter()
+await adapter.connect()
+db = await adapter.get_database()
+```
+
+#### RAG Adapter
+
+**Location**: `backend/app/adapters/rag/`
+
+- **Interface**: `RAGAdapter` (abstract base class)
+- **Current Implementation**: `TemenosRAGAdapter` (Temenos tbsg.temenos.com API)
+- **Factory**: `get_rag_adapter()` - Returns adapter based on `RAG_TYPE` config
+
+**Benefits**:
+- Easy to switch from Temenos RAG to OpenAI, Anthropic, or other RAG providers
+- Core application code doesn't need changes when switching RAG providers
+- Configuration-driven: Set `RAG_TYPE=temenos` or `RAG_TYPE=openai` in `.env`
+
+**Usage**:
+```python
+from app.adapters.rag import get_rag_adapter
+
+adapter = get_rag_adapter()
+result = await adapter.query(question="...", rag_model_id="...")
+```
+
+### Adding New Adapters
+
+To add a new database adapter:
+1. Create `backend/app/adapters/database/postgresql_adapter.py`
+2. Implement `DatabaseAdapter` interface
+3. Update factory to support new type
+4. Set `DATABASE_TYPE=postgresql` in `.env`
+
+To add a new RAG adapter:
+1. Create `backend/app/adapters/rag/openai_adapter.py`
+2. Implement `RAGAdapter` interface
+3. Update factory to support new type
+4. Set `RAG_TYPE=openai` in `.env`
+
 ## Notes
 
 - All services run locally for development
-- Database is hosted in Azure Cloud
+- Database is hosted in Azure Cloud (MongoDB via Azure Cosmos DB)
 - No Docker containers are currently used (services run as native processes)
 - Backend auto-reloads on code changes (development mode)
 - Frontend hot-reloads on code changes (Vite dev server)
+- Connection adapters enable easy database and RAG provider switching
 
 ---
 

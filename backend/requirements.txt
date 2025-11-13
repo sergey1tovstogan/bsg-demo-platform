@@ -57,3 +57,11 @@ isort==5.13.2
 python-slugify==8.0.1
 pytz==2024.1
 email-validator==2.1.0
+
+# Azure SDK for deployment analysis
+azure-identity==1.15.0
+azure-mgmt-resource==23.0.1
+azure-mgmt-containerinstance==10.1.0
+azure-mgmt-containerservice==29.0.0
+httpx==0.26.0
+kubernetes==28.1.0

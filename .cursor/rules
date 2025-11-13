@@ -279,10 +279,8 @@ bsg-demo-platform/
 │   │   ├── middleware/
 │   │   └── main.py
 │   ├── requirements.txt
-│   ├── Dockerfile
 │   └── create_collections.py
 ├── ARCHITECTURE.md
-├── docker-compose.yml
 └── README.md
 ```
 

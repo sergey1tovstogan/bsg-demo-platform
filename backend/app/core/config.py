@@ -26,11 +26,12 @@ class Settings(BaseSettings):
     PORT: int = Field(default=8000, description="API port")
 
     # Database Settings
+    DATABASE_TYPE: str = Field(default="mongodb", description="Database type: mongodb, postgresql, etc.")
     DATABASE_URL: str = Field(
         default="mongodb://localhost:27017/bsg_demo",
-        description="MongoDB connection string"
+        description="Database connection string"
     )
-    DATABASE_NAME: str = Field(default="bsg_demo", description="MongoDB database name")
+    DATABASE_NAME: str = Field(default="bsg_demo", description="Database name")
     DB_MAX_POOL_SIZE: int = Field(default=50, description="Database connection pool size")
     DB_MIN_POOL_SIZE: int = Field(default=10, description="Minimum connection pool size")
     DB_CONNECT_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
@@ -100,8 +101,25 @@ class Settings(BaseSettings):
     # Health Check
     HEALTH_CHECK_TIMEOUT: int = Field(default=5, description="Health check timeout in seconds")
 
+    # RAG Tool (Temenos tbsg.temenos.com)
+    RAG_TYPE: str = Field(default="temenos", description="RAG provider type: temenos, openai, etc.")
+    RAG_JWT_TOKEN: Optional[str] = Field(
+        default=None,
+        description="JWT token for RAG tool API authentication (tbsg.temenos.com)"
+    )
+    RAG_API_URL: str = Field(
+        default="https://tbsg.temenos.com",
+        description="RAG tool API base URL"
+    )
+
+    # Azure Default Subscription
+    AZURE_SUBSCRIPTION_ID: Optional[str] = Field(
+        default=None,
+        description="Default Azure subscription ID (used if not provided by user)"
+    )
+
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=[".env", "../.env"],  # Check current dir and parent dir
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"
