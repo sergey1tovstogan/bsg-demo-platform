@@ -122,11 +122,11 @@ class TemenosService:
             "microsoft.operationalinsights/workspaces",
         ]
         
-        # Skip if it's clearly infrastructure
+        # Skip if it's clearly infrastructure - NEVER include storage accounts, key vaults, etc. as Temenos components
         if any(infra_type in resource_type for infra_type in infrastructure_types):
-            # Only include if name suggests Temenos
-            if not any(pattern in name for pattern in ["transact", "temenos", "modular", "tap"]):
-                return False
+            # Infrastructure resources are NEVER Temenos components, even if name suggests it
+            # Storage accounts, key vaults, network resources are infrastructure, not Temenos components
+            return False
         
         # Quick pattern check - must have Temenos-related name
         temenos_patterns = [
@@ -218,10 +218,10 @@ class TemenosService:
                     "webingress": "Web Ingress Microservice",
                     # Handle namespaces with dates/versions (e.g., deposits202507)
                     "deposits202507": "Deposits Microservice",
-                    # Ingress namespaces
-                    "ingress-nginx-deposits-202507": "Ingress Service",
-                    "ingress-nginx-lending": "Ingress Service",
-                    "ingress-nginx-transact": "Ingress Service",
+                    # Ingress namespaces - use more specific names
+                    "ingress-nginx-deposits-202507": "Deposits Ingress Service",
+                    "ingress-nginx-lending": "Lending Ingress Service",
+                    "ingress-nginx-transact": "Transact Ingress Service",
                     
                     # Additional microservices
                     "stmtgen": "Statement Generation Microservice",
@@ -289,7 +289,15 @@ class TemenosService:
                         normalized = "Web Ingress Microservice"
                     elif "ingress" in namespace_lower and "nginx" in namespace_lower:
                         # Handle ingress-nginx-* namespaces (they're still Temenos-related ingress)
-                        normalized = "Ingress Service"
+                        # Extract the component name from the namespace (e.g., ingress-nginx-transact -> Transact Ingress)
+                        if "transact" in namespace_lower:
+                            normalized = "Transact Ingress Service"
+                        elif "deposits" in namespace_lower:
+                            normalized = "Deposits Ingress Service"
+                        elif "lending" in namespace_lower:
+                            normalized = "Lending Ingress Service"
+                        else:
+                            normalized = "Ingress Service"
                     elif "ingress" in namespace_lower:
                         normalized = "Ingress Microservice"
                     elif any(pattern in namespace_lower for pattern in ["tap", "tap-service"]):
@@ -474,6 +482,13 @@ class TemenosService:
                 return "Azure Container App (Initializer)"
             return "Azure Container App"
         
+        # For AKS pods, return more specific type
+        if "managedclusters/pods" in resource_type:
+            namespace = service.properties.get("namespace", "")
+            if namespace:
+                return f"AKS Pod ({namespace} namespace)"
+            return "AKS Pod"
+        
         if "microsoft.containerservice" in resource_type or "kubernetes" in resource_type:
             return "Azure Kubernetes Service (AKS)"
         
@@ -486,8 +501,11 @@ class TemenosService:
                 return "Azure Database for MySQL"
             return "Azure Database Service"
         
+        # Storage services should not be identified as Temenos components
+        # This method is only called for identified components, so this shouldn't happen
+        # But if it does, return a generic type
         if "storage" in resource_type:
-            return "Azure Storage Service"
+            return "Azure Storage (Infrastructure)"
         
         if "eventhub" in resource_type:
             return "Azure Event Hub"
@@ -684,4 +702,3 @@ class TemenosService:
         
         logger.info(f"Analysis complete. {len(results)} results, {sum(1 for r in results if r.component_info)} components identified, {skipped_count} infrastructure services skipped.")
         return results
-

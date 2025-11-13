@@ -345,16 +345,29 @@ def _deduplicate_components(results: List[TemenosAnalysisResult]) -> List[Temeno
         # This groups all pods from the same namespace/component together
         normalized_name = result.component_info.component_name
         
-        # For AKS pods, also consider namespace for better grouping
+        # For AKS pods, group by namespace ONLY - all pods in same namespace = one component
+        # This way: eventstore namespace = 1 component, adapterservice = 1 component, etc.
         if "managedclusters/pods" in result.service.type.lower():
             namespace = result.service.properties.get("namespace", "")
             if namespace:
-                # Use namespace as the grouping key for pods
-                # This ensures all pods from the same namespace are grouped as one component
-                grouping_key = f"{normalized_name}::{namespace}"
+                # Use namespace as the PRIMARY grouping key
+                # All pods from the same namespace should be grouped as ONE component
+                # This ensures: adapterservice (3 pods) = 1 component, eventstore (3 pods) = 1 component
+                grouping_key = namespace.lower()  # Use lowercase for consistency
             else:
+                # Fallback if namespace not found (shouldn't happen)
                 grouping_key = normalized_name
         else:
+            # For non-pod resources, use normalized name
+            # But exclude infrastructure types
+            if any(infra_type in result.service.type.lower() for infra_type in [
+                "microsoft.storage", "microsoft.keyvault", "microsoft.network",
+                "microsoft.insights", "microsoft.operationalinsights"
+            ]):
+                # Skip infrastructure resources - they shouldn't be Temenos components
+                logger.debug(f"Skipping infrastructure resource: {result.service.name} ({result.service.type})")
+                unidentified.append(result)
+                continue
             grouping_key = normalized_name
         
         existing = component_map.get(grouping_key)
