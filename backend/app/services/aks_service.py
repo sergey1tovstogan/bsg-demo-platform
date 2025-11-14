@@ -477,10 +477,11 @@ class AKSService:
             default_kubeconfig = os.path.expanduser("~/.kube/config")
             
             if not os.path.exists(default_kubeconfig):
-                logger.warning(f"Default kubeconfig not found at {default_kubeconfig}")
+                logger.error(f"Default kubeconfig not found at {default_kubeconfig}")
                 return namespaces
             
             kubeconfig_path = default_kubeconfig
+            logger.info(f"Using kubeconfig: {kubeconfig_path}")
             
             # Try to switch to the correct context (non-blocking)
             import asyncio
@@ -488,56 +489,47 @@ class AKSService:
             def _set_context():
                 import shutil
                 kubectl_cmd = shutil.which("kubectl") or "kubectl"
-                return subprocess.run(
+                result = subprocess.run(
                     [kubectl_cmd, "config", "use-context", cluster_name],
                     capture_output=True,
                     text=True,
                     timeout=5,
-                    shell=False
+                    shell=False,
+                    env=os.environ.copy()
                 )
+                return result
             try:
                 context_result = await loop.run_in_executor(None, _set_context)
                 if context_result.returncode != 0:
-                    logger.debug(f"Could not switch context to {cluster_name}, will try anyway")
+                    logger.warning(f"Could not switch context to {cluster_name}: {context_result.stderr}")
+                    logger.info(f"Will try to get namespaces anyway with current context")
             except Exception as e:
-                logger.debug(f"Context switch error (will try anyway): {e}")
+                logger.warning(f"Context switch error (will try anyway): {e}")
             
             # Get namespaces - use KUBECONFIG environment variable
             import asyncio
             import shutil
             kubectl_cmd = shutil.which("kubectl") or "kubectl"
             
+            if not kubectl_cmd or not shutil.which(kubectl_cmd):
+                logger.error(f"kubectl not found in PATH!")
+                return namespaces
+            
             # Set KUBECONFIG environment variable (preferred method)
             env = os.environ.copy()
             env["KUBECONFIG"] = kubeconfig_path
-            
-            # Try to switch context first (non-blocking)
-            try:
-                def _switch_context():
-                    return subprocess.run(
-                        [kubectl_cmd, "config", "use-context", cluster_name],
-                        capture_output=True,
-                        text=True,
-                        timeout=5,
-                        env=env,
-                        shell=False
-                    )
-                loop = asyncio.get_event_loop()
-                switch_result = await loop.run_in_executor(None, _switch_context)
-                if switch_result.returncode != 0:
-                    logger.debug(f"Could not switch context to {cluster_name}, will try anyway")
-            except Exception as e:
-                logger.debug(f"Context switch error (will try anyway): {e}")
+            logger.info(f"Set KUBECONFIG={kubeconfig_path}")
             
             # Build command - use KUBECONFIG env var, don't use --kubeconfig flag
             cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
             
-            logger.debug(f"Executing kubectl: {' '.join(cmd_parts)}")
-            logger.debug(f"KUBECONFIG={kubeconfig_path}")
+            logger.info(f"Executing kubectl: {' '.join(cmd_parts)}")
+            logger.info(f"KUBECONFIG={kubeconfig_path}")
             
             # Use run_in_executor for Windows compatibility
             def _run_kubectl():
-                return subprocess.run(
+                logger.debug(f"Running kubectl with env KUBECONFIG={env.get('KUBECONFIG')}")
+                result = subprocess.run(
                     cmd_parts,
                     capture_output=True,
                     text=True,
@@ -545,6 +537,8 @@ class AKSService:
                     env=env,
                     shell=False
                 )
+                logger.debug(f"kubectl completed with return code: {result.returncode}")
+                return result
             
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, _run_kubectl)
