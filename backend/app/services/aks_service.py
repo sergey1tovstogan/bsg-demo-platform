@@ -551,27 +551,41 @@ class AKSService:
             
             if result.returncode != 0:
                 error_msg = result.stderr if result.stderr else "Unknown error"
-                logger.warning(f"Failed to get namespaces from {cluster_name}: {error_msg}")
-                logger.debug(f"Command: {' '.join(cmd_parts)}")
-                logger.debug(f"KUBECONFIG: {env.get('KUBECONFIG')}")
-                logger.debug(f"Return code: {result.returncode}")
+                logger.error(f"Failed to get namespaces from {cluster_name}: {error_msg}")
+                logger.error(f"Command: {' '.join(cmd_parts)}")
+                logger.error(f"KUBECONFIG: {env.get('KUBECONFIG')}")
+                logger.error(f"Return code: {result.returncode}")
+                logger.error(f"Full stderr: {result.stderr}")
+                logger.error(f"Full stdout: {result.stdout[:500] if result.stdout else 'None'}")
                 return namespaces
             
             result_stdout = result.stdout if result.stdout else "{}"
+            logger.debug(f"kubectl stdout length: {len(result_stdout)}")
+            
             try:
                 namespaces_data = json.loads(result_stdout)
+                logger.debug(f"Parsed JSON successfully, found {len(namespaces_data.get('items', []))} total namespaces")
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse namespaces JSON: {e}")
-                logger.debug(f"Output: {result_stdout[:500]}")
+                logger.error(f"Output (first 500 chars): {result_stdout[:500]}")
+                logger.error(f"Output (last 500 chars): {result_stdout[-500:] if len(result_stdout) > 500 else result_stdout}")
                 return namespaces
             
-            for ns in namespaces_data.get("items", []):
+            items = namespaces_data.get("items", [])
+            logger.debug(f"Processing {len(items)} namespace items")
+            
+            for ns in items:
                 ns_name = ns.get("metadata", {}).get("name", "")
                 # Skip system namespaces
                 if ns_name not in ["kube-system", "kube-public", "kube-node-lease", "default"]:
                     namespaces.append(ns_name)
+                    logger.debug(f"Added namespace: {ns_name}")
             
-            logger.info(f"Found {len(namespaces)} namespaces in cluster {cluster_name}")
+            logger.info(f"Found {len(namespaces)} non-system namespaces in cluster {cluster_name}")
+            if len(namespaces) == 0:
+                logger.warning(f"No non-system namespaces found! Total namespaces: {len(items)}")
+                logger.warning(f"All namespaces: {[ns.get('metadata', {}).get('name', '') for ns in items]}")
+            
             return sorted(namespaces)
             
         except Exception as e:
