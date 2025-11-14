@@ -57,7 +57,6 @@ function App() {
         onComponentChange={handleComponentChange}
         onHomeClick={handleHomeClick}
         onSettingsClick={() => setSettingsOpen(true)}
-        onUtilityClick={(feature) => setPendingFeature(feature)}
       />
 
       {/* Settings Modal */}

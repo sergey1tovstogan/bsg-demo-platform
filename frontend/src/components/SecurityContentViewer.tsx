@@ -8,21 +8,11 @@ interface Slide {
   content_type: string
 }
 
-interface SlideSearchResponse {
-  slides: Slide[]
-  total_results: number
-  query: string
-}
+// Unused interfaces removed
 
 interface Paragraph {
   paragraph_number: number
   paragraph_content: string
-}
-
-interface ParagraphSearchResponse {
-  paragraphs: Paragraph[]
-  total_results: number
-  query: string
 }
 
 export function SecurityContentViewer() {

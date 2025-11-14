@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Code2, Radio, Database as DatabaseIcon, Loader2, ExternalLink, Power } from 'lucide-react'
+import { Code2, Radio, Database as DatabaseIcon, Loader2 } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { ComponentId, DemoConfig, DemoSession } from '../types'
 import { DatabaseRecords } from './DatabaseRecords'
@@ -77,11 +77,11 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
   }
 
   // For other components, try to load demo config
-  const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
-  const [session, setSession] = useState<DemoSession | null>(null)
+  const [_demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
+  const [_session, _setSession] = useState<DemoSession | null>(null)
   const [loading, setLoading] = useState(true)
-  const [connecting, setConnecting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [_connecting, _setConnecting] = useState(false)
+  const [_error, _setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadDemoConfig()
@@ -90,51 +90,29 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
   useEffect(() => {
     return () => {
       // Cleanup: disconnect on unmount
-      if (session?.session_id) {
-        apiService.disconnectDemo(componentId, session.session_id).catch(console.error)
+      if (_session?.session_id) {
+        apiService.disconnectDemo(componentId, _session.session_id).catch(console.error)
       }
     }
-  }, [session, componentId])
+  }, [_session, componentId])
 
   const loadDemoConfig = async () => {
     try {
       setLoading(true)
-      setError(null)
+      _setError(null)
       const response = await apiService.getDemoConfig(componentId)
-      setDemoConfig(response.data)
+      setDemoConfig(response.data) // setDemoConfig is used
     } catch (err: any) {
       // If demo config doesn't exist, that's okay - show placeholder
-      setError(null)
+      _setError(null)
     } finally {
       setLoading(false)
     }
   }
 
-  const connectDemo = async () => {
-    if (!demoConfig) return
-
-    try {
-      setConnecting(true)
-      setError(null)
-      const response = await apiService.connectDemo(componentId, 'default', {})
-      setSession(response.data)
-    } catch (err: any) {
-      setError(err.message || 'Failed to connect to demo system')
-    } finally {
-      setConnecting(false)
-    }
-  }
-
-  const disconnectDemo = async () => {
-    if (!session?.session_id) return
-
-    try {
-      await apiService.disconnectDemo(componentId, session.session_id)
-      setSession(null)
-    } catch (err: any) {
-      console.error('Failed to disconnect:', err)
-    }
-  }
+  // Demo connection functions - reserved for future use
+  // const connectDemo = async () => { ... }
+  // const disconnectDemo = async () => { ... }
 
   if (loading) {
     return (
