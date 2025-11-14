@@ -10,9 +10,18 @@ interface ApiResult {
   loading: boolean
 }
 
+interface BalanceInfo {
+  amount?: number
+  currency?: string
+  lastUpdated?: string
+  loading: boolean
+  error?: string
+}
+
 export function IntegrationDemo() {
   const [getResult, setGetResult] = useState<ApiResult>({ loading: false })
   const [postResult, setPostResult] = useState<ApiResult>({ loading: false })
+  const [balance, setBalance] = useState<BalanceInfo>({ loading: false })
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
   const [getResultCollapsed, setGetResultCollapsed] = useState(false)
   const [postResultCollapsed, setPostResultCollapsed] = useState(false)
@@ -31,6 +40,60 @@ export function IntegrationDemo() {
       }
     }
   }, null, 2))
+
+  const fetchBalance = async () => {
+    setBalance({ loading: true })
+    try {
+      const response = await axios.get(
+        'http://localhost:8000/api/v1/integration/proxy',
+        {
+          params: {
+            url: 'https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/accounts/11215/balances'
+          },
+          headers: {
+            'X-User-Id': 'demo_user'
+          },
+          timeout: 30000
+        }
+      )
+
+      const proxyData = response.data
+      console.log('Balance API Response:', proxyData) // Debug log
+
+      if (proxyData.success && proxyData.data) {
+        // Extract balance information from the response
+        // The balance data is nested in data.body as an array
+        const balanceData = proxyData.data.body && Array.isArray(proxyData.data.body)
+          ? proxyData.data.body[0]
+          : proxyData.data
+
+        console.log('Balance Data:', balanceData) // Debug log
+
+        const amount = balanceData?.availableBalance || 0
+        const currency = balanceData?.currency || 'USD'
+
+        console.log('Extracted Amount:', amount, 'Currency:', currency) // Debug log
+
+        setBalance({
+          loading: false,
+          amount: amount,
+          currency: currency,
+          lastUpdated: new Date().toISOString()
+        })
+      } else {
+        setBalance({
+          loading: false,
+          error: 'Failed to retrieve balance'
+        })
+      }
+    } catch (error: any) {
+      console.error('Balance fetch error:', error) // Debug log
+      setBalance({
+        loading: false,
+        error: error.response?.data?.detail || error.message || 'Failed to fetch balance'
+      })
+    }
+  }
 
   const executeGetRequest = async () => {
     setGetResult({ loading: true })
@@ -66,6 +129,9 @@ export function IntegrationDemo() {
 
   const executePostRequest = async () => {
     setPostResult({ loading: true })
+    // Clear previous balance when starting a new request
+    setBalance({ loading: false })
+
     try {
       // Validate JSON
       const parsedBody = JSON.parse(postBody)
@@ -93,7 +159,14 @@ export function IntegrationDemo() {
         status: proxyData.status,
         data: proxyData.data
       })
+
+      // If payment was successful, fetch the updated balance
+      if (proxyData.success && proxyData.status >= 200 && proxyData.status < 300) {
+        await fetchBalance()
+      }
     } catch (error: any) {
+      // Clear balance on error
+      setBalance({ loading: false })
       setPostResult({
         loading: false,
         error: error.response?.data?.detail || error.message || 'Request failed'
@@ -286,10 +359,49 @@ export function IntegrationDemo() {
               </div>
             </div>
             {!postResultCollapsed && (
-              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
-                <pre className="text-xs text-gray-800 whitespace-pre-wrap">
-                  {postResult.error || JSON.stringify(postResult.data, null, 2)}
-                </pre>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* API Response - Takes 2/3 of the width */}
+                <div className="lg:col-span-2">
+                  <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
+                    <pre className="text-xs text-gray-800 whitespace-pre-wrap">
+                      {postResult.error || JSON.stringify(postResult.data, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Account Balance - Takes 1/3 of the width on the right - Only show if payment was successful */}
+                {!postResult.error && (
+                  <div className="lg:col-span-1">
+                    {balance.loading && (
+                      <div className="bg-gray-50 rounded-lg p-4 h-full flex items-center justify-center">
+                        <div className="flex flex-col items-center space-y-2">
+                          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                          <span className="text-sm text-gray-600">Fetching balance...</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {balance.amount !== undefined && !balance.loading && (
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 h-full flex flex-col justify-center">
+                        <div className="text-center mb-3">
+                          <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
+                          <h3 className="text-xs font-semibold text-gray-600 mb-1">Account Balance</h3>
+                          <p className="text-xs text-gray-500">(Account: 11215)</p>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-700 mb-1">
+                            {balance.currency} {balance.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          {balance.lastUpdated && (
+                            <p className="text-xs text-gray-500">
+                              Updated: {new Date(balance.lastUpdated).toLocaleTimeString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
