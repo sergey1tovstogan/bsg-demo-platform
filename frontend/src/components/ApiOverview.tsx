@@ -57,22 +57,53 @@ export function ApiOverview() {
 
   return (
     <div className="card">
-      {/* Title */}
-      <h2 className="text-2xl font-bold text-[#283054] mb-6">API Overview</h2>
+      {/* Title and tooltip area */}
+      <div className="flex items-start justify-between gap-6 mb-6">
+        <h2 className="text-2xl font-bold text-[#283054]">API Overview</h2>
+
+        {/* Tooltip display area - in the white area to the right of title */}
+        <div className="flex-1 min-h-[120px]">
+          <div className={`p-4 bg-purple-50 border-2 border-purple-500 rounded-lg shadow-lg text-sm transition-opacity duration-200 ${activeTooltip ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className="flex items-start space-x-2">
+              <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+              <p className="text-gray-800 leading-relaxed">
+                {activeTooltip === 'expose-data' && tooltips[0].description}
+                {activeTooltip === 'api-catalog' && tooltips[1].description}
+                {activeTooltip === 'open-standards' && tooltips[2].description}
+                {activeTooltip === 'graphical-wizards' && tooltips[3].description}
+                {activeTooltip === 'security-standards' && tooltips[4].description}
+                {activeTooltip === 'upgradability' && tooltips[5].description}
+                {!activeTooltip && 'Hover over a feature to see details'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* API Framework Diagram */}
       <div
         className="relative rounded-lg overflow-hidden"
         style={{
           minHeight: '420px',
-          backgroundImage: `url(/api/v1/static/background.jpg?v=${Date.now()})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
         }}
       >
-        {/* Dark overlay to ensure text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/30"></div>
+        {/* Modern pattern overlay */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: `
+            radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 20%, rgba(255,255,255,0.05) 0%, transparent 50%)
+          `
+        }}></div>
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px'
+        }}></div>
 
         {/* Left Panel - Features */}
         <div className="absolute top-6 left-6 w-[45%] space-y-4 z-10">
@@ -84,17 +115,15 @@ export function ApiOverview() {
           >
             <div className="flex items-center space-x-4">
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-purple-600 rounded-xl flex items-center justify-center transform rotate-45">
-                  <div className="transform -rotate-45">
-                    <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l8 3.6v7.22c0 4.64-3.05 8.98-7.5 10.5-.32-.11-.64-.23-.95-.36C7.22 23.45 4 19.36 4 14.5V7.78l8-3.6z"/>
-                      <circle cx="9" cy="9" r="1.5"/>
-                      <circle cx="15" cy="9" r="1.5"/>
-                      <circle cx="9" cy="15" r="1.5"/>
-                      <circle cx="15" cy="15" r="1.5"/>
-                      <circle cx="12" cy="12" r="2"/>
-                    </svg>
-                  </div>
+                <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
+                  <svg className="w-full h-full p-1.5" viewBox="0 0 100 100" fill="none">
+                    {/* Clean symmetrical gear with 8 teeth */}
+                    <path fill="white" d="M50,10 L53,10 L53,18 L58,18 L61,14 L63.5,16.5 L59.5,20.5 L65,26 L69,22 L71.5,24.5 L67.5,28.5 L73,34 L77,30 L79.5,32.5 L75.5,36.5 L82,42 L82,47 L90,47 L90,53 L82,53 L82,58 L86,61 L83.5,63.5 L79.5,59.5 L74,65 L78,69 L75.5,71.5 L71.5,67.5 L66,73 L70,77 L67.5,79.5 L63.5,75.5 L58,82 L53,82 L53,90 L47,90 L47,82 L42,82 L39,86 L36.5,83.5 L40.5,79.5 L35,74 L31,78 L28.5,75.5 L32.5,71.5 L27,66 L23,70 L20.5,67.5 L24.5,63.5 L18,58 L18,53 L10,53 L10,47 L18,47 L18,42 L14,39 L16.5,36.5 L20.5,40.5 L26,35 L22,31 L24.5,28.5 L28.5,32.5 L34,27 L30,23 L32.5,20.5 L36.5,24.5 L42,18 L47,18 L47,10 Z M50,28 A22,22 0 1,0 50,72 A22,22 0 1,0 50,28 Z"/>
+                    {/* Inner circle for text - purple background */}
+                    <circle cx="50" cy="50" r="16" fill="#7C3AED" />
+                    {/* API text - white */}
+                    <text x="50" y="56" fontSize="14" fontWeight="bold" fill="white" textAnchor="middle" fontFamily="Arial, sans-serif">API</text>
+                  </svg>
                 </div>
               </div>
               <div className="flex-1 min-w-0">
@@ -102,14 +131,6 @@ export function ApiOverview() {
                 <p className="text-base font-bold text-purple-700 leading-tight">capabilities as REST APIs</p>
               </div>
             </div>
-            {activeTooltip === 'expose-data' && (
-              <div className="fixed z-[9999] w-96 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-2xl text-sm" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                <div className="flex items-start space-x-2">
-                  <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-800 leading-relaxed">{tooltips[0].description}</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Shopping Cart Icon & Text */}
@@ -131,14 +152,6 @@ export function ApiOverview() {
                 <p className="text-base font-bold text-purple-700 leading-tight">documentation and reuse</p>
               </div>
             </div>
-            {activeTooltip === 'api-catalog' && (
-              <div className="fixed z-[9999] w-96 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-2xl text-sm" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                <div className="flex items-start space-x-2">
-                  <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-800 leading-relaxed">{tooltips[1].description}</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Open Standards Icon & Text */}
@@ -174,14 +187,6 @@ export function ApiOverview() {
                 </div>
               </div>
             </div>
-            {activeTooltip === 'open-standards' && (
-              <div className="fixed z-[9999] w-96 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-2xl text-sm" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                <div className="flex items-start space-x-2">
-                  <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-800 leading-relaxed">{tooltips[2].description}</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -210,14 +215,6 @@ export function ApiOverview() {
                 <p className="text-base font-bold text-purple-700 leading-tight">productivity</p>
               </div>
             </div>
-            {activeTooltip === 'graphical-wizards' && (
-              <div className="fixed z-[9999] w-96 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-2xl text-sm" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                <div className="flex items-start space-x-2">
-                  <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-800 leading-relaxed">{tooltips[3].description}</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Security Shield Icon & Text */}
@@ -240,14 +237,6 @@ export function ApiOverview() {
                 <p className="text-base font-bold text-purple-700 leading-tight">privacy and authentication</p>
               </div>
             </div>
-            {activeTooltip === 'security-standards' && (
-              <div className="fixed z-[9999] w-96 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-2xl text-sm" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                <div className="flex items-start space-x-2">
-                  <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-800 leading-relaxed">{tooltips[4].description}</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Upgradability Icon & Text */}
@@ -270,14 +259,6 @@ export function ApiOverview() {
                 <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Upgradability and versioning</h3>
               </div>
             </div>
-            {activeTooltip === 'upgradability' && (
-              <div className="fixed z-[9999] w-96 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-2xl text-sm" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                <div className="flex items-start space-x-2">
-                  <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-800 leading-relaxed">{tooltips[5].description}</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

@@ -10,6 +10,51 @@ interface ApiResult {
   loading: boolean
 }
 
+// JSON Syntax Highlighter Component
+const JsonView = ({ data, rawText }: { data: any, rawText?: string }) => {
+  if (!data) {
+    // If JSON is invalid, show the raw text without highlighting
+    if (rawText) {
+      return <pre className="text-xs whitespace-pre-wrap font-mono">{rawText}</pre>
+    }
+    return <pre className="text-xs whitespace-pre-wrap text-gray-500">No data</pre>
+  }
+
+  const formattedJson = JSON.stringify(data, null, 2)
+
+  const renderToken = (token: string, index: number) => {
+    // Detect token type and apply appropriate styling with inline colors
+    if (token.match(/^".*":$/)) {
+      // Object key
+      return <span key={index} style={{ color: '#BB6F62', fontWeight: 600 }}>{token}</span>
+    } else if (token.match(/^".*"$/)) {
+      // String value
+      return <span key={index} style={{ color: '#134CA2' }}>{token}</span>
+    } else if (token.match(/^-?\d+\.?\d*$/)) {
+      // Number
+      return <span key={index} style={{ color: '#008456' }}>{token}</span>
+    } else if (token === 'true' || token === 'false') {
+      // Boolean - Purple
+      return <span key={index} style={{ color: '#9333ea', fontWeight: 600 }}>{token}</span>
+    } else if (token === 'null') {
+      // Null - Gray
+      return <span key={index} style={{ color: '#6b7280', fontWeight: 600 }}>{token}</span>
+    } else {
+      // Default (punctuation, whitespace)
+      return <span key={index}>{token}</span>
+    }
+  }
+
+  // Split JSON into tokens
+  const tokens = formattedJson.split(/("(?:\\.|[^"\\])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[{}[\],:]|\s+)/g).filter(Boolean)
+
+  return (
+    <pre className="text-xs whitespace-pre-wrap font-mono">
+      {tokens.map((token, index) => renderToken(token, index))}
+    </pre>
+  )
+}
+
 interface BalanceInfo {
   amount?: number
   currency?: string
@@ -260,9 +305,11 @@ export function IntegrationDemo() {
             </div>
             {!getResultCollapsed && (
               <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
-                <pre className="text-xs text-gray-800 whitespace-pre-wrap">
-                  {getResult.error || JSON.stringify(getResult.data, null, 2)}
-                </pre>
+                {getResult.error ? (
+                  <pre className="text-xs text-red-700 whitespace-pre-wrap">{getResult.error}</pre>
+                ) : (
+                  <JsonView data={getResult.data} />
+                )}
               </div>
             )}
           </div>
@@ -305,12 +352,21 @@ export function IntegrationDemo() {
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Request Body:
           </label>
-          <textarea
-            value={postBody}
-            onChange={(e) => setPostBody(e.target.value)}
-            className="w-full h-64 px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent"
-            placeholder="Enter JSON request body..."
-          />
+          <div className="relative">
+            <textarea
+              value={postBody}
+              onChange={(e) => setPostBody(e.target.value)}
+              className="absolute top-0 left-0 w-full h-48 px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent bg-transparent text-transparent caret-black resize-none z-10"
+              placeholder="Enter JSON request body..."
+              spellCheck={false}
+            />
+            <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
+              <JsonView
+                data={(() => { try { return JSON.parse(postBody) } catch { return null } })()}
+                rawText={postBody}
+              />
+            </div>
+          </div>
         </div>
 
         {/* POST Response */}
@@ -333,15 +389,6 @@ export function IntegrationDemo() {
                 )}
               </div>
               <div className="flex items-center space-x-2">
-                {/* Extensibility Framework Badge */}
-                {postResult.data && JSON.stringify(postResult.data).includes('pythonValidationError') && (
-                  <div className="flex items-center space-x-1 px-3 py-1 bg-purple-100 border border-purple-300 text-purple-700 rounded-lg">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/>
-                    </svg>
-                    <span className="text-xs font-semibold">Extensibility Framework - Python validation script</span>
-                  </div>
-                )}
                 <button
                   onClick={() => setPostResultCollapsed(!postResultCollapsed)}
                   className="flex items-center space-x-1 px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
@@ -363,42 +410,62 @@ export function IntegrationDemo() {
                 {/* API Response - Takes 2/3 of the width */}
                 <div className="lg:col-span-2">
                   <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
-                    <pre className="text-xs text-gray-800 whitespace-pre-wrap">
-                      {postResult.error || JSON.stringify(postResult.data, null, 2)}
-                    </pre>
+                    {postResult.error ? (
+                      <pre className="text-xs text-red-700 whitespace-pre-wrap">{postResult.error}</pre>
+                    ) : (
+                      <JsonView data={postResult.data} />
+                    )}
                   </div>
                 </div>
 
-                {/* Account Balance - Takes 1/3 of the width on the right - Only show if payment was successful */}
+                {/* Right column - Balance or Extensibility Framework Badge */}
                 {!postResult.error && (
                   <div className="lg:col-span-1">
-                    {balance.loading && (
-                      <div className="bg-gray-50 rounded-lg p-4 h-full flex items-center justify-center">
-                        <div className="flex flex-col items-center space-y-2">
-                          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                          <span className="text-sm text-gray-600">Fetching balance...</span>
+                    {/* Extensibility Framework Badge - Show when pythonValidationError is present */}
+                    {postResult.data && JSON.stringify(postResult.data).includes('pythonValidationError') && (
+                      <div className="bg-gradient-to-br from-purple-50 to-violet-50 border-2 border-purple-300 rounded-lg p-4 h-full flex flex-col justify-center">
+                        <div className="text-center mb-3">
+                          <svg className="w-10 h-10 text-purple-600 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/>
+                          </svg>
+                          <h3 className="text-sm font-semibold text-purple-700 mb-1">Extensibility Framework</h3>
+                          <p className="text-xs text-purple-600">Python validation script</p>
                         </div>
                       </div>
                     )}
 
-                    {balance.amount !== undefined && !balance.loading && (
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 h-full flex flex-col justify-center">
-                        <div className="text-center mb-3">
-                          <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
-                          <h3 className="text-xs font-semibold text-gray-600 mb-1">Account Balance</h3>
-                          <p className="text-xs text-gray-500">(Account: 11215)</p>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-700 mb-1">
-                            {balance.currency} {balance.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {/* Account Balance - Show when loading or when balance is available and no pythonValidationError */}
+                    {!(postResult.data && JSON.stringify(postResult.data).includes('pythonValidationError')) && (
+                      <>
+                        {balance.loading && (
+                          <div className="bg-gray-50 rounded-lg p-4 h-full flex items-center justify-center">
+                            <div className="flex flex-col items-center space-y-2">
+                              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                              <span className="text-sm text-gray-600">Fetching balance...</span>
+                            </div>
                           </div>
-                          {balance.lastUpdated && (
-                            <p className="text-xs text-gray-500">
-                              Updated: {new Date(balance.lastUpdated).toLocaleTimeString()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                        )}
+
+                        {balance.amount !== undefined && !balance.loading && (
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 h-full flex flex-col justify-center">
+                            <div className="text-center mb-3">
+                              <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
+                              <h3 className="text-xs font-semibold text-gray-600 mb-1">Account Balance</h3>
+                              <p className="text-xs text-gray-500">(Account: 11215)</p>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-green-700 mb-1">
+                                {balance.currency} {balance.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                              {balance.lastUpdated && (
+                                <p className="text-xs text-gray-500">
+                                  Updated: {new Date(balance.lastUpdated).toLocaleTimeString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
