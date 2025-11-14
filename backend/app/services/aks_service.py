@@ -525,6 +525,8 @@ class AKSService:
             
             logger.info(f"Executing kubectl: {' '.join(cmd_parts)}")
             logger.info(f"KUBECONFIG={kubeconfig_path}")
+            logger.info(f"kubectl path: {kubectl_cmd}")
+            logger.info(f"kubectl exists: {os.path.exists(kubectl_cmd) if os.path.exists(kubectl_cmd) else 'N/A'}")
             
             # Use run_in_executor for Windows compatibility
             def _run_kubectl():
