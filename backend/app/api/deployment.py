@@ -268,15 +268,19 @@ async def get_aks_namespaces(request: NamespacesRequest):
             "data": list(cluster_namespaces.values()),
             "count": len(cluster_namespaces)
         }
-    except Exception as e:
-        logger.error(f"Error getting AKS namespaces: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail={
+        except Exception as e:
+            logger.error(f"Error getting AKS namespaces: {e}", exc_info=True)
+            import traceback
+            error_detail = {
                 "status": "error",
-                "error": str(e)
+                "error": str(e),
+                "traceback": traceback.format_exc()
             }
-        )
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=500,
+                detail=error_detail
+            )
 
 
 @router.post("/azure/resources")
