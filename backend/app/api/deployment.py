@@ -268,7 +268,7 @@ async def get_aks_namespaces(request: NamespacesRequest):
             "data": list(cluster_namespaces.values()),
             "count": len(cluster_namespaces)
         }
-        except Exception as e:
+    except Exception as e:
             logger.error(f"Error getting AKS namespaces: {e}", exc_info=True)
             import traceback
             error_detail = {
