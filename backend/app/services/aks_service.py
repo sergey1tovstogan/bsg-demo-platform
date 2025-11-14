@@ -583,7 +583,9 @@ class AKSService:
             return sorted(namespaces)
             
         except Exception as e:
-            logger.error(f"Error listing namespaces for cluster {cluster.name}: {e}")
+            logger.error(f"Error listing namespaces for cluster {cluster.name}: {e}", exc_info=True)
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return namespaces
 
     async def discover_pods_from_resources(
