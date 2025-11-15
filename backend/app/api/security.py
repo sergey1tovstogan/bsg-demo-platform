@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import base64
+import urllib.parse
 
 from app.core.database import get_database
 from app.core.logging import get_logger
@@ -354,6 +355,45 @@ async def get_presentations(
     except Exception as e:
         logger.error(f"Error retrieving presentations: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error retrieving presentations: {str(e)}")
+
+
+@router.get("/presentations/by-name/{presentation_name}")
+async def get_presentation_by_name(
+    presentation_name: str,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Get a presentation by its name from security_presentation collection.
+    
+    Returns the full presentation context including slides, metadata, etc.
+    """
+    try:
+        # Decode URL-encoded presentation name
+        decoded_name = urllib.parse.unquote(presentation_name)
+        
+        doc = await db.security_presentation.find_one({"presentation_name": decoded_name})
+        
+        if not doc:
+            raise HTTPException(status_code=404, detail=f"Presentation '{decoded_name}' not found")
+        
+        presentation_data = doc.get('presentation', {})
+        
+        return {
+            "success": True,
+            "data": {
+                "presentation_number": doc.get("presentation_number"),
+                "presentation_name": doc.get("presentation_name"),
+                "presentation": presentation_data,
+                "created_at": doc.get("created_at"),
+                "updated_at": doc.get("updated_at")
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving presentation by name: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error retrieving presentation: {str(e)}")
 
 
 @router.get("/documents/{document_number}/search")

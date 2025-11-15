@@ -257,6 +257,25 @@ class ApiService {
     return response.data
   }
 
+  async getSecurityPresentationByName(presentationName: string) {
+    const encodedName = encodeURIComponent(presentationName)
+    const response = await this.client.get<ApiResponse<{
+      presentation_number: number
+      presentation_name: string
+      presentation: {
+        file_name?: string
+        slides?: Array<any>
+        slide_count?: number
+        full_text?: string
+        total_characters?: number
+        metadata?: any
+      }
+      created_at?: string
+      updated_at?: string
+    }>>(`/components/security/presentations/by-name/${encodedName}`)
+    return response.data
+  }
+
   // Auth APIs
   async login(email: string, password: string) {
     const response = await this.client.post<ApiResponse<{ access_token: string; refresh_token: string; token_type: string; expires_in: number }>>(
