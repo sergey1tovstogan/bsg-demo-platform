@@ -320,6 +320,42 @@ async def get_document(
         raise HTTPException(status_code=500, detail=f"Error retrieving document: {str(e)}")
 
 
+@router.get("/presentations")
+async def get_presentations(
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Get all presentations from security_presentation collection.
+    
+    Returns a list of presentations with their numbers and names.
+    """
+    try:
+        cursor = db.security_presentation.find(
+            {},
+            {"presentation_number": 1, "presentation_name": 1, "_id": 0}
+        ).sort("presentation_number", 1)
+        
+        presentations = await cursor.to_list(length=1000)
+        
+        return {
+            "success": True,
+            "data": {
+                "presentations": [
+                    {
+                        "presentation_number": p.get("presentation_number"),
+                        "presentation_name": p.get("presentation_name", "")
+                    }
+                    for p in presentations
+                ],
+                "total": len(presentations)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error retrieving presentations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error retrieving presentations: {str(e)}")
+
+
 @router.get("/documents/{document_number}/search")
 async def search_document_content(
     document_number: int,

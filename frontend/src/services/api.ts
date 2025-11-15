@@ -246,6 +246,17 @@ class ApiService {
     return response.data
   }
 
+  async getSecurityPresentations() {
+    const response = await this.client.get<ApiResponse<{
+      presentations: Array<{
+        presentation_number: number
+        presentation_name: string
+      }>
+      total: number
+    }>>('/components/security/presentations')
+    return response.data
+  }
+
   // Auth APIs
   async login(email: string, password: string) {
     const response = await this.client.post<ApiResponse<{ access_token: string; refresh_token: string; token_type: string; expires_in: number }>>(
