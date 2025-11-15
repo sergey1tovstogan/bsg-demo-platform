@@ -37,6 +37,13 @@ class AnalyzeRequest(BaseModel):
     """Request model for analyzing services."""
     services: List[Dict[str, Any]] = Field(..., description="List of Azure resources")
     analysis_id: Optional[str] = Field(None, description="Analysis ID for progress tracking")
+    selected_namespaces: Optional[List[str]] = Field(None, description="Selected AKS namespaces to analyze")
+
+
+class NamespacesRequest(BaseModel):
+    """Request model for getting AKS namespaces."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group_names: List[str] = Field(..., description="List of resource group names")
 
 
 def get_azure_service(subscription_id: str) -> AzureService:
@@ -188,6 +195,94 @@ async def get_resource_groups(subscriptionId: str):
         )
 
 
+@router.post("/aks/namespaces")
+async def get_aks_namespaces(request: NamespacesRequest):
+    """
+    Get all namespaces from AKS clusters in the specified resource groups.
+    
+    Args:
+        request: Namespaces request with subscription ID and resource group names
+        
+    Returns:
+        List of namespaces grouped by cluster
+    """
+    try:
+        subscription_id = request.subscription_id
+        resource_group_names = request.resource_group_names
+        
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="Subscription ID is required")
+        
+        if not resource_group_names or len(resource_group_names) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="At least one resource group name is required"
+            )
+        
+        azure_service = get_azure_service(subscription_id)
+        resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
+        
+        # Find AKS clusters
+        aks_clusters = [
+            r for r in resources 
+            if "microsoft.containerservice/managedclusters" in r.type.lower()
+        ]
+        
+        if not aks_clusters:
+            return {
+                "status": "success",
+                "data": [],
+                "message": "No AKS clusters found in selected resource groups"
+            }
+        
+        # Get namespaces from each cluster
+        aks_service = AKSService(subscription_id)
+        cluster_namespaces = {}
+        
+        for cluster in aks_clusters:
+            try:
+                namespaces = await aks_service.list_cluster_namespaces(cluster)
+                logger.info(f"Retrieved {len(namespaces)} namespaces from cluster {cluster.name}")
+                cluster_namespaces[cluster.name] = {
+                    "cluster_name": cluster.name,
+                    "resource_group": cluster.resource_group,
+                    "namespaces": namespaces
+                }
+                if len(namespaces) == 0:
+                    logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
+                    logger.warning("  1. kubectl is not installed or not in PATH")
+                    logger.warning("  2. Cluster credentials are not configured")
+                    logger.warning("  3. No non-system namespaces exist in the cluster")
+                    logger.warning("  4. Backend is running in an environment without kubectl access")
+            except Exception as e:
+                logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}", exc_info=True)
+                cluster_namespaces[cluster.name] = {
+                    "cluster_name": cluster.name,
+                    "resource_group": cluster.resource_group,
+                    "namespaces": [],
+                    "error": f"Failed to retrieve namespaces: {str(e)}"
+                }
+        
+        return {
+            "status": "success",
+            "data": list(cluster_namespaces.values()),
+            "count": len(cluster_namespaces)
+        }
+    except Exception as e:
+            logger.error(f"Error getting AKS namespaces: {e}", exc_info=True)
+            import traceback
+            error_detail = {
+                "status": "error",
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            }
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=500,
+                detail=error_detail
+            )
+
+
 @router.post("/azure/resources")
 async def get_resources(request: ResourcesRequest):
     """
@@ -217,18 +312,24 @@ async def get_resources(request: ResourcesRequest):
         
         # Discover pods from AKS clusters
         try:
+            logger.info(f"Starting AKS pod discovery for {len(resources)} resources...")
             aks_service = AKSService(subscription_id)
             # Don't filter by specific namespaces - let auto-detection find all Temenos namespaces
             # This will discover: eventstore, adapterservice, genericconfig, holdings, partyv2, transact, etc.
             aks_pods = await aks_service.discover_pods_from_resources(resources, temenos_namespaces=None)
             
             if aks_pods:
-                logger.info(f"Adding {len(aks_pods)} AKS pods to resources from discovered namespaces")
+                logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods from Temenos namespaces")
+                logger.info(f"Sample pod namespaces: {list(set([p.properties.get('namespace', 'unknown') for p in aks_pods[:5]]))}")
                 resources.extend(aks_pods)
+                logger.info(f"Total resources after adding pods: {len(resources)}")
             else:
-                logger.info("No AKS pods discovered (this is normal if no AKS clusters found)")
+                logger.warning("⚠ No AKS pods discovered - this might indicate:")
+                logger.warning("  1. No AKS clusters found in resource groups")
+                logger.warning("  2. AKS discovery failed (check logs above)")
+                logger.warning("  3. No Temenos namespaces found in clusters")
         except Exception as e:
-            logger.warning(f"Failed to discover AKS pods (this is optional): {e}", exc_info=True)
+            logger.error(f"❌ Failed to discover AKS pods: {e}", exc_info=True)
             # Don't fail the whole request if AKS discovery fails
         
         return {
@@ -287,6 +388,46 @@ async def analyze_services(request: AnalyzeRequest):
                 properties=svc_data.get("properties", {})
             ))
         
+        # Discover AKS pods if namespaces are selected
+        selected_namespaces = request.selected_namespaces if request.selected_namespaces else None
+        
+        if selected_namespaces and len(selected_namespaces) > 0:
+            logger.info(f"Selected namespaces for AKS pod discovery: {selected_namespaces}")
+            # Extract subscription ID from first resource
+            subscription_id = None
+            if services and services[0].id:
+                id_parts = services[0].id.split("/")
+                if "subscriptions" in id_parts:
+                    subscription_id = id_parts[id_parts.index("subscriptions") + 1]
+            
+            if subscription_id:
+                try:
+                    # Find AKS clusters in the resources
+                    aks_clusters = [s for s in services if "microsoft.containerservice/managedclusters" in s.type.lower()]
+                    if aks_clusters:
+                        aks_service = AKSService(subscription_id)
+                        # Discover pods only from selected namespaces
+                        aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=selected_namespaces)
+                        
+                        if aks_pods:
+                            logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods from {len(selected_namespaces)} selected namespaces")
+                            pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
+                            logger.info(f"Pod namespaces found: {pod_namespaces}")
+                            services.extend(aks_pods)
+                            logger.info(f"Total services after adding pods: {len(services)}")
+                        else:
+                            logger.warning(f"No pods found in selected namespaces: {selected_namespaces}")
+                except Exception as e:
+                    logger.error(f"Failed to discover AKS pods: {e}", exc_info=True)
+                    # Continue with analysis even if AKS discovery fails
+        
+        # Log what we're analyzing
+        pod_count = sum(1 for s in services if "managedclusters/pods" in s.type.lower())
+        logger.info(f"Analyzing {len(services)} services ({pod_count} AKS pods, {len(services) - pod_count} Azure resources)")
+        if pod_count > 0:
+            pod_namespaces = list(set([s.properties.get("namespace", "unknown") for s in services if "managedclusters/pods" in s.type.lower()]))
+            logger.info(f"Pod namespaces: {pod_namespaces}")
+        
         # Initialize Temenos service
         temenos_service = TemenosService()
         
@@ -316,7 +457,10 @@ async def analyze_services(request: AnalyzeRequest):
 
 
 def _deduplicate_components(results: List[TemenosAnalysisResult]) -> List[TemenosAnalysisResult]:
-    """Deduplicate components by grouping services with the same component name."""
+    """
+    Deduplicate components by grouping services with the same normalized component name.
+    For AKS pods, group by namespace/component rather than individual pod names.
+    """
     component_map: Dict[str, TemenosAnalysisResult] = {}
     unidentified: List[TemenosAnalysisResult] = []
     
@@ -325,17 +469,67 @@ def _deduplicate_components(results: List[TemenosAnalysisResult]) -> List[Temeno
             unidentified.append(result)
             continue
         
-        component_name = result.component_info.component_name
-        existing = component_map.get(component_name)
+        # Use normalized component name for grouping (not the individual service/pod name)
+        # This groups all pods from the same namespace/component together
+        normalized_name = result.component_info.component_name
+        
+        # For AKS pods, group by namespace ONLY - all pods in same namespace = one component
+        # This way: eventstore namespace = 1 component, adapterservice = 1 component, etc.
+        if "managedclusters/pods" in result.service.type.lower():
+            namespace = result.service.properties.get("namespace", "")
+            if namespace:
+                # Use namespace as the PRIMARY grouping key
+                # All pods from the same namespace should be grouped as ONE component
+                # This ensures: adapterservice (3 pods) = 1 component, eventstore (3 pods) = 1 component
+                grouping_key = namespace.lower()  # Use lowercase for consistency
+            else:
+                # Fallback if namespace not found (shouldn't happen)
+                grouping_key = normalized_name
+        else:
+            # For non-pod resources, use normalized name
+            # But exclude infrastructure types
+            if any(infra_type in result.service.type.lower() for infra_type in [
+                "microsoft.storage", "microsoft.keyvault", "microsoft.network",
+                "microsoft.insights", "microsoft.operationalinsights"
+            ]):
+                # Skip infrastructure resources - they shouldn't be Temenos components
+                logger.debug(f"Skipping infrastructure resource: {result.service.name} ({result.service.type})")
+                unidentified.append(result)
+                continue
+            grouping_key = normalized_name
+        
+        existing = component_map.get(grouping_key)
         
         if not existing:
-            component_map[component_name] = result
+            component_map[grouping_key] = result
         else:
-            # Merge services - simplified version
-            # In a full implementation, you'd merge related services here
-            pass
+            # Merge services - add related services list
+            # Keep the first result but note that there are multiple instances
+            if result.service.name not in existing.component_info.related_services:
+                existing.component_info.related_services.append(result.service.name)
     
-    return list(component_map.values()) + unidentified
+    # Filter out infrastructure services from unidentified
+    # Infrastructure services are not meaningful to show as "Other Azure Services"
+    infrastructure_types = [
+        "microsoft.storage", "microsoft.keyvault", "microsoft.network",
+        "microsoft.insights", "microsoft.operationalinsights", "microsoft.compute/virtualmachines",
+        "microsoft.compute/virtualmachinescalesets"
+    ]
+    
+    filtered_unidentified = []
+    for result in unidentified:
+        resource_type = result.service.type.lower()
+        # Skip infrastructure resources
+        if any(infra_type in resource_type for infra_type in infrastructure_types):
+            logger.debug(f"Filtering out infrastructure resource: {result.service.name} ({result.service.type})")
+            continue
+        filtered_unidentified.append(result)
+    
+    # Return identified components first, then filtered unidentified
+    identified = list(component_map.values())
+    logger.info(f"Deduplication: {len(identified)} unique components from {len(results)} results")
+    logger.info(f"Filtered out {len(unidentified) - len(filtered_unidentified)} infrastructure services")
+    return identified + filtered_unidentified
 
 
 @router.get("/temenos/health")

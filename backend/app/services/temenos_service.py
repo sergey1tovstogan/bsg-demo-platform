@@ -89,8 +89,12 @@ class TemenosService:
     
     def __init__(self):
         """Initialize Temenos service."""
-        self.rag_adapter = get_rag_adapter()
-        logger.info("Temenos service initialized with RAG adapter")
+        try:
+            self.rag_adapter = get_rag_adapter()
+            logger.info("Temenos service initialized with RAG adapter")
+        except Exception as e:
+            logger.warning(f"RAG adapter not available: {e}. Component identification will work from namespace/name only.")
+            self.rag_adapter = None
 
     def _is_potential_temenos_component(self, service: AzureResource) -> bool:
         """Quick check if service might be a Temenos component."""
@@ -118,11 +122,11 @@ class TemenosService:
             "microsoft.operationalinsights/workspaces",
         ]
         
-        # Skip if it's clearly infrastructure
+        # Skip if it's clearly infrastructure - NEVER include storage accounts, key vaults, etc. as Temenos components
         if any(infra_type in resource_type for infra_type in infrastructure_types):
-            # Only include if name suggests Temenos
-            if not any(pattern in name for pattern in ["transact", "temenos", "modular", "tap"]):
-                return False
+            # Infrastructure resources are NEVER Temenos components, even if name suggests it
+            # Storage accounts, key vaults, network resources are infrastructure, not Temenos components
+            return False
         
         # Quick pattern check - must have Temenos-related name
         temenos_patterns = [
@@ -152,7 +156,18 @@ class TemenosService:
         # Special handling for AKS pods - check namespace and pod name
         if "managedclusters/pods" in resource_type.lower():
             # Pods are already filtered by namespace, so include them
-            return True
+            # Also check if namespace in properties indicates Temenos component
+            namespace = service.properties.get("namespace", "")
+            if namespace:
+                # Check if namespace matches Temenos patterns
+                temenos_namespace_patterns = [
+                    r"eventstore", r"adapter", r"genericconfig", r"holdings", r"party",
+                    r"transact", r"modular", r"temenos", r"tap", r"stmtgen", r"notification",
+                    r"audit", r"file", r"workflow", r"deposits", r"lending", r"webingress", r"ingress"
+                ]
+                if any(re.search(pattern, namespace, re.IGNORECASE) for pattern in temenos_namespace_patterns):
+                    return True
+            return True  # Include all pods since they're already filtered by namespace discovery
         
         # Include if: has Temenos name OR is a relevant type with Temenos name
         return has_temenos_name or (is_relevant_type and has_temenos_name)
@@ -185,23 +200,120 @@ class TemenosService:
             
             # Use namespace as component identifier if it's Temenos-related
             if namespace:
+                logger.debug(f"Processing AKS pod '{pod_name}' from namespace '{namespace}'")
+                # Comprehensive Temenos namespace mapping
                 temenos_namespaces = {
+                    # Core microservices
                     "eventstore": "Event Store Microservice",
                     "adapterservice": "Adapter Microservice",
+                    "adapter-service": "Adapter Microservice",
                     "genericconfig": "Generic Config Microservice",
+                    "generic-config": "Generic Config Microservice",
                     "holdings": "Holdings Microservice",
                     "partyv2": "Party V2 Microservice",
+                    "party-v2": "Party V2 Microservice",
                     "transact": "Temenos Transact",
                     "modular-banking": "Modular Banking",
+                    "modularbanking": "Modular Banking",
+                    "webingress": "Web Ingress Microservice",
+                    # Handle namespaces with dates/versions (e.g., deposits202507)
+                    "deposits202507": "Deposits Microservice",
+                    # Ingress namespaces - use more specific names
+                    "ingress-nginx-deposits-202507": "Deposits Ingress Service",
+                    "ingress-nginx-lending": "Lending Ingress Service",
+                    "ingress-nginx-transact": "Transact Ingress Service",
+                    
+                    # Additional microservices
+                    "stmtgen": "Statement Generation Microservice",
+                    "stmt-gen": "Statement Generation Microservice",
+                    "notification": "Notification Microservice",
+                    "audit": "Audit Microservice",
+                    "file": "File Management Microservice",
+                    "workflow": "Workflow Microservice",
+                    "integration": "Integration Microservice",
+                    "deposits": "Deposits Microservice",
+                    "lending": "Lending Microservice",
+                    "webingress": "Web Ingress Microservice",
+                    "web-ingress": "Web Ingress Microservice",
+                    "ingress": "Ingress Microservice",
+                    
+                    # TAP components
+                    "tap": "Temenos TAP",
+                    "tap-service": "Temenos TAP Service",
+                    
+                    # Other common patterns
+                    "temenos": "Temenos Component",
+                    "t24": "Temenos Transact",
+                    "temenos-transact": "Temenos Transact",
                 }
                 
+                # Try exact match first
                 normalized = temenos_namespaces.get(namespace.lower())
+                
+                # If no exact match, try pattern matching
+                if not normalized:
+                    namespace_lower = namespace.lower()
+                    # Pattern-based matching for variations
+                    if any(pattern in namespace_lower for pattern in ["eventstore", "event-store", "event"]):
+                        normalized = "Event Store Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["adapter", "adapt"]):
+                        normalized = "Adapter Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["genericconfig", "generic-config", "config"]):
+                        normalized = "Generic Config Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["holdings", "holding"]):
+                        normalized = "Holdings Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["party", "partyv2", "party-v2"]):
+                        normalized = "Party V2 Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["transact", "t24", "temenos-transact"]):
+                        normalized = "Temenos Transact"
+                    elif any(pattern in namespace_lower for pattern in ["modular", "modularbanking", "modular-banking"]):
+                        normalized = "Modular Banking"
+                    elif any(pattern in namespace_lower for pattern in ["stmtgen", "stmt-gen", "statement"]):
+                        normalized = "Statement Generation Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["notification", "notify"]):
+                        normalized = "Notification Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["audit", "auditing"]):
+                        normalized = "Audit Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["file", "files"]):
+                        normalized = "File Management Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["workflow", "workflows"]):
+                        normalized = "Workflow Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["integration", "integrate"]):
+                        normalized = "Integration Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["deposits", "deposit"]):
+                        # Handle variations like "deposits202507"
+                        normalized = "Deposits Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["lending", "lend"]):
+                        normalized = "Lending Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["webingress", "web-ingress"]):
+                        normalized = "Web Ingress Microservice"
+                    elif "ingress" in namespace_lower and "nginx" in namespace_lower:
+                        # Handle ingress-nginx-* namespaces (they're still Temenos-related ingress)
+                        # Extract the component name from the namespace (e.g., ingress-nginx-transact -> Transact Ingress)
+                        if "transact" in namespace_lower:
+                            normalized = "Transact Ingress Service"
+                        elif "deposits" in namespace_lower:
+                            normalized = "Deposits Ingress Service"
+                        elif "lending" in namespace_lower:
+                            normalized = "Lending Ingress Service"
+                        else:
+                            normalized = "Ingress Service"
+                    elif "ingress" in namespace_lower:
+                        normalized = "Ingress Microservice"
+                    elif any(pattern in namespace_lower for pattern in ["tap", "tap-service"]):
+                        normalized = "Temenos TAP"
+                    elif any(pattern in namespace_lower for pattern in ["temenos"]):
+                        normalized = "Temenos Component"
+                
                 if normalized:
+                    logger.info(f"Identified Temenos component: {normalized} from namespace '{namespace}' (pod: {pod_name})")
                     return {
                         "componentName": pod_name,
                         "normalizedName": normalized,
-                        "componentCategory": "microservice"
+                        "componentCategory": "microservice" if "Microservice" in normalized else "core"
                     }
+                else:
+                    logger.debug(f"Namespace '{namespace}' did not match any Temenos patterns for pod '{pod_name}'")
             
             # Fall back to pod name patterns
             name = pod_name.lower()
@@ -370,6 +482,13 @@ class TemenosService:
                 return "Azure Container App (Initializer)"
             return "Azure Container App"
         
+        # For AKS pods, return more specific type
+        if "managedclusters/pods" in resource_type:
+            namespace = service.properties.get("namespace", "")
+            if namespace:
+                return f"AKS Pod ({namespace} namespace)"
+            return "AKS Pod"
+        
         if "microsoft.containerservice" in resource_type or "kubernetes" in resource_type:
             return "Azure Kubernetes Service (AKS)"
         
@@ -382,8 +501,11 @@ class TemenosService:
                 return "Azure Database for MySQL"
             return "Azure Database Service"
         
+        # Storage services should not be identified as Temenos components
+        # This method is only called for identified components, so this shouldn't happen
+        # But if it does, return a generic type
         if "storage" in resource_type:
-            return "Azure Storage Service"
+            return "Azure Storage (Infrastructure)"
         
         if "eventhub" in resource_type:
             return "Azure Event Hub"
@@ -415,6 +537,24 @@ class TemenosService:
             component_category = extracted_info["componentCategory"]
             
             logger.info(f"Identifying component for {service.name}: {component_name}")
+            
+            # Check if RAG adapter is available (has JWT token)
+            has_rag = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
+            
+            if not has_rag:
+                # If RAG is not available, create component info from namespace/name only
+                logger.info(f"RAG not available, creating component info from namespace for {component_name}")
+                component_info = TemenosComponentInfo(
+                    component_name=component_name,
+                    component_type=self._determine_component_type(service),
+                    architectural_overview=f"{component_name} is a Temenos microservice component deployed in Azure Kubernetes Service.",
+                    functional_overview=f"{component_name} provides core banking functionality as part of the Temenos Transact platform.",
+                    capabilities=[f"Core {component_name} functionality"],
+                    related_services=[],
+                    relationships=[]
+                )
+                logger.info(f"Successfully identified component (without RAG): {component_name} for {service.name}")
+                return component_info
             
             # Build queries
             architectural_query = self._build_architectural_query(component_name, component_category)
@@ -487,9 +627,23 @@ class TemenosService:
         
         logger.info(f"Starting analysis of {total} services...")
         
+        # Log pod count for debugging
+        pod_services = [s for s in services if "managedclusters/pods" in s.type.lower()]
+        logger.info(f"Found {len(pod_services)} AKS pod services out of {total} total services")
+        if pod_services:
+            pod_namespaces = list(set([s.properties.get("namespace", "unknown") for s in pod_services]))
+            logger.info(f"Pod namespaces in analysis: {pod_namespaces}")
+        
         # Filter services first - only process potential Temenos components
         potential_services = [s for s in services if self._is_potential_temenos_component(s)]
         skipped_count = total - len(potential_services)
+        
+        # Log which pods passed the filter
+        potential_pods = [s for s in potential_services if "managedclusters/pods" in s.type.lower()]
+        logger.info(f"After filtering: {len(potential_pods)} pods identified as potential Temenos components")
+        if potential_pods:
+            potential_namespaces = list(set([s.properties.get("namespace", "unknown") for s in potential_pods]))
+            logger.info(f"Potential component namespaces: {potential_namespaces}")
         
         if skipped_count > 0:
             logger.info(f"Skipping {skipped_count} non-Temenos infrastructure services")
@@ -548,4 +702,3 @@ class TemenosService:
         
         logger.info(f"Analysis complete. {len(results)} results, {sum(1 for r in results if r.component_info)} components identified, {skipped_count} infrastructure services skipped.")
         return results
-

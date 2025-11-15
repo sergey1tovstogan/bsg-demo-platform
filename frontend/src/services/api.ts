@@ -404,7 +404,23 @@ class ApiService {
     return response.data
   }
 
-  async analyzeAzureServices(services: any[], analysisId?: string) {
+  async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[]) {
+    const response = await this.client.post<ApiResponse<{
+      data: Array<{
+        cluster_name: string
+        resource_group: string
+        namespaces: string[]
+        error?: string
+      }>
+      count: number
+    }>>('/deployment/aks/namespaces', {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames
+    })
+    return response.data
+  }
+
+  async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[]) {
     const response = await this.client.post<ApiResponse<{
       data: Array<{
         service: any
@@ -428,7 +444,8 @@ class ApiService {
       analysisId: string
     }>>('/deployment/temenos/analyze', {
       services,
-      analysis_id: analysisId
+      analysis_id: analysisId,
+      selected_namespaces: selectedNamespaces
     })
     return response.data
   }

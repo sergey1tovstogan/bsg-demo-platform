@@ -278,39 +278,47 @@ To add a new RAG adapter:
 
 ## Deployment
 
-### Production Deployment (Azure VM)
+### Production Deployment (Azure App Service)
 
-The application is automatically deployed to an Azure VM when code is pushed to the `develop` branch.
+The application is automatically deployed to Azure App Service when code is pushed to the `develop` branch.
 
-**VM Details:**
-- **Name**: `bsg-demo-platform-vm`
+**App Service Details:**
+- **Name**: `bsg-demo-platform-app`
 - **Resource Group**: `bsg-demo-platform`
-- **Location**: `eastus`
-- **Size**: Standard_B2s (2 vCPUs, 4GB RAM)
-- **OS**: Ubuntu 22.04 LTS
+- **Location**: `westus2`
+- **Plan**: Basic B1 (Linux)
+- **Runtime**: Python 3.11
 
 **Deployment Process:**
 1. GitHub Actions workflow triggers on push to `develop`
 2. Frontend is built and packaged
 3. Backend dependencies are installed
-4. Code is deployed to VM via SSH
-5. Nginx is configured as reverse proxy
-6. Backend runs as systemd service
+4. Frontend static files are copied to backend/static
+5. Code is deployed to App Service via Azure Web Deploy
+6. Gunicorn serves the FastAPI application
 7. Health checks verify deployment
 
-**Access URLs (after deployment):**
-- **Frontend**: http://<VM_IP>
-- **Backend API**: http://<VM_IP>/api/v1
-- **API Docs**: http://<VM_IP>/docs
-- **Health Check**: http://<VM_IP>/api/v1/health
+**Access URLs:**
+- **Frontend**: https://bsg-demo-platform-app.azurewebsites.net
+- **Backend API**: https://bsg-demo-platform-app.azurewebsites.net/api/v1
+- **API Docs**: https://bsg-demo-platform-app.azurewebsites.net/docs
+- **Health Check**: https://bsg-demo-platform-app.azurewebsites.net/api/v1/health
 
-**To get VM IP:**
-```bash
-az vm show -d -g bsg-demo-platform -n bsg-demo-platform-vm --query publicIps -o tsv
-```
+**Why App Service over VM:**
+- ✅ No SSH/VM management required
+- ✅ Built-in CI/CD integration
+- ✅ HTTPS by default
+- ✅ Auto-scaling capabilities
+- ✅ Complies with security policies
+- ✅ Lower operational overhead
+- ✅ Pay for what you use
 
 **Setup Instructions:**
-See `infrastructure/README.md` for detailed setup and configuration instructions.
+The App Service is already created. Just configure GitHub Secrets:
+- `AZURE_CREDENTIALS` (service principal JSON)
+- `AZURE_SUBSCRIPTION_ID`
+
+Then push to `develop` branch to deploy automatically.
 
 ---
 
