@@ -1,6 +1,9 @@
-import { Shield, Lock, Key, UserCheck, Eye, Server, Cloud, FileCheck, CheckCircle2 } from 'lucide-react'
+import { useState } from 'react'
+import { Shield, Lock, Key, UserCheck, Eye, Server, Cloud, FileCheck, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { SecurityArchitecture } from './SecurityArchitecture'
 
 export function SecurityContentViewer() {
+  const [selectedCard, setSelectedCard] = useState<number | null>(null)
   // Card palette data - 9 cards in 3 rows
   const cards = [
     { 
@@ -75,6 +78,24 @@ export function SecurityContentViewer() {
     { id: 3, name: 'SaaS Security', icon: Cloud },
   ]
 
+  // Show Security Architecture when card 1 is selected
+  if (selectedCard === 1) {
+    return (
+      <div className="space-y-6">
+        <div className="card">
+          <button
+            onClick={() => setSelectedCard(null)}
+            className="flex items-center gap-2 mb-4 text-[#283054] hover:text-[#1E293B] transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-semibold">Back to Security Content</span>
+          </button>
+          <SecurityArchitecture />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="card">
@@ -125,6 +146,7 @@ export function SecurityContentViewer() {
                   return (
                     <div
                       key={card.id}
+                      onClick={() => setSelectedCard(card.id)}
                       className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054]"
                       style={{
                         borderColor: card.color,
@@ -165,6 +187,7 @@ export function SecurityContentViewer() {
                   return (
                     <div
                       key={card.id}
+                      onClick={() => setSelectedCard(card.id)}
                       className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054]"
                       style={{
                         borderColor: card.color,
@@ -205,6 +228,7 @@ export function SecurityContentViewer() {
                   return (
                     <div
                       key={card.id}
+                      onClick={() => setSelectedCard(card.id)}
                       className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054]"
                       style={{
                         borderColor: card.color,
