@@ -267,3 +267,119 @@ async def get_paragraph(
     except Exception as e:
         logger.error(f"Error retrieving paragraph: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error retrieving paragraph: {str(e)}")
+
+
+class DocumentResponse(BaseModel):
+    """Response model for a document."""
+    document_number: int
+    document_name: str
+
+
+class ParagraphMatchResponse(BaseModel):
+    """Response model for a matched paragraph."""
+    paragraph_number: int
+    text: str
+    style: Optional[str] = None
+
+
+class DocumentSearchResponse(BaseModel):
+    """Response model for document search results."""
+    paragraphs: List[ParagraphMatchResponse]
+    total_results: int
+    query: str
+
+
+@router.get("/documents/{document_number}")
+async def get_document(
+    document_number: int,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Get a document by document number from security_items collection.
+    
+    Returns the document name for the given document number.
+    """
+    try:
+        doc = await db.security_items.find_one({"document_number": document_number})
+        
+        if not doc:
+            raise HTTPException(status_code=404, detail=f"Document {document_number} not found")
+        
+        return {
+            "success": True,
+            "data": {
+                "document_number": doc.get('document_number'),
+                "document_name": doc.get('document_name', '')
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving document: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error retrieving document: {str(e)}")
+
+
+@router.get("/documents/{document_number}/search")
+async def search_document_content(
+    document_number: int,
+    q: str = Query(..., description="Search query to find matching paragraphs"),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Search within a document's content for paragraphs matching the search query.
+    
+    Searches in the 'document' field of security_items collection, specifically
+    within the 'paragraphs' array for text matching the query.
+    
+    Returns all paragraphs that contain the search query (case-insensitive).
+    """
+    try:
+        # Get the document
+        doc = await db.security_items.find_one({"document_number": document_number})
+        
+        if not doc:
+            raise HTTPException(status_code=404, detail=f"Document {document_number} not found")
+        
+        document = doc.get('document', {})
+        if not document:
+            raise HTTPException(status_code=404, detail=f"Document {document_number} has no content")
+        
+        paragraphs = document.get('paragraphs', [])
+        if not paragraphs:
+            return {
+                "success": True,
+                "data": {
+                    "paragraphs": [],
+                    "total_results": 0,
+                    "query": q
+                }
+            }
+        
+        # Search for matching paragraphs (case-insensitive)
+        search_query = q.strip().lower()
+        matched_paragraphs = []
+        
+        for para in paragraphs:
+            para_text = para.get('text', '').lower()
+            if search_query in para_text:
+                matched_paragraphs.append(ParagraphMatchResponse(
+                    paragraph_number=len(matched_paragraphs) + 1,
+                    text=para.get('text', ''),
+                    style=para.get('style')
+                ))
+        
+        return {
+            "success": True,
+            "data": {
+                "paragraphs": [para.dict() for para in matched_paragraphs],
+                "total_results": len(matched_paragraphs),
+                "query": q
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error searching document content: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error searching document content: {str(e)}")

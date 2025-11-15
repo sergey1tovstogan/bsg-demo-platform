@@ -224,6 +224,28 @@ class ApiService {
     return response.data
   }
 
+  // Security Component - Document APIs
+  async getSecurityDocument(documentNumber: number) {
+    const response = await this.client.get<ApiResponse<{
+      document_number: number
+      document_name: string
+    }>>(`/components/security/documents/${documentNumber}`)
+    return response.data
+  }
+
+  async searchSecurityDocument(documentNumber: number, query: string) {
+    const response = await this.client.get<ApiResponse<{
+      paragraphs: Array<{
+        paragraph_number: number
+        text: string
+        style?: string
+      }>
+      total_results: number
+      query: string
+    }>>(`/components/security/documents/${documentNumber}/search?q=${encodeURIComponent(query)}`)
+    return response.data
+  }
+
   // Auth APIs
   async login(email: string, password: string) {
     const response = await this.client.post<ApiResponse<{ access_token: string; refresh_token: string; token_type: string; expires_in: number }>>(

@@ -1,271 +1,305 @@
 import { useState } from 'react'
-import { Search, Loader2, X } from 'lucide-react'
+import { Search, Loader2, ArrowLeft } from 'lucide-react'
 import { apiService } from '../services/api'
 
-interface Slide {
-  slide_number: number
-  slide_content: string // Base64 encoded JPEG
-  content_type: string
-}
-
-// Unused interfaces removed
-
-interface Paragraph {
+interface ParagraphMatch {
   paragraph_number: number
-  paragraph_content: string
+  text: string
+  style?: string
 }
 
 export function SecurityContentViewer() {
+  // Screen 1: Document Number
+  const [documentNumber, setDocumentNumber] = useState<string>('')
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false)
+  const [documentError, setDocumentError] = useState<string | null>(null)
+  
+  // Screen 2: Document Info and Search
+  const [documentName, setDocumentName] = useState<string | null>(null)
+  const [currentDocumentNumber, setCurrentDocumentNumber] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [slides, setSlides] = useState<Slide[]>([])
-  const [paragraphs, setParagraphs] = useState<Paragraph[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [paragraphs, setParagraphs] = useState<ParagraphMatch[]>([])
   const [hasSearched, setHasSearched] = useState(false)
-  const [searchType, setSearchType] = useState<'slide' | 'paragraph' | null>(null)
 
-  const handleSearch = async () => {
+  // Handle Document Number search
+  const handleDocumentNumberSearch = async () => {
+    const docNum = documentNumber.trim()
+    
+    if (!docNum) {
+      setDocumentError('Please enter a document number')
+      return
+    }
+
+    const numValue = parseInt(docNum, 10)
+    if (isNaN(numValue) || numValue < 1) {
+      setDocumentError('Please enter a valid positive integer')
+      return
+    }
+
+    setIsLoadingDocument(true)
+    setDocumentError(null)
+    setSearchError(null)
+    setParagraphs([])
+    setHasSearched(false)
+    setSearchQuery('')
+
+    try {
+      const response = await apiService.getSecurityDocument(numValue)
+      if (response.success && response.data) {
+        setDocumentName(response.data.document_name)
+        setCurrentDocumentNumber(response.data.document_number)
+      } else {
+        setDocumentError('Failed to load document')
+      }
+    } catch (err: any) {
+      console.error('Error loading document:', err)
+      setDocumentError(err.response?.data?.detail || err.message || 'Document not found')
+      setDocumentName(null)
+      setCurrentDocumentNumber(null)
+    } finally {
+      setIsLoadingDocument(false)
+    }
+  }
+
+  // Handle Search Context search
+  const handleSearchContext = async () => {
     if (!searchQuery.trim()) {
-      setError('Please enter a search query')
+      setSearchError('Please enter a search query')
+      return
+    }
+
+    if (!currentDocumentNumber) {
+      setSearchError('No document selected')
       return
     }
 
     setIsSearching(true)
-    setError(null)
+    setSearchError(null)
     setHasSearched(true)
-    setSlides([])
     setParagraphs([])
 
-    const query = searchQuery.trim().toLowerCase()
-
     try {
-      // Determine search type based on query prefix
-      if (query.startsWith('p') && !query.startsWith('prg')) {
-        // Slide query: p10, p15, prg 10-20
-        const response = await apiService.searchSecuritySlides(query)
-        setSlides(response.data.slides || [])
-        setSearchType('slide')
-      } else if (query.startsWith('prg ')) {
-        // Slide range query: prg 10-20
-        const response = await apiService.searchSecuritySlides(query)
-        setSlides(response.data.slides || [])
-        setSearchType('slide')
-      } else if (query.startsWith('rg ')) {
-        // Paragraph range query: rg 10-20
-        const response = await apiService.searchSecurityParagraphs(query)
+      const response = await apiService.searchSecurityDocument(currentDocumentNumber, searchQuery)
+      if (response.success && response.data) {
         setParagraphs(response.data.paragraphs || [])
-        setSearchType('paragraph')
-      } else if (/^\d+$/.test(query)) {
-        // Numeric query: could be slides (p10) or paragraphs (10)
-        // Try paragraphs first (more common use case)
-        try {
-          const response = await apiService.searchSecurityParagraphs(query)
-          setParagraphs(response.data.paragraphs || [])
-          setSearchType('paragraph')
-        } catch (err) {
-          // If paragraphs fail, try slides
-          const slideQuery = `p${query}`
-          const response = await apiService.searchSecuritySlides(slideQuery)
-          setSlides(response.data.slides || [])
-          setSearchType('slide')
+        if (response.data.paragraphs.length === 0) {
+          setSearchError('No paragraphs found matching your search')
         }
       } else {
-        setError('Invalid query format. Use numbers (10, 15), ranges (rg 10-20), or slide queries (p10, prg 10-20)')
+        setSearchError('Failed to search document')
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Failed to search')
-      setSlides([])
+      console.error('Error searching document:', err)
+      setSearchError(err.response?.data?.detail || err.message || 'Failed to search document')
       setParagraphs([])
-      setSearchType(null)
     } finally {
       setIsSearching(false)
     }
   }
 
-  const handleClear = () => {
+  // Handle back to document number screen
+  const handleBack = () => {
+    setDocumentName(null)
+    setCurrentDocumentNumber(null)
     setSearchQuery('')
-    setSlides([])
     setParagraphs([])
-    setError(null)
     setHasSearched(false)
-    setSearchType(null)
+    setSearchError(null)
+    setDocumentError(null)
   }
 
-  const formatParagraphResults = (paragraphs: Paragraph[]): string => {
-    return paragraphs
-      .map((para) => `[Paragraph ${para.paragraph_number}]\n${para.paragraph_content}\n`)
-      .join('\n---\n\n')
-  }
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Handle Enter key press
+  const handleDocumentNumberKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      handleSearch()
+      handleDocumentNumberSearch()
     }
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Search Box */}
-      <div className="card">
-        <div className="flex items-center space-x-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Enter query: '10' for paragraphs, 'p10' for slides, 'rg 10-20' for range"
-              className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent"
-              disabled={isSearching}
-            />
-            {searchQuery && (
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearchContext()
+    }
+  }
+
+  // Screen 1: Document Number Search
+  if (!documentName) {
+    return (
+      <div className="space-y-6">
+        <div className="card">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-[#283054] mb-2">Security Content Viewer</h2>
+            <p className="text-[#4A5568]">Enter a document number to begin</p>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex-1 relative">
+              <label htmlFor="document-number" className="block text-sm font-medium text-[#283054] mb-2">
+                Document Number
+              </label>
+              <input
+                id="document-number"
+                type="number"
+                min="1"
+                value={documentNumber}
+                onChange={(e) => {
+                  setDocumentNumber(e.target.value)
+                  setDocumentError(null)
+                }}
+                onKeyPress={handleDocumentNumberKeyPress}
+                placeholder="Enter document number (e.g., 1)"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent"
+                disabled={isLoadingDocument}
+              />
+            </div>
+            <div className="flex items-end">
               <button
-                onClick={handleClear}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                onClick={handleDocumentNumberSearch}
+                disabled={isLoadingDocument || !documentNumber.trim()}
+                className="px-6 py-3 bg-[#283054] text-white rounded-lg hover:bg-[#283054]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
               >
-                <X className="w-5 h-5" />
+                {isLoadingDocument ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-5 h-5" />
+                    <span>Search</span>
+                  </>
+                )}
               </button>
-            )}
-          </div>
-          <button
-            onClick={handleSearch}
-            disabled={isSearching || !searchQuery.trim()}
-            className="px-6 py-3 bg-[#283054] text-white rounded-lg hover:bg-[#283054]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-          >
-            {isSearching ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Searching...</span>
-              </>
-            ) : (
-              <>
-                <Search className="w-5 h-5" />
-                <span>Search</span>
-              </>
-            )}
-          </button>
-        </div>
-        
-        {/* Query Examples */}
-        <div className="mt-4 text-sm text-[#4A5568]">
-          <p className="font-semibold mb-2">Query Examples:</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="font-semibold mb-1">Paragraphs:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li><code className="bg-gray-100 px-2 py-1 rounded">10</code> - First 10 paragraphs</li>
-                <li><code className="bg-gray-100 px-2 py-1 rounded">15</code> - First 15 paragraphs</li>
-                <li><code className="bg-gray-100 px-2 py-1 rounded">rg 10-20</code> - Paragraphs 10-20</li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">Slides:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li><code className="bg-gray-100 px-2 py-1 rounded">p10</code> - First 10 slides</li>
-                <li><code className="bg-gray-100 px-2 py-1 rounded">p15</code> - First 15 slides</li>
-                <li><code className="bg-gray-100 px-2 py-1 rounded">prg 10-20</code> - Slides 10-20</li>
-              </ul>
             </div>
           </div>
+
+          {documentError && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600">{documentError}</p>
+            </div>
+          )}
         </div>
       </div>
+    )
+  }
 
-      {/* Error Message */}
-      {error && (
-        <div className="card bg-red-50 border border-red-200">
-          <p className="text-red-600">{error}</p>
+  // Screen 2: Document Name and Search Context
+  return (
+    <div className="space-y-6">
+      {/* Document Info Header */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <button
+              onClick={handleBack}
+              className="flex items-center space-x-2 text-[#283054] hover:text-[#283054]/80 transition-colors mb-2"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back to Document Number</span>
+            </button>
+            <h2 className="text-2xl font-bold text-[#283054] mb-2">{documentName}</h2>
+            <p className="text-sm text-[#4A5568]">Document Number: {currentDocumentNumber}</p>
+          </div>
         </div>
-      )}
 
-      {/* Results */}
+        {/* Search Context Box */}
+        <div className="flex items-center space-x-4">
+          <div className="flex-1 relative">
+            <label htmlFor="search-context" className="block text-sm font-medium text-[#283054] mb-2">
+              Search Context
+            </label>
+            <input
+              id="search-context"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setSearchError(null)
+              }}
+              onKeyPress={handleSearchKeyPress}
+              placeholder="Enter search query (any alphanumeric combination)"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent"
+              disabled={isSearching}
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={handleSearchContext}
+              disabled={isSearching || !searchQuery.trim()}
+              className="px-6 py-3 bg-[#283054] text-white rounded-lg hover:bg-[#283054]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+            >
+              {isSearching ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Searching...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="w-5 h-5" />
+                  <span>Search</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {searchError && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600">{searchError}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Results Display */}
       {hasSearched && !isSearching && (
         <div className="card">
-          {/* Paragraph Results */}
-          {searchType === 'paragraph' && (
-            <>
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold">
-                  {paragraphs.length > 0 ? `Found ${paragraphs.length} paragraph(s)` : 'No paragraphs found'}
-                </h3>
-                {paragraphs.length > 0 && (
-                  <p className="text-sm text-[#4A5568] mt-1">
-                    Query: <code className="bg-gray-100 px-2 py-1 rounded">{searchQuery}</code>
-                  </p>
-                )}
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-[#283054]">
+              {paragraphs.length > 0 ? `Found ${paragraphs.length} paragraph(s)` : 'No paragraphs found'}
+            </h3>
+            {paragraphs.length > 0 && (
+              <p className="text-sm text-[#4A5568] mt-1">
+                Search query: <code className="bg-gray-100 px-2 py-1 rounded">{searchQuery}</code>
+              </p>
+            )}
+          </div>
+
+          {/* Scrollable Text Box with Paragraphs */}
+          {paragraphs.length > 0 && (
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+              <div className="max-h-[600px] overflow-y-auto p-4 bg-white">
+                {paragraphs.map((para, index) => (
+                  <div key={para.paragraph_number}>
+                    <div className="mb-4">
+                      <p className="text-[#4A5568] whitespace-pre-wrap leading-relaxed">
+                        {para.text}
+                      </p>
+                    </div>
+                    {index < paragraphs.length - 1 && (
+                      <div 
+                        className="my-4"
+                        style={{
+                          height: '3px',
+                          backgroundColor: '#DC2626',
+                          width: '100%'
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
-
-              {/* Scrollable Text Box for Paragraphs */}
-              {paragraphs.length > 0 && (
-                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <textarea
-                    readOnly
-                    value={formatParagraphResults(paragraphs)}
-                    className="w-full h-[600px] p-4 border-0 resize-none bg-white text-[#4A5568] font-mono text-sm leading-relaxed focus:outline-none"
-                    style={{ overflowY: 'auto' }}
-                  />
-                </div>
-              )}
-
-              {paragraphs.length === 0 && !error && (
-                <div className="text-center py-12 text-[#4A5568]">
-                  <p>No paragraphs found for the given query.</p>
-                  <p className="text-sm mt-2">Try a different query format.</p>
-                </div>
-              )}
-            </>
+            </div>
           )}
 
-          {/* Slide Results */}
-          {searchType === 'slide' && (
-            <>
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold">
-                  {slides.length > 0 ? `Found ${slides.length} slide(s)` : 'No slides found'}
-                </h3>
-                {slides.length > 0 && (
-                  <p className="text-sm text-[#4A5568] mt-1">
-                    Query: <code className="bg-gray-100 px-2 py-1 rounded">{searchQuery}</code>
-                  </p>
-                )}
-              </div>
-
-              {/* Scrollable Picture Box */}
-              {slides.length > 0 && (
-                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <div className="max-h-[600px] overflow-y-auto p-4 space-y-4">
-                    {slides.map((slide) => (
-                      <div key={slide.slide_number} className="bg-white rounded-lg shadow-sm p-4">
-                        <div className="mb-2">
-                          <span className="text-sm font-semibold text-[#283054]">
-                            Slide {slide.slide_number}
-                          </span>
-                        </div>
-                        <div className="flex justify-center">
-                          <img
-                            src={`data:${slide.content_type};base64,${slide.slide_content}`}
-                            alt={`Slide ${slide.slide_number}`}
-                            className="max-w-full h-auto rounded-lg shadow-md"
-                            style={{ maxHeight: '500px' }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {slides.length === 0 && !error && (
-                <div className="text-center py-12 text-[#4A5568]">
-                  <p>No slides found for the given query.</p>
-                  <p className="text-sm mt-2">Try a different query format.</p>
-                </div>
-              )}
-            </>
+          {paragraphs.length === 0 && !searchError && (
+            <div className="text-center py-12 text-[#4A5568]">
+              <p>No paragraphs found matching your search query.</p>
+              <p className="text-sm mt-2">Try a different search term.</p>
+            </div>
           )}
         </div>
       )}
     </div>
   )
 }
-
