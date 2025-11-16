@@ -48,6 +48,7 @@ class AKSPod:
         pod_display_name = f"{self.namespace}/{self.name}"
         
         # Ensure namespace is in properties for Temenos service to find it
+        # Also store in tags for redundancy
         resource = AzureResource(
             id=resource_id,
             name=pod_display_name,
@@ -56,7 +57,7 @@ class AKSPod:
             resource_group=self.cluster_resource_group,
             tags={
                 **self.labels,
-                "namespace": self.namespace,
+                "namespace": self.namespace,  # Store namespace in tags too
                 "pod_name": self.name,
                 "cluster": self.cluster_name
             },
@@ -65,7 +66,8 @@ class AKSPod:
                 "cluster": self.cluster_name,
                 "status": self.status,
                 "containers": self.containers,
-                "pod_name": self.name
+                "pod_name": self.name,
+                "namespace_name": self.namespace  # Redundant but ensures it's always available
             }
         )
         
@@ -73,6 +75,7 @@ class AKSPod:
         logger.debug(f"Converted pod {self.name} from namespace {self.namespace} to AzureResource")
         logger.debug(f"  Resource type: {resource.type}")
         logger.debug(f"  Properties namespace: {resource.properties.get('namespace')}")
+        logger.debug(f"  Tags namespace: {resource.tags.get('namespace')}")
         
         return resource
 
@@ -288,7 +291,7 @@ class AKSService:
                         logger.warning(f"No kubeconfig available for cluster {cluster_name}")
                         return pods
             
-            # Get namespaces first - use KUBECONFIG env var instead of --kubeconfig flag
+            # Get namespaces first - use --context flag to ensure correct cluster
             import asyncio
             import shutil
             import os
@@ -297,6 +300,23 @@ class AKSService:
             # Use KUBECONFIG environment variable
             env = os.environ.copy()
             env["KUBECONFIG"] = kubeconfig_path
+            
+            # Switch context first (Rancher Desktop doesn't support --context flag)
+            def _switch_context():
+                return subprocess.run(
+                    [kubectl_cmd, "config", "use-context", cluster_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    shell=False,
+                    env=env
+                )
+            try:
+                switch_result = await loop.run_in_executor(None, _switch_context)
+                if switch_result.returncode != 0:
+                    logger.warning(f"Could not switch context: {switch_result.stderr}")
+            except Exception as e:
+                logger.warning(f"Context switch error: {e}")
             
             cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
             
@@ -376,6 +396,23 @@ class AKSService:
                     import os
                     env = os.environ.copy()
                     env["KUBECONFIG"] = kubeconfig_path
+                    
+                    # Switch context before getting pods (Rancher Desktop doesn't support --context flag)
+                    def _switch_context_for_pods():
+                        return subprocess.run(
+                            [kubectl_cmd, "config", "use-context", cluster_name],
+                            capture_output=True,
+                            text=True,
+                            timeout=5,
+                            shell=False,
+                            env=env
+                        )
+                    try:
+                        switch_result = await loop.run_in_executor(None, _switch_context_for_pods)
+                        if switch_result.returncode != 0:
+                            logger.warning(f"Could not switch context for pods: {switch_result.stderr}")
+                    except Exception as e:
+                        logger.warning(f"Context switch error for pods: {e}")
                     
                     cmd_pods = [
                         kubectl_cmd, "get", "pods",
@@ -464,7 +501,25 @@ class AKSService:
         Returns:
             List of namespace names
         """
+        # CRITICAL: Use both logger AND print for visibility
+        print("=" * 80)
+        print(f"=== FUNCTION ENTRY: list_cluster_namespaces ===")
+        print(f"Cluster name: {cluster.name}")
+        print(f"Cluster ID: {cluster.id}")
+        print(f"Cluster resource group: {cluster.resource_group}")
+        print("=" * 80)
+        logger.info("=" * 80)
+        logger.info(f"=== FUNCTION ENTRY: list_cluster_namespaces ===")
+        logger.info(f"Cluster name: {cluster.name}")
+        logger.info(f"Cluster ID: {cluster.id}")
+        logger.info(f"Cluster resource group: {cluster.resource_group}")
+        logger.info("=" * 80)
+        
         namespaces = []
+        
+        logger.info(f"=== STARTING namespace discovery for cluster: {cluster.name} ===")
+        logger.info(f"Cluster ID: {cluster.id}")
+        logger.info(f"Cluster resource group: {cluster.resource_group}")
         
         try:
             # Extract resource group and cluster name
@@ -472,95 +527,240 @@ class AKSService:
             resource_group = id_parts[id_parts.index("resourceGroups") + 1] if "resourceGroups" in id_parts else cluster.resource_group
             cluster_name = cluster.name
             
-            # Use default kubeconfig - skip credential retrieval to avoid errors
+            # Check if kubectl is available
+            import shutil
             import os
-            default_kubeconfig = os.path.expanduser("~/.kube/config")
+            kubectl_cmd = shutil.which("kubectl") or shutil.which("kubectl.exe") or "kubectl"
             
-            if not os.path.exists(default_kubeconfig):
-                logger.error(f"Default kubeconfig not found at {default_kubeconfig}")
+            logger.info(f"Checking kubectl availability...")
+            logger.info(f"kubectl command: {kubectl_cmd}")
+            kubectl_found = shutil.which(kubectl_cmd)
+            logger.info(f"kubectl found: {kubectl_found}")
+            logger.info(f"PATH: {os.environ.get('PATH', 'Not set')[:300]}")
+            
+            if not kubectl_cmd or not kubectl_found:
+                logger.error(f"kubectl not found in PATH! Cannot list namespaces for cluster {cluster_name}")
+                logger.error("To fix: Install kubectl or ensure it's in PATH")
                 return namespaces
             
-            kubeconfig_path = default_kubeconfig
-            logger.info(f"Using kubeconfig: {kubeconfig_path}")
+            logger.info(f"✓ kubectl found: {kubectl_found}")
             
-            # Try to switch to the correct context (non-blocking)
+            # Use default kubeconfig (Azure CLI merges credentials here)
+            import os
+            # Handle Windows path correctly
+            if os.name == 'nt':  # Windows
+                default_kubeconfig = os.path.expanduser("~/.kube/config").replace('/', os.sep)
+            else:
+                default_kubeconfig = os.path.expanduser("~/.kube/config")
+            
+            logger.info(f"Looking for kubeconfig at: {default_kubeconfig}")
+            logger.info(f"Kubeconfig exists: {os.path.exists(default_kubeconfig)}")
+            
+            # Ensure credentials are up to date
+            try:
+                # Get credentials to ensure they're in the default kubeconfig
+                creds = await self.get_cluster_credentials(resource_group, cluster_name)
+                # But use default kubeconfig regardless
+                if os.path.exists(default_kubeconfig):
+                    kubeconfig_path = default_kubeconfig
+                    logger.info(f"Using default kubeconfig: {kubeconfig_path}")
+                elif creds and creds.get("kubeconfig_path") and os.path.exists(creds["kubeconfig_path"]):
+                    kubeconfig_path = creds["kubeconfig_path"]
+                    logger.info(f"Using credential kubeconfig: {kubeconfig_path}")
+                else:
+                    logger.error(f"No kubeconfig found for cluster {cluster_name}")
+                    logger.error(f"Default kubeconfig path: {default_kubeconfig}")
+                    logger.error(f"Default kubeconfig exists: {os.path.exists(default_kubeconfig)}")
+                    return namespaces
+            except Exception as e:
+                logger.warning(f"Error getting credentials, trying default kubeconfig: {e}")
+                if os.path.exists(default_kubeconfig):
+                    kubeconfig_path = default_kubeconfig
+                    logger.info(f"Using default kubeconfig after error: {kubeconfig_path}")
+                else:
+                    logger.error(f"No kubeconfig found for cluster {cluster_name}")
+                    logger.error(f"Default kubeconfig path: {default_kubeconfig}")
+                    return namespaces
+            
+            logger.info(f"Using kubeconfig: {kubeconfig_path} for cluster {cluster_name}")
+            
+            # Set KUBECONFIG environment variable and context
             import asyncio
             loop = asyncio.get_event_loop()
-            def _set_context():
-                import shutil
-                kubectl_cmd = shutil.which("kubectl") or "kubectl"
-                result = subprocess.run(
-                    [kubectl_cmd, "config", "use-context", cluster_name],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    shell=False,
-                    env=os.environ.copy()
-                )
-                return result
-            try:
-                context_result = await loop.run_in_executor(None, _set_context)
-                if context_result.returncode != 0:
-                    logger.warning(f"Could not switch context to {cluster_name}: {context_result.stderr}")
-                    logger.info(f"Will try to get namespaces anyway with current context")
-            except Exception as e:
-                logger.warning(f"Context switch error (will try anyway): {e}")
-            
-            # Get namespaces - use KUBECONFIG environment variable
-            import asyncio
-            import shutil
-            kubectl_cmd = shutil.which("kubectl") or "kubectl"
-            
-            if not kubectl_cmd or not shutil.which(kubectl_cmd):
-                logger.error(f"kubectl not found in PATH!")
-                return namespaces
-            
-            # Set KUBECONFIG environment variable (preferred method)
             env = os.environ.copy()
             env["KUBECONFIG"] = kubeconfig_path
-            logger.info(f"Set KUBECONFIG={kubeconfig_path}")
             
-            # Build command - use KUBECONFIG env var, don't use --kubeconfig flag
+            # NOTE: Rancher Desktop kubectl doesn't support "kubectl config" commands
+            # The context should already be set by Azure CLI when we ran "az aks get-credentials"
+            # So we'll skip context switching and just use the current context
+            print(f"Note: Skipping context switch (Rancher Desktop limitation), using current context")
+            logger.info(f"Skipping context switch (Rancher Desktop kubectl doesn't support 'config' command)")
+            logger.info(f"Assuming context '{cluster_name}' is already set from Azure CLI credentials")
+            
+            # Build command - simple kubectl get namespaces
             cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
             
+            # CRITICAL: Print for immediate visibility
+            print(f"Executing kubectl: {' '.join(cmd_parts)}")
+            print(f"KUBECONFIG={kubeconfig_path}")
+            print(f"kubectl path: {kubectl_cmd}")
+            print(f"Using context: {cluster_name}")
             logger.info(f"Executing kubectl: {' '.join(cmd_parts)}")
             logger.info(f"KUBECONFIG={kubeconfig_path}")
             logger.info(f"kubectl path: {kubectl_cmd}")
-            logger.info(f"kubectl exists: {os.path.exists(kubectl_cmd) if os.path.exists(kubectl_cmd) else 'N/A'}")
+            logger.info(f"Using context: {cluster_name}")
+            logger.info(f"Resource group: {resource_group}, Cluster: {cluster_name}")
             
             # Use run_in_executor for Windows compatibility
             def _run_kubectl():
-                logger.debug(f"Running kubectl with env KUBECONFIG={env.get('KUBECONFIG')}")
-                result = subprocess.run(
-                    cmd_parts,
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    env=env,
-                    shell=False
-                )
-                logger.debug(f"kubectl completed with return code: {result.returncode}")
-                return result
+                logger.info(f"Running kubectl command: {' '.join(cmd_parts)}")
+                logger.info(f"Environment KUBECONFIG={env.get('KUBECONFIG')}")
+                logger.info(f"Using context: {cluster_name}")
+                logger.info(f"kubectl path: {kubectl_cmd}")
+                try:
+                    result = subprocess.run(
+                        cmd_parts,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                        env=env,
+                        shell=False
+                    )
+                    # CRITICAL: Print for immediate visibility
+                    print(f"kubectl completed with return code: {result.returncode}")
+                    logger.info(f"kubectl completed with return code: {result.returncode}")
+                    if result.returncode != 0:
+                        print(f"✗ kubectl FAILED! stderr: {result.stderr if result.stderr else 'None'}")
+                        print(f"✗ kubectl stdout: {result.stdout[:500] if result.stdout else 'None'}")
+                        logger.error(f"kubectl FAILED! stderr: {result.stderr if result.stderr else 'None'}")
+                        logger.error(f"kubectl stdout: {result.stdout[:500] if result.stdout else 'None'}")
+                    else:
+                        print(f"✓ kubectl SUCCESS! stdout length: {len(result.stdout) if result.stdout else 0}")
+                        logger.info(f"kubectl SUCCESS! stdout length: {len(result.stdout) if result.stdout else 0}")
+                    return result
+                except Exception as e:
+                    logger.error(f"Exception running kubectl: {e}", exc_info=True)
+                    raise
             
-            loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, _run_kubectl)
+            
+            logger.info(f"kubectl command completed. Return code: {result.returncode}")
+            if result.stdout:
+                logger.info(f"kubectl stdout length: {len(result.stdout)}")
+            if result.stderr:
+                logger.warning(f"kubectl stderr: {result.stderr[:500]}")
             
             if result.returncode != 0:
                 error_msg = result.stderr if result.stderr else "Unknown error"
+                print(f"✗ kubectl JSON failed: {error_msg}")
                 logger.error(f"Failed to get namespaces from {cluster_name}: {error_msg}")
-                logger.error(f"Command: {' '.join(cmd_parts)}")
-                logger.error(f"KUBECONFIG: {env.get('KUBECONFIG')}")
-                logger.error(f"Return code: {result.returncode}")
-                logger.error(f"Full stderr: {result.stderr}")
-                logger.error(f"Full stdout: {result.stdout[:500] if result.stdout else 'None'}")
-                return namespaces
+                
+                # Try alternative: use table format (Rancher Desktop kubectl doesn't support -o json)
+                if "-o" in error_msg.lower() or "flag" in error_msg.lower() or "shorthand" in error_msg.lower():
+                    print("⚠ kubectl doesn't support -o flag, trying table format...")
+                    logger.warning("kubectl doesn't support -o flag, trying table format...")
+                    # Use simple command without any flags
+                    cmd_parts_table = [kubectl_cmd, "get", "namespaces"]
+                    print(f"Trying: {' '.join(cmd_parts_table)}")
+                    logger.info(f"Trying table format command: {' '.join(cmd_parts_table)}")
+                    
+                    def _run_kubectl_table():
+                        try:
+                            # Use list format (works on both Windows and Linux)
+                            # This avoids shell interpretation issues
+                            print(f"Running: {cmd_parts_table}")
+                            logger.info(f"Running table command: {cmd_parts_table}")
+                            return subprocess.run(
+                                cmd_parts_table,
+                                capture_output=True,
+                                text=True,
+                                timeout=30,
+                                env=env,
+                                shell=False,  # Use shell=False for better control
+                                cwd=None
+                            )
+                        except Exception as e:
+                            print(f"Exception in table command: {e}")
+                            logger.error(f"Exception in table command: {e}", exc_info=True)
+                            return type('obj', (object,), {'returncode': 1, 'stderr': str(e), 'stdout': ''})()
+                    
+                    result = await loop.run_in_executor(None, _run_kubectl_table)
+                    print(f"Table command return code: {result.returncode}")
+                    print(f"Table stdout length: {len(result.stdout) if result.stdout else 0}")
+                    print(f"Table stderr: {result.stderr[:200] if result.stderr else 'None'}")
+                    
+                    if result.returncode == 0 and result.stdout:
+                        print("✓ Got table output, parsing...")
+                        print(f"First 500 chars: {result.stdout[:500]}")
+                        logger.info("Got table output, parsing...")
+                        logger.info(f"Table output (first 500 chars): {result.stdout[:500]}")
+                        
+                        # Parse table output - split by newlines and skip header
+                        lines = [l.strip() for l in result.stdout.strip().split('\n') if l.strip()]
+                        if len(lines) > 1:  # Has header + data
+                            system_namespaces = {"kube-system", "kube-public", "kube-node-lease", "default"}
+                            for line in lines[1:]:  # Skip header line
+                                # Split by whitespace and take first column (namespace name)
+                                parts = line.split()
+                                if len(parts) > 0:
+                                    ns_name = parts[0].strip()
+                                    if ns_name and ns_name not in system_namespaces:
+                                        namespaces.append(ns_name)
+                            print(f"✓ Parsed {len(namespaces)} namespaces from table: {namespaces}")
+                            logger.info(f"Parsed {len(namespaces)} namespaces from table: {namespaces}")
+                            if len(namespaces) > 0:
+                                return namespaces
+                        else:
+                            print("⚠ Table output has no data lines")
+                            logger.warning("Table output has no data lines")
+                    else:
+                        print(f"✗ Table format failed - return code: {result.returncode}")
+                        print(f"Stderr: {result.stderr[:500] if result.stderr else 'None'}")
+                        logger.error(f"Table format failed - return code: {result.returncode}, stderr: {result.stderr[:500] if result.stderr else 'None'}")
+                
+                # Try alternative: ensure credentials are fresh
+                logger.info(f"Retrying with fresh credentials...")
+                try:
+                    az_cmd = shutil.which("az") or shutil.which("az.cmd") or "az"
+                    def _refresh_creds():
+                        return subprocess.run(
+                            [az_cmd, "aks", "get-credentials", "--resource-group", resource_group, "--name", cluster_name, "--overwrite-existing"],
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                            shell=False
+                        )
+                    refresh_result = await loop.run_in_executor(None, _refresh_creds)
+                    if refresh_result.returncode == 0:
+                        logger.info("Credentials refreshed, retrying namespace listing...")
+                        # Retry the kubectl command
+                        result = await loop.run_in_executor(None, _run_kubectl)
+                        if result.returncode != 0:
+                            logger.error(f"Still failed after credential refresh")
+                            return namespaces
+                    else:
+                        logger.warning(f"Failed to refresh credentials: {refresh_result.stderr}")
+                        return namespaces
+                except Exception as retry_error:
+                    logger.error(f"Error retrying: {retry_error}")
+                    return namespaces
             
             result_stdout = result.stdout if result.stdout else "{}"
-            logger.debug(f"kubectl stdout length: {len(result_stdout)}")
+            logger.info(f"kubectl stdout length: {len(result_stdout)}")
+            
+            if not result_stdout or result_stdout.strip() == "":
+                logger.error(f"kubectl returned empty stdout!")
+                logger.error(f"stderr: {result.stderr if result.stderr else 'None'}")
+                return namespaces
             
             try:
+                logger.info(f"Attempting to parse kubectl JSON output...")
+                logger.info(f"JSON string length: {len(result_stdout)}")
+                logger.info(f"First 500 chars: {result_stdout[:500]}")
                 namespaces_data = json.loads(result_stdout)
-                logger.debug(f"Parsed JSON successfully, found {len(namespaces_data.get('items', []))} total namespaces")
+                total_namespaces = len(namespaces_data.get('items', []))
+                logger.info(f"✓ Parsed JSON successfully, found {total_namespaces} total namespaces")
+                logger.info(f"Namespace items: {[item.get('metadata', {}).get('name') for item in namespaces_data.get('items', [])[:10]]}")
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse namespaces JSON: {e}")
                 logger.error(f"Output (first 500 chars): {result_stdout[:500]}")
@@ -568,19 +768,24 @@ class AKSService:
                 return namespaces
             
             items = namespaces_data.get("items", [])
-            logger.debug(f"Processing {len(items)} namespace items")
+            logger.info(f"Processing {len(items)} namespace items")
+            
+            # System namespaces to exclude
+            system_namespaces = {"kube-system", "kube-public", "kube-node-lease", "default"}
             
             for ns in items:
                 ns_name = ns.get("metadata", {}).get("name", "")
                 # Skip system namespaces
-                if ns_name not in ["kube-system", "kube-public", "kube-node-lease", "default"]:
+                if ns_name and ns_name not in system_namespaces:
                     namespaces.append(ns_name)
-                    logger.debug(f"Added namespace: {ns_name}")
+                    logger.info(f"Added namespace: {ns_name}")
             
             logger.info(f"Found {len(namespaces)} non-system namespaces in cluster {cluster_name}")
             if len(namespaces) == 0:
                 logger.warning(f"No non-system namespaces found! Total namespaces: {len(items)}")
-                logger.warning(f"All namespaces: {[ns.get('metadata', {}).get('name', '') for ns in items]}")
+                all_namespaces = [ns.get("metadata", {}).get("name", "") for ns in items]
+                logger.warning(f"All namespaces: {all_namespaces}")
+                logger.warning(f"This might indicate all namespaces are system namespaces")
             
             return sorted(namespaces)
             

@@ -206,9 +206,23 @@ async def get_aks_namespaces(request: NamespacesRequest):
     Returns:
         List of namespaces grouped by cluster
     """
+    # CRITICAL: Use both logger AND print for visibility
+    print("=" * 80)
+    print("=== API ENDPOINT CALLED: /aks/namespaces ===")
+    print(f"Request subscription_id: {request.subscription_id}")
+    print(f"Request resource_group_names: {request.resource_group_names}")
+    print("=" * 80)
+    logger.info("=" * 80)
+    logger.info("=== API ENDPOINT CALLED: /aks/namespaces ===")
+    logger.info(f"Request subscription_id: {request.subscription_id}")
+    logger.info(f"Request resource_group_names: {request.resource_group_names}")
+    logger.info("=" * 80)
+    
     try:
         subscription_id = request.subscription_id
         resource_group_names = request.resource_group_names
+        
+        logger.info(f"Step 1: Validating request...")
         
         if not subscription_id:
             raise HTTPException(status_code=400, detail="Subscription ID is required")
@@ -223,12 +237,18 @@ async def get_aks_namespaces(request: NamespacesRequest):
         resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
         
         # Find AKS clusters
+        logger.info(f"Searching for AKS clusters in {len(resources)} resources...")
         aks_clusters = [
             r for r in resources 
             if "microsoft.containerservice/managedclusters" in r.type.lower()
         ]
         
+        logger.info(f"Found {len(aks_clusters)} AKS cluster(s)")
+        for cluster in aks_clusters:
+            logger.info(f"  - Cluster: {cluster.name}, Type: {cluster.type}, RG: {cluster.resource_group}")
+        
         if not aks_clusters:
+            logger.warning("No AKS clusters found in selected resource groups")
             return {
                 "status": "success",
                 "data": [],
@@ -236,13 +256,28 @@ async def get_aks_namespaces(request: NamespacesRequest):
             }
         
         # Get namespaces from each cluster
+        logger.info(f"Initializing AKS service for subscription: {subscription_id}")
         aks_service = AKSService(subscription_id)
         cluster_namespaces = {}
         
-        for cluster in aks_clusters:
+        logger.info(f"Step 4: Processing {len(aks_clusters)} cluster(s) for namespace discovery...")
+        for idx, cluster in enumerate(aks_clusters, 1):
             try:
+                logger.info("=" * 80)
+                logger.info(f"=== CLUSTER {idx}/{len(aks_clusters)}: {cluster.name} ===")
+                logger.info(f"Cluster type: {cluster.type}")
+                logger.info(f"Cluster ID: {cluster.id}")
+                logger.info(f"Resource Group: {cluster.resource_group}")
+                logger.info("Calling aks_service.list_cluster_namespaces()...")
+                logger.info("=" * 80)
                 namespaces = await aks_service.list_cluster_namespaces(cluster)
+                logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name}")
+                if namespaces:
+                    logger.info(f"Namespaces: {namespaces[:5]}...")  # Show first 5
+                else:
+                    logger.warning(f"⚠ No namespaces returned for cluster {cluster.name}")
                 logger.info(f"Retrieved {len(namespaces)} namespaces from cluster {cluster.name}")
+                logger.info(f"Namespaces list: {namespaces}")
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
                     "resource_group": cluster.resource_group,
@@ -251,9 +286,10 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 if len(namespaces) == 0:
                     logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
                     logger.warning("  1. kubectl is not installed or not in PATH")
-                    logger.warning("  2. Cluster credentials are not configured")
+                    logger.warning("  2. Cluster credentials are not configured (run: az aks get-credentials)")
                     logger.warning("  3. No non-system namespaces exist in the cluster")
-                    logger.warning("  4. Backend is running in an environment without kubectl access")
+                    logger.warning("  4. Backend is running in an environment without kubectl access (e.g., Azure App Service)")
+                    logger.warning("  Note: In Azure App Service, kubectl must be installed via startup script or extension")
             except Exception as e:
                 logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}", exc_info=True)
                 cluster_namespaces[cluster.name] = {

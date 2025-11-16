@@ -405,19 +405,30 @@ class ApiService {
   }
 
   async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[]) {
-    const response = await this.client.post<ApiResponse<{
-      data: Array<{
-        cluster_name: string
-        resource_group: string
-        namespaces: string[]
-        error?: string
-      }>
-      count: number
-    }>>('/deployment/aks/namespaces', {
+    console.log('[API] getAKSNamespaces called with:', { subscriptionId, resourceGroupNames })
+    const url = '/deployment/aks/namespaces'
+    const payload = {
       subscription_id: subscriptionId,
       resource_group_names: resourceGroupNames
-    })
-    return response.data
+    }
+    console.log('[API] POST', url, payload)
+    try {
+      const response = await this.client.post<ApiResponse<{
+        data: Array<{
+          cluster_name: string
+          resource_group: string
+          namespaces: string[]
+          error?: string
+        }>
+        count: number
+      }>>(url, payload)
+      console.log('[API] Response received:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('[API] Error in getAKSNamespaces:', error)
+      console.error('[API] Error response:', error.response?.data)
+      throw error
+    }
   }
 
   async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[]) {
