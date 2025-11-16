@@ -527,15 +527,44 @@ Be thorough and provide as much detail as possible."""
     def _extract_capabilities(self, text: str) -> List[str]:
         """Extract capabilities from functional overview text."""
         capabilities = []
+        if not text or text in ["Information not available", "Information not available - timeout"]:
+            return capabilities
+        
         sentences = re.split(r"[.!?]+", text)
         
+        # Look for capability indicators
+        capability_patterns = [
+            r"supports", r"provides", r"enables", r"allows", r"can", r"handles",
+            r"manages", r"processes", r"facilitates", r"delivers", r"offers",
+            r"includes", r"features", r"capabilities", r"functions"
+        ]
+        
         for sentence in sentences:
-            if re.search(r"supports|provides|enables|allows|can", sentence, re.IGNORECASE):
-                clean = sentence.strip()[:100]
-                if len(clean) > 20:
+            sentence = sentence.strip()
+            if len(sentence) < 20:
+                continue
+            
+            # Check if sentence contains capability indicators
+            if any(re.search(pattern, sentence, re.IGNORECASE) for pattern in capability_patterns):
+                # Clean and format the capability
+                clean = re.sub(r"^\W+", "", sentence)  # Remove leading punctuation
+                clean = clean.strip()
+                if len(clean) > 20 and len(clean) < 200:  # Reasonable length
                     capabilities.append(clean)
         
-        return capabilities[:5]  # Limit to 5 capabilities
+        # If we didn't find many capabilities, try extracting from bullet points or lists
+        if len(capabilities) < 3:
+            # Look for bullet points or numbered lists
+            lines = text.split('\n')
+            for line in lines:
+                line = line.strip()
+                # Check for bullet points (-, *, •) or numbered lists
+                if re.match(r'^[-*•]\s+', line) or re.match(r'^\d+[.)]\s+', line):
+                    clean = re.sub(r'^[-*•\d.)]\s+', '', line).strip()
+                    if len(clean) > 20 and len(clean) < 200:
+                        capabilities.append(clean)
+        
+        return capabilities[:10]  # Increased limit to 10 capabilities
 
     def _determine_component_type(self, service: AzureResource) -> str:
         """Determine component type from service."""
