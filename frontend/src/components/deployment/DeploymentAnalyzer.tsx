@@ -875,6 +875,22 @@ function ComponentCard({
 
       {expanded && (
         <div className="mt-4 space-y-4 pt-4 border-t border-gray-200">
+          {/* Azure Portal Link */}
+          {service.portalUrl && (
+            <div className="mb-4">
+              <a
+                href={service.portalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>Open in Azure Portal</span>
+              </a>
+            </div>
+          )}
+          
           <div>
             <h5 className="font-semibold text-gray-900 mb-2">Architectural Overview</h5>
             <div className="text-sm text-gray-700 whitespace-pre-line">

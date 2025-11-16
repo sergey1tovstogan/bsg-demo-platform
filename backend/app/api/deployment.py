@@ -424,38 +424,51 @@ async def analyze_services(request: AnalyzeRequest):
                 properties=svc_data.get("properties", {})
             ))
         
-        # Discover AKS pods if namespaces are selected
+        # Discover AKS pods from ALL Temenos namespaces (not just selected ones)
+        # This ensures we find all pods, then we can filter if needed
         selected_namespaces = request.selected_namespaces if request.selected_namespaces else None
         
-        if selected_namespaces and len(selected_namespaces) > 0:
-            logger.info(f"Selected namespaces for AKS pod discovery: {selected_namespaces}")
-            # Extract subscription ID from first resource
-            subscription_id = None
-            if services and services[0].id:
-                id_parts = services[0].id.split("/")
-                if "subscriptions" in id_parts:
-                    subscription_id = id_parts[id_parts.index("subscriptions") + 1]
-            
-            if subscription_id:
-                try:
-                    # Find AKS clusters in the resources
-                    aks_clusters = [s for s in services if "microsoft.containerservice/managedclusters" in s.type.lower()]
-                    if aks_clusters:
-                        aks_service = AKSService(subscription_id)
-                        # Discover pods only from selected namespaces
-                        aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=selected_namespaces)
+        # Extract subscription ID from first resource
+        subscription_id = None
+        if services and services[0].id:
+            id_parts = services[0].id.split("/")
+            if "subscriptions" in id_parts:
+                subscription_id = id_parts[id_parts.index("subscriptions") + 1]
+        
+        if subscription_id:
+            try:
+                # Find AKS clusters in the resources
+                aks_clusters = [s for s in services if "microsoft.containerservice/managedclusters" in s.type.lower()]
+                if aks_clusters:
+                    logger.info(f"Found {len(aks_clusters)} AKS cluster(s), discovering pods from ALL Temenos namespaces...")
+                    aks_service = AKSService(subscription_id)
+                    # Discover pods from ALL Temenos namespaces (auto-detection)
+                    aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=None)
+                    
+                    if aks_pods:
+                        logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods from Temenos namespaces")
+                        pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
+                        logger.info(f"Pod namespaces found: {pod_namespaces}")
                         
-                        if aks_pods:
-                            logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods from {len(selected_namespaces)} selected namespaces")
-                            pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
-                            logger.info(f"Pod namespaces found: {pod_namespaces}")
-                            services.extend(aks_pods)
-                            logger.info(f"Total services after adding pods: {len(services)}")
+                        # If namespaces were selected, filter pods to only those namespaces
+                        if selected_namespaces and len(selected_namespaces) > 0:
+                            logger.info(f"Filtering {len(aks_pods)} pods to {len(selected_namespaces)} selected namespaces: {selected_namespaces}")
+                            filtered_pods = [
+                                pod for pod in aks_pods 
+                                if pod.properties.get('namespace') in selected_namespaces or 
+                                   pod.tags.get('namespace') in selected_namespaces
+                            ]
+                            logger.info(f"Filtered to {len(filtered_pods)} pods from selected namespaces")
+                            services.extend(filtered_pods)
                         else:
-                            logger.warning(f"No pods found in selected namespaces: {selected_namespaces}")
-                except Exception as e:
-                    logger.error(f"Failed to discover AKS pods: {e}", exc_info=True)
-                    # Continue with analysis even if AKS discovery fails
+                            # Include all discovered pods
+                            services.extend(aks_pods)
+                        logger.info(f"Total services after adding pods: {len(services)}")
+                    else:
+                        logger.warning("No AKS pods discovered from Temenos namespaces")
+            except Exception as e:
+                logger.error(f"Failed to discover AKS pods: {e}", exc_info=True)
+                # Continue with analysis even if AKS discovery fails
         
         # Log what we're analyzing
         pod_count = sum(1 for s in services if "managedclusters/pods" in s.type.lower())

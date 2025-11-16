@@ -462,22 +462,24 @@ class TemenosService:
         formatted = re.sub(r"\s{3,}", " ", formatted)
         formatted = formatted.strip()
         
-        # Summarize long responses
-        max_length = 800
+        # Don't truncate - return full response for complete descriptions
+        # Increased max_length significantly to preserve full information
+        max_length = 2000  # Increased from 800 to preserve more content
         if len(formatted) > max_length:
+            # Only truncate if extremely long, but preserve more content
             sentences = re.split(r"[.!?]\s+", formatted)
             summary = ""
             char_count = 0
             
             for sentence in sentences:
-                if char_count + len(sentence) > max_length and len(summary) > 200:
+                if char_count + len(sentence) > max_length and len(summary) > 500:
                     break
                 summary += sentence + ". "
                 char_count += len(sentence) + 2
             
             formatted = summary.strip()
             if len(text) > max_length:
-                formatted += "\n\n[Summary - full response truncated for brevity]"
+                formatted += "\n\n[Note: Response truncated - full details available in RAG knowledge base]"
         
         return formatted
 
