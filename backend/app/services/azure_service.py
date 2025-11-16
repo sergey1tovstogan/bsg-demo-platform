@@ -52,6 +52,10 @@ class AzureResource:
         self.properties = properties or {}
 
     def to_dict(self) -> Dict[str, Any]:
+        # Build Azure Portal URL
+        # Format: https://portal.azure.com/#@<tenant>/resource<resource_id>
+        portal_url = f"https://portal.azure.com/#resource{self.id}"
+        
         return {
             "id": self.id,
             "name": self.name,
@@ -59,7 +63,8 @@ class AzureResource:
             "location": self.location,
             "resourceGroup": self.resource_group,
             "tags": self.tags,
-            "properties": self.properties
+            "properties": self.properties,
+            "portalUrl": portal_url  # Add Azure Portal URL
         }
 
 
