@@ -530,20 +530,20 @@ class AKSService:
             # Check if kubectl is available
             import shutil
             import os
-            kubectl_cmd = shutil.which("kubectl") or shutil.which("kubectl.exe") or "kubectl"
+            # Find kubectl but use just "kubectl" in commands (works better with subprocess)
+            kubectl_path = shutil.which("kubectl") or shutil.which("kubectl.exe")
+            kubectl_cmd = "kubectl"  # Use just the command name, not full path
             
             logger.info(f"Checking kubectl availability...")
-            logger.info(f"kubectl command: {kubectl_cmd}")
-            kubectl_found = shutil.which(kubectl_cmd)
-            logger.info(f"kubectl found: {kubectl_found}")
-            logger.info(f"PATH: {os.environ.get('PATH', 'Not set')[:300]}")
+            logger.info(f"kubectl path found: {kubectl_path}")
+            logger.info(f"kubectl command will use: {kubectl_cmd}")
             
-            if not kubectl_cmd or not kubectl_found:
+            if not kubectl_path:
                 logger.error(f"kubectl not found in PATH! Cannot list namespaces for cluster {cluster_name}")
                 logger.error("To fix: Install kubectl or ensure it's in PATH")
                 return namespaces
             
-            logger.info(f"✓ kubectl found: {kubectl_found}")
+            logger.info(f"✓ kubectl found at: {kubectl_path}, will use '{kubectl_cmd}' command")
             
             # Use default kubeconfig (Azure CLI merges credentials here)
             import os
