@@ -505,15 +505,15 @@ Be thorough and provide as much detail as possible."""
         
         # Don't truncate - return full response for complete descriptions
         # Increased max_length significantly to preserve full information
-        max_length = 2000  # Increased from 800 to preserve more content
+        max_length = 5000  # Increased significantly to preserve comprehensive responses
         if len(formatted) > max_length:
-            # Only truncate if extremely long, but preserve more content
+            # Only truncate if extremely long, but preserve much more content
             sentences = re.split(r"[.!?]\s+", formatted)
             summary = ""
             char_count = 0
             
             for sentence in sentences:
-                if char_count + len(sentence) > max_length and len(summary) > 500:
+                if char_count + len(sentence) > max_length and len(summary) > 2000:
                     break
                 summary += sentence + ". "
                 char_count += len(sentence) + 2
@@ -657,6 +657,7 @@ Be thorough and provide as much detail as possible."""
             
             # Query RAG API with timeout - use asyncio.wait_for for timeout
             import asyncio
+            logger.info(f"Querying RAG for {component_name} - Architectural query...")
             try:
                 architectural_response = await asyncio.wait_for(
                     self._query_rag(
@@ -665,15 +666,18 @@ Be thorough and provide as much detail as possible."""
                         rag_model_id="ModularBanking, TechnologyOverview",
                         context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
                     ),
-                    timeout=15.0  # Increased timeout for comprehensive responses
+                    timeout=30.0  # Increased timeout significantly for comprehensive responses
                 )
+                logger.info(f"✓ Architectural query completed for {component_name}")
+                logger.debug(f"Architectural response: {str(architectural_response)[:200]}")
             except asyncio.TimeoutError:
-                logger.warning(f"Architectural query timeout for {service.name}")
+                logger.warning(f"Architectural query timeout for {service.name} after 30s")
                 architectural_response = {"data": {"answer": "Information not available - timeout"}}
             except Exception as e:
-                logger.warning(f"Architectural query failed for {service.name}: {e}")
+                logger.error(f"Architectural query failed for {service.name}: {e}", exc_info=True)
                 architectural_response = {"data": {"answer": "Information not available - timeout"}}
             
+            logger.info(f"Querying RAG for {component_name} - Functional query...")
             try:
                 functional_response = await asyncio.wait_for(
                     self._query_rag(
@@ -682,13 +686,15 @@ Be thorough and provide as much detail as possible."""
                         rag_model_id="ModularBanking, FuncTransactGeneric",
                         context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
                     ),
-                    timeout=15.0  # Increased timeout for comprehensive responses
+                    timeout=30.0  # Increased timeout significantly for comprehensive responses
                 )
+                logger.info(f"✓ Functional query completed for {component_name}")
+                logger.debug(f"Functional response: {str(functional_response)[:200]}")
             except asyncio.TimeoutError:
-                logger.warning(f"Functional query timeout for {service.name}")
+                logger.warning(f"Functional query timeout for {service.name} after 30s")
                 functional_response = {"data": {"answer": "Information not available - timeout"}}
             except Exception as e:
-                logger.warning(f"Functional query failed for {service.name}: {e}")
+                logger.error(f"Functional query failed for {service.name}: {e}", exc_info=True)
                 functional_response = {"data": {"answer": "Information not available - timeout"}}
             
             architectural_text = architectural_response.get("data", {}).get("answer", "Information not available")
