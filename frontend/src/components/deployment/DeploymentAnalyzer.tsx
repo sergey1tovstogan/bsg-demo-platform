@@ -876,9 +876,9 @@ function ComponentCard({
 
       {expanded && (
         <div className="mt-4 space-y-4 pt-4 border-t border-gray-200">
-          {/* Azure Portal Link */}
-          {service.portalUrl && (
-            <div className="mb-4">
+          {/* Action Buttons */}
+          <div className="mb-4 flex items-center space-x-2">
+            {service.portalUrl && (
               <a
                 href={service.portalUrl}
                 target="_blank"
@@ -889,8 +889,43 @@ function ComponentCard({
                 <ExternalLink className="w-4 h-4" />
                 <span>Open in Azure Portal</span>
               </a>
-            </div>
-          )}
+            )}
+            <button
+              onClick={async (e) => {
+                e.stopPropagation()
+                // Refresh this component's information
+                const button = e.currentTarget
+                const originalText = button.innerHTML
+                button.disabled = true
+                button.innerHTML = '<span class="animate-spin">⟳</span> Refreshing...'
+                
+                try {
+                  const response = await apiService.analyzeAzureServices(
+                    [service],
+                    undefined,
+                    undefined,
+                    true // forceRefresh
+                  )
+                  if (response.data && response.data.length > 0 && response.data[0].componentInfo) {
+                    // Update the component info
+                    result.componentInfo = response.data[0].componentInfo
+                    // Trigger re-render by updating parent state
+                    window.location.reload() // Simple refresh for now
+                  }
+                } catch (error) {
+                  console.error('Failed to refresh component info:', error)
+                  alert('Failed to refresh component information. Please try again.')
+                } finally {
+                  button.disabled = false
+                  button.innerHTML = originalText
+                }
+              }}
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh Info</span>
+            </button>
+          </div>
           
           <div>
             <h5 className="font-semibold text-gray-900 mb-2">Architectural Overview</h5>

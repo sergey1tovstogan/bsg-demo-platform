@@ -392,6 +392,18 @@ async def get_resources(request: ResourcesRequest):
 
 @router.post("/temenos/analyze")
 async def analyze_services(request: AnalyzeRequest):
+    """Analyze Azure services for Temenos components (uses cache by default)."""
+    return await _analyze_services_impl(request)
+
+
+@router.post("/temenos/analyze/refresh")
+async def refresh_analysis(request: AnalyzeRequest):
+    """Refresh analysis - forces RAG queries even if cached."""
+    request.force_refresh = True
+    return await _analyze_services_impl(request)
+
+
+async def _analyze_services_impl(request: AnalyzeRequest):
     """
     Analyze Azure services and identify Temenos components.
     
@@ -440,32 +452,25 @@ async def analyze_services(request: AnalyzeRequest):
                 # Find AKS clusters in the resources
                 aks_clusters = [s for s in services if "microsoft.containerservice/managedclusters" in s.type.lower()]
                 if aks_clusters:
-                    logger.info(f"Found {len(aks_clusters)} AKS cluster(s), discovering pods from ALL Temenos namespaces...")
                     aks_service = AKSService(subscription_id)
-                    # Discover pods from ALL Temenos namespaces (auto-detection)
-                    aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=None)
+                    
+                    # If namespaces were selected, discover pods ONLY from those namespaces
+                    # Otherwise, discover from ALL Temenos namespaces (auto-detection)
+                    if selected_namespaces and len(selected_namespaces) > 0:
+                        logger.info(f"Discovering pods from {len(selected_namespaces)} selected namespaces: {selected_namespaces}")
+                        aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=selected_namespaces)
+                    else:
+                        logger.info(f"Discovering pods from ALL Temenos namespaces (auto-detection)...")
+                        aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=None)
                     
                     if aks_pods:
-                        logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods from Temenos namespaces")
+                        logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods")
                         pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
                         logger.info(f"Pod namespaces found: {pod_namespaces}")
-                        
-                        # If namespaces were selected, filter pods to only those namespaces
-                        if selected_namespaces and len(selected_namespaces) > 0:
-                            logger.info(f"Filtering {len(aks_pods)} pods to {len(selected_namespaces)} selected namespaces: {selected_namespaces}")
-                            filtered_pods = [
-                                pod for pod in aks_pods 
-                                if pod.properties.get('namespace') in selected_namespaces or 
-                                   pod.tags.get('namespace') in selected_namespaces
-                            ]
-                            logger.info(f"Filtered to {len(filtered_pods)} pods from selected namespaces")
-                            services.extend(filtered_pods)
-                        else:
-                            # Include all discovered pods
-                            services.extend(aks_pods)
+                        services.extend(aks_pods)
                         logger.info(f"Total services after adding pods: {len(services)}")
                     else:
-                        logger.warning("No AKS pods discovered from Temenos namespaces")
+                        logger.warning("No AKS pods discovered")
             except Exception as e:
                 logger.error(f"Failed to discover AKS pods: {e}", exc_info=True)
                 # Continue with analysis even if AKS discovery fails
@@ -480,8 +485,9 @@ async def analyze_services(request: AnalyzeRequest):
         # Initialize Temenos service
         temenos_service = TemenosService()
         
-        # Analyze services
-        results = await temenos_service.analyze_services(services)
+        # Analyze services (use cache by default, unless force_refresh is True)
+        force_refresh = getattr(request, 'force_refresh', False)
+        results = await temenos_service.analyze_services(services, use_cache=True, force_refresh=force_refresh)
         
         # Deduplicate components (simplified version)
         deduplicated_results = _deduplicate_components(results)

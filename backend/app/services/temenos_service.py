@@ -95,6 +95,9 @@ class TemenosService:
         except Exception as e:
             logger.warning(f"RAG adapter not available: {e}. Component identification will work from namespace/name only.")
             self.rag_adapter = None
+        
+        # Cache for RAG responses - key: component_name, value: TemenosComponentInfo
+        self._component_cache: Dict[str, TemenosComponentInfo] = {}
 
     def _is_potential_temenos_component(self, service: AzureResource) -> bool:
         """Quick check if service might be a Temenos component."""
@@ -417,16 +420,54 @@ class TemenosService:
         return "core"
 
     def _build_architectural_query(self, component_name: str, category: str) -> str:
-        """Build architectural query."""
+        """Build comprehensive architectural query."""
         if category == "microservice":
-            return f"What is the architecture and design of {component_name} in Temenos Transact? How does it work and what are its key architectural components?"
-        return f"What is the architecture of {component_name}? Provide detailed architectural information including design patterns, components, and deployment considerations."
+            return f"""Provide a comprehensive and detailed architectural overview of {component_name} in Temenos Transact. Include:
+- Architecture and design patterns used
+- Key architectural components and their interactions
+- Deployment architecture and considerations
+- Integration points with other Temenos components
+- Technology stack and frameworks
+- Scalability and performance characteristics
+- Security architecture
+- Data flow and processing patterns
+Be thorough and provide as much detail as possible."""
+        return f"""Provide a comprehensive and detailed architectural overview of {component_name}. Include:
+- Architecture and design patterns
+- Key components and their interactions
+- Deployment considerations
+- Integration points
+- Technology stack
+- Scalability and performance
+- Security architecture
+- Data flow patterns
+Be thorough and provide as much detail as possible."""
 
     def _build_functional_query(self, component_name: str, category: str) -> str:
-        """Build functional query."""
+        """Build comprehensive functional query."""
         if category == "microservice":
-            return f"What are the functional capabilities and responsibilities of {component_name} in Temenos Transact? What business functions does it support?"
-        return f"What are the functional capabilities of {component_name}? What business functions and features does it provide?"
+            return f"""Provide a comprehensive and detailed functional overview of {component_name} in Temenos Transact. Include:
+- Core functional capabilities and responsibilities
+- Business functions and features it supports
+- Use cases and scenarios
+- Key business processes it handles
+- Data it manages and processes
+- APIs and interfaces it exposes
+- Business rules and validations
+- Workflow and process orchestration
+- Reporting and analytics capabilities
+Be thorough and provide as much detail as possible."""
+        return f"""Provide a comprehensive and detailed functional overview of {component_name}. Include:
+- Core functional capabilities
+- Business functions and features
+- Use cases and scenarios
+- Key business processes
+- Data management
+- APIs and interfaces
+- Business rules
+- Workflow capabilities
+- Reporting features
+Be thorough and provide as much detail as possible."""
 
     async def query_rag(
         self,
@@ -546,9 +587,16 @@ class TemenosService:
         return "Azure Resource"
 
     async def identify_component(
-        self, service: AzureResource, all_services: Optional[List[AzureResource]] = None
+        self, service: AzureResource, all_services: Optional[List[AzureResource]] = None, use_cache: bool = True, force_refresh: bool = False
     ) -> Optional[TemenosComponentInfo]:
-        """Identify Temenos component from Azure service."""
+        """Identify Temenos component from Azure service.
+        
+        Args:
+            service: Azure resource to identify
+            all_services: Optional list of all services for context
+            use_cache: Whether to use cached component info
+            force_refresh: Force refresh even if cached (ignores cache)
+        """
         try:
             # Quick filter
             if not self._is_potential_temenos_component(service):
@@ -566,6 +614,22 @@ class TemenosService:
             
             logger.info(f"Identifying component for {service.name}: {component_name}")
             
+            # Check cache first (unless force_refresh is True)
+            cache_key = component_name.lower()
+            if use_cache and not force_refresh and cache_key in self._component_cache:
+                logger.info(f"Using cached component info for {component_name}")
+                cached_info = self._component_cache[cache_key]
+                # Return a copy with service-specific type
+                return TemenosComponentInfo(
+                    component_name=cached_info.component_name,
+                    component_type=self._determine_component_type(service),
+                    architectural_overview=cached_info.architectural_overview,
+                    functional_overview=cached_info.functional_overview,
+                    capabilities=cached_info.capabilities,
+                    related_services=cached_info.related_services,
+                    relationships=cached_info.relationships
+                )
+            
             # Check if RAG adapter is available (has JWT token)
             has_rag = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
             
@@ -582,6 +646,9 @@ class TemenosService:
                     relationships=[]
                 )
                 logger.info(f"Successfully identified component (without RAG): {component_name} for {service.name}")
+                # Cache even non-RAG responses
+                if use_cache:
+                    self._component_cache[cache_key] = component_info
                 return component_info
             
             # Build queries
@@ -647,6 +714,11 @@ class TemenosService:
                 related_services=[],
                 relationships=[]
             )
+            
+            # Cache the component info
+            if use_cache:
+                self._component_cache[cache_key] = component_info
+                logger.info(f"Cached component info for {component_name}")
             
             logger.info(f"Successfully identified component: {component_name} for {service.name}")
             return component_info
