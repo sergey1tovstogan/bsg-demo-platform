@@ -431,7 +431,8 @@ class ApiService {
     }
   }
 
-  async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[]) {
+  async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[], forceRefresh?: boolean) {
+    const endpoint = forceRefresh ? '/deployment/temenos/analyze/refresh' : '/deployment/temenos/analyze'
     const response = await this.client.post<ApiResponse<{
       data: Array<{
         service: any
@@ -453,10 +454,11 @@ class ApiService {
       count: number
       processed: number
       analysisId: string
-    }>>('/deployment/temenos/analyze', {
+    }>>(endpoint, {
       services,
       analysis_id: analysisId,
-      selected_namespaces: selectedNamespaces
+      selected_namespaces: selectedNamespaces,
+      force_refresh: forceRefresh || false
     })
     return response.data
   }
