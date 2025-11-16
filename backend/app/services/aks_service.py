@@ -414,16 +414,17 @@ class AKSService:
                     except Exception as e:
                         logger.warning(f"Context switch error for pods: {e}")
                     
-                    cmd_pods = [
+                    # Try JSON format first
+                    cmd_pods_json = [
                         kubectl_cmd, "get", "pods",
                         "-n", namespace,
                         "-o", "json"
                     ]
                     
                     try:
-                        def _get_pods():
+                        def _get_pods_json():
                             return subprocess.run(
-                                cmd_pods,
+                                cmd_pods_json,
                                 capture_output=True,
                                 text=True,
                                 timeout=30,
@@ -432,8 +433,9 @@ class AKSService:
                             )
                         
                         loop = asyncio.get_event_loop()
-                        result = await loop.run_in_executor(None, _get_pods)
+                        result = await loop.run_in_executor(None, _get_pods_json)
                         
+                        pods_parsed = False
                         if result.returncode == 0:
                             try:
                                 pods_data = json.loads(result.stdout if result.stdout else "{}")
@@ -464,15 +466,70 @@ class AKSService:
                                     ))
                                     namespace_pod_count += 1
                                 
-                                logger.info(f"Found {namespace_pod_count} pods in namespace '{namespace}'")
+                                logger.info(f"Found {namespace_pod_count} pods in namespace '{namespace}' (JSON format)")
+                                pods_parsed = True
                             except json.JSONDecodeError as e:
                                 logger.warning(f"Failed to parse pods JSON for namespace {namespace}: {e}")
-                                logger.debug(f"Response: {(stdout.decode() if stdout else '')[:200]}")
-                                continue
+                                logger.debug(f"Response: {result.stdout[:200] if result.stdout else 'None'}")
                         else:
                             error_msg = result.stderr if result.stderr else "Unknown error"
-                            logger.warning(f"Failed to get pods from namespace '{namespace}': {error_msg}")
-                            logger.debug(f"Command: {' '.join(cmd_pods)}")
+                            # Check if it's the same "-o" flag error
+                            if "unknown shorthand flag" in error_msg.lower() or "unknown flag" in error_msg.lower():
+                                logger.warning(f"kubectl doesn't support -o flag for pods, trying table format...")
+                            else:
+                                logger.warning(f"Failed to get pods from namespace '{namespace}': {error_msg}")
+                        
+                        # If JSON failed, try table format (Rancher Desktop limitation)
+                        if not pods_parsed:
+                            logger.info(f"Trying table format for pods in namespace '{namespace}'...")
+                            cmd_pods_table = [
+                                kubectl_cmd, "get", "pods",
+                                "-n", namespace
+                            ]
+                            
+                            def _get_pods_table():
+                                return subprocess.run(
+                                    cmd_pods_table,
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=30,
+                                    env=env,
+                                    shell=False
+                                )
+                            
+                            result_table = await loop.run_in_executor(None, _get_pods_table)
+                            
+                            if result_table.returncode == 0 and result_table.stdout:
+                                # Parse table format
+                                # Format: NAME READY STATUS RESTARTS AGE
+                                lines = result_table.stdout.strip().split('\n')
+                                if len(lines) > 1:  # Has header + data
+                                    namespace_pod_count = 0
+                                    for line in lines[1:]:  # Skip header line
+                                        parts = line.split()
+                                        if len(parts) > 0:
+                                            pod_name = parts[0].strip()
+                                            if pod_name:
+                                                # Get status from parts (usually index 2)
+                                                pod_status = parts[2] if len(parts) > 2 else "Unknown"
+                                                
+                                                pods.append(AKSPod(
+                                                    name=pod_name,
+                                                    namespace=namespace,
+                                                    cluster_name=cluster_name,
+                                                    cluster_resource_group=resource_group,
+                                                    status=pod_status,
+                                                    labels={},
+                                                    containers=[]
+                                                ))
+                                                namespace_pod_count += 1
+                                    
+                                    logger.info(f"Found {namespace_pod_count} pods in namespace '{namespace}' (table format)")
+                                else:
+                                    logger.warning(f"No pods found in namespace '{namespace}' (table format)")
+                            else:
+                                error_msg = result_table.stderr if result_table.stderr else "Unknown error"
+                                logger.warning(f"Failed to get pods from namespace '{namespace}' (table format): {error_msg}")
                     except Exception as e:
                         logger.warning(f"Error getting pods from namespace '{namespace}': {e}", exc_info=True)
                         continue
