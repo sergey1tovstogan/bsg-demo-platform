@@ -745,9 +745,17 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             architectural_text = architectural_response.get("data", {}).get("answer", "Information not available")
             functional_text = functional_response.get("data", {}).get("answer", "Information not available")
             
+            # Log actual RAG response lengths
+            logger.info(f"RAG response for {component_name}:")
+            logger.info(f"  Architectural: {len(architectural_text)} chars - {architectural_text[:100]}...")
+            logger.info(f"  Functional: {len(functional_text)} chars - {functional_text[:100]}...")
+            
             # Format responses - but don't truncate too aggressively
             arch_formatted = self._format_rag_response(architectural_text)
             func_formatted = self._format_rag_response(functional_text)
+            
+            # Log formatted lengths
+            logger.info(f"Formatted response lengths: arch={len(arch_formatted)}, func={len(func_formatted)}")
             
             # If RAG returned "Information not available", provide more detailed fallback description
             if arch_formatted in ["Information not available", "Information not available - timeout"]:
