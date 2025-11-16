@@ -708,7 +708,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                         rag_model_id="ModularBanking, TechnologyOverview",
                         context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
                     ),
-                    timeout=30.0  # Increased timeout significantly for comprehensive responses
+                    timeout=60.0  # Increased timeout to 60s for complete comprehensive responses
                 )
                 logger.info(f"✓ Architectural query completed for {component_name}")
                 logger.debug(f"Architectural response: {str(architectural_response)[:200]}")
@@ -728,7 +728,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                         rag_model_id="ModularBanking, FuncTransactGeneric",
                         context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
                     ),
-                    timeout=30.0  # Increased timeout significantly for comprehensive responses
+                    timeout=60.0  # Increased timeout to 60s for complete comprehensive responses
                 )
                 logger.info(f"✓ Functional query completed for {component_name}")
                 logger.debug(f"Functional response: {str(functional_response)[:200]}")
