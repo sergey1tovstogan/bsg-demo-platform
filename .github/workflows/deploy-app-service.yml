@@ -58,6 +58,23 @@ jobs:
         continue-on-error: false
         id: azure-login
       
+      - name: Install kubectl (for AKS namespace discovery)
+        run: |
+          # Install kubectl for AKS namespace discovery
+          # This is optional - the app will work without it, but namespace discovery won't work
+          if ! command -v kubectl &> /dev/null; then
+            echo "Installing kubectl..."
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            sudo mv kubectl /usr/local/bin/
+            kubectl version --client
+          else
+            echo "kubectl already installed"
+            kubectl version --client
+          fi
+        continue-on-error: true
+        id: install-kubectl
+      
       - name: Copy frontend build to backend static
         run: |
           mkdir -p backend/app/static
@@ -136,7 +153,10 @@ jobs:
             --always-on true \
             --output none
           
+          # Note: kubectl is not available in Azure App Service by default
+          # The app will handle this gracefully - namespace discovery will be skipped if kubectl is not available
           echo "App settings configured successfully"
+          echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
       
       - name: Health Check
         run: |

@@ -193,10 +193,36 @@ class TemenosService:
         
         # Special handling for AKS pods - extract from namespace or pod name
         if "managedclusters/pods" in service.type.lower():
-            # Pod name format: cluster/namespace/pod
-            # Or check properties for namespace
-            namespace = service.properties.get("namespace", "")
-            pod_name = service.name.split("/")[-1] if "/" in service.name else service.name
+            # Pod name format: cluster/namespace/pod or namespace/pod
+            # Check properties first, then tags, then parse from name
+            namespace = (
+                service.properties.get("namespace") or 
+                service.properties.get("namespace_name") or
+                service.tags.get("namespace") or
+                ""
+            )
+            
+            # Parse pod name - handle both "namespace/pod" and "cluster/namespace/pod" formats
+            pod_name = service.name
+            if "/" in service.name:
+                parts = service.name.split("/")
+                # If we have 2 parts, it's namespace/pod
+                # If we have 3+ parts, it's cluster/namespace/pod or similar
+                if len(parts) >= 2:
+                    pod_name = parts[-1]  # Last part is always pod name
+                    # If namespace not found, try to extract from name
+                    if not namespace and len(parts) >= 2:
+                        namespace = parts[-2]  # Second to last is namespace
+                else:
+                    pod_name = parts[-1]
+            
+            # Fallback: try to extract namespace from name if still not found
+            if not namespace and "/" in service.name:
+                parts = service.name.split("/")
+                if len(parts) >= 2:
+                    namespace = parts[-2]
+            
+            logger.debug(f"Extracting component name for pod '{pod_name}' in namespace '{namespace}'")
             
             # Use namespace as component identifier if it's Temenos-related
             if namespace:
