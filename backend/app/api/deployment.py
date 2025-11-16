@@ -455,14 +455,20 @@ async def _analyze_services_impl(request: AnalyzeRequest):
                 if aks_clusters:
                     aks_service = AKSService(subscription_id)
                     
-                    # If namespaces were selected, discover pods ONLY from those namespaces
-                    # Otherwise, discover from ALL Temenos namespaces (auto-detection)
-                    if selected_namespaces and len(selected_namespaces) > 0:
-                        logger.info(f"Discovering pods from {len(selected_namespaces)} selected namespaces: {selected_namespaces}")
-                        aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=selected_namespaces)
-                    else:
-                        logger.info(f"Discovering pods from ALL Temenos namespaces (auto-detection)...")
-                        aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=None)
+                    # ALWAYS discover from ALL Temenos namespaces (auto-detection)
+                    # This ensures we find all pods regardless of selection
+                    logger.info(f"Discovering pods from ALL Temenos namespaces (auto-detection)...")
+                    aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=None)
+                    
+                    # Log what we found
+                    if aks_pods:
+                        all_pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
+                        logger.info(f"✓ Discovered pods from {len(all_pod_namespaces)} namespaces: {all_pod_namespaces}")
+                        
+                        # If namespaces were selected, log which ones match
+                        if selected_namespaces and len(selected_namespaces) > 0:
+                            matching_namespaces = [ns for ns in all_pod_namespaces if ns in selected_namespaces]
+                            logger.info(f"Selected namespaces {selected_namespaces} match {len(matching_namespaces)} discovered namespaces: {matching_namespaces}")
                     
                     if aks_pods:
                         logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods")
