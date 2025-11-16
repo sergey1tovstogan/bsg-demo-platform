@@ -663,9 +663,9 @@ Be thorough and provide as much detail as possible."""
                         question=architectural_query,
                         region="global",
                         rag_model_id="ModularBanking, TechnologyOverview",
-                        context="This is a Temenos microservice component in a core banking system deployment. Provide a concise, well-structured response."
+                        context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
                     ),
-                    timeout=10.0  # 10 second timeout per query
+                    timeout=15.0  # Increased timeout for comprehensive responses
                 )
             except asyncio.TimeoutError:
                 logger.warning(f"Architectural query timeout for {service.name}")
@@ -680,9 +680,9 @@ Be thorough and provide as much detail as possible."""
                         question=functional_query,
                         region="global",
                         rag_model_id="ModularBanking, FuncTransactGeneric",
-                        context="This is a Temenos microservice component in a core banking system deployment. Provide a concise, well-structured response."
+                        context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
                     ),
-                    timeout=10.0  # 10 second timeout per query
+                    timeout=15.0  # Increased timeout for comprehensive responses
                 )
             except asyncio.TimeoutError:
                 logger.warning(f"Functional query timeout for {service.name}")
