@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search, ExternalLink } from 'lucide-react'
 import { apiService } from '../../services/api'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
@@ -26,6 +26,7 @@ interface AzureResource {
   resourceGroup: string
   tags?: Record<string, string>
   properties?: Record<string, any>
+  portalUrl?: string
 }
 
 interface ComponentInfo {
