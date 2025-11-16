@@ -38,6 +38,7 @@ class AnalyzeRequest(BaseModel):
     services: List[Dict[str, Any]] = Field(..., description="List of Azure resources")
     analysis_id: Optional[str] = Field(None, description="Analysis ID for progress tracking")
     selected_namespaces: Optional[List[str]] = Field(None, description="Selected AKS namespaces to analyze")
+    force_refresh: Optional[bool] = Field(False, description="Force refresh RAG queries even if cached")
 
 
 class NamespacesRequest(BaseModel):
