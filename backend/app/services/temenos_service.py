@@ -91,9 +91,16 @@ class TemenosService:
         """Initialize Temenos service."""
         try:
             self.rag_adapter = get_rag_adapter()
-            logger.info("Temenos service initialized with RAG adapter")
+            logger.info("✓ Temenos service initialized with RAG adapter")
+            logger.info(f"  RAG adapter type: {type(self.rag_adapter).__name__}")
+            if hasattr(self.rag_adapter, 'base_url'):
+                logger.info(f"  RAG API URL: {self.rag_adapter.base_url}")
+            if hasattr(self.rag_adapter, 'jwt_token'):
+                token_preview = self.rag_adapter.jwt_token[:20] + "..." if self.rag_adapter.jwt_token else "NOT SET"
+                logger.info(f"  RAG JWT Token: {token_preview}")
         except Exception as e:
-            logger.warning(f"RAG adapter not available: {e}. Component identification will work from namespace/name only.")
+            logger.error(f"✗ RAG adapter initialization FAILED: {e}", exc_info=True)
+            logger.warning("Component identification will work from namespace/name only (no RAG queries)")
             self.rag_adapter = None
         
         # Cache for RAG responses - key: component_name, value: TemenosComponentInfo
@@ -678,9 +685,17 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             # Check if RAG adapter is available (has JWT token)
             has_rag = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
             
+            logger.info(f"RAG availability check for {component_name}:")
+            logger.info(f"  rag_adapter is None: {self.rag_adapter is None}")
+            if self.rag_adapter:
+                logger.info(f"  has jwt_token attr: {hasattr(self.rag_adapter, 'jwt_token')}")
+                if hasattr(self.rag_adapter, 'jwt_token'):
+                    logger.info(f"  jwt_token value: {'SET' if self.rag_adapter.jwt_token else 'NOT SET'}")
+            logger.info(f"  Final has_rag: {has_rag}")
+            
             if not has_rag:
                 # If RAG is not available, create component info from namespace/name only
-                logger.info(f"RAG not available, creating component info from namespace for {component_name}")
+                logger.warning(f"✗ RAG not available for {component_name}, using minimal fallback description")
                 component_info = TemenosComponentInfo(
                     component_name=component_name,
                     component_type=self._determine_component_type(service),
