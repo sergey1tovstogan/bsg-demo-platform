@@ -577,7 +577,10 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     if len(clean) > 20 and len(clean) < 200:
                         capabilities.append(clean)
         
-        return capabilities[:10]  # Increased limit to 10 capabilities
+        # Return ALL capabilities found - no limit
+        # We want complete information
+        logger.info(f"Extracted {len(capabilities)} capabilities for component")
+        return capabilities
 
     def _determine_component_type(self, service: AzureResource) -> str:
         """Determine component type from service."""
