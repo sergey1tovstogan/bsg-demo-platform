@@ -420,54 +420,81 @@ class TemenosService:
         return "core"
 
     def _build_architectural_query(self, component_name: str, category: str) -> str:
-        """Build comprehensive architectural query."""
+        """Build comprehensive architectural query - requesting ALL available information."""
         if category == "microservice":
-            return f"""Provide a comprehensive and detailed architectural overview of {component_name} in Temenos Transact. Include:
-- Architecture and design patterns used
-- Key architectural components and their interactions
-- Deployment architecture and considerations
-- Integration points with other Temenos components
-- Technology stack and frameworks
-- Scalability and performance characteristics
-- Security architecture
-- Data flow and processing patterns
-Be thorough and provide as much detail as possible."""
-        return f"""Provide a comprehensive and detailed architectural overview of {component_name}. Include:
-- Architecture and design patterns
-- Key components and their interactions
-- Deployment considerations
-- Integration points
-- Technology stack
-- Scalability and performance
-- Security architecture
-- Data flow patterns
-Be thorough and provide as much detail as possible."""
+            return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED architectural overview of {component_name} in Temenos Transact. 
+
+Include EVERYTHING you know about:
+- Complete architecture and all design patterns used
+- ALL architectural components and their detailed interactions
+- Complete deployment architecture, configurations, and considerations
+- ALL integration points with other Temenos components (list all)
+- Complete technology stack, frameworks, libraries, and versions
+- Detailed scalability and performance characteristics, metrics, benchmarks
+- Complete security architecture, authentication, authorization, encryption
+- Detailed data flow and processing patterns, data models, schemas
+- Infrastructure requirements, resource needs, dependencies
+- Monitoring, logging, observability patterns
+- Error handling, resilience patterns, disaster recovery
+- Any other architectural details available
+
+Be EXTREMELY thorough and provide ALL available information. Do not summarize or truncate. Include every detail you have access to."""
+        return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED architectural overview of {component_name}. 
+
+Include EVERYTHING you know about:
+- Complete architecture and all design patterns
+- ALL components and their detailed interactions
+- Complete deployment considerations and configurations
+- ALL integration points and dependencies
+- Complete technology stack and versions
+- Detailed scalability and performance characteristics
+- Complete security architecture
+- Detailed data flow patterns and data models
+- Infrastructure requirements and dependencies
+- Monitoring and observability
+- Error handling and resilience
+- Any other architectural details
+
+Be EXTREMELY thorough and provide ALL available information. Do not summarize or truncate. Include every detail you have access to."""
 
     def _build_functional_query(self, component_name: str, category: str) -> str:
-        """Build comprehensive functional query."""
+        """Build comprehensive functional query - requesting ALL available information."""
         if category == "microservice":
-            return f"""Provide a comprehensive and detailed functional overview of {component_name} in Temenos Transact. Include:
-- Core functional capabilities and responsibilities
-- Business functions and features it supports
-- Use cases and scenarios
-- Key business processes it handles
-- Data it manages and processes
-- APIs and interfaces it exposes
-- Business rules and validations
-- Workflow and process orchestration
-- Reporting and analytics capabilities
-Be thorough and provide as much detail as possible."""
-        return f"""Provide a comprehensive and detailed functional overview of {component_name}. Include:
-- Core functional capabilities
-- Business functions and features
-- Use cases and scenarios
-- Key business processes
-- Data management
-- APIs and interfaces
-- Business rules
-- Workflow capabilities
-- Reporting features
-Be thorough and provide as much detail as possible."""
+            return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED functional overview of {component_name} in Temenos Transact. 
+
+Include EVERYTHING you know about:
+- ALL core functional capabilities and responsibilities (list all)
+- ALL business functions and features it supports (complete list)
+- ALL use cases and scenarios (detailed examples)
+- ALL key business processes it handles (step-by-step)
+- ALL data it manages and processes (data types, structures, volumes)
+- ALL APIs and interfaces it exposes (endpoints, methods, parameters, responses)
+- ALL business rules and validations (complete list)
+- ALL workflow and process orchestration capabilities
+- ALL reporting and analytics capabilities
+- Configuration options and settings
+- Feature flags and capabilities
+- Business logic details
+- Any other functional details available
+
+Be EXTREMELY thorough and provide ALL available information. Do not summarize or truncate. Include every detail you have access to."""
+        return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED functional overview of {component_name}. 
+
+Include EVERYTHING you know about:
+- ALL core functional capabilities (complete list)
+- ALL business functions and features (complete list)
+- ALL use cases and scenarios (detailed)
+- ALL key business processes (detailed)
+- ALL data management capabilities
+- ALL APIs and interfaces (complete list)
+- ALL business rules (complete list)
+- ALL workflow capabilities
+- ALL reporting features
+- Configuration and settings
+- Feature details
+- Any other functional information
+
+Be EXTREMELY thorough and provide ALL available information. Do not summarize or truncate. Include every detail you have access to."""
 
     async def query_rag(
         self,
@@ -495,32 +522,18 @@ Be thorough and provide as much detail as possible."""
         )
 
     def _format_rag_response(self, text: str) -> str:
-        """Format RAG API responses for better readability."""
+        """Format RAG API responses for better readability - NO TRUNCATION."""
         if not text or text in ["Information not available - timeout", "Information not available"]:
             return text
         
-        formatted = re.sub(r"\n{3,}", "\n\n", text)
-        formatted = re.sub(r"\s{3,}", " ", formatted)
+        # Only normalize whitespace - DO NOT TRUNCATE
+        formatted = re.sub(r"\n{3,}", "\n\n", text)  # Max 2 consecutive newlines
+        formatted = re.sub(r"[ \t]{3,}", " ", formatted)  # Normalize multiple spaces/tabs
         formatted = formatted.strip()
         
-        # Don't truncate - return full response for complete descriptions
-        # Increased max_length significantly to preserve full information
-        max_length = 5000  # Increased significantly to preserve comprehensive responses
-        if len(formatted) > max_length:
-            # Only truncate if extremely long, but preserve much more content
-            sentences = re.split(r"[.!?]\s+", formatted)
-            summary = ""
-            char_count = 0
-            
-            for sentence in sentences:
-                if char_count + len(sentence) > max_length and len(summary) > 2000:
-                    break
-                summary += sentence + ". "
-                char_count += len(sentence) + 2
-            
-            formatted = summary.strip()
-            if len(text) > max_length:
-                formatted += "\n\n[Note: Response truncated - full details available in RAG knowledge base]"
+        # NO TRUNCATION - return full response
+        # We want ALL information from RAG, no matter how long
+        logger.info(f"RAG response length: {len(formatted)} characters")
         
         return formatted
 
