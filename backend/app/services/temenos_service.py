@@ -730,7 +730,9 @@ Be thorough and provide as much detail as possible."""
         self,
         services: List[AzureResource],
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
-        component_callback: Optional[Callable[[TemenosAnalysisResult], None]] = None
+        component_callback: Optional[Callable[[TemenosAnalysisResult], None]] = None,
+        use_cache: bool = True,
+        force_refresh: bool = False
     ) -> List[TemenosAnalysisResult]:
         """Analyze multiple services with progress and component callbacks."""
         results = []
@@ -783,7 +785,7 @@ Be thorough and provide as much detail as possible."""
                     progress_callback(original_index, total, service.name)
                 
                 try:
-                    component_info = await self.identify_component(service, services)
+                    component_info = await self.identify_component(service, services, use_cache=use_cache, force_refresh=force_refresh)
                     result = TemenosAnalysisResult(
                         service=service,
                         component_info=component_info,
