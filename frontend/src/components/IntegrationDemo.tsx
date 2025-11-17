@@ -66,10 +66,14 @@ interface BalanceInfo {
 export function IntegrationDemo() {
   const [getResult, setGetResult] = useState<ApiResult>({ loading: false })
   const [postResult, setPostResult] = useState<ApiResult>({ loading: false })
+  const [portfolioResult, setPortfolioResult] = useState<ApiResult>({ loading: false })
   const [balance, setBalance] = useState<BalanceInfo>({ loading: false })
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
   const [getResultCollapsed, setGetResultCollapsed] = useState(false)
   const [postResultCollapsed, setPostResultCollapsed] = useState(false)
+  const [portfolioResultCollapsed, setPortfolioResultCollapsed] = useState(false)
+  const [portfolioMethod, setPortfolioMethod] = useState<'GET' | 'POST'>('POST')
+  const [portfolioId, setPortfolioId] = useState('100291-3')
 
   // POST request body
   const [postBody, setPostBody] = useState(JSON.stringify({
@@ -83,6 +87,21 @@ export function IntegrationDemo() {
       "extensionData": {
         "taxSegmentTR": "B"
       }
+    }
+  }, null, 2))
+
+  // Portfolio API request body
+  const [portfolioBody, setPortfolioBody] = useState(JSON.stringify({
+    "header": {
+    },
+    "body": {
+      "referenceCurrency": "USD",
+      "valuationCurrency": "USD",
+      "portfolioName": "Bank USD Portfolio",
+      "investmentProgram": "9",
+      "managedAccount": "4",
+      "startDate": "2019-08-24",
+      "memoAccount": "Y"
     }
   }, null, 2))
 
@@ -219,6 +238,69 @@ export function IntegrationDemo() {
     }
   }
 
+  const executePortfolioRequest = async () => {
+    setPortfolioResult({ loading: true })
+    try {
+      const portfolioUrl = `https://transactwb.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/${portfolioId}`
+
+      if (portfolioMethod === 'POST') {
+        // Validate JSON
+        const parsedBody = JSON.parse(portfolioBody)
+
+        // Use backend proxy to avoid CORS issues
+        const response = await axios.post(
+          'http://localhost:8000/api/v1/integration/proxy',
+          parsedBody,
+          {
+            params: {
+              url: portfolioUrl
+            },
+            headers: {
+              'X-User-Id': 'demo_user',
+              'Content-Type': 'application/json'
+            },
+            timeout: 30000
+          }
+        )
+
+        // Extract data from proxy response
+        const proxyData = response.data
+        setPortfolioResult({
+          loading: false,
+          status: proxyData.status,
+          data: proxyData.data
+        })
+      } else {
+        // GET request
+        const response = await axios.get(
+          'http://localhost:8000/api/v1/integration/proxy',
+          {
+            params: {
+              url: portfolioUrl
+            },
+            headers: {
+              'X-User-Id': 'demo_user'
+            },
+            timeout: 30000
+          }
+        )
+
+        // Extract data from proxy response
+        const proxyData = response.data
+        setPortfolioResult({
+          loading: false,
+          status: proxyData.status,
+          data: proxyData.data
+        })
+      }
+    } catch (error: any) {
+      setPortfolioResult({
+        loading: false,
+        error: error.response?.data?.detail || error.message || 'Request failed'
+      })
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* API Key Management Button */}
@@ -238,84 +320,6 @@ export function IntegrationDemo() {
         onClose={() => setShowApiKeyModal(false)}
       />
 
-      {/* GET Request - Security Trades */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
-              <h3 className="text-lg font-bold text-[#283054]">Security Trades</h3>
-            </div>
-            <p className="text-sm text-gray-500 mt-1">
-              https://api.temenos.com/api/v4.0.0/holdings/securityTrades/trades
-            </p>
-          </div>
-          <button
-            onClick={executeGetRequest}
-            disabled={getResult.loading}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1a1f36] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {getResult.loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Loading...</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" />
-                <span>Execute</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* GET Response */}
-        {(getResult.data || getResult.error) && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                {getResult.error ? (
-                  <>
-                    <AlertCircle className="w-5 h-5 text-red-500" />
-                    <span className="text-sm font-semibold text-red-700">Error</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                    <span className="text-sm font-semibold text-green-700">
-                      Status: {getResult.status}
-                    </span>
-                  </>
-                )}
-              </div>
-              <button
-                onClick={() => setGetResultCollapsed(!getResultCollapsed)}
-                className="flex items-center space-x-1 px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-                title={getResultCollapsed ? "Expand result" : "Collapse result"}
-              >
-                <span className="text-xs font-medium">
-                  {getResultCollapsed ? 'Show' : 'Hide'}
-                </span>
-                {getResultCollapsed ? (
-                  <ChevronDown className="w-4 h-4" />
-                ) : (
-                  <ChevronUp className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-            {!getResultCollapsed && (
-              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
-                {getResult.error ? (
-                  <pre className="text-xs text-red-700 whitespace-pre-wrap">{getResult.error}</pre>
-                ) : (
-                  <JsonView data={getResult.data} />
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* POST Request - Payment Orders */}
       <div className="card">
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
@@ -331,17 +335,17 @@ export function IntegrationDemo() {
           <button
             onClick={executePostRequest}
             disabled={postResult.loading}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1a1f36] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-[#097BED] text-white rounded-lg hover:bg-[#0868CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm hover:shadow-md font-medium"
           >
             {postResult.loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Loading...</span>
+                <span style={{ color: '#FFFFFF' }}>Loading...</span>
               </>
             ) : (
               <>
                 <Play className="w-4 h-4" />
-                <span>Execute</span>
+                <span style={{ color: '#FFFFFF' }}>Execute</span>
               </>
             )}
           </button>
@@ -468,6 +472,203 @@ export function IntegrationDemo() {
                       </>
                     )}
                   </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* GET Request - Security Trades */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
+              <h3 className="text-lg font-bold text-[#283054]">Security Trades</h3>
+            </div>
+            <p className="text-sm text-gray-500 mt-1">
+              https://api.temenos.com/api/v4.0.0/holdings/securityTrades/trades
+            </p>
+          </div>
+          <button
+            onClick={executeGetRequest}
+            disabled={getResult.loading}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#097BED] text-white rounded-lg hover:bg-[#0868CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm hover:shadow-md font-medium"
+          >
+            {getResult.loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span style={{ color: '#FFFFFF' }}>Loading...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                <span style={{ color: '#FFFFFF' }}>Execute</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* GET Response */}
+        {(getResult.data || getResult.error) && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {getResult.error ? (
+                  <>
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <span className="text-sm font-semibold text-red-700">Error</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-semibold text-green-700">
+                      Status: {getResult.status}
+                    </span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setGetResultCollapsed(!getResultCollapsed)}
+                className="flex items-center space-x-1 px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                title={getResultCollapsed ? "Expand result" : "Collapse result"}
+              >
+                <span className="text-xs font-medium">
+                  {getResultCollapsed ? 'Show' : 'Hide'}
+                </span>
+                {getResultCollapsed ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            {!getResultCollapsed && (
+              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
+                {getResult.error ? (
+                  <pre className="text-xs text-red-700 whitespace-pre-wrap">{getResult.error}</pre>
+                ) : (
+                  <JsonView data={getResult.data} />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Portfolio API - POST and GET */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-2">
+              {/* Method selector styled as badge */}
+              <select
+                value={portfolioMethod}
+                onChange={(e) => setPortfolioMethod(e.target.value as 'GET' | 'POST')}
+                className={`px-2 py-1 ${portfolioMethod === 'POST' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'} text-xs font-bold rounded cursor-pointer border-none focus:outline-none focus:ring-2 focus:ring-offset-1 ${portfolioMethod === 'POST' ? 'focus:ring-blue-500' : 'focus:ring-green-500'}`}
+              >
+                <option value="POST">POST</option>
+                <option value="GET">GET</option>
+              </select>
+              <h3 className="text-lg font-bold text-[#283054]">Portfolio</h3>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500">
+                https://transactwb.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/
+              </span>
+              <input
+                type="text"
+                value={portfolioId}
+                onChange={(e) => setPortfolioId(e.target.value)}
+                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent font-mono"
+                placeholder="Portfolio ID"
+              />
+            </div>
+          </div>
+          <button
+            onClick={executePortfolioRequest}
+            disabled={portfolioResult.loading}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#097BED] text-white rounded-lg hover:bg-[#0868CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm hover:shadow-md font-medium"
+          >
+            {portfolioResult.loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span style={{ color: '#FFFFFF' }}>Loading...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                <span style={{ color: '#FFFFFF' }}>Execute</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Request Body (only for POST) */}
+        {portfolioMethod === 'POST' && (
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Request Body:
+            </label>
+            <div className="relative">
+              <textarea
+                value={portfolioBody}
+                onChange={(e) => setPortfolioBody(e.target.value)}
+                className="absolute top-0 left-0 w-full h-48 px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent bg-transparent text-transparent caret-black resize-none z-10"
+                placeholder="Enter JSON request body..."
+                spellCheck={false}
+              />
+              <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
+                <JsonView
+                  data={(() => { try { return JSON.parse(portfolioBody) } catch { return null } })()}
+                  rawText={portfolioBody}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Portfolio Response */}
+        {(portfolioResult.data || portfolioResult.error) && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {portfolioResult.error ? (
+                  <>
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <span className="text-sm font-semibold text-red-700">Error</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-semibold text-green-700">
+                      Status: {portfolioResult.status}
+                    </span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setPortfolioResultCollapsed(!portfolioResultCollapsed)}
+                className="flex items-center space-x-1 px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                title={portfolioResultCollapsed ? "Expand result" : "Collapse result"}
+              >
+                <span className="text-xs font-medium">
+                  {portfolioResultCollapsed ? 'Show' : 'Hide'}
+                </span>
+                {portfolioResultCollapsed ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            {!portfolioResultCollapsed && (
+              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
+                {portfolioResult.error ? (
+                  <pre className="text-xs text-red-700 whitespace-pre-wrap">{portfolioResult.error}</pre>
+                ) : (
+                  <JsonView data={portfolioResult.data} />
                 )}
               </div>
             )}
