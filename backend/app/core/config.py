@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     # Database Settings
     DATABASE_TYPE: str = Field(default="mongodb", description="Database type: mongodb, postgresql, etc.")
     DATABASE_URL: str = Field(
-        default="mongodb://localhost:27017/bsg_demo",
-        description="Database connection string"
+        default="mongodb://bsg-demo-platform-mongodb:wC418aLYO4SazuhljALVOclZc48spvoHidWukgFDOoBCjO5Z4wjjKPziuJ44TAUyVlOs89HeL4a5ACDbdAs80w==@bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@bsg-demo-platform-mongodb@",
+        description="Database connection string (Azure Cosmos DB MongoDB API)"
     )
     DATABASE_NAME: str = Field(default="bsg_demo", description="Database name")
     DB_MAX_POOL_SIZE: int = Field(default=50, description="Database connection pool size")
