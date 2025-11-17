@@ -57,32 +57,14 @@ export function ApiOverview() {
 
   return (
     <div className="card">
-      {/* Title and tooltip area */}
-      <div className="flex items-start justify-between gap-6 mb-6">
+      {/* Title */}
+      <div className="mb-6">
         <h2 className="text-2xl font-bold text-[#283054]">API Overview</h2>
-
-        {/* Tooltip display area - in the white area to the right of title */}
-        <div className="flex-1 min-h-[120px]">
-          <div className={`p-4 bg-purple-50 border-2 border-purple-500 rounded-lg shadow-lg text-sm transition-opacity duration-200 ${activeTooltip ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            <div className="flex items-start space-x-2">
-              <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-              <p className="text-gray-800 leading-relaxed">
-                {activeTooltip === 'expose-data' && tooltips[0].description}
-                {activeTooltip === 'api-catalog' && tooltips[1].description}
-                {activeTooltip === 'open-standards' && tooltips[2].description}
-                {activeTooltip === 'graphical-wizards' && tooltips[3].description}
-                {activeTooltip === 'security-standards' && tooltips[4].description}
-                {activeTooltip === 'upgradability' && tooltips[5].description}
-                {!activeTooltip && 'Hover over a feature to see details'}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* API Framework Diagram */}
       <div
-        className="relative rounded-lg overflow-hidden"
+        className="relative rounded-lg overflow-hidden flex"
         style={{
           minHeight: '420px',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
@@ -106,14 +88,14 @@ export function ApiOverview() {
         }}></div>
 
         {/* Left Panel - Features */}
-        <div className="absolute top-6 left-6 w-[45%] space-y-4 z-10">
+        <div className="w-[30%] p-6 space-y-3 z-10 flex flex-col justify-between">
           {/* API Icon & Text */}
           <div
-            className="bg-white/95 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all cursor-help relative"
+            className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-help relative"
             onMouseEnter={() => setActiveTooltip('expose-data')}
             onMouseLeave={() => setActiveTooltip(null)}
           >
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
                   <svg className="w-full h-full p-1.5" viewBox="0 0 100 100" fill="none">
@@ -135,11 +117,11 @@ export function ApiOverview() {
 
           {/* Shopping Cart Icon & Text */}
           <div
-            className="bg-white/95 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all cursor-help relative"
+            className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-help relative"
             onMouseEnter={() => setActiveTooltip('api-catalog')}
             onMouseLeave={() => setActiveTooltip(null)}
           >
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
                   <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -156,11 +138,11 @@ export function ApiOverview() {
 
           {/* Open Standards Icon & Text */}
           <div
-            className="bg-white/95 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all cursor-help relative"
+            className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-help relative"
             onMouseEnter={() => setActiveTooltip('open-standards')}
             onMouseLeave={() => setActiveTooltip(null)}
           >
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
                   <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -191,15 +173,148 @@ export function ApiOverview() {
         </div>
 
 
+        {/* Middle Panel - API Schema with Tooltip */}
+        <div className="flex-1 p-6 z-10 flex flex-col items-center justify-center gap-6">
+          {/* API Schema Diagram - Two boxes with U-shaped connection */}
+          <div className="relative flex flex-col items-center justify-center" style={{ minHeight: '150px', gap: '28px' }}>
+            {/* Bank's System Box - spans width of both columns */}
+            <div className="bg-white rounded-lg p-3 shadow-md border-2 border-[#097BED]" style={{ width: '235px' }}>
+              <div className="text-center text-xs font-semibold text-[#283054] leading-tight">
+                Bank's system<br/>
+                <span className="text-[10px]">(channel, real-time interface, etc.)</span>
+              </div>
+            </div>
+
+            {/* Command Arrow - from Bank's System to left API */}
+            <div className="absolute" style={{ top: '58px', left: '50%', transform: 'translateX(-62px)' }}>
+              <svg width="4" height="24" style={{ overflow: 'visible' }}>
+                <defs>
+                  <marker id="arrowCommand" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+                    <polygon points="0,0 6,3 0,6" fill="#097BED" />
+                  </marker>
+                </defs>
+                <line x1="2" y1="0" x2="2" y2="22" stroke="#097BED" strokeWidth="2" markerEnd="url(#arrowCommand)" strokeDasharray="6,3">
+                  <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
+                </line>
+              </svg>
+              <div className="absolute text-[9px] font-semibold whitespace-nowrap" style={{ right: '8px', top: '6px', color: '#FFFFFF' }}>command</div>
+            </div>
+
+            {/* Response Arrow - from right API to Bank's System */}
+            <div className="absolute" style={{ top: '61px', left: '50%', transform: 'translateX(58px)' }}>
+              <svg width="4" height="23" style={{ overflow: 'visible' }}>
+                <defs>
+                  <marker id="arrowResponse" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto-start-reverse">
+                    <polygon points="0,0 6,3 0,6" fill="#097BED" />
+                  </marker>
+                </defs>
+                <line x1="2" y1="21" x2="2" y2="1" stroke="#097BED" strokeWidth="2" markerEnd="url(#arrowResponse)" strokeDasharray="6,3">
+                  <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
+                </line>
+              </svg>
+              <div className="absolute text-[9px] font-semibold whitespace-nowrap" style={{ left: '8px', top: '6px', color: '#FFFFFF' }}>query</div>
+            </div>
+
+            {/* Two Boxes with U-shaped Arrow */}
+            <div className="flex items-start gap-3 relative">
+              {/* Temenos Business Logic Box with API label */}
+              <div className="flex flex-col items-center relative gap-2">
+                {/* Thin API Box */}
+                <div className="bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-4 py-1 shadow-sm" style={{ minWidth: '110px' }}>
+                  <div className="text-center text-xs font-bold text-white" style={{ color: '#FFFFFF' }}>API</div>
+                </div>
+
+                {/* Temenos Business Logic Box */}
+                <div className="bg-white rounded-lg p-2.5 shadow-md border-2 border-[#097BED]" style={{ minWidth: '110px' }}>
+                  <div className="text-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#097BED] to-[#0868CC] rounded-lg flex items-center justify-center mx-auto mb-1 shadow-sm">
+                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                      </svg>
+                    </div>
+                    <div className="text-xs font-semibold text-[#283054] leading-tight">Temenos<br/>Business Logic</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* U-shaped arrow connecting the two boxes at the bottom with spacing */}
+              <div className="absolute" style={{ bottom: '-30px', left: '50%', transform: 'translateX(-50%)', width: '150px', height: '40px' }}>
+                <svg width="150" height="40" style={{ overflow: 'visible' }}>
+                  <defs>
+                    <marker id="arrowUShape" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
+                      <polygon points="0,0 6,3 0,6" fill="#097BED" />
+                    </marker>
+                  </defs>
+                  {/* U-shaped path starting from outside the boxes */}
+                  <path
+                    d="M 0,5 Q 0,35 5,35 L 145,35 Q 150,35 150,5"
+                    fill="none"
+                    stroke="#097BED"
+                    strokeWidth="2"
+                    markerEnd="url(#arrowUShape)"
+                    strokeDasharray="6,3"
+                  >
+                    <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="1.2s" repeatCount="indefinite" />
+                  </path>
+                </svg>
+              </div>
+
+              {/* Business Microservices Box with API label */}
+              <div className="flex flex-col items-center relative gap-2">
+                {/* Thin API Box */}
+                <div className="bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-4 py-1 shadow-sm" style={{ minWidth: '110px' }}>
+                  <div className="text-center text-xs font-bold text-white" style={{ color: '#FFFFFF' }}>API</div>
+                </div>
+
+                {/* Business Microservices Box */}
+                <div className="bg-white rounded-lg p-2.5 shadow-md border-2 border-[#097BED]" style={{ minWidth: '110px' }}>
+                  <div className="text-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#097BED] to-[#0868CC] rounded-lg flex items-center justify-center mx-auto mb-1 shadow-sm">
+                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                      </svg>
+                    </div>
+                    <div className="text-xs font-semibold text-[#283054] leading-tight">Business<br/>Microservices</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tooltip Display */}
+          <div className={`transition-opacity duration-200 ${activeTooltip ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="p-4 bg-white/95 backdrop-blur-sm border-2 border-purple-500 rounded-lg shadow-lg text-sm max-w-md">
+              <div className="flex items-start space-x-2">
+                <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  {activeTooltip && (
+                    <div>
+                      <h3 className="font-bold text-purple-900 mb-2">
+                        {tooltips.find(t => t.id === activeTooltip)?.title}
+                      </h3>
+                      <p className="text-gray-800 leading-relaxed">
+                        {tooltips.find(t => t.id === activeTooltip)?.description}
+                      </p>
+                    </div>
+                  )}
+                  {!activeTooltip && (
+                    <p className="text-gray-600 italic">Hover over a feature card to see details</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Right Panel - Features */}
-        <div className="absolute top-6 right-6 w-[45%] space-y-4 z-10">
+        <div className="w-[30%] p-6 space-y-3 z-10 flex flex-col justify-between">
           {/* Desktop/Wizard Icon & Text */}
           <div
-            className="bg-white/95 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all cursor-help relative"
+            className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-help relative"
             onMouseEnter={() => setActiveTooltip('graphical-wizards')}
             onMouseLeave={() => setActiveTooltip(null)}
           >
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
                   <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -219,11 +334,11 @@ export function ApiOverview() {
 
           {/* Security Shield Icon & Text */}
           <div
-            className="bg-white/95 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all cursor-help relative"
+            className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-help relative"
             onMouseEnter={() => setActiveTooltip('security-standards')}
             onMouseLeave={() => setActiveTooltip(null)}
           >
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
                   <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -241,11 +356,11 @@ export function ApiOverview() {
 
           {/* Upgradability Icon & Text */}
           <div
-            className="bg-white/95 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all cursor-help relative"
+            className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-help relative"
             onMouseEnter={() => setActiveTooltip('upgradability')}
             onMouseLeave={() => setActiveTooltip(null)}
           >
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
                   <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
