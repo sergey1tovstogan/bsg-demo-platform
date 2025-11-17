@@ -5,8 +5,12 @@ import { VideoPlayer } from '../components/VideoPlayer'
 import { Chatbot } from '../components/Chatbot'
 import { DemoFrame } from '../components/DemoFrame'
 import { ObservabilityContent } from '../components/observability/ObservabilityContent'
+<<<<<<< HEAD
 import { DeploymentAnalyzer } from '../components/deployment/DeploymentAnalyzer'
 import { DeploymentContentViewer } from '../components/deployment/DeploymentContentViewer'
+=======
+import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
+>>>>>>> 818979199214937ee4e25cfe7e85ad1502746eb2
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
@@ -60,8 +64,13 @@ export function ComponentPage({ componentId }: ComponentPageProps) {
         {activeTab === 'content' && (
           componentId === 'observability' ? (
             <ObservabilityContent />
+<<<<<<< HEAD
           ) : componentId === 'deployment' ? (
             <DeploymentContentViewer />
+=======
+          ) : componentId === 'data-architecture' ? (
+            <DataArchitectureContent />
+>>>>>>> 818979199214937ee4e25cfe7e85ad1502746eb2
           ) : (
             <ContentViewer componentId={componentId} />
           )
