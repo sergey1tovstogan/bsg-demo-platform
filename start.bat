@@ -39,17 +39,22 @@ if errorlevel 1 (
     exit /b 1
 )
 
-where python >nul 2>&1
+where py >nul 2>&1
 if errorlevel 1 (
-    where python3 >nul 2>&1
+    where python >nul 2>&1
     if errorlevel 1 (
-        echo [ERROR] Python not found. Please install from https://www.python.org/
-        pause
-        exit /b 1
+        where python3 >nul 2>&1
+        if errorlevel 1 (
+            echo [ERROR] Python not found. Please install from https://www.python.org/
+            pause
+            exit /b 1
+        )
+        set PYTHON_CMD=python3
+    ) else (
+        set PYTHON_CMD=python
     )
-    set PYTHON_CMD=python3
 ) else (
-    set PYTHON_CMD=python
+    set PYTHON_CMD=py
 )
 
 echo [OK] All required dependencies are installed
@@ -115,33 +120,19 @@ if exist "%BACKEND_DIR%" (
         if exist "%BACKEND_DIR%\requirements.txt" (
             echo [INFO] Checking and installing backend dependencies...
             
-            REM Check for pip
-            set PIP_CMD=pip
-            where pip >nul 2>&1
+            REM Install/upgrade packages from requirements.txt using pip
+            echo [INFO] Installing/updating Python packages from requirements.txt...
+            %PYTHON_CMD% -m pip install --upgrade -r "%BACKEND_DIR%\requirements.txt" >nul 2>&1
             if errorlevel 1 (
-                where pip3 >nul 2>&1
-                if not errorlevel 1 (
-                    set PIP_CMD=pip3
-                ) else (
-                    echo [WARN] pip not found, skipping dependency installation
-                )
-            )
-            
-            REM Install/upgrade packages from requirements.txt if pip is available
-            if defined PIP_CMD (
-                echo [INFO] Installing/updating Python packages from requirements.txt...
-                %PIP_CMD% install --upgrade -r "%BACKEND_DIR%\requirements.txt" >nul 2>&1
+                echo [WARN] Some packages may have failed to install. Trying without --upgrade...
+                %PYTHON_CMD% -m pip install -r "%BACKEND_DIR%\requirements.txt" >nul 2>&1
                 if errorlevel 1 (
-                    echo [WARN] Some packages may have failed to install. Trying without --upgrade...
-                    %PIP_CMD% install -r "%BACKEND_DIR%\requirements.txt" >nul 2>&1
-                    if errorlevel 1 (
-                        echo [WARN] Package installation had errors. Check manually with: %PIP_CMD% install -r "%BACKEND_DIR%\requirements.txt"
-                    ) else (
-                        echo [OK] Backend dependencies installed
-                    )
+                    echo [WARN] Package installation had errors. Check manually with: %PYTHON_CMD% -m pip install -r "%BACKEND_DIR%\requirements.txt"
                 ) else (
-                    echo [OK] All backend dependencies are installed/up-to-date
+                    echo [OK] Backend dependencies installed
                 )
+            ) else (
+                echo [OK] All backend dependencies are installed/up-to-date
             )
         )
 
