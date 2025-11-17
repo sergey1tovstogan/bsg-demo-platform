@@ -1,88 +1,4 @@
-import { useState } from 'react'
-import { Key, UserCheck, Lock, Shield, Eye, Server, Cloud, KeyRound, FileCheck, X, type LucideIcon } from 'lucide-react'
-
-interface SecurityCard {
-  id: number
-  title: string
-  icon: LucideIcon
-  color: string
-  bgColor: string
-}
-
-const cards: SecurityCard[] = [
-  {
-    id: 1,
-    title: 'Authentication',
-    icon: Key,
-    color: '#3B82F6', // Blue
-    bgColor: '#DBEAFE', // Light blue background
-  },
-  {
-    id: 2,
-    title: 'Authorization',
-    icon: UserCheck,
-    color: '#10B981', // Green
-    bgColor: '#D1FAE5', // Light green background
-  },
-  {
-    id: 3,
-    title: 'Privacy & Encryption',
-    icon: Lock,
-    color: '#8B5CF6', // Purple
-    bgColor: '#EDE9FE', // Light purple background
-  },
-  {
-    id: 4,
-    title: 'Segregation',
-    icon: Shield,
-    color: '#F59E0B', // Amber
-    bgColor: '#FEF3C7', // Light amber background
-  },
-  {
-    id: 5,
-    title: 'Access Management',
-    icon: Eye,
-    color: '#EF4444', // Red
-    bgColor: '#FEE2E2', // Light red background
-  },
-  {
-    id: 6,
-    title: 'Platform Management',
-    icon: Server,
-    color: '#06B6D4', // Cyan
-    bgColor: '#CFFAFE', // Light cyan background
-  },
-  {
-    id: 7,
-    title: 'SaaS Security Model',
-    icon: Cloud,
-    color: '#6366F1', // Indigo
-    bgColor: '#E0E7FF', // Light indigo background
-  },
-  {
-    id: 8,
-    title: 'SaaS Access Control',
-    icon: KeyRound,
-    color: '#14B8A6', // Teal
-    bgColor: '#CCFBF1', // Light teal background
-  },
-  {
-    id: 9,
-    title: 'Compliance and Risk Management',
-    icon: FileCheck,
-    color: '#F97316', // Orange
-    bgColor: '#FFEDD5', // Light orange background
-  },
-]
-
-const securityCategories = [
-  { id: 1, name: 'Application Security' },
-  { id: 2, name: 'Infrastructure Security' },
-  { id: 3, name: 'SaaS Security' },
-]
-
-// HTML5 Security Architecture Diagram Content
-const SecurityArchitectureHTML = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -444,26 +360,26 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             },
             {
                 id: 'bank-iam',
-                title: 'Bank\\'s Identity and Access Management',
-                description: 'For authentication, Temenos solution makes use of Bank\\'s Identity and Access Management (IaM) solution like Active Directory. The bank\\'s individual employees are authenticated at Active Directory. Temenos comes pre-integrated with KeyCloak. KeyCloak will become the defacto IaM system for Temenos applications. It acts as the identity broker for redirecting authentication requests to the Bank managed IaM solution.',
+                title: 'Bank\'s Identity and Access Management',
+                description: 'For authentication, Temenos solution makes use of Bank\'s Identity and Access Management (IaM) solution like Active Directory. The bank\'s individual employees are authenticated at Active Directory. Temenos comes pre-integrated with KeyCloak. KeyCloak will become the defacto IaM system for Temenos applications. It acts as the identity broker for redirecting authentication requests to the Bank managed IaM solution.',
                 position: 'left'
             },
             {
                 id: 'authentication-box',
                 title: 'Authentication',
-                description: 'The external authentication mechanism for Temenos solution leverages Keycloak solution. Temenos SaaS leverages Keycloak as authentication and authorization. Keycloak can be federated to another Bank\\'s identity management system. A bank can replace Keycloak with any existing fit-for-purpose IAM solution capable of OIDC AZ Code & PKCE & client grant type private key JSON Web Token (JWT).',
+                description: 'The external authentication mechanism for Temenos solution leverages Keycloak solution. Temenos SaaS leverages Keycloak as authentication and authorization. Keycloak can be federated to another Bank\'s identity management system. A bank can replace Keycloak with any existing fit-for-purpose IAM solution capable of OIDC AZ Code & PKCE & client grant type private key JSON Web Token (JWT).',
                 position: 'top'
             },
             {
                 id: 'authorization-box',
                 title: 'Authorization',
-                description: 'Temenos has embedded internal mechanism, native to the solution. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. The Temenos Security Management System (SMS) provides role-based access limits and full transaction and user activity audit. Each user has their own profile within the SMS which contains full user details and security settings to control the user\\'s access within the system. SMS managing the access control, executing the following steps: Checks each user activity against the profile to determine validity; unacceptable actions are prevented and recorded (User Profile), Validates each contract against conditions, such as limits and exchange rate tolerance bands, before it is accepted (User Authority), Make specific data inaccessible to specified users or user groups based on conditions (Data Security).',
+                description: 'Temenos has embedded internal mechanism, native to the solution. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. The Temenos Security Management System (SMS) provides role-based access limits and full transaction and user activity audit. Each user has their own profile within the SMS which contains full user details and security settings to control the user\'s access within the system. SMS managing the access control, executing the following steps: Checks each user activity against the profile to determine validity; unacceptable actions are prevented and recorded (User Profile), Validates each contract against conditions, such as limits and exchange rate tolerance bands, before it is accepted (User Authority), Make specific data inaccessible to specified users or user groups based on conditions (Data Security).',
                 position: 'top'
             },
             {
                 id: 'audit-box',
                 title: 'Audit',
-                description: 'Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.\\n\\nAuditing includes: User activity auditing includes details of; Applications accessed, ID of transactions executed, Time connected, No. of operations executed etc. Application activity auditing includes details of; ID of new transactions, Inputter and Authorizer,  Security violation reports store details of unauthorised access attempts including who accessed the system, when and the target application',
+                description: 'Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.\n\nAuditing includes: User activity auditing includes details of; Applications accessed, ID of transactions executed, Time connected, No. of operations executed etc. Application activity auditing includes details of; ID of new transactions, Inputter and Authorizer,  Security violation reports store details of unauthorised access attempts including who accessed the system, when and the target application',
                 position: 'top'
             },
             {
@@ -556,209 +472,4 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         });
     </script>
 </body>
-</html>`
-
-export function SecurityContentViewer() {
-  const [selectedCard, setSelectedCard] = useState<number | null>(null)
-
-  const handleCardClick = (cardId: number) => {
-    if (cardId === 1) {
-      setSelectedCard(cardId)
-    }
-  }
-
-  const handleBack = () => {
-    setSelectedCard(null)
-  }
-
-  // Show HTML5 diagram when card 1 is selected
-  if (selectedCard === 1) {
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={SecurityArchitectureHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="Temenos Security Architecture"
-          sandbox="allow-same-origin allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="card">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#283054] mb-2">Security Content</h2>
-        <p className="text-[#4A5568]">Select a security category and explore content</p>
-      </div>
-
-      {/* Layout: Column with categories + Card palette - Vertical center alignment */}
-      <div className="flex gap-6">
-        {/* Security Categories Column - Vertical */}
-        <div className="w-64 flex-shrink-0 flex flex-col justify-center">
-          <div className="space-y-4">
-            {securityCategories.map((category) => {
-              return (
-                <div
-                  key={category.id}
-                  className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054] flex items-center justify-center"
-                  style={{
-                    minHeight: '200px',
-                    height: '200px',
-                  }}
-                >
-                  <div className="flex flex-col items-center justify-center text-center p-6 w-full">
-                    <h3 className="text-base font-semibold text-[#283054]">
-                      {category.name}
-                    </h3>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Card Palette - 3 rows x 3 cards - Grouped by rows for alignment */}
-        <div className="flex-1">
-          <div className="space-y-4">
-            {/* Row 1: Cards 1, 2, 3 */}
-            <div className="grid grid-cols-3 gap-4">
-              {cards.slice(0, 3).map((card) => {
-                const IconComponent = card.icon
-                return (
-                  <div
-                    key={card.id}
-                    onClick={() => handleCardClick(card.id)}
-                    className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054]"
-                    style={{
-                      borderColor: card.color,
-                      minHeight: '200px',
-                      height: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <div className="flex flex-col items-center text-center p-6 w-full">
-                      <div 
-                        className="mb-4 p-4 rounded-lg"
-                        style={{
-                          backgroundColor: card.bgColor,
-                        }}
-                      >
-                        <IconComponent 
-                          className="w-8 h-8" 
-                          style={{ color: card.color }}
-                        />
-                      </div>
-                      <h3 
-                        className="text-lg font-semibold mb-2"
-                        style={{ color: card.color }}
-                      >
-                        {card.title}
-                      </h3>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            
-            {/* Row 2: Cards 4, 5, 6 */}
-            <div className="grid grid-cols-3 gap-4">
-              {cards.slice(3, 6).map((card) => {
-                const IconComponent = card.icon
-                return (
-                  <div
-                    key={card.id}
-                    onClick={() => handleCardClick(card.id)}
-                    className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054]"
-                    style={{
-                      borderColor: card.color,
-                      minHeight: '200px',
-                      height: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <div className="flex flex-col items-center text-center p-6 w-full">
-                      <div 
-                        className="mb-4 p-4 rounded-lg"
-                        style={{
-                          backgroundColor: card.bgColor,
-                        }}
-                      >
-                        <IconComponent 
-                          className="w-8 h-8" 
-                          style={{ color: card.color }}
-                        />
-                      </div>
-                      <h3 
-                        className="text-lg font-semibold mb-2"
-                        style={{ color: card.color }}
-                      >
-                        {card.title}
-                      </h3>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            
-            {/* Row 3: Cards 7, 8, 9 */}
-            <div className="grid grid-cols-3 gap-4">
-              {cards.slice(6, 9).map((card) => {
-                const IconComponent = card.icon
-                return (
-                  <div
-                    key={card.id}
-                    onClick={() => handleCardClick(card.id)}
-                    className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054]"
-                    style={{
-                      borderColor: card.color,
-                      minHeight: '200px',
-                      height: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <div className="flex flex-col items-center text-center p-6 w-full">
-                      <div 
-                        className="mb-4 p-4 rounded-lg"
-                        style={{
-                          backgroundColor: card.bgColor,
-                        }}
-                      >
-                        <IconComponent 
-                          className="w-8 h-8" 
-                          style={{ color: card.color }}
-                        />
-                      </div>
-                      <h3 
-                        className="text-lg font-semibold mb-2"
-                        style={{ color: card.color }}
-                      >
-                        {card.title}
-                      </h3>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+</html>
