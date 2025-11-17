@@ -38,7 +38,7 @@ echo   Services Started!
 echo ========================================
 echo.
 echo Backend:  http://localhost:8000
-echo Frontend: http://localhost:5173
+echo Frontend: http://localhost:3000
 echo API Docs: http://localhost:8000/docs
 echo.
 echo Two command windows have opened:
@@ -46,7 +46,7 @@ echo   - BSG Backend  (backend server)
 echo   - BSG Frontend (frontend server)
 echo.
 echo Wait a few seconds for services to fully start, then:
-echo   1. Open http://localhost:5173 in your browser
+echo   1. Open http://localhost:3000 in your browser
 echo   2. Go to Demo -^> Deployment Analyzer
 echo   3. Connect to Azure and analyze deployments
 echo.
