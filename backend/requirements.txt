@@ -7,9 +7,11 @@ gunicorn==21.2.0
 python-multipart==0.0.6
 
 # Database
-pymongo==4.6.1
-motor==3.3.2
-pymssql==2.3.0
+pymongo==4.6.1  # MongoDB synchronous driver (used by motor)
+motor==3.3.2    # Async MongoDB driver for Python - provides async/await support for MongoDB operations
+                # Required for FastAPI async database operations with MongoDB
+                # Documentation: https://motor.readthedocs.io/
+pymssql==2.3.0  # Microsoft SQL Server driver
 
 # Validation & Serialization
 pydantic==2.5.3
@@ -58,11 +60,14 @@ isort==5.13.2
 python-slugify==8.0.1
 pytz==2024.1
 email-validator==2.1.0
+python-docx==1.1.0  # For reading .docx files
+python-pptx==0.6.23  # For reading .pptx files
+reportlab==4.0.7  # For PDF generation
+Pillow==10.2.0  # For image processing in PDF
 
 # Azure SDK for deployment analysis
 azure-identity==1.15.0
 azure-mgmt-resource==23.0.1
 azure-mgmt-containerinstance==10.1.0
 azure-mgmt-containerservice==29.0.0
-httpx==0.26.0
 kubernetes==28.1.0

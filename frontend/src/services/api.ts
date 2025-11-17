@@ -224,6 +224,112 @@ class ApiService {
     return response.data
   }
 
+  // Security Component - Get Document by Number
+  async getSecurityItem(documentNumber: number) {
+    const response = await this.client.get<ApiResponse<{
+      document_number: number
+      document_name: string
+      document: Record<string, any>
+    }>>(`/components/security/items/${documentNumber}`)
+    return response.data
+  }
+
+  // Security Component - Search Within Document
+  async searchWithinDocument(documentNumber: number, searchContext: string) {
+    const params = new URLSearchParams()
+    params.append('search_context', searchContext.trim())
+    
+    const response = await this.client.get<ApiResponse<{
+      document_number: number
+      document_name: string
+      document: Record<string, any>
+      search_context: string
+      matches_found: number
+    }>>(`/components/security/items/${documentNumber}/search?${params.toString()}`)
+    return response.data
+  }
+
+  // Security Component - Get All Presentations
+  async getSecurityPresentations() {
+    const response = await this.client.get<ApiResponse<{
+      presentations: Array<{
+        presentation_number: number
+        presentation_name: string
+      }>
+      total_results: number
+    }>>(`/components/security/presentations`)
+    return response.data
+  }
+
+  // Security Component - Get Presentation by Number
+  async getSecurityPresentation(presentationNumber: number) {
+    const response = await this.client.get<ApiResponse<{
+      presentation_number: number
+      presentation_name: string
+      presentation: Record<string, any>
+    }>>(`/components/security/presentations/${presentationNumber}`)
+    return response.data
+  }
+
+  // Security Component - Get Presentation by Name
+  async getSecurityPresentationByName(presentationName: string) {
+    const encodedName = encodeURIComponent(presentationName)
+    const response = await this.client.get<ApiResponse<{
+      presentation_number: number
+      presentation_name: string
+      presentation: Record<string, any>
+    }>>(`/components/security/presentations/by-name/${encodedName}`)
+    return response.data
+  }
+
+  // Security Component - Get Presentation HTML5 by Name
+  async getSecurityPresentationHTML5ByName(presentationName: string) {
+    const encodedName = encodeURIComponent(presentationName)
+    const token = localStorage.getItem('access_token')
+    const response = await fetch(`${API_BASE_URL}/components/security/presentations/by-name/${encodedName}/html5`, {
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      }
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const htmlContent = await response.text()
+    return { success: true, data: { html: htmlContent } }
+  }
+
+  // Security Component - Search Document by Name and Term (HTML5)
+  async searchDocumentByNameAndTermHTML5(documentName: string, searchTerm: string) {
+    const encodedName = encodeURIComponent(documentName)
+    const encodedTerm = encodeURIComponent(searchTerm)
+    const token = localStorage.getItem('access_token')
+    const response = await fetch(`${API_BASE_URL}/components/security/items/by-name/${encodedName}/search/${encodedTerm}/html5`, {
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      }
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const htmlContent = await response.text()
+    return { success: true, data: { html: htmlContent } }
+  }
+
+  // Security Component - Get Authentication HTML5 Page
+  async getAuthenticationHTML5Page() {
+    const token = localStorage.getItem('access_token')
+    const response = await fetch(`${API_BASE_URL}/components/security/items/authentication/html5`, {
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      }
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const htmlContent = await response.text()
+    return { success: true, data: { html: htmlContent } }
+  }
+
   // Auth APIs
   async login(email: string, password: string) {
     const response = await this.client.post<ApiResponse<{ access_token: string; refresh_token: string; token_type: string; expires_in: number }>>(

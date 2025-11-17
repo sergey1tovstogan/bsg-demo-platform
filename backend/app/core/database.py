@@ -30,6 +30,11 @@ async def init_db():
     """
     Initialize database connection via adapter.
     
+    This function:
+    - Creates a MongoDB client with connection pooling
+    - Tests the connection with a ping command
+    - Returns the database instance for use in the application
+    
     Returns:
         Database instance (adapter-specific)
     """

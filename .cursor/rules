@@ -358,6 +358,7 @@ bsg-demo-platform/
 - Frontend hot-reloads on code changes (Vite dev server)
 - MongoDB is schema-less - no migrations needed
 - Collections are created programmatically with indexes
+- Always work with matching component/collection
 - **All external connections use adapter pattern** - see Architecture Patterns above
 
 ## Important Files to Reference
