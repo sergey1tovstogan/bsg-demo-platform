@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Pause, SkipForward, SkipBack } from 'lucide-react'
 
@@ -29,14 +29,24 @@ interface AnimationStep {
   type: 'component' | 'arrow'
 }
 
+interface DataFlowDot {
+  id: string
+  type: 'business' | 'data'
+  pathId: string
+  startTime: number
+  segment: 'events-pubsub' | 'pubsub-microservices'
+}
+
 export function DataArchitectureContent() {
   const [selectedPath, setSelectedPath] = useState<AnimationPath>('path-c')
   const [playbackState, setPlaybackState] = useState<PlaybackState>('idle')
-  const [currentStep] = useState(0) // setCurrentStep temporarily disabled
-  // Temporarily disabled for layout verification
-  // const [visibleComponents, setVisibleComponents] = useState<Set<string>>(new Set())
-  // const [allAnimatedComponents, setAllAnimatedComponents] = useState<Set<string>>(new Set())
+  const [currentStep, setCurrentStep] = useState(0)
+  const [visibleComponents, setVisibleComponents] = useState<Set<string>>(new Set())
+  const [allAnimatedComponents, setAllAnimatedComponents] = useState<Set<string>>(new Set())
   const [hoveredComponent, setHoveredComponent] = useState<string | null>(null)
+  const [activeDataFlows, setActiveDataFlows] = useState<DataFlowDot[]>([])
+  const [spawningTrigger, setSpawningTrigger] = useState(0) // Increment to restart spawning
+  const spawningIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Static components that are always visible (common starting point for all paths)
   const staticComponents: ComponentItem[] = [
@@ -77,15 +87,15 @@ export function DataArchitectureContent() {
 
   // Define arrows/connections - updated for new layout (8px grid aligned)
   const arrows: ArrowItem[] = [
-    // Path C arrows - High-Volume Query path (Buy)
+    // Path 1 arrows - Event-Driven path (RGB 41, 50, 118) - Extended into component areas
+    { id: 'arrow-events-pubsub', from: 'events_left', to: 'pub_sub', points: 'M 288 107 L 552 107', dashArray: '5,5', color: '#293276' },
+    { id: 'arrow-pubsub-microservices', from: 'pub_sub', to: 'microservices', points: 'M 661 107 L 887 107', dashArray: '5,5', color: '#293276' },
+
+    // Path 2 arrows - High-Volume Query path (Buy)
     { id: 'arrow-pubsub-datahub', from: 'pub_sub', to: 'data_hub', points: 'M 432 112 L 440 216', label: 'Buy', dashArray: '5,5', color: '#F59E0B' },
     { id: 'arrow-datahub-analytics', from: 'data_hub', to: 'analytics', points: 'M 576 216 L 592 220', color: '#3B82F6' },
 
-    // Path A arrows - Event-Driven path
-    { id: 'arrow-events-pubsub', from: 'events_left', to: 'pub_sub', points: 'M 216 52 L 537 107', dashArray: '5,5', color: '#F59E0B' },
-    { id: 'arrow-pubsub-microservices', from: 'pub_sub', to: 'microservices', points: 'M 676 107 L 872 107', dashArray: '5,5', color: '#F59E0B' },
-
-    // Path B arrows - ETL Pipeline path
+    // Path 3 arrows - ETL Pipeline path
     { id: 'arrow-file-etl', from: 'file_left', to: 'etl', points: 'M 172 192 L 264 220', color: '#14B8A6' },
     { id: 'arrow-etl-warehouse', from: 'etl', to: 'data_warehouse', points: 'M 328 248 L 480 296', color: '#8B5CF6' },
     { id: 'arrow-pubsub-etl', from: 'pub_sub', to: 'etl', points: 'M 376 144 L 328 192', label: 'Build', dashArray: '5,5', color: '#F59E0B' },
@@ -95,7 +105,15 @@ export function DataArchitectureContent() {
   // Define animation sequences for each path (static components are always visible, so not included)
   const animationSequences: Record<AnimationPath, AnimationStep[]> = {
     'path-c': [
-      // Path C: Pub/Sub → Data Hub (Buy) → Analytics
+      // Path 1 (path-c): Events → Pub/Sub → Microservices - Components appear first, then arrows
+      { componentId: 'events_left', delay: 0, type: 'component' },
+      { componentId: 'pub_sub', delay: 0, type: 'component' },
+      { componentId: 'microservices', delay: 0, type: 'component' },
+      { componentId: 'arrow-events-pubsub', delay: 1000, type: 'arrow' },
+      { componentId: 'arrow-pubsub-microservices', delay: 1000, type: 'arrow' },
+    ],
+    'path-a': [
+      // Path 2 (path-a): Pub/Sub → Data Hub (Buy) → Analytics
       { componentId: 'pub_sub', delay: 0, type: 'component' },
       { componentId: 'arrow-pubsub-datahub', delay: 2000, type: 'arrow' },
       { componentId: 'data_hub', delay: 4000, type: 'component' },
@@ -105,16 +123,8 @@ export function DataArchitectureContent() {
       { componentId: 'arrow-datahub-analytics', delay: 8000, type: 'arrow' },
       { componentId: 'analytics', delay: 10000, type: 'component' },
     ],
-    'path-a': [
-      // Path A: Events → Pub/Sub → Microservices (Core & DBs are static)
-      { componentId: 'events_left', delay: 0, type: 'component' },
-      { componentId: 'arrow-events-pubsub', delay: 2000, type: 'arrow' },
-      { componentId: 'pub_sub', delay: 4000, type: 'component' },
-      { componentId: 'arrow-pubsub-microservices', delay: 6000, type: 'arrow' },
-      { componentId: 'microservices', delay: 7000, type: 'component' },
-    ],
     'path-b': [
-      // Path B: File → ETL → Data Warehouse → Analytics (Core & DBs are static)
+      // Path 3 (path-b): File → ETL → Data Warehouse → Analytics (Core & DBs are static)
       { componentId: 'file_left', delay: 0, type: 'component' },
       { componentId: 'arrow-file-etl', delay: 2000, type: 'arrow' },
       { componentId: 'etl', delay: 4000, type: 'component' },
@@ -126,27 +136,73 @@ export function DataArchitectureContent() {
     ],
   }
 
-  // Play animation sequence - TEMPORARILY DISABLED for layout verification
+  // Play animation sequence
   const playSequence = useCallback(() => {
-    // Disabled for layout verification
-    console.log('Animation disabled for layout verification')
-    // setPlaybackState('playing')
-    // setCurrentStep(0)
-    // const sequence = animationSequences[selectedPath]
-    // const timers: ReturnType<typeof setTimeout>[] = []
-    // sequence.forEach((step, index) => {
-    //   const timer = setTimeout(() => {
-    //     setVisibleComponents((prev) => new Set([...prev, step.componentId]))
-    //     setAllAnimatedComponents((prev) => new Set([...prev, step.componentId]))
-    //     setCurrentStep(index + 1)
-    //     if (index === sequence.length - 1) {
-    //       setPlaybackState('completed')
-    //     }
-    //   }, step.delay)
-    //   timers.push(timer)
-    // })
-    // return () => timers.forEach(clearTimeout)
+    setPlaybackState('playing')
+    setCurrentStep(0)
+
+    // Trigger spawning restart for Path 1
+    if (selectedPath === 'path-c') {
+      setSpawningTrigger(prev => prev + 1)
+    }
+
+    const sequence = animationSequences[selectedPath]
+    const timers: ReturnType<typeof setTimeout>[] = []
+    sequence.forEach((step, index) => {
+      const timer = setTimeout(() => {
+        setVisibleComponents((prev) => new Set([...prev, step.componentId]))
+        setAllAnimatedComponents((prev) => new Set([...prev, step.componentId]))
+        setCurrentStep(index + 1)
+        if (index === sequence.length - 1) {
+          setPlaybackState('completed')
+        }
+      }, step.delay)
+      timers.push(timer)
+    })
+    return () => timers.forEach(clearTimeout)
   }, [selectedPath, animationSequences])
+
+  // Select path and automatically start playing
+  const selectAndPlayPath = (path: AnimationPath) => {
+    // Reset current state
+    setPlaybackState('idle')
+    setVisibleComponents(new Set())
+    setAllAnimatedComponents(new Set())
+    setCurrentStep(0)
+    setActiveDataFlows([])
+    // Clear spawning interval
+    if (spawningIntervalRef.current) {
+      clearInterval(spawningIntervalRef.current)
+      spawningIntervalRef.current = null
+    }
+
+    // Set new path
+    setSelectedPath(path)
+
+    // Trigger spawning restart for Path 1
+    if (path === 'path-c') {
+      setSpawningTrigger(prev => prev + 1)
+    }
+
+    // Start playing after a brief delay to ensure state updates
+    setTimeout(() => {
+      setPlaybackState('playing')
+      setCurrentStep(0)
+      const sequence = animationSequences[path]
+      const timers: ReturnType<typeof setTimeout>[] = []
+      sequence.forEach((step, index) => {
+        const timer = setTimeout(() => {
+          setVisibleComponents((prev) => new Set([...prev, step.componentId]))
+          setAllAnimatedComponents((prev) => new Set([...prev, step.componentId]))
+          setCurrentStep(index + 1)
+          if (index === sequence.length - 1) {
+            setPlaybackState('completed')
+          }
+        }, step.delay)
+        timers.push(timer)
+      })
+    }, 100)
+  }
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -199,55 +255,190 @@ export function DataArchitectureContent() {
     }
   }
 
-  // TEMPORARILY DISABLED for layout verification
   const handleReset = () => {
-    console.log('Reset disabled for layout verification')
-    // setPlaybackState('idle')
-    // setVisibleComponents(new Set())
-    // setAllAnimatedComponents(new Set())
-    // setCurrentStep(0)
+    setPlaybackState('idle')
+    setVisibleComponents(new Set())
+    setAllAnimatedComponents(new Set())
+    setCurrentStep(0)
+    setActiveDataFlows([])
+    // Clear spawning interval
+    if (spawningIntervalRef.current) {
+      clearInterval(spawningIntervalRef.current)
+      spawningIntervalRef.current = null
+    }
   }
 
   const handleStepForward = () => {
-    console.log('Step forward disabled for layout verification')
-    // const sequence = animationSequences[selectedPath]
-    // if (currentStep < sequence.length) {
-    //   const step = sequence[currentStep]
-    //   setVisibleComponents((prev) => new Set([...prev, step.componentId]))
-    //   setAllAnimatedComponents((prev) => new Set([...prev, step.componentId]))
-    //   setCurrentStep(currentStep + 1)
-    //   if (currentStep === sequence.length - 1) {
-    //     setPlaybackState('completed')
-    //   }
-    // }
+    const sequence = animationSequences[selectedPath]
+    if (currentStep < sequence.length) {
+      const step = sequence[currentStep]
+      setVisibleComponents((prev) => new Set([...prev, step.componentId]))
+      setAllAnimatedComponents((prev) => new Set([...prev, step.componentId]))
+      setCurrentStep(currentStep + 1)
+      if (currentStep === sequence.length - 1) {
+        setPlaybackState('completed')
+      }
+    }
   }
 
   const handleStepBack = () => {
-    console.log('Step back disabled for layout verification')
-    // if (currentStep > 0) {
-    //   const sequence = animationSequences[selectedPath]
-    //   const step = sequence[currentStep - 1]
-    //   setVisibleComponents((prev) => {
-    //     const newSet = new Set(prev)
-    //     newSet.delete(step.componentId)
-    //     return newSet
-    //   })
-    //   setCurrentStep(currentStep - 1)
-    //   if (playbackState === 'completed') {
-    //     setPlaybackState('paused')
-    //   }
-    // }
+    if (currentStep > 0) {
+      const sequence = animationSequences[selectedPath]
+      const step = sequence[currentStep - 1]
+      setVisibleComponents((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(step.componentId)
+        return newSet
+      })
+      setCurrentStep(currentStep - 1)
+      if (playbackState === 'completed') {
+        setPlaybackState('paused')
+      }
+    }
   }
 
-  // Temporarily disabled for layout verification
   // Check if a component is part of the current path
-  // const isComponentInPath = (componentId: string): boolean => {
-  //   return animationSequences[selectedPath].some(step => step.componentId === componentId)
-  // }
+  const isComponentInPath = (componentId: string): boolean => {
+    return animationSequences[selectedPath].some(step => step.componentId === componentId)
+  }
+
+  // Spawn Business Event dots every 2 seconds for Path 1 (Event-Driven)
+  useEffect(() => {
+    console.log('[Spawning] useEffect triggered - selectedPath:', selectedPath, 'trigger:', spawningTrigger)
+
+    // Only spawn for Path 1
+    if (selectedPath !== 'path-c') {
+      console.log('[Spawning] Not Path 1, cleaning up')
+      if (spawningIntervalRef.current) {
+        clearInterval(spawningIntervalRef.current)
+        spawningIntervalRef.current = null
+      }
+      return
+    }
+
+    // Don't start spawning if trigger is 0 (initial state)
+    if (spawningTrigger === 0) {
+      console.log('[Spawning] Initial state, waiting for trigger')
+      return
+    }
+
+    console.log('[Spawning] Path 1 selected, starting spawning timeout (1300ms)')
+    // For Path 1, animation starts at 100ms, arrows appear at 1100ms, so start spawning dots at 1300ms
+    const startSpawningTimeout = setTimeout(() => {
+      console.log('[Spawning] Timeout fired - spawning first Business Event')
+      // Spawn first Business Event immediately
+      const now = Date.now()
+      setActiveDataFlows([{
+        id: `business-${now}`,
+        type: 'business',
+        pathId: 'arrow-events-pubsub',
+        startTime: now,
+        segment: 'events-pubsub'
+      }])
+
+      // Spawn first Data Event 1.5s after first Business Event
+      setTimeout(() => {
+        console.log('[Spawning] Spawning first Data Event')
+        const now = Date.now()
+        setActiveDataFlows((prev) => [
+          ...prev,
+          {
+            id: `data-${now}`,
+            type: 'data',
+            pathId: 'arrow-events-pubsub',
+            startTime: now,
+            segment: 'events-pubsub'
+          }
+        ])
+      }, 1500)
+
+      console.log('[Spawning] Setting up interval for Business Events (every 3.5s)')
+      // Then spawn a new Business Event every 3.5 seconds
+      spawningIntervalRef.current = setInterval(() => {
+        console.log('[Spawning] Interval firing - spawning Business Event')
+        const businessNow = Date.now()
+        setActiveDataFlows((prev) => [
+          ...prev,
+          {
+            id: `business-${businessNow}`,
+            type: 'business',
+            pathId: 'arrow-events-pubsub',
+            startTime: businessNow,
+            segment: 'events-pubsub'
+          }
+        ])
+
+        // Spawn Data Event 1.5s after each Business Event
+        setTimeout(() => {
+          console.log('[Spawning] Spawning Data Event')
+          const dataNow = Date.now()
+          setActiveDataFlows((prev) => [
+            ...prev,
+            {
+              id: `data-${dataNow}`,
+              type: 'data',
+              pathId: 'arrow-events-pubsub',
+              startTime: dataNow,
+              segment: 'events-pubsub'
+            }
+          ])
+        }, 1500)
+      }, 3500)
+      console.log('[Spawning] Interval set up')
+    }, 1300) // Start after arrows appear (animation starts at 100ms, arrows at 1100ms, spawn at 1300ms)
+
+    return () => {
+      console.log('[Spawning] Cleanup function called')
+      clearTimeout(startSpawningTimeout)
+      if (spawningIntervalRef.current) {
+        clearInterval(spawningIntervalRef.current)
+        spawningIntervalRef.current = null
+      }
+    }
+  }, [selectedPath, spawningTrigger]) // Depend on both path and trigger
+
+  // Cleanup completed dots and handle transitions between segments
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now()
+      setActiveDataFlows((prev) => {
+        const updated: DataFlowDot[] = []
+        prev.forEach((dot) => {
+          const age = now - dot.startTime
+
+          if (dot.segment === 'events-pubsub') {
+            // Duration: 2 seconds for this segment
+            if (age < 2000) {
+              updated.push(dot)
+            } else if (age >= 2000 && age < 2100 && dot.type === 'business') {
+              // Business event transitions to next segment (Pub_Sub -> Microservices)
+              // Data events do NOT transition - they end at Pub/Sub
+              updated.push({
+                ...dot,
+                segment: 'pubsub-microservices',
+                pathId: 'arrow-pubsub-microservices',
+                startTime: now
+              })
+            }
+            // Data events and expired business events are removed
+          } else if (dot.segment === 'pubsub-microservices') {
+            // Duration: 2 seconds for this segment
+            if (age < 2000) {
+              updated.push(dot)
+            }
+            // Remove after completing this segment
+          }
+        })
+        return updated
+      })
+    }, 50) // Check every 50ms for smooth animation
+
+    return () => clearInterval(interval)
+  }, [])
 
   const pathDescriptions = {
-    'path-c': 'High-Volume Query Path: Pub/Sub → Data Hub → Analytics',
-    'path-a': 'Event-Driven Path: Core → Events → Pub/Sub → Microservices',
+    'path-c': 'Event-Driven Path: Core → Events → Pub/Sub → Microservices',
+    'path-a': 'High-Volume Query Path: Pub/Sub → Data Hub → Analytics',
     'path-b': 'ETL Path: Core → File → ETL → Data Warehouse → Analytics',
   }
 
@@ -265,7 +456,7 @@ export function DataArchitectureContent() {
           {/* Path Selection - Left side */}
           <div className="flex flex-1 space-x-3">
             <button
-              onClick={() => setSelectedPath('path-c')}
+              onClick={() => selectAndPlayPath('path-c')}
               disabled={playbackState === 'playing'}
               className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
                 selectedPath === 'path-c'
@@ -273,8 +464,8 @@ export function DataArchitectureContent() {
                   : 'border-gray-300 bg-white text-gray-700 hover:border-[#283054]'
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <div className="text-sm font-semibold">Path 1 (Key: 1)</div>
-              <div className="text-xs mt-1 opacity-90">High-Volume Query</div>
+              <div className="text-sm font-semibold">Path 1</div>
+              <div className="text-xs mt-1 opacity-90">Event Driven: Business Events (only)</div>
             </button>
 
             <button
@@ -287,7 +478,7 @@ export function DataArchitectureContent() {
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 2 (Key: 2)</div>
-              <div className="text-xs mt-1 opacity-90">Event-Driven</div>
+              <div className="text-xs mt-1 opacity-90">High-Volume Query</div>
             </button>
 
             <button
@@ -350,20 +541,6 @@ export function DataArchitectureContent() {
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3">
           <p className="text-sm font-medium text-[#283054] text-center">{pathDescriptions[selectedPath]}</p>
         </div>
-
-        {/* Progress indicator */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Progress</span>
-            <span>{currentStep} / {animationSequences[selectedPath].length}</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-[#283054] h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / animationSequences[selectedPath].length) * 100}%` }}
-            />
-          </div>
-        </div>
       </div>
 
       {/* Diagram Canvas - Dynamically expands to fill available space */}
@@ -378,20 +555,59 @@ export function DataArchitectureContent() {
                  borderColor: '#3CB5A6',
                  borderRadius: '8px'
                }}>
-          {/* Content area for components - all visible for layout verification */}
+          {/* Content area for components */}
 
-          {/* Arrows hidden temporarily for layout verification */}
-          <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1, display: 'none' }}>
+          {/* SVG Layer for Arrows and Data Flow Dots */}
+          <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }}>
+            {/* Define arrow markers */}
+            <defs>
+              {/* Arrow head for Path 1 (Event-Driven) - dark blue - 10% smaller */}
+              <marker
+                id="arrowhead-path1"
+                markerWidth="9"
+                markerHeight="9"
+                refX="8"
+                refY="2.7"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M0,0 L0,5.4 L8,2.7 z" fill="#293276" />
+              </marker>
+
+              {/* Generic arrow head for other paths */}
+              <marker
+                id="arrowhead-generic"
+                markerWidth="9"
+                markerHeight="9"
+                refX="8"
+                refY="2.7"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M0,0 L0,5.4 L8,2.7 z" fill="#3B82F6" />
+              </marker>
+            </defs>
+
             {/* Render arrows */}
             {arrows.map((arrow) => {
+              const isVisible = visibleComponents.has(arrow.id)
+
+              if (!isVisible) return null
+
+              // Determine which marker to use
+              const isPath1Arrow = arrow.id === 'arrow-events-pubsub' || arrow.id === 'arrow-pubsub-microservices'
+              const markerEnd = isPath1Arrow ? 'url(#arrowhead-path1)' : undefined
+
               return (
                 <g key={arrow.id}>
+                  {/* Static dashed arrows */}
                   <path
                     d={arrow.points}
                     stroke={arrow.color || '#3B82F6'}
                     strokeWidth="3"
                     fill="none"
                     strokeDasharray={arrow.dashArray}
+                    markerEnd={markerEnd}
                   />
                   {arrow.label && (
                     <text
@@ -404,6 +620,76 @@ export function DataArchitectureContent() {
                       {arrow.label}
                     </text>
                   )}
+                </g>
+              )
+            })}
+
+            {/* Render Data Flow Dots */}
+            {(() => {
+              if (activeDataFlows.length > 0) {
+                console.log('[Rendering] Rendering', activeDataFlows.length, 'dots')
+              }
+              return null
+            })()}
+            {activeDataFlows.map((dot) => {
+              const age = Date.now() - dot.startTime
+              const progress = Math.min(age / 2000, 1) // 2 second duration per segment
+
+              // Get path coordinates
+              const arrow = arrows.find(a => a.id === dot.pathId)
+              if (!arrow) {
+                console.log('[Rendering] Arrow not found for dot:', dot.pathId)
+                return null
+              }
+
+              // Parse start and end points from SVG path
+              const pathParts = arrow.points.split(' ')
+              const startX = parseFloat(pathParts[1])
+              const startY = parseFloat(pathParts[2])
+              const endX = parseFloat(pathParts[4])
+              const endY = parseFloat(pathParts[5])
+
+              // Calculate current position along path
+              const currentX = startX + (endX - startX) * progress
+              const currentY = startY + (endY - startY) * progress
+
+              // Set color and label based on event type
+              // Business Event color: RGB(92, 184, 178) = #5CB8B2
+              // Data Event color: RGB(130, 70, 175) = #8246AF
+              const dotColor = dot.type === 'business' ? '#5CB8B2' : '#8246AF'
+              const label = dot.type === 'business' ? 'Business Event' : 'Data Event'
+
+              return (
+                <g key={dot.id}>
+                  {/* Glow effect */}
+                  <circle
+                    cx={currentX}
+                    cy={currentY}
+                    r="8"
+                    fill={dotColor}
+                    opacity="0.3"
+                  />
+                  {/* Main dot */}
+                  <circle
+                    cx={currentX}
+                    cy={currentY}
+                    r="6"
+                    fill={dotColor}
+                  />
+                  {/* Label */}
+                  <text
+                    x={currentX}
+                    y={currentY - 15}
+                    fill="#1F2937"
+                    fontSize="11"
+                    fontWeight="600"
+                    textAnchor="middle"
+                    style={{
+                      textShadow: '0 0 3px white, 0 0 3px white'
+                    }}
+                  >
+                    {label}
+                  </text>
                 </g>
               )
             })}
@@ -455,12 +741,23 @@ export function DataArchitectureContent() {
             )
           })}
 
-          {/* Render animated components - ALL VISIBLE for layout verification */}
+          {/* Render animated components */}
           {animatedComponents.map((component) => {
             const isHovered = hoveredComponent === component.id
+            const isVisible = visibleComponents.has(component.id)
+            const wasAnimated = allAnimatedComponents.has(component.id)
+            const isInCurrentPath = isComponentInPath(component.id)
+
+            // Determine opacity based on animation state
+            let opacity = 1
+            if (!isVisible) {
+              opacity = 0
+            } else if (wasAnimated && !isInCurrentPath) {
+              opacity = 0.3 // Grey out components not in current path
+            }
 
             return (
-              <div
+              <motion.div
                 key={component.id}
                 className="absolute"
                 style={{
@@ -469,8 +766,14 @@ export function DataArchitectureContent() {
                   width: `${component.position.width}px`,
                   height: `${component.position.height}px`,
                   zIndex: 2,
-                  opacity: 0.9, // Slightly transparent to see overlaps
                 }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{
+                  opacity,
+                  scale: isVisible ? 1 : 0.8,
+                  filter: wasAnimated && !isInCurrentPath ? 'grayscale(100%)' : 'grayscale(0%)'
+                }}
+                transition={{ duration: 0.5 }}
                 onMouseEnter={() => setHoveredComponent(component.id)}
                 onMouseLeave={() => setHoveredComponent(null)}
               >
@@ -498,7 +801,7 @@ export function DataArchitectureContent() {
                     )}
                   </AnimatePresence>
                 </div>
-              </div>
+              </motion.div>
             )
           })}
 
