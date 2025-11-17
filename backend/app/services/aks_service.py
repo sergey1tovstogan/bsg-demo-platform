@@ -291,32 +291,23 @@ class AKSService:
                         logger.warning(f"No kubeconfig available for cluster {cluster_name}")
                         return pods
             
-            # Get namespaces first - use --context flag to ensure correct cluster
+            # Get namespaces first - use same approach as list_cluster_namespaces
             import asyncio
             import shutil
             import os
-            kubectl_cmd = shutil.which("kubectl") or "kubectl"
+            # Use just "kubectl" command name (not full path) - works better with Rancher Desktop
+            kubectl_path = shutil.which("kubectl") or shutil.which("kubectl.exe")
+            kubectl_cmd = "kubectl"  # Use just the command name, not full path
             
             # Use KUBECONFIG environment variable
             env = os.environ.copy()
             env["KUBECONFIG"] = kubeconfig_path
             
-            # Switch context first (Rancher Desktop doesn't support --context flag)
-            def _switch_context():
-                return subprocess.run(
-                    [kubectl_cmd, "config", "use-context", cluster_name],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    shell=False,
-                    env=env
-                )
-            try:
-                switch_result = await loop.run_in_executor(None, _switch_context)
-                if switch_result.returncode != 0:
-                    logger.warning(f"Could not switch context: {switch_result.stderr}")
-            except Exception as e:
-                logger.warning(f"Context switch error: {e}")
+            # NOTE: Rancher Desktop kubectl doesn't support "kubectl config" commands
+            # The context should already be set by Azure CLI when we ran "az aks get-credentials"
+            # So we'll skip context switching and just use the current context
+            logger.info(f"Skipping context switch (Rancher Desktop kubectl doesn't support 'config' command)")
+            logger.info(f"Assuming context '{cluster_name}' is already set from Azure CLI credentials")
             
             cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
             
@@ -392,32 +383,22 @@ class AKSService:
                 for namespace in namespaces:
                     logger.info(f"Querying pods from namespace '{namespace}' in cluster '{cluster_name}'")
                     import shutil
-                    kubectl_cmd = shutil.which("kubectl") or "kubectl"
                     import os
+                    # Use just "kubectl" command name (not full path) - works better with Rancher Desktop
+                    kubectl_path = shutil.which("kubectl") or shutil.which("kubectl.exe")
+                    kubectl_cmd = "kubectl"  # Use just the command name, not full path
+                    
                     env = os.environ.copy()
                     env["KUBECONFIG"] = kubeconfig_path
                     
-                    # Switch context before getting pods (Rancher Desktop doesn't support --context flag)
-                    def _switch_context_for_pods():
-                        return subprocess.run(
-                            [kubectl_cmd, "config", "use-context", cluster_name],
-                            capture_output=True,
-                            text=True,
-                            timeout=5,
-                            shell=False,
-                            env=env
-                        )
-                    try:
-                        switch_result = await loop.run_in_executor(None, _switch_context_for_pods)
-                        if switch_result.returncode != 0:
-                            logger.warning(f"Could not switch context for pods: {switch_result.stderr}")
-                    except Exception as e:
-                        logger.warning(f"Context switch error for pods: {e}")
+                    # NOTE: Rancher Desktop kubectl doesn't support "kubectl config" commands
+                    # Skip context switching - assume context is already set from Azure CLI
+                    logger.debug(f"Skipping context switch for pods (Rancher Desktop limitation)")
                     
-                    # Try JSON format first
+                    # Try JSON format first - use --namespace instead of -n (Rancher Desktop compatibility)
                     cmd_pods_json = [
                         kubectl_cmd, "get", "pods",
-                        "-n", namespace,
+                        "--namespace", namespace,
                         "-o", "json"
                     ]
                     
@@ -484,7 +465,7 @@ class AKSService:
                             logger.info(f"Trying table format for pods in namespace '{namespace}'...")
                             cmd_pods_table = [
                                 kubectl_cmd, "get", "pods",
-                                "-n", namespace
+                                "--namespace", namespace
                             ]
                             
                             def _get_pods_table():
