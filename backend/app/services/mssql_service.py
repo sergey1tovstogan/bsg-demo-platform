@@ -3,10 +3,11 @@ MSSQL Database Service for External Database Access
 Provides connection and query functionality for ODS/SDS databases
 """
 
-import pymssql
+import pyodbc
 from typing import List, Dict, Any, Optional
 from contextlib import contextmanager
 import logging
+from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -15,30 +16,104 @@ logger = logging.getLogger(__name__)
 class MSSQLService:
     """Service for managing MSSQL database connections and queries"""
 
-    def __init__(self):
-        self.host = settings.MSSQL_HOST
-        self.port = settings.MSSQL_PORT
-        self.user = settings.MSSQL_USER
-        self.password = settings.MSSQL_PASSWORD
-        self.database = settings.MSSQL_DATABASE
-        self.schema = settings.MSSQL_SCHEMA
+    def __init__(
+        self,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        database: Optional[str] = None,
+        schema: Optional[str] = None
+    ):
+        """
+        Initialize MSSQL service with connection parameters.
+        If parameters are not provided, falls back to settings (for backward compatibility).
+        """
+        self.host = host or settings.MSSQL_HOST
+        self.port = port or settings.MSSQL_PORT
+        self.user = user or settings.MSSQL_USER
+        self.password = password or settings.MSSQL_PASSWORD
+        self.database = database or settings.MSSQL_DATABASE
+        self.schema = schema or settings.MSSQL_SCHEMA
+
+    @classmethod
+    async def from_mongodb(
+        cls,
+        connection_name: str = "demo_sql_server",
+        component_id: str = "data-architecture"
+    ) -> "MSSQLService":
+        """
+        Create MSSQLService instance with connection details from MongoDB.
+
+        Args:
+            connection_name: Name of the connection configuration in MongoDB
+            component_id: Component ID to filter connections
+
+        Returns:
+            MSSQLService instance configured with MongoDB connection details
+
+        Raises:
+            ValueError: If connection configuration not found in MongoDB
+        """
+        try:
+            # Connect to MongoDB
+            client = AsyncIOMotorClient(settings.DATABASE_URL)
+            db = client[settings.DATABASE_NAME]
+
+            # Fetch connection details from data_architecture collection
+            connection_config = await db["data_architecture"].find_one({
+                "config_type": "database_connection",
+                "connection_name": connection_name,
+                "component_id": component_id,
+                "is_active": True
+            })
+
+            if not connection_config:
+                logger.error(
+                    f"Database connection '{connection_name}' not found in MongoDB "
+                    f"for component '{component_id}'. Falling back to settings."
+                )
+                client.close()
+                return cls()  # Fall back to settings
+
+            logger.info(
+                f"Loaded database connection '{connection_name}' from MongoDB "
+                f"(host: {connection_config['host']}:{connection_config['port']})"
+            )
+
+            client.close()
+
+            # Create instance with MongoDB connection details
+            return cls(
+                host=connection_config["host"],
+                port=connection_config["port"],
+                user=connection_config["user"],
+                password=connection_config["password"],
+                database=connection_config["database"],
+                schema=connection_config.get("schemas", [connection_config["database"]])[0]
+            )
+
+        except Exception as e:
+            logger.error(f"Error loading connection from MongoDB: {e}. Falling back to settings.")
+            return cls()  # Fall back to settings on error
 
     @contextmanager
     def get_connection(self):
         """Context manager for database connections"""
         conn = None
         try:
-            conn = pymssql.connect(
-                server=self.host,
-                port=self.port,
-                user=self.user,
-                password=self.password,
-                database=self.database,
-                timeout=30,
-                login_timeout=30
+            # Build pyodbc connection string
+            conn_str = (
+                f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+                f"SERVER={self.host},{self.port};"
+                f"DATABASE={self.database};"
+                f"UID={self.user};"
+                f"PWD={self.password};"
+                f"Connection Timeout=30;"
             )
+            conn = pyodbc.connect(conn_str)
             yield conn
-        except pymssql.Error as e:
+        except pyodbc.Error as e:
             logger.error(f"MSSQL connection error: {e}")
             raise
         finally:
@@ -79,7 +154,7 @@ class MSSQLService:
                         TABLE_NAME,
                         TABLE_TYPE
                     FROM INFORMATION_SCHEMA.TABLES
-                    WHERE TABLE_SCHEMA = %s
+                    WHERE TABLE_SCHEMA = ?
                     ORDER BY TABLE_NAME
                 """
                 cursor.execute(query, (schema,))
@@ -110,7 +185,7 @@ class MSSQLService:
                         IS_NULLABLE,
                         COLUMN_DEFAULT
                     FROM INFORMATION_SCHEMA.COLUMNS
-                    WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+                    WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
                     ORDER BY ORDINAL_POSITION
                 """
                 cursor.execute(query, (schema, table_name))
