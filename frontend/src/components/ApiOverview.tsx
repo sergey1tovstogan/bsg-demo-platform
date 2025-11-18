@@ -215,6 +215,20 @@ export function ApiOverview() {
               <div className="absolute text-[9px] font-semibold whitespace-nowrap" style={{ left: '8px', top: '6px', color: '#FFFFFF' }}>query</div>
             </div>
 
+            {/* Gray Response Arrow - from Bank's System back to API (next to command arrow) */}
+            <div className="absolute" style={{ top: '61px', left: '50%', transform: 'translateX(-54px)' }}>
+              <svg width="4" height="23" style={{ overflow: 'visible' }}>
+                <defs>
+                  <marker id="arrowResponseGray" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto-start-reverse">
+                    <polygon points="0,0 6,3 0,6" fill="#9CA3AF" />
+                  </marker>
+                </defs>
+                <line x1="2" y1="21" x2="2" y2="1" stroke="#9CA3AF" strokeWidth="2" markerEnd="url(#arrowResponseGray)" strokeDasharray="6,3">
+                  <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
+                </line>
+              </svg>
+            </div>
+
             {/* Two Boxes with U-shaped Arrow */}
             <div className="flex items-start gap-3 relative">
               {/* Temenos Business Logic Box with API label */}
