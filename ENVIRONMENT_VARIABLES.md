@@ -59,7 +59,9 @@ This document describes the environment variables required for the BSG Demo Plat
 
 ### Local Development
 
-Create a `.env` file in the `backend/` directory (this file is gitignored):
+**The `.env` file is gitignored for security** - you need to create it locally.
+
+1. Create a `.env` file in the `backend/` directory:
 
 ```bash
 DATABASE_URL=mongodb://...

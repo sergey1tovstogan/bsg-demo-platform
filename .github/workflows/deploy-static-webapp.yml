@@ -37,10 +37,34 @@ jobs:
         working-directory: ./frontend
         run: npm run build
         env:
-          VITE_API_URL: /api/v1
+          VITE_API_URL: https://bsg-demo-platform-app.azurewebsites.net/api/v1
           NODE_ENV: production
       
+      - name: Copy Static Web App config to dist
+        run: |
+          if [ -f "frontend/staticwebapp.config.json" ]; then
+            cp frontend/staticwebapp.config.json frontend/dist/staticwebapp.config.json
+            echo "✓ Copied staticwebapp.config.json to dist"
+          else
+            echo "⚠ staticwebapp.config.json not found"
+          fi
+      
+      - name: Verify build output
+        run: |
+          echo "Checking build output..."
+          ls -la frontend/dist/ || echo "Build output not found"
+          if [ -f "frontend/dist/index.html" ]; then
+            echo "✓ index.html found"
+          else
+            echo "✗ index.html not found - build may have failed"
+            exit 1
+          fi
+          if [ -f "frontend/dist/staticwebapp.config.json" ]; then
+            echo "✓ staticwebapp.config.json found in dist"
+          fi
+      
       - name: Deploy to Azure Static Web Apps
+        if: env.AZURE_STATIC_WEB_APPS_API_TOKEN != ''
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN }}
@@ -49,7 +73,16 @@ jobs:
           app_location: "/frontend"
           output_location: "dist"
           skip_app_build: true
-          skip_deploy_on_missing_secrets: true
+          skip_deploy_on_missing_secrets: false
+      
+      - name: Check deployment status
+        if: env.AZURE_STATIC_WEB_APPS_API_TOKEN == ''
+        run: |
+          echo "⚠ Warning: AZURE_STATIC_WEB_APPS_API_TOKEN secret is not set"
+          echo "Deployment skipped. To enable deployment:"
+          echo "1. Go to Azure Portal → Static Web App → Manage deployment token"
+          echo "2. Copy the deployment token"
+          echo "3. Add it to GitHub Secrets as AZURE_STATIC_WEB_APPS_API_TOKEN"
       
       - name: Deployment Summary
         run: |
