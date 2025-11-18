@@ -108,17 +108,9 @@ jobs:
           echo "First 20 lines of requirements.txt:"
           head -20 backend/requirements.txt
       
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: ./backend
-          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120'
-          python-version: '3.11'
-      
-      - name: Configure App Settings
+      - name: Configure App Settings (Before Deployment)
         run: |
-          echo "Configuring Azure App Service settings..."
+          echo "Configuring Azure App Service settings BEFORE deployment..."
           
           # Generate JWT secret if not provided
           if [ -z "${{ secrets.JWT_SECRET_KEY }}" ]; then
@@ -134,8 +126,8 @@ jobs:
             RAG_API_URL_VALUE="https://tbsg.temenos.com"
           fi
           
-          # Build settings command - set each setting individually to avoid escaping issues
-          echo "Setting basic app settings..."
+          # Set build settings FIRST so Azure can build during deployment
+          echo "Setting build settings..."
           az webapp config appsettings set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
@@ -143,6 +135,14 @@ jobs:
               SCM_DO_BUILD_DURING_DEPLOYMENT=true \
               ENABLE_ORYX_BUILD=true \
               SCM_BUILD_ARGS="--build-arg REQUIREMENTS_FILE=requirements.txt" \
+            --output none
+          
+          # Set other app settings
+          echo "Setting app settings..."
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --settings \
               ENVIRONMENT=production \
               DEBUG=False \
               DATABASE_NAME=bsg_demo \
@@ -175,6 +175,22 @@ jobs:
             echo "⚠ Warning: RAG_JWT_TOKEN secret is not set. RAG features will not work."
           fi
           
+          # Set startup command
+          echo "Setting startup command..."
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --startup-file "gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120" \
+            --output none
+          
+          # Enable Always On (critical for App Service to prevent sleep)
+          echo "Enabling Always On..."
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --always-on true \
+            --output none
+          
           echo ""
           echo "✓ App settings configured successfully"
           echo ""
@@ -186,25 +202,16 @@ jobs:
           echo ""
           echo "To set secrets: Repository → Settings → Secrets and variables → Actions → New repository secret"
           echo "See ENVIRONMENT_VARIABLES.md for details"
-          
-          # Set startup command
-          az webapp config set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120" \
-            --output none
-          
-          # Enable Always On (critical for App Service to prevent sleep)
-          az webapp config set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --always-on true \
-            --output none
-          
-          # Note: kubectl is not available in Azure App Service by default
-          # The app will handle this gracefully - namespace discovery will be skipped if kubectl is not available
-          echo "App settings configured successfully"
+          echo ""
           echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
+      
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ./backend
+          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120'
+          python-version: '3.11'
       
       - name: Health Check
         run: |
