@@ -50,6 +50,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
+      - name: Clean up test files
+        run: |
+          find . -name "*test*.py" -not -path "./backend/app/*" -not -path "./.venv/*" -not -path "./venv/*" -delete || true
+          find . -name "*.pyc" -delete || true
+          find . -type d -name "__pycache__" -exec rm -rf {} + || true
+      
       - name: Azure Login
         uses: azure/login@v2
         with:

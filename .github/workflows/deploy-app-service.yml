@@ -83,6 +83,8 @@ jobs:
       - name: Clean up unnecessary files
         working-directory: ./backend
         run: |
+          # Remove test files
+          find . -name "*test*.py" -not -path "./app/*" -delete || true
           # Remove files that shouldn't be deployed
           rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/ || true
           # Find and remove all __pycache__ directories (handle both Unix and Windows paths)

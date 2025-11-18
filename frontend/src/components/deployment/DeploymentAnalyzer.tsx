@@ -954,7 +954,7 @@ function ComponentCard({
 
       {!expanded && (
         <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-          {componentInfo.architecturalOverview.substring(0, 150)}...
+          {componentInfo.architecturalOverview}
         </p>
       )}
     </div>
