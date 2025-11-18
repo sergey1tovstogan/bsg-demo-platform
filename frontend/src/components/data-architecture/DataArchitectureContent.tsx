@@ -46,6 +46,8 @@ export function DataArchitectureContent() {
   const [hoveredComponent, setHoveredComponent] = useState<string | null>(null)
   const [activeDataFlows, setActiveDataFlows] = useState<DataFlowDot[]>([])
   const [spawningTrigger, setSpawningTrigger] = useState(0) // Increment to restart spawning
+  const [greyedComponents, setGreyedComponents] = useState<Set<string>>(new Set()) // Components to grey out
+  const [completedPaths, setCompletedPaths] = useState<Set<AnimationPath>>(new Set()) // Track which paths have been completed
   const spawningIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Static components that are always visible (common starting point for all paths)
@@ -67,19 +69,19 @@ export function DataArchitectureContent() {
 
     // Middle tier - Build/Buy area - REPOSITIONED AND ALIGNED
     { id: 'pub_sub', label: 'Pub/Sub (e.g., Kafka)', image: 'Pub_Sub.png', position: { x: 537, y: 66, width: 139, height: 82 }, tooltip: 'Message broker for event streaming' },
-    { id: 'etl', label: 'ETL', image: 'ETL.png', position: { x: 408, y: 216, width: 144, height: 64 }, tooltip: 'Extract, Transform, Load processes' },
+    { id: 'etl', label: 'ETL', image: 'ETL.png', position: { x: 408, y: 246, width: 144, height: 64 }, tooltip: 'Extract, Transform, Load processes' },
 
     // Center-right - Data Hub & Analytics band - VERTICALLY CENTERED WITH ETL
-    { id: 'data_hub', label: 'Data Hub', image: 'Data_Hub.png', position: { x: 656, y: 203, width: 152, height: 90 }, tooltip: 'Centralized data hub with specialized stores' },
-    { id: 'analytics', label: 'Analytics (optional)', image: 'Analytics.png', position: { x: 818, y: 216, width: 120, height: 64 }, tooltip: 'Analytics and reporting platform' },
+    { id: 'data_hub', label: 'Data Hub', image: 'Data_Hub.png', position: { x: 656, y: 233, width: 152, height: 90 }, tooltip: 'Centralized data hub with specialized stores' },
+    { id: 'analytics', label: 'Analytics (optional)', image: 'Analytics.png', position: { x: 818, y: 246, width: 120, height: 64 }, tooltip: 'Analytics and reporting platform' },
 
     // Cylinders overlaying bottom of Data Hub and Analytics - INCREASED SIZE (+5%)
-    { id: 'ods', label: 'ODS', image: 'ODS.png', position: { x: 666, y: 260, width: 59, height: 59 }, tooltip: 'Operational Data Store' },
-    { id: 'sds', label: 'SDS', image: 'SDS.png', position: { x: 742, y: 260, width: 59, height: 59 }, tooltip: 'Staging Data Store' },
-    { id: 'ads', label: 'ADS', image: 'ADS.png', position: { x: 850, y: 260, width: 59, height: 59 }, tooltip: 'Analytical Data Store' },
+    { id: 'ods', label: 'ODS', image: 'ODS.png', position: { x: 666, y: 290, width: 59, height: 59 }, tooltip: 'Operational Data Store' },
+    { id: 'sds', label: 'SDS', image: 'SDS.png', position: { x: 742, y: 290, width: 59, height: 59 }, tooltip: 'Staging Data Store' },
+    { id: 'ads', label: 'ADS', image: 'ADS.png', position: { x: 850, y: 290, width: 59, height: 59 }, tooltip: 'Analytical Data Store' },
 
     // Bottom - Data Warehouse bar - DECREASED SIZE (-15%), MOVED RIGHT AND UP, ALIGNED WITH ADS CENTER
-    { id: 'data_warehouse', label: 'Data Warehouse', image: 'DWH.png', position: { x: 418, y: 368, width: 462, height: 54 }, tooltip: 'Centralized data repository for analytics' },
+    { id: 'data_warehouse', label: 'Data Warehouse', image: 'DWH.png', position: { x: 418, y: 390, width: 462, height: 54 }, tooltip: 'Centralized data repository for analytics' },
 
     // Right tier - Microservices panel - ALIGNED WITH PUB_SUB CENTER
     { id: 'microservices', label: 'Business Microservices (optional)', image: 'Microservices.png', position: { x: 872, y: 39, width: 240, height: 136 }, tooltip: 'Optional microservices with dedicated databases (Holdings, Party)' },
@@ -91,9 +93,18 @@ export function DataArchitectureContent() {
     { id: 'arrow-events-pubsub', from: 'events_left', to: 'pub_sub', points: 'M 288 107 L 552 107', dashArray: '5,5', color: '#293276' },
     { id: 'arrow-pubsub-microservices', from: 'pub_sub', to: 'microservices', points: 'M 661 107 L 887 107', dashArray: '5,5', color: '#293276' },
 
-    // Path 2 arrows - High-Volume Query path (Buy)
-    { id: 'arrow-pubsub-datahub', from: 'pub_sub', to: 'data_hub', points: 'M 432 112 L 440 216', label: 'Buy', dashArray: '5,5', color: '#F59E0B' },
+    // Path 2 forked arrows - From Pub/Sub down, then fork to ETL (left) and Data Hub (right)
+    { id: 'arrow-pubsub-fork-main', from: 'pub_sub', to: 'fork', points: 'M 606 148 L 606 200', dashArray: '5,5', color: '#293276' },
+    { id: 'arrow-fork-horizontal', from: 'fork', to: 'fork', points: 'M 480 200 L 732 200', dashArray: '5,5', color: '#293276' },
+    { id: 'arrow-fork-horizontal-left', from: 'fork', to: 'etl', points: 'M 606 200 L 480 200', dashArray: '5,5', color: '#293276' },
+    { id: 'arrow-fork-horizontal-right', from: 'fork', to: 'data_hub', points: 'M 606 200 L 732 200', dashArray: '5,5', color: '#293276' },
+    { id: 'arrow-fork-etl', from: 'fork', to: 'etl', points: 'M 480 200 L 480 252', dashArray: '5,5', color: '#293276' },
+    { id: 'arrow-fork-datahub', from: 'fork', to: 'data_hub', points: 'M 732 200 L 732 245', dashArray: '5,5', color: '#293276' },
     { id: 'arrow-datahub-analytics', from: 'data_hub', to: 'analytics', points: 'M 576 216 L 592 220', color: '#3B82F6' },
+
+    // Path 2 data flow arrows - ETL and SDS to Data Warehouse (intermittent)
+    { id: 'arrow-etl-dwh', from: 'etl', to: 'data_warehouse', points: 'M 480 310 L 480 390', dashArray: '5,5', color: '#00B0F0' },
+    { id: 'arrow-sds-dwh', from: 'sds', to: 'data_warehouse', points: 'M 771 349 L 771 390', dashArray: '5,5', color: '#00B0F0' },
 
     // Path 3 arrows - ETL Pipeline path
     { id: 'arrow-file-etl', from: 'file_left', to: 'etl', points: 'M 172 192 L 264 220', color: '#14B8A6' },
@@ -113,20 +124,29 @@ export function DataArchitectureContent() {
       { componentId: 'arrow-pubsub-microservices', delay: 1000, type: 'arrow' },
     ],
     'path-a': [
-      // Path 2 (path-a): Events → Pub/Sub → (Buy: Data Hub → Analytics) & (Build: ETL)
+      // Path 2 (path-a): Events → Pub/Sub → (Microservices greyed + ETL + Data Hub + Analytics)
       { componentId: 'events_left', delay: 0, type: 'component' },
       { componentId: 'pub_sub', delay: 0, type: 'component' },
       { componentId: 'arrow-events-pubsub', delay: 1000, type: 'arrow' },
-      // Fork at Pub/Sub: Buy path (to Data Hub) and Build path (to ETL)
-      { componentId: 'arrow-pubsub-datahub', delay: 2000, type: 'arrow' },
-      { componentId: 'arrow-pubsub-etl', delay: 2000, type: 'arrow' },
-      { componentId: 'data_hub', delay: 3000, type: 'component' },
-      { componentId: 'etl', delay: 3000, type: 'component' },
-      { componentId: 'ods', delay: 4000, type: 'component' },
-      { componentId: 'sds', delay: 4500, type: 'component' },
-      { componentId: 'ads', delay: 5000, type: 'component' },
-      { componentId: 'arrow-datahub-analytics', delay: 6000, type: 'arrow' },
-      { componentId: 'analytics', delay: 8000, type: 'component' },
+      // Show greyed out microservices path and ETL/data hub/analytics at same time
+      { componentId: 'arrow-pubsub-microservices', delay: 2000, type: 'arrow' },
+      { componentId: 'microservices', delay: 2000, type: 'component' },
+      { componentId: 'etl', delay: 2000, type: 'component' },
+      { componentId: 'data_hub', delay: 2000, type: 'component' },
+      { componentId: 'analytics', delay: 2000, type: 'component' },
+      // Forked arrows (main → horizontal → down to both sides) and data stores appear together
+      { componentId: 'arrow-pubsub-fork-main', delay: 2500, type: 'arrow' },
+      { componentId: 'arrow-fork-horizontal', delay: 2500, type: 'arrow' },
+      { componentId: 'arrow-fork-etl', delay: 2500, type: 'arrow' },
+      { componentId: 'arrow-fork-datahub', delay: 2500, type: 'arrow' },
+      { componentId: 'ods', delay: 2500, type: 'component' },
+      { componentId: 'sds', delay: 2500, type: 'component' },
+      { componentId: 'ads', delay: 2500, type: 'component' },
+      // Data Warehouse appears in cascade effect when bubbles reach fork
+      { componentId: 'data_warehouse', delay: 2500, type: 'component' },
+      // Intermittent arrows to DWH appear shortly after
+      { componentId: 'arrow-etl-dwh', delay: 3000, type: 'arrow' },
+      { componentId: 'arrow-sds-dwh', delay: 3000, type: 'arrow' },
     ],
     'path-b': [
       // Path 3 (path-b): File → ETL → Data Warehouse → Analytics (Core & DBs are static)
@@ -167,6 +187,32 @@ export function DataArchitectureContent() {
     return () => timers.forEach(clearTimeout)
   }, [selectedPath, animationSequences])
 
+  // Track completed paths and trigger combined mode when both Path 1 and Path 2 are done
+  useEffect(() => {
+    if (playbackState === 'completed' && (selectedPath === 'path-c' || selectedPath === 'path-a')) {
+      // Mark this path as completed
+      setCompletedPaths((prev) => new Set([...prev, selectedPath]))
+    }
+  }, [playbackState, selectedPath])
+
+  // When both Path 1 and Path 2 are completed, show combined animation
+  useEffect(() => {
+    if (completedPaths.has('path-c') && completedPaths.has('path-a')) {
+      // Ungrey everything
+      setGreyedComponents(new Set())
+
+      // Show all components from both paths
+      const allPath1And2Components = new Set<string>()
+      animationSequences['path-c'].forEach(step => allPath1And2Components.add(step.componentId))
+      animationSequences['path-a'].forEach(step => allPath1And2Components.add(step.componentId))
+      setVisibleComponents(allPath1And2Components)
+      setAllAnimatedComponents(allPath1And2Components)
+
+      // Continue spawning both business and data events
+      setSpawningTrigger(prev => prev + 1)
+    }
+  }, [completedPaths, animationSequences])
+
   // Select path and automatically start playing
   const selectAndPlayPath = (path: AnimationPath) => {
     // Reset current state
@@ -175,6 +221,8 @@ export function DataArchitectureContent() {
     setAllAnimatedComponents(new Set())
     setCurrentStep(0)
     setActiveDataFlows([])
+    setGreyedComponents(new Set())
+    setCompletedPaths(new Set()) // Reset completed paths tracking when replaying
     // Clear spawning interval
     if (spawningIntervalRef.current) {
       clearInterval(spawningIntervalRef.current)
@@ -183,6 +231,11 @@ export function DataArchitectureContent() {
 
     // Set new path
     setSelectedPath(path)
+
+    // Set greyed out components for Path 2
+    if (path === 'path-a') {
+      setGreyedComponents(new Set(['arrow-pubsub-microservices', 'microservices']))
+    }
 
     // Trigger spawning restart for Path 1 and Path 2
     if (path === 'path-c' || path === 'path-a') {
@@ -266,6 +319,8 @@ export function DataArchitectureContent() {
     setAllAnimatedComponents(new Set())
     setCurrentStep(0)
     setActiveDataFlows([])
+    setGreyedComponents(new Set())
+    setCompletedPaths(new Set()) // Reset completed paths tracking
     // Clear spawning interval
     if (spawningIntervalRef.current) {
       clearInterval(spawningIntervalRef.current)
@@ -307,13 +362,13 @@ export function DataArchitectureContent() {
     return animationSequences[selectedPath].some(step => step.componentId === componentId)
   }
 
-  // Spawn Business Event dots every 2 seconds for Path 1 (Event-Driven)
+  // Spawn Business Event dots for Path 1 and Path 2 (Event-Driven paths)
   useEffect(() => {
     console.log('[Spawning] useEffect triggered - selectedPath:', selectedPath, 'trigger:', spawningTrigger)
 
-    // Only spawn for Path 1
-    if (selectedPath !== 'path-c') {
-      console.log('[Spawning] Not Path 1, cleaning up')
+    // Only spawn for Path 1 and Path 2
+    if (selectedPath !== 'path-c' && selectedPath !== 'path-a') {
+      console.log('[Spawning] Not Path 1 or Path 2, cleaning up')
       if (spawningIntervalRef.current) {
         clearInterval(spawningIntervalRef.current)
         spawningIntervalRef.current = null
@@ -327,8 +382,8 @@ export function DataArchitectureContent() {
       return
     }
 
-    console.log('[Spawning] Path 1 selected, starting spawning timeout (1300ms)')
-    // For Path 1, animation starts at 100ms, arrows appear at 1100ms, so start spawning dots at 1300ms
+    console.log('[Spawning] Path 1 or 2 selected, starting spawning timeout (1300ms)')
+    // For Path 1/2, animation starts at 100ms, arrows appear at 1100ms, so start spawning dots at 1300ms
     const startSpawningTimeout = setTimeout(() => {
       console.log('[Spawning] Timeout fired - spawning first Business Event')
       // Spawn first Business Event immediately
@@ -415,23 +470,89 @@ export function DataArchitectureContent() {
             // Duration: 2 seconds for this segment
             if (age < 2000) {
               updated.push(dot)
-            } else if (age >= 2000 && age < 2100 && dot.type === 'business') {
-              // Business event transitions to next segment (Pub_Sub -> Microservices)
-              // Data events do NOT transition - they end at Pub/Sub
-              updated.push({
-                ...dot,
-                segment: 'pubsub-microservices',
-                pathId: 'arrow-pubsub-microservices',
-                startTime: now
-              })
+            } else if (age >= 2000 && age < 2100) {
+              if (dot.type === 'business') {
+                // Business events transition to microservices (both Path 1 and Path 2)
+                updated.push({
+                  ...dot,
+                  segment: 'pubsub-microservices',
+                  pathId: 'arrow-pubsub-microservices',
+                  startTime: now
+                })
+              } else if (dot.type === 'data' && selectedPath === 'path-a') {
+                // Data events in Path 2 transition to fork vertical segment
+                updated.push({
+                  ...dot,
+                  segment: 'pubsub-fork-main',
+                  pathId: 'arrow-pubsub-fork-main',
+                  startTime: now
+                })
+              }
+              // Data events in Path 1 end at Pub/Sub (not transitioned)
             }
-            // Data events and expired business events are removed
           } else if (dot.segment === 'pubsub-microservices') {
             // Duration: 2 seconds for this segment
             if (age < 2000) {
               updated.push(dot)
             }
             // Remove after completing this segment
+          } else if (dot.segment === 'pubsub-fork-main') {
+            // Vertical segment of the fork (Path 2 data events only)
+            // Duration: 1 second for this short vertical segment
+            if (age < 1000) {
+              updated.push(dot)
+            } else if (age >= 1000 && age < 1100) {
+              // Split into two dots at fork center: one goes left, one goes right
+              updated.push({
+                ...dot,
+                id: `${dot.id}-left`,
+                segment: 'fork-horizontal-left',
+                pathId: 'arrow-fork-horizontal-left',
+                startTime: now
+              })
+              updated.push({
+                ...dot,
+                id: `${dot.id}-right`,
+                segment: 'fork-horizontal-right',
+                pathId: 'arrow-fork-horizontal-right',
+                startTime: now
+              })
+            }
+          } else if (dot.segment === 'fork-horizontal-left') {
+            // Horizontal left segment (center to left)
+            // Duration: 0.8 seconds
+            if (age < 800) {
+              updated.push(dot)
+            } else if (age >= 800 && age < 900) {
+              // Transition to vertical down to ETL
+              updated.push({
+                ...dot,
+                segment: 'fork-etl',
+                pathId: 'arrow-fork-etl',
+                startTime: now
+              })
+            }
+          } else if (dot.segment === 'fork-horizontal-right') {
+            // Horizontal right segment (center to right)
+            // Duration: 0.8 seconds
+            if (age < 800) {
+              updated.push(dot)
+            } else if (age >= 800 && age < 900) {
+              // Transition to vertical down to Data Hub
+              updated.push({
+                ...dot,
+                segment: 'fork-datahub',
+                pathId: 'arrow-fork-datahub',
+                startTime: now
+              })
+            }
+          } else if (dot.segment === 'fork-etl' || dot.segment === 'fork-datahub') {
+            // Vertical segments to ETL and Data Hub
+            // Duration: 1 second for these segments
+            if (age < 1000) {
+              updated.push(dot)
+            }
+            // Remove after completing
           }
         })
         return updated
@@ -439,11 +560,11 @@ export function DataArchitectureContent() {
     }, 50) // Check every 50ms for smooth animation
 
     return () => clearInterval(interval)
-  }, [])
+  }, [selectedPath])
 
   const pathDescriptions = {
     'path-c': 'Event-Driven Path: Core → Events → Pub/Sub → Microservices',
-    'path-a': 'High-Volume Query Path: Pub/Sub → Data Hub → Analytics',
+    'path-a': 'Event-Driven Path: Core → Events → Pub/Sub → Data Hub + Analytics (Data Events only)',
     'path-b': 'ETL Path: Core → File → ETL → Data Warehouse → Analytics',
   }
 
@@ -474,7 +595,7 @@ export function DataArchitectureContent() {
             </button>
 
             <button
-              onClick={() => setSelectedPath('path-a')}
+              onClick={() => selectAndPlayPath('path-a')}
               disabled={playbackState === 'playing'}
               className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
                 selectedPath === 'path-a'
@@ -482,8 +603,8 @@ export function DataArchitectureContent() {
                   : 'border-gray-300 bg-white text-gray-700 hover:border-[#283054]'
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <div className="text-sm font-semibold">Path 2 (Key: 2)</div>
-              <div className="text-xs mt-1 opacity-90">High-Volume Query</div>
+              <div className="text-sm font-semibold">Path 2</div>
+              <div className="text-xs mt-1 opacity-90">Event Driven: Data Events</div>
             </button>
 
             <button
@@ -566,31 +687,61 @@ export function DataArchitectureContent() {
           <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }}>
             {/* Define arrow markers */}
             <defs>
-              {/* Arrow head for Path 1 (Event-Driven) - dark blue - 10% smaller */}
+              {/* Arrow head for Path 1 and Path 2 (Event-Driven) - dark blue - refined design */}
               <marker
                 id="arrowhead-path1"
-                markerWidth="9"
-                markerHeight="9"
-                refX="8"
-                refY="2.7"
+                markerWidth="6"
+                markerHeight="6"
+                refX="5.5"
+                refY="2"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
-                <path d="M0,0 L0,5.4 L8,2.7 z" fill="#293276" />
+                <path d="M0,0 L0,4 L5.5,2 z" fill="#293276" />
               </marker>
 
-              {/* Generic arrow head for other paths */}
+              {/* Generic arrow head for other paths - refined design */}
               <marker
                 id="arrowhead-generic"
-                markerWidth="9"
-                markerHeight="9"
-                refX="8"
-                refY="2.7"
+                markerWidth="6"
+                markerHeight="6"
+                refX="5.5"
+                refY="2"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
-                <path d="M0,0 L0,5.4 L8,2.7 z" fill="#3B82F6" />
+                <path d="M0,0 L0,4 L5.5,2 z" fill="#3B82F6" />
               </marker>
+
+              {/* Cyan arrow head for DWH arrows - refined design */}
+              <marker
+                id="arrowhead-cyan"
+                markerWidth="6"
+                markerHeight="6"
+                refX="5.5"
+                refY="2"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M0,0 L0,4 L5.5,2 z" fill="#00B0F0" />
+              </marker>
+
+              {/* CSS Animation for dashed arrows */}
+              <style>
+                {`
+                  @keyframes dashFlow {
+                    from {
+                      stroke-dashoffset: 0;
+                    }
+                    to {
+                      stroke-dashoffset: -10;
+                    }
+                  }
+                  .animated-dash {
+                    animation: dashFlow 0.8s linear infinite;
+                  }
+                `}
+              </style>
             </defs>
 
             {/* Render arrows */}
@@ -599,9 +750,25 @@ export function DataArchitectureContent() {
 
               if (!isVisible) return null
 
+              // Check if this arrow should be greyed out
+              const isGreyed = greyedComponents.has(arrow.id)
+
               // Determine which marker to use
-              const isPath1Arrow = arrow.id === 'arrow-events-pubsub' || arrow.id === 'arrow-pubsub-microservices'
-              const markerEnd = isPath1Arrow ? 'url(#arrowhead-path1)' : undefined
+              const isDarkBlueArrow = arrow.id === 'arrow-events-pubsub' ||
+                                      arrow.id === 'arrow-pubsub-microservices' ||
+                                      arrow.id === 'arrow-fork-etl' ||
+                                      arrow.id === 'arrow-fork-datahub'
+              const isCyanArrow = arrow.id === 'arrow-etl-dwh' || arrow.id === 'arrow-sds-dwh'
+
+              let markerEnd = undefined
+              if (isDarkBlueArrow) {
+                markerEnd = 'url(#arrowhead-path1)'
+              } else if (isCyanArrow) {
+                markerEnd = 'url(#arrowhead-cyan)'
+              }
+
+              // Add animated class for cyan DWH arrows
+              const pathClassName = isCyanArrow ? 'animated-dash' : ''
 
               return (
                 <g key={arrow.id}>
@@ -613,6 +780,9 @@ export function DataArchitectureContent() {
                     fill="none"
                     strokeDasharray={arrow.dashArray}
                     markerEnd={markerEnd}
+                    opacity={isGreyed ? 0.3 : 1}
+                    style={isGreyed ? { filter: 'grayscale(100%)' } : {}}
+                    className={pathClassName}
                   />
                   {arrow.label && (
                     <text
@@ -621,6 +791,7 @@ export function DataArchitectureContent() {
                       fill={arrow.color || '#3B82F6'}
                       fontSize="12"
                       fontWeight="600"
+                      opacity={isGreyed ? 0.3 : 1}
                     >
                       {arrow.label}
                     </text>
@@ -638,7 +809,14 @@ export function DataArchitectureContent() {
             })()}
             {activeDataFlows.map((dot) => {
               const age = Date.now() - dot.startTime
-              const progress = Math.min(age / 2000, 1) // 2 second duration per segment
+              // Adjust duration based on segment
+              let segmentDuration = 2000 // Default for main segments
+              if (dot.segment === 'pubsub-fork-main' || dot.segment === 'fork-etl' || dot.segment === 'fork-datahub') {
+                segmentDuration = 1000 // Short vertical segments
+              } else if (dot.segment === 'fork-horizontal-left' || dot.segment === 'fork-horizontal-right') {
+                segmentDuration = 800 // Horizontal fork segments
+              }
+              const progress = Math.min(age / segmentDuration, 1)
 
               // Get path coordinates
               const arrow = arrows.find(a => a.id === dot.pathId)
@@ -664,6 +842,11 @@ export function DataArchitectureContent() {
               const dotColor = dot.type === 'business' ? '#5CB8B2' : '#8246AF'
               const label = dot.type === 'business' ? 'Business Event' : 'Data Event'
 
+              // Determine if this dot should be greyed out (Path 2 business events on microservices path)
+              const isDotGreyed = selectedPath === 'path-a' &&
+                                 dot.type === 'business' &&
+                                 dot.segment === 'pubsub-microservices'
+
               return (
                 <g key={dot.id}>
                   {/* Glow effect */}
@@ -672,7 +855,8 @@ export function DataArchitectureContent() {
                     cy={currentY}
                     r="8"
                     fill={dotColor}
-                    opacity="0.3"
+                    opacity={isDotGreyed ? 0.1 : 0.3}
+                    style={isDotGreyed ? { filter: 'grayscale(100%)' } : {}}
                   />
                   {/* Main dot */}
                   <circle
@@ -680,6 +864,8 @@ export function DataArchitectureContent() {
                     cy={currentY}
                     r="6"
                     fill={dotColor}
+                    opacity={isDotGreyed ? 0.3 : 1}
+                    style={isDotGreyed ? { filter: 'grayscale(100%)' } : {}}
                   />
                   {/* Label */}
                   <text
@@ -689,6 +875,7 @@ export function DataArchitectureContent() {
                     fontSize="11"
                     fontWeight="600"
                     textAnchor="middle"
+                    opacity={isDotGreyed ? 0.3 : 1}
                     style={{
                       textShadow: '0 0 3px white, 0 0 3px white'
                     }}
@@ -752,11 +939,14 @@ export function DataArchitectureContent() {
             const isVisible = visibleComponents.has(component.id)
             const wasAnimated = allAnimatedComponents.has(component.id)
             const isInCurrentPath = isComponentInPath(component.id)
+            const isGreyed = greyedComponents.has(component.id)
 
             // Determine opacity based on animation state
             let opacity = 1
             if (!isVisible) {
               opacity = 0
+            } else if (isGreyed) {
+              opacity = 0.3 // Grey out specified components (e.g., microservices in Path 2)
             } else if (wasAnimated && !isInCurrentPath) {
               opacity = 0.3 // Grey out components not in current path
             }
@@ -776,7 +966,7 @@ export function DataArchitectureContent() {
                 animate={{
                   opacity,
                   scale: isVisible ? 1 : 0.8,
-                  filter: wasAnimated && !isInCurrentPath ? 'grayscale(100%)' : 'grayscale(0%)'
+                  filter: (isGreyed || (wasAnimated && !isInCurrentPath)) ? 'grayscale(100%)' : 'grayscale(0%)'
                 }}
                 transition={{ duration: 0.5 }}
                 onMouseEnter={() => setHoveredComponent(component.id)}
