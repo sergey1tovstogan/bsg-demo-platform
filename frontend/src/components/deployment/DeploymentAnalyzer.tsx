@@ -900,7 +900,6 @@ function ServiceAnalysis({
                 {identifiedComponents.map((result, index) => {
                   const componentId = result.service.id || `component-${index}`
                   const isSelected = selectedServiceId === result.service.id
-                  const isExpanded = expandedService === result.service.id
                   return (
                     <button
                       key={componentId}
