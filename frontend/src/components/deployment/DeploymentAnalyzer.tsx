@@ -714,10 +714,34 @@ function ServiceAnalysis({
   onBack: () => void
   onRefresh: () => void
 }) {
-  const [expandedService, setExpandedService] = useState<string | null>(null)
-
   const identifiedComponents = analysisResults.filter(r => r.componentInfo)
+  
+  // Default to first component, or null if none
+  const getFirstComponentId = () => {
+    if (identifiedComponents.length > 0) {
+      return identifiedComponents[0].service.id || null
+    }
+    return null
+  }
+  
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(getFirstComponentId())
+  const [expandedService, setExpandedService] = useState<string | null>(getFirstComponentId())
+  
+  // Update selected service when components change
+  useEffect(() => {
+    if (!selectedServiceId && identifiedComponents.length > 0) {
+      const firstId = getFirstComponentId()
+      setSelectedServiceId(firstId)
+      setExpandedService(firstId)
+    }
+  }, [identifiedComponents.length, selectedServiceId])
+
   const unidentifiedServices = analysisResults.filter(r => !r.componentInfo && !r.error)
+  
+  // Get the currently selected component
+  const selectedComponent = identifiedComponents.find(
+    r => (r.service.id || null) === selectedServiceId
+  ) || identifiedComponents[0] || null
 
   // Always render something, even if services is empty
   if (!services || services.length === 0) {
@@ -824,25 +848,21 @@ function ServiceAnalysis({
           </div>
         </div>
 
-        {/* Temenos Components */}
-        {identifiedComponents.length > 0 && (
+        {/* Temenos Components - Show only selected component */}
+        {selectedComponent && (
           <div>
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
               <CheckCircle2 className="w-6 h-6 text-green-600" />
               <span>Temenos Components</span>
             </h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {identifiedComponents.map((result, index) => (
-                <div id={`component-${result.service.id || index}`} key={result.service.id || index}>
-                  <ComponentCard
-                    result={result}
-                    expanded={expandedService === result.service.id}
-                    onToggle={() => setExpandedService(
-                      expandedService === result.service.id ? null : result.service.id || null
-                    )}
-                  />
-                </div>
-              ))}
+            <div id={`component-${selectedComponent.service.id || 0}`}>
+              <ComponentCard
+                result={selectedComponent}
+                expanded={expandedService === selectedComponent.service.id}
+                onToggle={() => setExpandedService(
+                  expandedService === selectedComponent.service.id ? null : selectedComponent.service.id || null
+                )}
+              />
             </div>
           </div>
         )}
@@ -879,29 +899,30 @@ function ServiceAnalysis({
               <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
                 {identifiedComponents.map((result, index) => {
                   const componentId = result.service.id || `component-${index}`
+                  const isSelected = selectedServiceId === result.service.id
                   const isExpanded = expandedService === result.service.id
                   return (
                     <button
                       key={componentId}
                       onClick={() => {
+                        const newSelectedId = result.service.id || null
+                        setSelectedServiceId(newSelectedId)
+                        setExpandedService(newSelectedId)
                         setScrollToId(componentId)
-                        setExpandedService(
-                          isExpanded ? null : result.service.id || null
-                        )
                       }}
                       className={`w-full text-left p-3 rounded-lg transition-all ${
-                        isExpanded
+                        isSelected
                           ? 'bg-purple-100 border-2 border-purple-500'
                           : 'bg-white border border-gray-200 hover:border-purple-300 hover:bg-purple-50'
                       }`}
                     >
                       <div className="flex items-start space-x-2">
                         <Cloud className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                          isExpanded ? 'text-purple-600' : 'text-gray-500'
+                          isSelected ? 'text-purple-600' : 'text-gray-500'
                         }`} />
                         <div className="flex-1 min-w-0">
                           <p className={`font-semibold text-sm truncate ${
-                            isExpanded ? 'text-purple-900' : 'text-gray-900'
+                            isSelected ? 'text-purple-900' : 'text-gray-900'
                           }`}>
                             {result.componentInfo?.componentName || 'Unknown Component'}
                           </p>
@@ -912,7 +933,7 @@ function ServiceAnalysis({
                             {result.service.resourceGroup}
                           </p>
                         </div>
-                        {isExpanded && (
+                        {isSelected && (
                           <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
                         )}
                       </div>
