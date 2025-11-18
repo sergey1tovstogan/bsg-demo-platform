@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, Loader2, AlertCircle, CheckCircle, Key, ChevronUp, ChevronDown } from 'lucide-react'
+import { Play, Loader2, AlertCircle, CheckCircle, Key, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react'
 import axios from 'axios'
 import { ApiKeyModal } from './ApiKeyModal'
 
@@ -486,6 +486,15 @@ export function IntegrationDemo() {
             <div className="flex items-center space-x-2">
               <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
               <h3 className="text-lg font-bold text-[#283054]">Security Trades</h3>
+              <a
+                href="https://developer.temenos.com/service/security-trades#tag/WEALTH/operation/getSecurityTrades"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-600 hover:text-purple-800 transition-colors"
+                title="View API documentation"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
             </div>
             <p className="text-sm text-gray-500 mt-1">
               https://api.temenos.com/api/v4.0.0/holdings/securityTrades/trades
