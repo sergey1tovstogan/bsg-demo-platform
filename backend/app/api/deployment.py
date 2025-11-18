@@ -118,14 +118,12 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
                 "Try restarting the backend server"
             ]
         
+        # Format error message for better frontend display
+        error_detail = f"Azure connection failed: {error_msg}\n\nError Type: {error_type}\n\nRecovery Steps:\n" + "\n".join(f"- {step}" for step in recovery_steps)
+        logger.error(f"Azure connection error: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail={
-                "status": "error",
-                "error": error_msg,
-                "errorType": error_type,
-                "recoverySteps": recovery_steps
-            }
+            detail=error_detail
         )
     except Exception as e:
         logger.error(f"Connect error: {e}", exc_info=True)
@@ -145,14 +143,12 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
         if "azure" in error_msg.lower() or "subscription" in error_msg.lower():
             recovery_steps.insert(0, f"Verify you have access to subscription '{request.subscription_id}' in Azure Portal")
         
+        # Format error message for better frontend display
+        error_detail = f"Azure connection failed: {error_msg}\n\nError Type: {error_type}\n\nRecovery Steps:\n" + "\n".join(f"- {step}" for step in recovery_steps)
+        logger.error(f"Azure connection error: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail={
-                "status": "error",
-                "error": error_msg,
-                "errorType": error_type,
-                "recoverySteps": recovery_steps
-            }
+            detail=error_detail
         )
 
 
@@ -180,19 +176,11 @@ async def get_resource_groups(subscriptionId: str):
             "count": len(resource_groups)
         }
     except Exception as e:
-        logger.error(f"Error getting resource groups: {e}")
+        error_detail = f"Error getting resource groups: {str(e)}\n\nRecovery Steps:\n- Check backend server logs\n- Verify Azure CLI is installed and logged in\n- Try restarting the backend server"
+        logger.error(f"Resource groups error: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail={
-                "status": "error",
-                "error": str(e),
-                "errorType": "unknown",
-                "recoverySteps": [
-                    "Check backend server logs",
-                    "Verify Azure CLI is installed and logged in",
-                    "Try restarting the backend server"
-                ]
-            }
+            detail=error_detail
         )
 
 
@@ -308,12 +296,9 @@ async def get_aks_namespaces(request: NamespacesRequest):
     except Exception as e:
             logger.error(f"Error getting AKS namespaces: {e}", exc_info=True)
             import traceback
-            error_detail = {
-                "status": "error",
-                "error": str(e),
-                "traceback": traceback.format_exc()
-            }
-            logger.error(f"Full traceback: {traceback.format_exc()}")
+            error_traceback = traceback.format_exc()
+            error_detail = f"Error getting AKS namespaces: {str(e)}\n\nTraceback:\n{error_traceback}\n\nRecovery Steps:\n- Check backend server logs\n- Verify kubectl is installed\n- Verify Azure CLI is logged in\n- Check AKS cluster access permissions"
+            logger.error(f"Full traceback: {error_traceback}")
             raise HTTPException(
                 status_code=500,
                 detail=error_detail
@@ -375,19 +360,11 @@ async def get_resources(request: ResourcesRequest):
             "count": len(resources)
         }
     except Exception as e:
-        logger.error(f"Error getting resources: {e}")
+        error_detail = f"Error getting resources: {str(e)}\n\nRecovery Steps:\n- Check backend server logs\n- Verify Azure CLI is installed and logged in\n- Try restarting the backend server"
+        logger.error(f"Resources error: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail={
-                "status": "error",
-                "error": str(e),
-                "errorType": "unknown",
-                "recoverySteps": [
-                    "Check backend server logs",
-                    "Verify Azure CLI is installed and logged in",
-                    "Try restarting the backend server"
-                ]
-            }
+            detail=error_detail
         )
 
 
@@ -507,14 +484,12 @@ async def _analyze_services_impl(request: AnalyzeRequest):
             "analysisId": analysis_id
         }
     except Exception as e:
-        logger.error(f"Analysis error: {e}")
+        service_count = len(request.services) if request.services else 0
+        error_detail = f"Analysis error: {str(e)}\n\nService count: {service_count}\n\nRecovery Steps:\n- Check backend server logs\n- Verify RAG_JWT_TOKEN is set\n- Verify Azure connection is working"
+        logger.error(f"Analysis error: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail={
-                "status": "error",
-                "error": str(e),
-                "serviceCount": len(request.services) if request.services else 0
-            }
+            detail=error_detail
         )
 
 
