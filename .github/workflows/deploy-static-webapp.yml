@@ -79,26 +79,34 @@ jobs:
           echo "=== Checking for assets ==="
           ls -la frontend/dist/assets/ || echo "No assets folder"
       
+      - name: Check deployment token
+        run: |
+          if [ -z "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" ]; then
+            echo "⚠️ ERROR: AZURE_STATIC_WEB_APPS_API_TOKEN secret is not set!"
+            echo ""
+            echo "To fix this:"
+            echo "1. Go to Azure Portal → Static Web App (bsg-demo-platform-4077)"
+            echo "2. Click 'Manage deployment token'"
+            echo "3. Copy the deployment token"
+            echo "4. Go to GitHub → Repository Settings → Secrets and variables → Actions"
+            echo "5. Add new secret: AZURE_STATIC_WEB_APPS_API_TOKEN with the token value"
+            echo ""
+            echo "⚠️ Deployment will be skipped without the token!"
+            exit 1
+          else
+            echo "✓ Deployment token is set"
+          fi
+      
       - name: Deploy to Azure Static Web Apps
-        if: env.AZURE_STATIC_WEB_APPS_API_TOKEN != ''
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           app_location: "/frontend"
           output_location: "dist"
           skip_app_build: true
           skip_deploy_on_missing_secrets: false
-      
-      - name: Check deployment status
-        if: env.AZURE_STATIC_WEB_APPS_API_TOKEN == ''
-        run: |
-          echo "⚠ Warning: AZURE_STATIC_WEB_APPS_API_TOKEN secret is not set"
-          echo "Deployment skipped. To enable deployment:"
-          echo "1. Go to Azure Portal → Static Web App → Manage deployment token"
-          echo "2. Copy the deployment token"
-          echo "3. Add it to GitHub Secrets as AZURE_STATIC_WEB_APPS_API_TOKEN"
       
       - name: Deployment Summary
         run: |
