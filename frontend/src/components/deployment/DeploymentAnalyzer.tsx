@@ -775,27 +775,26 @@ function ServiceAnalysis({
   }, [scrollToId])
 
   return (
-    <div className="flex gap-6">
-      {/* Main Content Area */}
-      <div className="flex-1 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Deployment Analysis</h2>
-            <p className="text-gray-600">
-              {services.length} Azure service{services.length !== 1 ? 's' : ''} found • {identifiedComponents.length} Temenos component{identifiedComponents.length !== 1 ? 's' : ''} identified
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
-            </button>
-            <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
-            </button>
-          </div>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Deployment Analysis</h2>
+          <p className="text-gray-600">
+            {services.length} Azure service{services.length !== 1 ? 's' : ''} found • {identifiedComponents.length} Temenos component{identifiedComponents.length !== 1 ? 's' : ''} identified
+          </p>
         </div>
+        <div className="flex items-center space-x-3">
+          <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+          <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+        </div>
+      </div>
 
         {loading && (
           <div className="card text-center py-12">
@@ -848,6 +847,78 @@ function ServiceAnalysis({
           </div>
         </div>
 
+      {/* Quick Overview - Horizontal Component Selector */}
+      {identifiedComponents.length > 0 && (
+        <div className="card bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <h3 className="font-bold text-gray-900">Quick Overview</h3>
+              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                {identifiedComponents.length} Components
+              </span>
+            </div>
+            <div className="text-xs text-gray-500">
+              Select a component to view details
+            </div>
+          </div>
+          
+          {/* Horizontal Scrollable Component List */}
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-transparent">
+            {identifiedComponents.map((result, index) => {
+              const componentId = result.service.id || `component-${index}`
+              const isSelected = selectedServiceId === result.service.id
+              return (
+                <button
+                  key={componentId}
+                  onClick={() => {
+                    const newSelectedId = result.service.id || null
+                    setSelectedServiceId(newSelectedId)
+                    setExpandedService(newSelectedId)
+                    setScrollToId(componentId)
+                  }}
+                  className={`flex-shrink-0 min-w-[200px] max-w-[280px] p-4 rounded-lg transition-all transform hover:scale-105 ${
+                    isSelected
+                      ? 'bg-white border-2 border-purple-500 shadow-lg ring-2 ring-purple-200'
+                      : 'bg-white/80 border border-gray-200 hover:border-purple-300 hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+                      isSelected ? 'bg-purple-100' : 'bg-gray-100'
+                    }`}>
+                      <Cloud className={`w-5 h-5 ${
+                        isSelected ? 'text-purple-600' : 'text-gray-500'
+                      }`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <p className={`font-semibold text-sm truncate ${
+                          isSelected ? 'text-purple-900' : 'text-gray-900'
+                        }`}>
+                          {result.componentInfo?.componentName || 'Unknown Component'}
+                        </p>
+                        {isSelected && (
+                          <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 truncate mb-1">
+                        {result.componentInfo?.componentType || result.service.type}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {result.service.resourceGroup}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="space-y-6">
         {/* Temenos Components - Show only selected component */}
         {selectedComponent && (
           <div>
@@ -883,67 +954,6 @@ function ServiceAnalysis({
           </div>
         )}
       </div>
-
-      {/* Right Sidebar - Quick Overview */}
-      {identifiedComponents.length > 0 && (
-        <div className="w-80 flex-shrink-0">
-          <div className="sticky top-6">
-            <div className="card bg-gray-50 border-gray-200">
-              <div className="flex items-center space-x-2 mb-4 pb-3 border-b border-gray-300">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <h3 className="font-bold text-gray-900">Quick Overview</h3>
-                <span className="ml-auto px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                  {identifiedComponents.length}
-                </span>
-              </div>
-              <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
-                {identifiedComponents.map((result, index) => {
-                  const componentId = result.service.id || `component-${index}`
-                  const isSelected = selectedServiceId === result.service.id
-                  return (
-                    <button
-                      key={componentId}
-                      onClick={() => {
-                        const newSelectedId = result.service.id || null
-                        setSelectedServiceId(newSelectedId)
-                        setExpandedService(newSelectedId)
-                        setScrollToId(componentId)
-                      }}
-                      className={`w-full text-left p-3 rounded-lg transition-all ${
-                        isSelected
-                          ? 'bg-purple-100 border-2 border-purple-500'
-                          : 'bg-white border border-gray-200 hover:border-purple-300 hover:bg-purple-50'
-                      }`}
-                    >
-                      <div className="flex items-start space-x-2">
-                        <Cloud className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                          isSelected ? 'text-purple-600' : 'text-gray-500'
-                        }`} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-semibold text-sm truncate ${
-                            isSelected ? 'text-purple-900' : 'text-gray-900'
-                          }`}>
-                            {result.componentInfo?.componentName || 'Unknown Component'}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1 truncate">
-                            {result.componentInfo?.componentType || result.service.type}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1 truncate">
-                            {result.service.resourceGroup}
-                          </p>
-                        </div>
-                        {isSelected && (
-                          <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                        )}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
