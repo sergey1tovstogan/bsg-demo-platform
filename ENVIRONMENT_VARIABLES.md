@@ -123,6 +123,77 @@ To verify environment variables are set correctly:
 2. **Azure**: Use Azure Portal or CLI to list app settings
 3. **Runtime**: Check application logs for configuration errors
 
+## Azure Authentication
+
+### Local Development
+
+For local development, you need to authenticate with Azure:
+
+1. **Install Azure CLI**: https://aka.ms/installazurecliwindows
+2. **Interactive login** (recommended for local):
+   ```bash
+   az login
+   ```
+3. **Device code login** (for non-interactive environments):
+   ```bash
+   az login --use-device-code
+   ```
+   - This is useful when:
+     - Running in a remote server without GUI
+     - Using SSH to connect to a server
+     - Running in CI/CD pipelines
+     - Azure App Service (if using Azure CLI)
+4. **Verify authentication**:
+   ```bash
+   az account show
+   ```
+5. **Set subscription** (if needed):
+   ```bash
+   az account set --subscription <subscription-id>
+   ```
+
+### Azure App Service
+
+For Azure App Service deployments, you have two options:
+
+1. **Managed Identity** (recommended):
+   - Enable Managed Identity in Azure Portal
+   - Grant permissions to the identity
+   - The app will automatically use the identity
+
+2. **Service Principal**:
+   - Create a Service Principal: `az ad sp create-for-rbac --name <name>`
+   - Set environment variables:
+     - `AZURE_CLIENT_ID`
+     - `AZURE_CLIENT_SECRET`
+     - `AZURE_TENANT_ID`
+
+### Troubleshooting Azure Connection
+
+If you get a 500 error when connecting to Azure:
+
+1. **Check Azure CLI is installed**:
+   ```bash
+   az --version
+   ```
+
+2. **Check if logged in**:
+   ```bash
+   az account show
+   ```
+
+3. **Login if needed**:
+   ```bash
+   az login --use-device-code
+   ```
+
+4. **Verify subscription access**:
+   ```bash
+   az account list --output table
+   ```
+
+5. **Check backend logs** for detailed error messages
+
 ## Security Notes
 
 - **Never commit** `.env` files or secrets to git
@@ -130,4 +201,5 @@ To verify environment variables are set correctly:
 - Rotate `JWT_SECRET_KEY` periodically
 - Keep `RAG_JWT_TOKEN` secure and rotate if compromised
 - Use Azure Key Vault for production secrets (future enhancement)
+- **Azure credentials**: Never commit Azure CLI credentials or service principal secrets
 

@@ -91,9 +91,11 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
             error_type = "authentication"
             recovery_steps = [
                 "Check if Azure CLI is installed: Run `az --version`",
-                "Login to Azure: Run `az login`",
+                "For interactive login: Run `az login`",
+                "For non-interactive environments (CI/CD, remote servers, Azure App Service): Run `az login --use-device-code`",
                 "Verify your login: Run `az account show`",
                 "Set the correct subscription: Run `az account set --subscription <subscription-id>`",
+                "For Azure App Service: Configure Managed Identity or Service Principal (see documentation)",
                 "After logging in, restart the backend server"
             ]
         elif "permission" in error_msg.lower() or "authorization" in error_msg.lower():
