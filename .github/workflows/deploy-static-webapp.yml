@@ -67,7 +67,11 @@ jobs:
           echo "=== Checking for index.html ==="
           if [ -f "frontend/dist/index.html" ]; then
             echo "✓ index.html found"
-            head -20 frontend/dist/index.html
+            echo "=== Full index.html content ==="
+            cat frontend/dist/index.html
+            echo ""
+            echo "=== Checking script tags ==="
+            grep -i "script" frontend/dist/index.html || echo "No script tags found"
           else
             echo "✗ index.html not found - build may have failed"
             exit 1
@@ -82,7 +86,15 @@ jobs:
           fi
           echo ""
           echo "=== Checking for assets ==="
-          ls -la frontend/dist/assets/ || echo "No assets folder"
+          if [ -d "frontend/dist/assets" ]; then
+            echo "✓ Assets folder found"
+            ls -la frontend/dist/assets/ | head -10
+            echo "=== Checking for JS files ==="
+            find frontend/dist/assets -name "*.js" | head -5
+          else
+            echo "✗ No assets folder found - build may have failed"
+            exit 1
+          fi
       
       - name: Check deployment token
         run: |
