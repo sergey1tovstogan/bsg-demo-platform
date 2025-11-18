@@ -107,6 +107,8 @@ jobs:
           output_location: "dist"
           skip_app_build: true
           skip_deploy_on_missing_secrets: false
+          api_location: ""
+          api_build_command: ""
       
       - name: Deployment Summary
         run: |
