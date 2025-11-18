@@ -9,9 +9,11 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database, get_db_health
 from app.core.config import settings
+from app.core.logging import get_logger
 from app.utils.datetime_utils import utc_now, format_iso8601
 
 router = APIRouter(tags=["Health"])
+logger = get_logger(__name__)
 
 
 @router.get("/health", status_code=status.HTTP_200_OK)
