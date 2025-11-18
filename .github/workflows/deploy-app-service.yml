@@ -112,7 +112,8 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
-          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:8000 --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120'
+          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120'
+          python-version: '3.11'
       
       - name: Configure App Settings
         run: |
@@ -138,8 +139,9 @@ jobs:
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --settings \
-              SCM_DO_BUILD_DURING_DEPLOYMENT=false \
-              ENABLE_ORYX_BUILD=false \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+              ENABLE_ORYX_BUILD=true \
+              SCM_BUILD_ARGS="--build-arg REQUIREMENTS_FILE=requirements.txt" \
               ENVIRONMENT=production \
               DEBUG=False \
               DATABASE_NAME=bsg_demo \
