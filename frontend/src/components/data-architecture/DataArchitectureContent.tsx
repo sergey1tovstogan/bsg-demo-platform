@@ -34,7 +34,7 @@ interface DataFlowDot {
   type: 'business' | 'data'
   pathId: string
   startTime: number
-  segment: 'events-pubsub' | 'pubsub-microservices'
+  segment: 'events-pubsub' | 'pubsub-microservices' | 'pubsub-datahub' | 'datahub-analytics' | 'pubsub-etl'
 }
 
 export function DataArchitectureContent() {
@@ -113,15 +113,20 @@ export function DataArchitectureContent() {
       { componentId: 'arrow-pubsub-microservices', delay: 1000, type: 'arrow' },
     ],
     'path-a': [
-      // Path 2 (path-a): Pub/Sub → Data Hub (Buy) → Analytics
+      // Path 2 (path-a): Events → Pub/Sub → (Buy: Data Hub → Analytics) & (Build: ETL)
+      { componentId: 'events_left', delay: 0, type: 'component' },
       { componentId: 'pub_sub', delay: 0, type: 'component' },
+      { componentId: 'arrow-events-pubsub', delay: 1000, type: 'arrow' },
+      // Fork at Pub/Sub: Buy path (to Data Hub) and Build path (to ETL)
       { componentId: 'arrow-pubsub-datahub', delay: 2000, type: 'arrow' },
-      { componentId: 'data_hub', delay: 4000, type: 'component' },
-      { componentId: 'ods', delay: 5000, type: 'component' },
-      { componentId: 'sds', delay: 5500, type: 'component' },
-      { componentId: 'ads', delay: 6000, type: 'component' },
-      { componentId: 'arrow-datahub-analytics', delay: 8000, type: 'arrow' },
-      { componentId: 'analytics', delay: 10000, type: 'component' },
+      { componentId: 'arrow-pubsub-etl', delay: 2000, type: 'arrow' },
+      { componentId: 'data_hub', delay: 3000, type: 'component' },
+      { componentId: 'etl', delay: 3000, type: 'component' },
+      { componentId: 'ods', delay: 4000, type: 'component' },
+      { componentId: 'sds', delay: 4500, type: 'component' },
+      { componentId: 'ads', delay: 5000, type: 'component' },
+      { componentId: 'arrow-datahub-analytics', delay: 6000, type: 'arrow' },
+      { componentId: 'analytics', delay: 8000, type: 'component' },
     ],
     'path-b': [
       // Path 3 (path-b): File → ETL → Data Warehouse → Analytics (Core & DBs are static)
@@ -141,8 +146,8 @@ export function DataArchitectureContent() {
     setPlaybackState('playing')
     setCurrentStep(0)
 
-    // Trigger spawning restart for Path 1
-    if (selectedPath === 'path-c') {
+    // Trigger spawning restart for Path 1 and Path 2
+    if (selectedPath === 'path-c' || selectedPath === 'path-a') {
       setSpawningTrigger(prev => prev + 1)
     }
 
@@ -179,8 +184,8 @@ export function DataArchitectureContent() {
     // Set new path
     setSelectedPath(path)
 
-    // Trigger spawning restart for Path 1
-    if (path === 'path-c') {
+    // Trigger spawning restart for Path 1 and Path 2
+    if (path === 'path-c' || path === 'path-a') {
       setSpawningTrigger(prev => prev + 1)
     }
 
