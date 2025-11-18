@@ -521,6 +521,10 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
         context: Optional[str] = None
     ) -> Dict[str, Any]:
         """Query the Temenos RAG API via adapter."""
+        if self.rag_adapter is None:
+            raise RuntimeError(
+                "RAG adapter is not initialized. Please check RAG_JWT_TOKEN and RAG_API_URL environment variables."
+            )
         return await self.rag_adapter.query(
             question=question,
             region=region,
