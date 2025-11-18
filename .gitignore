@@ -224,3 +224,4 @@ backup/
 # Test files
 test-results/
 playwright-report/
+.claude/settings.local.json
