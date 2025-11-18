@@ -46,11 +46,16 @@ jobs:
             # Copy to dist (where files are deployed from)
             cp frontend/staticwebapp.config.json frontend/dist/staticwebapp.config.json
             echo "✓ Copied staticwebapp.config.json to dist"
-            # Also copy to repository root (fallback location)
+            # Also copy to repository root (Azure Static Web Apps may look here)
             cp frontend/staticwebapp.config.json staticwebapp.config.json
             echo "✓ Copied staticwebapp.config.json to repository root"
+            # Verify both copies exist
+            echo "Verifying copies..."
+            ls -la frontend/dist/staticwebapp.config.json || echo "✗ Not in dist"
+            ls -la staticwebapp.config.json || echo "✗ Not in root"
           else
-            echo "⚠ staticwebapp.config.json not found"
+            echo "⚠ staticwebapp.config.json not found in frontend/"
+            exit 1
           fi
       
       - name: Verify build output
