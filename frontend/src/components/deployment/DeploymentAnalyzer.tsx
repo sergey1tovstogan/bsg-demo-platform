@@ -729,112 +729,198 @@ function ServiceAnalysis({
     )
   }
 
+  const [scrollToId, setScrollToId] = useState<string | null>(null)
+
+  // Scroll to component when scrollToId changes
+  useEffect(() => {
+    if (scrollToId) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        const element = document.getElementById(`component-${scrollToId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          // Highlight briefly
+          element.classList.add('ring-2', 'ring-purple-500', 'ring-offset-2')
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-purple-500', 'ring-offset-2')
+          }, 2000)
+        }
+        setScrollToId(null)
+      }, 100)
+    }
+  }, [scrollToId])
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Deployment Analysis</h2>
-          <p className="text-gray-600">
-            {services.length} Azure service{services.length !== 1 ? 's' : ''} found • {identifiedComponents.length} Temenos component{identifiedComponents.length !== 1 ? 's' : ''} identified
-          </p>
+    <div className="flex gap-6">
+      {/* Main Content Area */}
+      <div className="flex-1 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Deployment Analysis</h2>
+            <p className="text-gray-600">
+              {services.length} Azure service{services.length !== 1 ? 's' : ''} found • {identifiedComponents.length} Temenos component{identifiedComponents.length !== 1 ? 's' : ''} identified
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+            <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
-          <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
-          </button>
-        </div>
-      </div>
 
-      {loading && (
-        <div className="card text-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-700 font-medium mb-2">Analyzing Azure services and identifying Temenos components...</p>
-          {analysisProgress && (
-            <div className="mt-4">
-              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                <div 
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                  style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
-                ></div>
+        {loading && (
+          <div className="card text-center py-12">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-700 font-medium mb-2">Analyzing Azure services and identifying Temenos components...</p>
+            {analysisProgress && (
+              <div className="mt-4">
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                  <div 
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-gray-600">
+                  {analysisProgress.message} ({analysisProgress.current}/{analysisProgress.total})
+                </p>
               </div>
-              <p className="text-sm text-gray-600">
-                {analysisProgress.message} ({analysisProgress.current}/{analysisProgress.total})
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card bg-green-50 border-green-200">
-          <div className="flex items-center space-x-3">
-            <CheckCircle2 className="w-8 h-8 text-green-600" />
-            <div>
-              <p className="text-sm text-green-700 font-medium">Temenos Components</p>
-              <p className="text-2xl font-bold text-green-900">{identifiedComponents.length}</p>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="card bg-green-50 border-green-200">
+            <div className="flex items-center space-x-3">
+              <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <div>
+                <p className="text-sm text-green-700 font-medium">Temenos Components</p>
+                <p className="text-2xl font-bold text-green-900">{identifiedComponents.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card bg-blue-50 border-blue-200">
+            <div className="flex items-center space-x-3">
+              <Cloud className="w-8 h-8 text-blue-600" />
+              <div>
+                <p className="text-sm text-blue-700 font-medium">Azure Services</p>
+                <p className="text-2xl font-bold text-blue-900">{services.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card bg-gray-50 border-gray-200">
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="w-8 h-8 text-gray-600" />
+              <div>
+                <p className="text-sm text-gray-700 font-medium">Unclassified Services</p>
+                <p className="text-2xl font-bold text-gray-900">{unidentifiedServices.length}</p>
+              </div>
             </div>
           </div>
         </div>
-        <div className="card bg-blue-50 border-blue-200">
-          <div className="flex items-center space-x-3">
-            <Cloud className="w-8 h-8 text-blue-600" />
-            <div>
-              <p className="text-sm text-blue-700 font-medium">Azure Services</p>
-              <p className="text-2xl font-bold text-blue-900">{services.length}</p>
+
+        {/* Temenos Components */}
+        {identifiedComponents.length > 0 && (
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
+              <CheckCircle2 className="w-6 h-6 text-green-600" />
+              <span>Temenos Components</span>
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {identifiedComponents.map((result, index) => (
+                <div id={`component-${result.service.id || index}`} key={result.service.id || index}>
+                  <ComponentCard
+                    result={result}
+                    expanded={expandedService === result.service.id}
+                    onToggle={() => setExpandedService(
+                      expandedService === result.service.id ? null : result.service.id || null
+                    )}
+                  />
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-        <div className="card bg-gray-50 border-gray-200">
-          <div className="flex items-center space-x-3">
-            <AlertCircle className="w-8 h-8 text-gray-600" />
-            <div>
-              <p className="text-sm text-gray-700 font-medium">Unclassified Services</p>
-              <p className="text-2xl font-bold text-gray-900">{unidentifiedServices.length}</p>
+        )}
+
+        {/* Other Services */}
+        {unidentifiedServices.length > 0 && (
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Other Azure Services</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {unidentifiedServices.map((result, index) => (
+                <div key={result.service.id || index} className="card">
+                  <h4 className="font-semibold text-gray-900">{result.service.name}</h4>
+                  <p className="text-sm text-gray-500 mt-1">{result.service.type}</p>
+                  <p className="text-xs text-gray-400 mt-1">{result.service.location}</p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Temenos Components */}
+      {/* Right Sidebar - Quick Overview */}
       {identifiedComponents.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-            <CheckCircle2 className="w-6 h-6 text-green-600" />
-            <span>Temenos Components</span>
-          </h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {identifiedComponents.map((result, index) => (
-              <ComponentCard
-                key={result.service.id || index}
-                result={result}
-                expanded={expandedService === result.service.id}
-                onToggle={() => setExpandedService(
-                  expandedService === result.service.id ? null : result.service.id || null
-                )}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Other Services */}
-      {unidentifiedServices.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Other Azure Services</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {unidentifiedServices.map((result, index) => (
-              <div key={result.service.id || index} className="card">
-                <h4 className="font-semibold text-gray-900">{result.service.name}</h4>
-                <p className="text-sm text-gray-500 mt-1">{result.service.type}</p>
-                <p className="text-xs text-gray-400 mt-1">{result.service.location}</p>
+        <div className="w-80 flex-shrink-0">
+          <div className="sticky top-6">
+            <div className="card bg-gray-50 border-gray-200">
+              <div className="flex items-center space-x-2 mb-4 pb-3 border-b border-gray-300">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <h3 className="font-bold text-gray-900">Quick Overview</h3>
+                <span className="ml-auto px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                  {identifiedComponents.length}
+                </span>
               </div>
-            ))}
+              <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
+                {identifiedComponents.map((result, index) => {
+                  const componentId = result.service.id || `component-${index}`
+                  const isExpanded = expandedService === result.service.id
+                  return (
+                    <button
+                      key={componentId}
+                      onClick={() => {
+                        setScrollToId(componentId)
+                        setExpandedService(
+                          isExpanded ? null : result.service.id || null
+                        )
+                      }}
+                      className={`w-full text-left p-3 rounded-lg transition-all ${
+                        isExpanded
+                          ? 'bg-purple-100 border-2 border-purple-500'
+                          : 'bg-white border border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-2">
+                        <Cloud className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                          isExpanded ? 'text-purple-600' : 'text-gray-500'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold text-sm truncate ${
+                            isExpanded ? 'text-purple-900' : 'text-gray-900'
+                          }`}>
+                            {result.componentInfo?.componentName || 'Unknown Component'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1 truncate">
+                            {result.componentInfo?.componentType || result.service.type}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1 truncate">
+                            {result.service.resourceGroup}
+                          </p>
+                        </div>
+                        {isExpanded && (
+                          <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}
