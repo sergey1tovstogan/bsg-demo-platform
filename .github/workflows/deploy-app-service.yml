@@ -98,14 +98,15 @@ jobs:
           find . -type f -path "*\\*" -delete 2>/dev/null || true
           find . -type d -path "*\\*" -exec rm -rf {} + 2>/dev/null || true
       
-      - name: Create startup script
+      - name: Verify requirements.txt exists
         run: |
-          cat > backend/startup.sh << 'EOF'
-          #!/bin/bash
-          cd /home/site/wwwroot
-          gunicorn app.main:app --bind 0.0.0.0:8000 --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile -
-          EOF
-          chmod +x backend/startup.sh
+          if [ ! -f "backend/requirements.txt" ]; then
+            echo "❌ ERROR: requirements.txt not found in backend directory"
+            exit 1
+          fi
+          echo "✓ requirements.txt found"
+          echo "First 20 lines of requirements.txt:"
+          head -20 backend/requirements.txt
       
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
