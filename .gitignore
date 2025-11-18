@@ -94,6 +94,8 @@ venv.bak/
 *.sqlite
 *.sqlite3
 *.db-journal
+postgres_data/
+backend/postgres_data/
 
 # Alembic
 alembic/versions/*.pyc
@@ -115,6 +117,7 @@ node_modules/
 /dist
 .next/
 out/
+.vite/
 
 # Misc
 .DS_Store
@@ -170,6 +173,10 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Keep .claude and .cursor directories
+!.claude/
+!.cursor/
 
 # Logs
 logs
