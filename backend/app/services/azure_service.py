@@ -192,9 +192,11 @@ class AzureService:
             if "credential" in error_msg.lower() or "authentication" in error_msg.lower() or "unauthorized" in error_msg.lower():
                 raise RuntimeError(
                     "Azure authentication failed. Please ensure:\n"
-                    "1. Azure CLI is installed and logged in (run: az login)\n"
-                    "2. Verify subscription ID is correct\n"
-                    "3. Run: az account set --subscription <subscription-id>"
+                    "1. Azure CLI is installed: https://aka.ms/installazurecliwindows\n"
+                    "2. For interactive login: Run 'az login'\n"
+                    "3. For non-interactive environments: Run 'az login --use-device-code'\n"
+                    "4. Verify subscription ID is correct\n"
+                    "5. Run: az account set --subscription <subscription-id>"
                 )
             elif "permission" in error_msg.lower() or "authorization" in error_msg.lower() or "forbidden" in error_msg.lower():
                 raise RuntimeError(
