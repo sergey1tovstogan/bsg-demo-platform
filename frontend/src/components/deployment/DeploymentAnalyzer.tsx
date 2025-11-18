@@ -906,9 +906,9 @@ function ComponentCard({
                     undefined,
                     true // forceRefresh
                   )
-                  if (response.data && response.data.length > 0 && response.data[0].componentInfo) {
+                  if (response.data?.data && Array.isArray(response.data.data) && response.data.data.length > 0 && response.data.data[0].componentInfo) {
                     // Update the component info
-                    result.componentInfo = response.data[0].componentInfo
+                    result.componentInfo = response.data.data[0].componentInfo
                     // Trigger re-render by updating parent state
                     window.location.reload() // Simple refresh for now
                   }
