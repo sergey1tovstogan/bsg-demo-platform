@@ -40,11 +40,15 @@ jobs:
           VITE_API_URL: https://bsg-demo-platform-app.azurewebsites.net/api/v1
           NODE_ENV: production
       
-      - name: Copy Static Web App config to dist
+      - name: Copy Static Web App config
         run: |
           if [ -f "frontend/staticwebapp.config.json" ]; then
+            # Copy to dist (where files are deployed from)
             cp frontend/staticwebapp.config.json frontend/dist/staticwebapp.config.json
             echo "✓ Copied staticwebapp.config.json to dist"
+            # Also copy to repository root (fallback location)
+            cp frontend/staticwebapp.config.json staticwebapp.config.json
+            echo "✓ Copied staticwebapp.config.json to repository root"
           else
             echo "⚠ staticwebapp.config.json not found"
           fi
@@ -52,16 +56,28 @@ jobs:
       - name: Verify build output
         run: |
           echo "Checking build output..."
+          echo "=== Contents of frontend/dist ==="
           ls -la frontend/dist/ || echo "Build output not found"
+          echo ""
+          echo "=== Checking for index.html ==="
           if [ -f "frontend/dist/index.html" ]; then
             echo "✓ index.html found"
+            head -20 frontend/dist/index.html
           else
             echo "✗ index.html not found - build may have failed"
             exit 1
           fi
+          echo ""
+          echo "=== Checking for config file ==="
           if [ -f "frontend/dist/staticwebapp.config.json" ]; then
             echo "✓ staticwebapp.config.json found in dist"
+            cat frontend/dist/staticwebapp.config.json
+          else
+            echo "✗ staticwebapp.config.json not found in dist"
           fi
+          echo ""
+          echo "=== Checking for assets ==="
+          ls -la frontend/dist/assets/ || echo "No assets folder"
       
       - name: Deploy to Azure Static Web Apps
         if: env.AZURE_STATIC_WEB_APPS_API_TOKEN != ''
