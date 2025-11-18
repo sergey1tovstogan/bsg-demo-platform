@@ -123,14 +123,18 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         .label {
             position: absolute;
             top: 20px;
-            right: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(255, 255, 255, 0.95);
-            padding: 10px 20px;
+            padding: 12px 24px;
             border-radius: 5px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             font-weight: bold;
+            font-size: 16px;
             color: #283054;
             z-index: 1000;
+            text-align: center;
+            line-height: 1.4;
         }
         
         .tooltip {
@@ -205,9 +209,9 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         }
         
         .temenos-box {
-            fill: #1e3a8a;
-            stroke: #000;
-            stroke-width: 2;
+            fill: #d3d3d3;
+            stroke: #3B82F6;
+            stroke-width: 3;
         }
         
         .purple-box {
@@ -258,7 +262,10 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
 </head>
 <body>
     <div class="container">
-        <div class="label">Here is the Temenos Security Architecture</div>
+        <div class="label">
+            Here is the Temenos Security Architecture<br>
+            <span style="font-size: 14px; font-weight: normal;">click on elements to get more details</span>
+        </div>
         <div id="tooltip" class="tooltip">
             <div class="tooltip-title" id="tooltip-title"></div>
             <div class="tooltip-description" id="tooltip-description"></div>
@@ -268,63 +275,64 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             <rect id="tls-entry-points" x="50" y="200" width="80" height="400" class="entry-bar clickable"/>
             <text x="90" y="230" text-anchor="middle" class="text-white title-text">TLS 1.2</text>
             
-            <!-- User Interface (Grey) -->
-            <rect x="55" y="270" width="70" height="50" class="entry-item-grey"/>
-            <text x="90" y="290" text-anchor="middle" class="text-white">User</text>
-            <text x="90" y="310" text-anchor="middle" class="text-white">Interface</text>
+            <!-- Temenos Software (Central Light Grey Block with Blue Border) - Moved 40px right -->
+            <rect x="240" y="150" width="500" height="500" class="temenos-box" rx="5"/>
+            <text x="490" y="180" text-anchor="middle" class="text-black title-text">Temenos software</text>
             
-            <!-- APIs (Grey) -->
-            <rect x="55" y="340" width="70" height="40" class="entry-item-grey"/>
-            <text x="90" y="365" text-anchor="middle" class="text-white">APIs</text>
+            <!-- User Interface (Grey) - Moved between TLS 1.2 and Temenos Software, right border moved 50px right -->
+            <rect x="135" y="270" width="120" height="50" class="entry-item-grey"/>
+            <text x="195" y="290" text-anchor="middle" class="text-white">User</text>
+            <text x="195" y="310" text-anchor="middle" class="text-white">Interface</text>
             
-            <!-- Events (Grey) -->
-            <rect x="55" y="400" width="70" height="40" class="entry-item-grey"/>
-            <text x="90" y="425" text-anchor="middle" class="text-white">Events</text>
+            <!-- APIs (Grey) - Moved between TLS 1.2 and Temenos Software, right border moved 50px right -->
+            <rect x="135" y="340" width="120" height="40" class="entry-item-grey"/>
+            <text x="195" y="365" text-anchor="middle" class="text-white">APIs</text>
             
-            <!-- Temenos Software (Central Dark Blue Block) -->
-            <rect x="200" y="150" width="500" height="500" class="temenos-box" rx="5"/>
-            <text x="450" y="180" text-anchor="middle" class="text-white title-text">Temenos software</text>
+            <!-- Events (Grey) - Moved between TLS 1.2 and Temenos Software, right border moved 50px right -->
+            <rect x="135" y="400" width="120" height="40" class="entry-item-grey"/>
+            <text x="195" y="425" text-anchor="middle" class="text-white">Events</text>
             
-            <!-- Authentication Box -->
-            <rect id="authentication-box" x="250" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="340" y="245" text-anchor="middle" class="text-white title-text">Authentication</text>
-            <text x="340" y="270" text-anchor="middle" class="text-white small-text">oAuth 2.0</text>
-            <text x="340" y="290" text-anchor="middle" class="text-white small-text">OpenID Connect</text>
-            <text x="340" y="310" text-anchor="middle" class="text-white small-text">JWT, SAML</text>
+            <!-- Authentication Box - Moved 40px right -->
+            <rect id="authentication-box" x="290" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="380" y="245" text-anchor="middle" class="text-white title-text">Authentication</text>
+            <text x="380" y="270" text-anchor="middle" class="text-white small-text">oAuth 2.0</text>
+            <text x="380" y="290" text-anchor="middle" class="text-white small-text">OpenID Connect</text>
+            <text x="380" y="310" text-anchor="middle" class="text-white small-text">JWT, SAML</text>
             
-            <!-- Authorization Box -->
-            <rect id="authorization-box" x="470" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="560" y="245" text-anchor="middle" class="text-white title-text">Authorization</text>
-            <text x="560" y="270" text-anchor="middle" class="text-white small-text">RBAC, ABAC</text>
+            <!-- Authorization Box - Moved 40px right -->
+            <rect id="authorization-box" x="510" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="600" y="245" text-anchor="middle" class="text-white title-text">Authorization</text>
+            <text x="600" y="270" text-anchor="middle" class="text-white small-text">RBAC, ABAC</text>
             
-            <!-- Audit Box -->
-            <rect id="audit-box" x="350" y="360" width="100" height="50" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="400" y="385" text-anchor="middle" class="text-white">Audit</text>
+            <!-- Audit Box - Moved 40px right -->
+            <rect id="audit-box" x="390" y="360" width="100" height="50" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="440" y="385" text-anchor="middle" class="text-white">Audit</text>
             
-            <!-- DB Box - Green Cylinder outside Temenos Software, aligned with Data Encryption -->
+            <!-- DB Box - Green Cylinder outside Temenos Software - Moved 40px right -->
             <!-- Cylinder shape: ellipse on top, rectangle in middle, ellipse on bottom -->
-            <ellipse cx="310" cy="580" rx="60" ry="15" class="db-cylinder"/>
-            <rect x="250" y="580" width="120" height="100" class="db-cylinder"/>
-            <ellipse cx="310" cy="680" rx="60" ry="15" class="db-cylinder"/>
-            <text x="310" y="625" text-anchor="middle" class="text-white title-text">DB</text>
+            <ellipse cx="350" cy="580" rx="60" ry="15" class="db-cylinder"/>
+            <rect x="290" y="580" width="120" height="100" class="db-cylinder"/>
+            <ellipse cx="350" cy="680" rx="60" ry="15" class="db-cylinder"/>
+            <text x="350" y="625" text-anchor="middle" class="text-white title-text">DB</text>
+            <text x="420" y="625" text-anchor="start" class="text-black small-text" style="font-weight: bold;">Transparent Data Encryption TDE</text>
             
-            <!-- Temenos Vault Box -->
-            <rect id="temenos-vault" x="400" y="450" width="150" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="475" y="485" text-anchor="middle" class="text-white title-text">Temenos</text>
-            <text x="475" y="505" text-anchor="middle" class="text-white title-text">Vault</text>
+            <!-- Temenos Vault Box - Positioned in lower right corner of Temenos Software -->
+            <rect id="temenos-vault" x="590" y="570" width="150" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="665" y="595" text-anchor="middle" class="text-white title-text">Temenos</text>
+            <text x="665" y="615" text-anchor="middle" class="text-white title-text">Vault</text>
             
-            <!-- Externalized authorization Box -->
-            <rect id="externalized-auth" x="590" y="450" width="80" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="630" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
-            <text x="630" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
-            <text x="630" y="520" text-anchor="middle" class="text-white small-text">(XACML)</text>
+            <!-- Externalized authorization Box - Moved 40px right -->
+            <rect id="externalized-auth" x="630" y="450" width="80" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="670" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
+            <text x="670" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
+            <text x="670" y="520" text-anchor="middle" class="text-white small-text">(XACML)</text>
             
-            <!-- Bank's IAM (Purple Box) -->
-            <rect id="bank-iam" x="800" y="220" width="200" height="120" class="purple-box clickable" rx="5"/>
-            <text x="900" y="250" text-anchor="middle" class="text-white title-text">Bank's identity</text>
-            <text x="900" y="275" text-anchor="middle" class="text-white title-text">access</text>
-            <text x="900" y="300" text-anchor="middle" class="text-white title-text">management</text>
-            <text x="900" y="325" text-anchor="middle" class="text-white small-text">(IAM)</text>
+            <!-- Bank's IAM (Purple Box) - Aligned with upper border of Temenos Software -->
+            <rect id="bank-iam" x="800" y="150" width="200" height="120" class="purple-box clickable" rx="5"/>
+            <text x="900" y="180" text-anchor="middle" class="text-white title-text">Bank's identity</text>
+            <text x="900" y="205" text-anchor="middle" class="text-white title-text">access</text>
+            <text x="900" y="230" text-anchor="middle" class="text-white title-text">management</text>
+            <text x="900" y="255" text-anchor="middle" class="text-white small-text">(IAM)</text>
             
             <!-- Secrets management (Purple Box) -->
             <rect id="secrets-management" x="1050" y="220" width="180" height="100" class="purple-box clickable" rx="5"/>
@@ -341,64 +349,49 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             <text x="1140" y="530" text-anchor="middle" class="text-white title-text">Certificate</text>
             <text x="1140" y="555" text-anchor="middle" class="text-white title-text">Management</text>
             
-            <!-- Data Encryption (Purple Box) - Aligned horizontally with DB (same y position) -->
-            <rect id="data-encryption" x="800" y="580" width="200" height="80" class="purple-box clickable" rx="5"/>
-            <text x="900" y="610" text-anchor="middle" class="text-white title-text">Data Encryption</text>
-            <text x="900" y="635" text-anchor="middle" class="text-white small-text">(Data-at-rest,</text>
-            <text x="900" y="650" text-anchor="middle" class="text-white small-text">in transit)</text>
+            <!-- Data Encryption (Purple Box) - Centered horizontally with DB, 30px below DB - Moved 40px right -->
+            <rect id="data-encryption" x="250" y="710" width="200" height="80" class="purple-box clickable" rx="5"/>
+            <text x="350" y="740" text-anchor="middle" class="text-white title-text">Data Encryption</text>
+            <text x="350" y="765" text-anchor="middle" class="text-white small-text">(Data-at-rest,</text>
+            <text x="350" y="780" text-anchor="middle" class="text-white small-text">in transit)</text>
             
             <!-- Lines - All Red -->
             
-            <!-- Entry Points to Temenos -->
-            <line x1="130" y1="295" x2="200" y2="280" class="line-red"/>
-            <line x1="130" y1="360" x2="200" y2="350" class="line-red"/>
-            <line x1="130" y1="420" x2="200" y2="400" class="line-red"/>
+            <!-- REMOVED: Entry Points to Temenos lines (User Interface, APIs, Events) -->
             
-            <!-- Authentication to Authorization (role) -->
-            <line x1="430" y1="280" x2="470" y2="280" class="line-red"/>
-            <text x="450" y="275" text-anchor="middle" class="text-black small-text">role</text>
+            <!-- Authentication to Authorization (role) - Updated coordinates -->
+            <line x1="470" y1="280" x2="510" y2="280" class="line-red"/>
+            <text x="490" y="275" text-anchor="middle" class="text-black small-text">role</text>
             
             <!-- REMOVED: Authentication to Audit line (as requested) -->
             
-            <!-- Bank's IAM to Authentication -->
-            <line x1="800" y1="280" x2="430" y2="280" class="line-red"/>
+            <!-- Bank's IAM to Temenos Software right border -->
+            <line x1="800" y1="210" x2="740" y2="210" class="line-red"/>
             
-            <!-- Authorization to Externalized authorization -->
-            <line x1="650" y1="280" x2="630" y2="490" class="line-red"/>
+            <!-- Authorization to Externalized authorization - Updated coordinates -->
+            <line x1="690" y1="280" x2="670" y2="490" class="line-red"/>
             
-            <!-- DB to Temenos Vault (dotted line - Transparent data encryption) -->
-            <line x1="310" y1="580" x2="475" y2="530" class="line-dotted"/>
-            <text x="390" y="555" text-anchor="middle" class="text-black small-text">Transparent data encryption</text>
+            <!-- REMOVED: All lines linked to DB -->
             
-            <!-- Events to DB -->
-            <line x1="200" y1="400" x2="310" y2="630" class="line-red"/>
+            <!-- REMOVED: All lines linked to Data Encryption -->
             
-            <!-- Authorization to DB -->
-            <line x1="560" y1="340" x2="310" y2="630" class="line-red"/>
+            <!-- Externalized authorization to Secrets management - Updated coordinates -->
+            <line x1="670" y1="450" x2="1050" y2="270" class="line-red"/>
             
-            <!-- DB to Data Encryption (horizontal alignment) -->
-            <line x1="370" y1="630" x2="800" y2="620" class="line-red"/>
+            <!-- Externalized authorization to Key management - Updated coordinates -->
+            <line x1="670" y1="490" x2="1050" y2="410" class="line-red"/>
             
-            <!-- Events to Data Encryption -->
-            <line x1="200" y1="400" x2="800" y2="660" class="line-red"/>
+            <!-- Externalized authorization to Certificate Management - Updated coordinates -->
+            <line x1="670" y1="530" x2="1050" y2="550" class="line-red"/>
             
-            <!-- Externalized authorization to Secrets management -->
-            <line x1="630" y1="450" x2="1050" y2="270" class="line-red"/>
+            <!-- Temenos Vault to Secrets management - Updated coordinates (Temenos Vault in lower right corner) -->
+            <line x1="665" y1="570" x2="1050" y2="270" class="line-red"/>
             
-            <!-- Externalized authorization to Key management -->
-            <line x1="630" y1="490" x2="1050" y2="410" class="line-red"/>
+            <!-- Temenos Vault to Key management - Updated coordinates -->
+            <line x1="665" y1="610" x2="1050" y2="410" class="line-red"/>
             
-            <!-- Externalized authorization to Certificate Management -->
-            <line x1="630" y1="530" x2="1050" y2="550" class="line-red"/>
-            
-            <!-- Temenos Vault to Secrets management -->
-            <line x1="475" y1="450" x2="1050" y2="270" class="line-red"/>
-            
-            <!-- Temenos Vault to Key management -->
-            <line x1="475" y1="490" x2="1050" y2="410" class="line-red"/>
-            
-            <!-- Temenos Vault to Certificate Management -->
-            <line x1="475" y1="530" x2="1050" y2="550" class="line-red"/>
+            <!-- Temenos Vault to Certificate Management - Updated coordinates -->
+            <line x1="665" y1="650" x2="1050" y2="550" class="line-red"/>
         </svg>
         <button class="tooltip-button" onclick="alert('Move to Detailed Explanation')">Move to Detailed Explanation</button>
     </div>
