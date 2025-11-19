@@ -43,16 +43,18 @@ jobs:
       - name: Copy Static Web App config
         run: |
           if [ -f "frontend/staticwebapp.config.json" ]; then
-            # Copy to dist (where files are deployed from)
+            # Copy to dist (where files are deployed from) - this is critical
             cp frontend/staticwebapp.config.json frontend/dist/staticwebapp.config.json
             echo "✓ Copied staticwebapp.config.json to dist"
-            # Also copy to repository root (Azure Static Web Apps may look here)
-            cp frontend/staticwebapp.config.json staticwebapp.config.json
-            echo "✓ Copied staticwebapp.config.json to repository root"
-            # Verify both copies exist
-            echo "Verifying copies..."
-            ls -la frontend/dist/staticwebapp.config.json || echo "✗ Not in dist"
-            ls -la staticwebapp.config.json || echo "✗ Not in root"
+            # Verify the copy exists
+            if [ -f "frontend/dist/staticwebapp.config.json" ]; then
+              echo "✓ Verified staticwebapp.config.json exists in dist"
+              echo "Config file contents:"
+              cat frontend/dist/staticwebapp.config.json
+            else
+              echo "✗ ERROR: staticwebapp.config.json not found in dist after copy!"
+              exit 1
+            fi
           else
             echo "⚠ staticwebapp.config.json not found in frontend/"
             exit 1
@@ -67,11 +69,11 @@ jobs:
           echo "=== Checking for index.html ==="
           if [ -f "frontend/dist/index.html" ]; then
             echo "✓ index.html found"
-            echo "=== Full index.html content ==="
-            cat frontend/dist/index.html
+            echo "=== First 30 lines of index.html ==="
+            head -30 frontend/dist/index.html
             echo ""
-            echo "=== Checking script tags ==="
-            grep -i "script" frontend/dist/index.html || echo "No script tags found"
+            echo "=== Checking script and link tags ==="
+            grep -E "(script|link)" frontend/dist/index.html || echo "No script/link tags found"
           else
             echo "✗ index.html not found - build may have failed"
             exit 1
@@ -80,21 +82,34 @@ jobs:
           echo "=== Checking for config file ==="
           if [ -f "frontend/dist/staticwebapp.config.json" ]; then
             echo "✓ staticwebapp.config.json found in dist"
+            echo "Config contents:"
             cat frontend/dist/staticwebapp.config.json
           else
-            echo "✗ staticwebapp.config.json not found in dist"
+            echo "✗ staticwebapp.config.json not found in dist - will fail deployment"
+            exit 1
           fi
           echo ""
           echo "=== Checking for assets ==="
           if [ -d "frontend/dist/assets" ]; then
             echo "✓ Assets folder found"
-            ls -la frontend/dist/assets/ | head -10
-            echo "=== Checking for JS files ==="
-            find frontend/dist/assets -name "*.js" | head -5
+            echo "Asset files:"
+            ls -lh frontend/dist/assets/ | head -10
+            echo ""
+            echo "=== Verifying JS and CSS files exist ==="
+            JS_COUNT=$(find frontend/dist/assets -name "*.js" | wc -l)
+            CSS_COUNT=$(find frontend/dist/assets -name "*.css" | wc -l)
+            echo "JavaScript files: $JS_COUNT"
+            echo "CSS files: $CSS_COUNT"
+            if [ "$JS_COUNT" -eq 0 ] || [ "$CSS_COUNT" -eq 0 ]; then
+              echo "⚠ WARNING: Missing asset files!"
+              exit 1
+            fi
           else
             echo "✗ No assets folder found - build may have failed"
             exit 1
           fi
+          echo ""
+          echo "=== Build verification complete ==="
       
       - name: Check deployment token
         run: |
@@ -123,9 +138,9 @@ jobs:
           app_location: "/frontend"
           output_location: "dist"
           skip_app_build: true
-          skip_deploy_on_missing_secrets: false
           api_location: ""
           api_build_command: ""
+        continue-on-error: false
       
       - name: Deployment Summary
         run: |
