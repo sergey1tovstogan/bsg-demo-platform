@@ -76,7 +76,15 @@ async def get_database() -> AsyncIOMotorDatabase:
     
     Returns:
         Database instance (adapter-specific, currently MongoDB)
+    
+    Raises:
+        HTTPException: If database connection fails
     """
-    adapter = _get_adapter()
-    await adapter.connect()
-    return await adapter.get_database()
+    try:
+        adapter = _get_adapter()
+        await adapter.connect()
+        return await adapter.get_database()
+    except Exception as e:
+        logger.error(f"Failed to get database connection: {e}")
+        # Re-raise to let FastAPI handle it with proper error response
+        raise

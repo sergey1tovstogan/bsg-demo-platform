@@ -58,6 +58,7 @@ DEBUG=True
 - `security_docs` - Security documentation
 - `presentations` - Presentation materials
 - `integration` - Integration component data
+- `data_architecture` - Data Architecture component-specific collection
 
 **Component/Collection Convention:**
 > **IMPORTANT**: Each component should have a matching MongoDB collection with the same name.

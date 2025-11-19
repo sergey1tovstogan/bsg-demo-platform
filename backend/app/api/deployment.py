@@ -646,13 +646,112 @@ async def query_rag(request: Dict[str, Any]):
             "status": "success",
             "data": result.get("data", result)
         }
-    except Exception as e:
-        logger.error(f"RAG query error: {e}", exc_info=True)
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except ValueError as e:
+        # Configuration errors
+        logger.error(f"RAG configuration error: {e}", exc_info=True)
+        error_detail = f"RAG configuration error: {str(e)}. Please check RAG_JWT_TOKEN and RAG_API_URL environment variables."
         raise HTTPException(
             status_code=500,
-            detail={
-                "status": "error",
-                "error": str(e)
+            detail=error_detail
+        )
+    except RuntimeError as e:
+        # Runtime errors (e.g., adapter not initialized)
+        logger.error(f"RAG runtime error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+    except Exception as e:
+        # Other exceptions - provide more context
+        error_msg = str(e)
+        error_type = type(e).__name__
+        logger.error(f"RAG query error ({error_type}): {e}", exc_info=True)
+        
+        # Provide more helpful error messages based on error type
+        if "timeout" in error_msg.lower() or "TimeoutException" in error_type:
+            error_msg = f"RAG API request timed out. The RAG service may be slow or unavailable. Original error: {error_msg}"
+        elif "401" in error_msg or "403" in error_msg or "unauthorized" in error_msg.lower():
+            error_msg = f"RAG API authentication failed. Please check RAG_JWT_TOKEN. Original error: {error_msg}"
+        elif "connection" in error_msg.lower() or "network" in error_msg.lower():
+            error_msg = f"Failed to connect to RAG API. Please check RAG_API_URL and network connectivity. Original error: {error_msg}"
+        elif "RAG_JWT_TOKEN" in error_msg or "RAG_API_URL" in error_msg:
+            error_msg = f"RAG configuration issue: {error_msg}. Please check environment variables."
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"[{error_type}] {error_msg}"
+        )
+
+
+@router.get("/temenos/jwt-info")
+async def get_jwt_info(settings: Settings = Depends(get_settings)):
+    """
+    Get JWT token information including expiration status.
+
+    Returns:
+        JWT token expiration information
+    """
+    import jwt
+    from datetime import datetime
+
+    try:
+        if not settings.RAG_JWT_TOKEN:
+            raise HTTPException(
+                status_code=500,
+                detail="RAG_JWT_TOKEN not configured"
+            )
+
+        # Decode JWT without verification to get payload
+        payload = jwt.decode(
+            settings.RAG_JWT_TOKEN,
+            options={"verify_signature": False}
+        )
+
+        exp_timestamp = payload.get("exp")
+        iat_timestamp = payload.get("iat")
+
+        if not exp_timestamp:
+            jwt_data = {
+                "configured": True,
+                "has_expiration": False,
+                "user_id": payload.get("user_id"),
+                "email": payload.get("email")
             }
+            return {"success": True, "data": jwt_data}
+
+        exp_date = datetime.fromtimestamp(exp_timestamp)
+        iat_date = datetime.fromtimestamp(iat_timestamp) if iat_timestamp else None
+        now = datetime.now()
+
+        is_expired = exp_date < now
+        days_remaining = (exp_date - now).days if not is_expired else 0
+
+        jwt_data = {
+            "configured": True,
+            "has_expiration": True,
+            "is_expired": is_expired,
+            "expires_at": exp_date.isoformat(),
+            "issued_at": iat_date.isoformat() if iat_date else None,
+            "days_remaining": days_remaining,
+            "user_id": payload.get("user_id"),
+            "email": payload.get("email"),
+            "issuer": payload.get("iss"),
+            "audience": payload.get("aud")
+        }
+
+        return {"success": True, "data": jwt_data}
+    except jwt.DecodeError:
+        raise HTTPException(
+            status_code=500,
+            detail="Invalid JWT token format"
+        )
+    except Exception as e:
+        logger.error(f"Error getting JWT info: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving JWT information: {str(e)}"
         )
 

@@ -5,6 +5,7 @@ Handles environment-based configuration with validation.
 Supports environment variables, .env files, and secret injection.
 """
 
+import os
 from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,13 +24,16 @@ class Settings(BaseSettings):
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     HOST: str = Field(default="0.0.0.0", description="API host")
-    PORT: int = Field(default=8000, description="API port")
+    PORT: int = Field(
+        default_factory=lambda: int(os.getenv("PORT", "8000")),
+        description="API port (Azure App Service sets PORT automatically)"
+    )
 
     # Database Settings
     DATABASE_TYPE: str = Field(default="mongodb", description="Database type: mongodb, postgresql, etc.")
     DATABASE_URL: str = Field(
-        default="mongodb://localhost:27017/bsg_demo",
-        description="Database connection string"
+        default="mongodb://bsg-demo-platform-mongodb:wC418aLYO4SazuhljALVOclZc48spvoHidWukgFDOoBCjO5Z4wjjKPziuJ44TAUyVlOs89HeL4a5ACDbdAs80w==@bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@bsg-demo-platform-mongodb@",
+        description="Database connection string (Azure Cosmos DB MongoDB API)"
     )
     DATABASE_NAME: str = Field(default="bsg_demo", description="Database name")
     DB_MAX_POOL_SIZE: int = Field(default=50, description="Database connection pool size")
