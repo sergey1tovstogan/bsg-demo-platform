@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Play, Loader2, AlertCircle, CheckCircle, Key, ChevronUp, ChevronDown } from 'lucide-react'
 import { Play, Loader2, AlertCircle, CheckCircle, Key, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react'
 import axios from 'axios'
 import { ApiKeyModal } from './ApiKeyModal'
@@ -450,8 +449,6 @@ export function IntegrationDemo() {
                 rawText={postBody}
               />
             </div>
-              style={{ caretColor: 'black' }}
-            />
           </div>
         </div>
 
@@ -722,8 +719,6 @@ export function IntegrationDemo() {
                   rawText={portfolioBody}
                 />
               </div>
-                style={{ caretColor: 'black' }}
-              />
             </div>
           </div>
         )}
