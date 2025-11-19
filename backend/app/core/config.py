@@ -144,19 +144,6 @@ class Settings(BaseSettings):
         return v
 
 
-    @field_validator("CORS_METHODS", mode="before")
-    def parse_cors_methods(cls, v):
-        """Parse CORS methods from string or list."""
-        if isinstance(v, str):
-            return [method.strip() for method in v.split(",")]
-        return v
-
-    @field_validator("CORS_HEADERS", mode="before")
-    def parse_cors_headers(cls, v):
-        """Parse CORS headers from string or list."""
-        if isinstance(v, str):
-            return [header.strip() for header in v.split(",")]
-        return v
 
     @field_validator("JWT_SECRET_KEY")
     def validate_jwt_secret(cls, v, info):
