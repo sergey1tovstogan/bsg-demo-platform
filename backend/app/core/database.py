@@ -1,123 +1,64 @@
 """
 Database Service
 
-Provides MongoDB connection pooling, session management,
-and common database utilities using Motor (async MongoDB driver).
+Provides database connection via adapter pattern.
+Uses adapter abstraction to support multiple database types.
 """
 
 from typing import Optional
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
-import logging
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from app.adapters.database import get_database_adapter
 from app.core.config import settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Global MongoDB client
-_client: Optional[AsyncIOMotorClient] = None
-_database: Optional[AsyncIOMotorDatabase] = None
+# Global database adapter instance
+_db_adapter = None
 
 
-def get_client() -> AsyncIOMotorClient:
-    """Get MongoDB client instance."""
-    global _client
-    if _client is None:
-        raise RuntimeError("Database client not initialized. Call init_db() first.")
-    return _client
+def _get_adapter():
+    """Get database adapter instance."""
+    global _db_adapter
+    if _db_adapter is None:
+        _db_adapter = get_database_adapter()
+    return _db_adapter
 
 
-def _get_database_sync() -> AsyncIOMotorDatabase:
-    """Get MongoDB database instance (synchronous helper)."""
-    global _database
-    if _database is None:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
-    return _database
-
-
-async def init_db() -> AsyncIOMotorDatabase:
+async def init_db():
     """
-    Initialize MongoDB connection and return database instance.
+    Initialize database connection via adapter.
+    
+    This function:
+    - Creates a MongoDB client with connection pooling
+    - Tests the connection with a ping command
+    - Returns the database instance for use in the application
     
     Returns:
-        AsyncIOMotorDatabase instance
+        Database instance (adapter-specific)
     """
-    global _client, _database
-    
-    if _database is not None:
-        return _database
-    
-    try:
-        logger.info(f"Connecting to MongoDB: {settings.DATABASE_URL.split('@')[-1] if '@' in settings.DATABASE_URL else 'localhost'}")
-        
-        # Create MongoDB client
-        _client = AsyncIOMotorClient(
-            settings.DATABASE_URL,
-            maxPoolSize=settings.DB_MAX_POOL_SIZE,
-            minPoolSize=settings.DB_MIN_POOL_SIZE,
-            serverSelectionTimeoutMS=settings.DB_CONNECT_TIMEOUT * 1000,
-            connectTimeoutMS=settings.DB_CONNECT_TIMEOUT * 1000,
-            socketTimeoutMS=settings.DB_CONNECT_TIMEOUT * 1000,
-        )
-        
-        # Test connection
-        await _client.admin.command('ping')
-        
-        # Get database
-        _database = _client[settings.DATABASE_NAME]
-        
-        logger.info(f"Connected to MongoDB database: {settings.DATABASE_NAME}")
-        return _database
-        
-    except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-        logger.error(f"Failed to connect to MongoDB: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error connecting to MongoDB: {e}")
-        raise
+    adapter = _get_adapter()
+    await adapter.connect()
+    return await adapter.get_database()
 
 
 async def close_db():
-    """Close MongoDB connection."""
-    global _client, _database
-    
-    if _client:
-        _client.close()
-        _client = None
-        _database = None
-        logger.info("MongoDB connection closed")
+    """Close database connection."""
+    adapter = _get_adapter()
+    await adapter.disconnect()
 
 
 async def get_db_health() -> dict:
     """
-    Get database health status.
+    Get database health status via adapter.
     
     Returns:
         Dictionary with health status information
     """
     try:
-        global _database, _client
-        if _database is None or _client is None:
-            return {
-                "status": "unhealthy",
-                "database": settings.DATABASE_NAME,
-                "error": "Database not initialized",
-                "connected": False
-            }
-        
-        # Ping the database
-        await _client.admin.command('ping')
-        
-        # Get server status
-        server_info = await _client.server_info()
-        
-        return {
-            "status": "healthy",
-            "database": settings.DATABASE_NAME,
-            "server_version": server_info.get("version", "unknown"),
-            "connected": True
-        }
+        adapter = _get_adapter()
+        return await adapter.health_check()
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         return {
@@ -134,9 +75,16 @@ async def get_database() -> AsyncIOMotorDatabase:
     FastAPI dependency to get database instance.
     
     Returns:
-        AsyncIOMotorDatabase instance
+        Database instance (adapter-specific, currently MongoDB)
+    
+    Raises:
+        HTTPException: If database connection fails
     """
-    global _database
-    if _database is None:
-        _database = await init_db()
-    return _database
+    try:
+        adapter = _get_adapter()
+        await adapter.connect()
+        return await adapter.get_database()
+    except Exception as e:
+        logger.error(f"Failed to get database connection: {e}")
+        # Re-raise to let FastAPI handle it with proper error response
+        raise

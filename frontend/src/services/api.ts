@@ -224,6 +224,112 @@ class ApiService {
     return response.data
   }
 
+  // Security Component - Get Document by Number
+  async getSecurityItem(documentNumber: number) {
+    const response = await this.client.get<ApiResponse<{
+      document_number: number
+      document_name: string
+      document: Record<string, any>
+    }>>(`/components/security/items/${documentNumber}`)
+    return response.data
+  }
+
+  // Security Component - Search Within Document
+  async searchWithinDocument(documentNumber: number, searchContext: string) {
+    const params = new URLSearchParams()
+    params.append('search_context', searchContext.trim())
+    
+    const response = await this.client.get<ApiResponse<{
+      document_number: number
+      document_name: string
+      document: Record<string, any>
+      search_context: string
+      matches_found: number
+    }>>(`/components/security/items/${documentNumber}/search?${params.toString()}`)
+    return response.data
+  }
+
+  // Security Component - Get All Presentations
+  async getSecurityPresentations() {
+    const response = await this.client.get<ApiResponse<{
+      presentations: Array<{
+        presentation_number: number
+        presentation_name: string
+      }>
+      total_results: number
+    }>>(`/components/security/presentations`)
+    return response.data
+  }
+
+  // Security Component - Get Presentation by Number
+  async getSecurityPresentation(presentationNumber: number) {
+    const response = await this.client.get<ApiResponse<{
+      presentation_number: number
+      presentation_name: string
+      presentation: Record<string, any>
+    }>>(`/components/security/presentations/${presentationNumber}`)
+    return response.data
+  }
+
+  // Security Component - Get Presentation by Name
+  async getSecurityPresentationByName(presentationName: string) {
+    const encodedName = encodeURIComponent(presentationName)
+    const response = await this.client.get<ApiResponse<{
+      presentation_number: number
+      presentation_name: string
+      presentation: Record<string, any>
+    }>>(`/components/security/presentations/by-name/${encodedName}`)
+    return response.data
+  }
+
+  // Security Component - Get Presentation HTML5 by Name
+  async getSecurityPresentationHTML5ByName(presentationName: string) {
+    const encodedName = encodeURIComponent(presentationName)
+    const token = localStorage.getItem('access_token')
+    const response = await fetch(`${API_BASE_URL}/components/security/presentations/by-name/${encodedName}/html5`, {
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      }
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const htmlContent = await response.text()
+    return { success: true, data: { html: htmlContent } }
+  }
+
+  // Security Component - Search Document by Name and Term (HTML5)
+  async searchDocumentByNameAndTermHTML5(documentName: string, searchTerm: string) {
+    const encodedName = encodeURIComponent(documentName)
+    const encodedTerm = encodeURIComponent(searchTerm)
+    const token = localStorage.getItem('access_token')
+    const response = await fetch(`${API_BASE_URL}/components/security/items/by-name/${encodedName}/search/${encodedTerm}/html5`, {
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      }
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const htmlContent = await response.text()
+    return { success: true, data: { html: htmlContent } }
+  }
+
+  // Security Component - Get Authentication HTML5 Page
+  async getAuthenticationHTML5Page() {
+    const token = localStorage.getItem('access_token')
+    const response = await fetch(`${API_BASE_URL}/components/security/items/authentication/html5`, {
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      }
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const htmlContent = await response.text()
+    return { success: true, data: { html: htmlContent } }
+  }
+
   // Auth APIs
   async login(email: string, password: string) {
     const response = await this.client.post<ApiResponse<{ access_token: string; refresh_token: string; token_type: string; expires_in: number }>>(
@@ -246,6 +352,178 @@ class ApiService {
     await this.client.post('/auth/logout')
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
+  }
+
+  // Deployment & Cloud APIs
+  async connectAzureSubscription(subscriptionId: string) {
+    try {
+      const response = await this.client.post<ApiResponse<{
+        status: string
+        message: string
+        subscriptionId: string
+      }>>('/deployment/azure/connect', { subscription_id: subscriptionId })
+      return response.data
+    } catch (error: any) {
+      // Re-throw with better error handling
+      if (error.response?.data?.detail) {
+        throw error.response.data.detail
+      }
+      throw error
+    }
+  }
+
+  async getAzureResourceGroups(subscriptionId: string) {
+    const response = await this.client.get<ApiResponse<{
+      data: Array<{
+        id: string
+        name: string
+        location: string
+        tags?: Record<string, string>
+      }>
+      count: number
+    }>>(`/deployment/azure/resource-groups?subscriptionId=${subscriptionId}`)
+    return response.data
+  }
+
+  async getAzureResources(subscriptionId: string, resourceGroupNames: string[]) {
+    const response = await this.client.post<ApiResponse<{
+      data: Array<{
+        id: string
+        name: string
+        type: string
+        location: string
+        resourceGroup: string
+        tags?: Record<string, string>
+        properties?: Record<string, any>
+      }>
+      count: number
+    }>>('/deployment/azure/resources', {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames
+    })
+    return response.data
+  }
+
+  async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[]) {
+    console.log('[API] getAKSNamespaces called with:', { subscriptionId, resourceGroupNames })
+    const url = '/deployment/aks/namespaces'
+    const payload = {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames
+    }
+    console.log('[API] POST', url, payload)
+    try {
+      const response = await this.client.post<ApiResponse<{
+        data: Array<{
+          cluster_name: string
+          resource_group: string
+          namespaces: string[]
+          error?: string
+        }>
+        count: number
+      }>>(url, payload)
+      console.log('[API] Response received:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('[API] Error in getAKSNamespaces:', error)
+      console.error('[API] Error response:', error.response?.data)
+      throw error
+    }
+  }
+
+  async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[], forceRefresh?: boolean) {
+    const endpoint = forceRefresh ? '/deployment/temenos/analyze/refresh' : '/deployment/temenos/analyze'
+    const response = await this.client.post<ApiResponse<{
+      data: Array<{
+        service: any
+        componentInfo?: {
+          componentName: string
+          componentType: string
+          architecturalOverview: string
+          functionalOverview: string
+          capabilities: string[]
+          relatedServices: string[]
+          relationships?: Array<{
+            targetComponent: string
+            relationshipType: string
+            description: string
+          }>
+        }
+        error?: string
+      }>
+      count: number
+      processed: number
+      analysisId: string
+    }>>(endpoint, {
+      services,
+      analysis_id: analysisId,
+      selected_namespaces: selectedNamespaces,
+      force_refresh: forceRefresh || false
+    })
+    return response.data
+  }
+
+  async getDeploymentContent() {
+    const response = await this.client.get<ApiResponse<any>>('/components/deployment/content')
+    return response.data
+  }
+
+  async queryRAG(params: {
+    question: string
+    region: string
+    RAGmodelId: string
+    context?: string
+  }) {
+    const response = await this.client.post<ApiResponse<{
+      answer: string
+      sources?: Array<{ title?: string; url?: string }>
+    }>>('/deployment/temenos/query', params)
+    return response.data
+  }
+
+  // Cache APIs
+  async getCachedContent(cacheKey: string) {
+    const response = await this.client.get<ApiResponse<{
+      cache_key: string
+      content: string
+      content_type: string
+      metadata?: Record<string, any>
+      updated_at: string
+    }>>(`/cache/${cacheKey}`)
+    return response.data
+  }
+
+  async updateCachedContent(cacheKey: string, content: string, contentType: string = 'text', metadata?: Record<string, any>) {
+    const response = await this.client.post<ApiResponse<{
+      cache_key: string
+      content: string
+      content_type: string
+      metadata?: Record<string, any>
+      updated_at: string
+    }>>(`/cache/${cacheKey}`, {
+      cache_key: cacheKey,
+      content,
+      content_type: contentType,
+      metadata
+    })
+    return response.data
+  }
+
+  // JWT Token Info API
+  async getJWTInfo() {
+    const response = await this.client.get<ApiResponse<{
+      configured: boolean
+      has_expiration: boolean
+      is_expired?: boolean
+      expires_at?: string
+      issued_at?: string
+      days_remaining?: number
+      user_id?: string
+      email?: string
+      issuer?: string
+      audience?: string
+    }>>('/deployment/temenos/jwt-info')
+    return response.data
   }
 }
 

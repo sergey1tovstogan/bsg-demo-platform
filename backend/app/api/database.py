@@ -6,12 +6,36 @@ Provides REST API for querying external MSSQL databases
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
-from app.services.mssql_service import mssql_service
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Try to import MSSQL service, but don't fail if ODBC drivers are missing
+try:
+    from app.services.mssql_service import MSSQLService
+    MSSQL_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"MSSQL service not available: {e}")
+    MSSQL_AVAILABLE = False
+    MSSQLService = None
+
 router = APIRouter(prefix="/database", tags=["database"])
+
+
+async def get_mssql_service() -> MSSQLService:
+    """
+    Get MSSQL service instance with connection details from MongoDB.
+    Falls back to settings if MongoDB connection details are not found.
+    """
+    if not MSSQL_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="MSSQL service is not available. ODBC drivers may not be installed."
+        )
+    return await MSSQLService.from_mongodb(
+        connection_name="demo_sql_server",
+        component_id="data-architecture"
+    )
 
 
 # Response Models
@@ -72,7 +96,8 @@ async def test_connection():
     Returns connection status and database version
     """
     try:
-        status = mssql_service.test_connection()
+        service = await get_mssql_service()
+        status = service.test_connection()
         return ConnectionStatus(**status)
     except Exception as e:
         logger.error(f"Connection test failed: {e}")
@@ -93,7 +118,8 @@ async def get_tables(
         List of tables with their schema and type
     """
     try:
-        tables = mssql_service.get_tables(schema=schema)
+        service = await get_mssql_service()
+        tables = service.get_tables(schema=schema)
         return [TableInfo(**table) for table in tables]
     except Exception as e:
         logger.error(f"Error fetching tables: {e}")
@@ -116,7 +142,8 @@ async def get_table_columns(
         List of column definitions
     """
     try:
-        columns = mssql_service.get_table_columns(table_name, schema=schema)
+        service = await get_mssql_service()
+        columns = service.get_table_columns(table_name, schema=schema)
         return [ColumnInfo(**col) for col in columns]
     except Exception as e:
         logger.error(f"Error fetching columns for {table_name}: {e}")
@@ -143,8 +170,10 @@ async def get_table_data(
         Table data with columns and rows
     """
     try:
+        service = await get_mssql_service()
+
         # Get table data
-        result = mssql_service.get_table_data(
+        result = service.get_table_data(
             table_name=table_name,
             schema=schema,
             limit=limit,
@@ -153,7 +182,7 @@ async def get_table_data(
 
         # Get total row count
         try:
-            total_rows = mssql_service.get_row_count(table_name, schema=schema)
+            total_rows = service.get_row_count(table_name, schema=schema)
         except:
             total_rows = None
 
@@ -204,7 +233,8 @@ async def execute_query(request: QueryRequest):
                     detail=f"Query contains forbidden keyword: {keyword}"
                 )
 
-        result = mssql_service.execute_query(
+        service = await get_mssql_service()
+        result = service.execute_query(
             query=request.query,
             limit=request.limit
         )
@@ -226,7 +256,8 @@ async def get_schemas():
         List of schema names
     """
     try:
-        with mssql_service.get_connection() as conn:
+        service = await get_mssql_service()
+        with service.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT DISTINCT SCHEMA_NAME

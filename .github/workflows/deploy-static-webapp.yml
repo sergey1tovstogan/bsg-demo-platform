@@ -1,0 +1,157 @@
+name: Deploy to Azure Static Web Apps
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+env:
+  AZURE_STATIC_WEB_APPS_API_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+  STATIC_WEB_APP_NAME: bsg-demo-platform-4077
+  RESOURCE_GROUP: bsg-demo-platform
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy Frontend
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+      
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+        env:
+          VITE_API_URL: https://bsg-demo-platform-app.azurewebsites.net/api/v1
+          NODE_ENV: production
+      
+      - name: Copy Static Web App config
+        run: |
+          if [ -f "frontend/staticwebapp.config.json" ]; then
+            # Copy to dist (where files are deployed from) - this is critical
+            cp frontend/staticwebapp.config.json frontend/dist/staticwebapp.config.json
+            echo "✓ Copied staticwebapp.config.json to dist"
+            # Also copy to repository root (Azure Static Web Apps may check here)
+            cp frontend/staticwebapp.config.json staticwebapp.config.json
+            echo "✓ Copied staticwebapp.config.json to repository root"
+            # Verify both copies exist
+            if [ -f "frontend/dist/staticwebapp.config.json" ] && [ -f "staticwebapp.config.json" ]; then
+              echo "✓ Verified staticwebapp.config.json exists in both locations"
+              echo "Config file contents:"
+              cat frontend/dist/staticwebapp.config.json
+            else
+              echo "✗ ERROR: staticwebapp.config.json not found after copy!"
+              echo "Dist exists: $([ -f 'frontend/dist/staticwebapp.config.json' ] && echo 'yes' || echo 'no')"
+              echo "Root exists: $([ -f 'staticwebapp.config.json' ] && echo 'yes' || echo 'no')"
+              exit 1
+            fi
+          else
+            echo "⚠ staticwebapp.config.json not found in frontend/"
+            exit 1
+          fi
+      
+      - name: Verify build output
+        run: |
+          echo "Checking build output..."
+          echo "=== Contents of frontend/dist ==="
+          ls -la frontend/dist/ || echo "Build output not found"
+          echo ""
+          echo "=== Checking for index.html ==="
+          if [ -f "frontend/dist/index.html" ]; then
+            echo "✓ index.html found"
+            echo "=== First 30 lines of index.html ==="
+            head -30 frontend/dist/index.html
+            echo ""
+            echo "=== Checking script and link tags ==="
+            grep -E "(script|link)" frontend/dist/index.html || echo "No script/link tags found"
+          else
+            echo "✗ index.html not found - build may have failed"
+            exit 1
+          fi
+          echo ""
+          echo "=== Checking for config file ==="
+          if [ -f "frontend/dist/staticwebapp.config.json" ]; then
+            echo "✓ staticwebapp.config.json found in dist"
+            echo "Config contents:"
+            cat frontend/dist/staticwebapp.config.json
+          else
+            echo "✗ staticwebapp.config.json not found in dist - will fail deployment"
+            exit 1
+          fi
+          echo ""
+          echo "=== Checking for assets ==="
+          if [ -d "frontend/dist/assets" ]; then
+            echo "✓ Assets folder found"
+            echo "Asset files:"
+            ls -lh frontend/dist/assets/ | head -10
+            echo ""
+            echo "=== Verifying JS and CSS files exist ==="
+            JS_COUNT=$(find frontend/dist/assets -name "*.js" | wc -l)
+            CSS_COUNT=$(find frontend/dist/assets -name "*.css" | wc -l)
+            echo "JavaScript files: $JS_COUNT"
+            echo "CSS files: $CSS_COUNT"
+            if [ "$JS_COUNT" -eq 0 ] || [ "$CSS_COUNT" -eq 0 ]; then
+              echo "⚠ WARNING: Missing asset files!"
+              exit 1
+            fi
+          else
+            echo "✗ No assets folder found - build may have failed"
+            exit 1
+          fi
+          echo ""
+          echo "=== Build verification complete ==="
+      
+      - name: Check deployment token
+        run: |
+          if [ -z "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" ]; then
+            echo "⚠️ ERROR: AZURE_STATIC_WEB_APPS_API_TOKEN secret is not set!"
+            echo ""
+            echo "To fix this:"
+            echo "1. Go to Azure Portal → Static Web App (bsg-demo-platform-4077)"
+            echo "2. Click 'Manage deployment token'"
+            echo "3. Copy the deployment token"
+            echo "4. Go to GitHub → Repository Settings → Secrets and variables → Actions"
+            echo "5. Add new secret: AZURE_STATIC_WEB_APPS_API_TOKEN with the token value"
+            echo ""
+            echo "⚠️ Deployment will be skipped without the token!"
+            exit 1
+          else
+            echo "✓ Deployment token is set"
+          fi
+      
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "/frontend"
+          output_location: "dist"
+          skip_app_build: true
+          api_location: ""
+          api_build_command: ""
+        continue-on-error: false
+      
+      - name: Deployment Summary
+        run: |
+          echo "## Frontend Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Frontend URL**: https://kind-beach-01c0a990f.3.azurestaticapps.net" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The frontend is now live and accessible!" >> $GITHUB_STEP_SUMMARY
+

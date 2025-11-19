@@ -53,10 +53,17 @@ DEBUG=True
 - `users` - User accounts and authentication
 - `user_sessions` - Active user sessions
 - `components` - Component definitions
-- `content` - Component content
+- `content` - Component content (shared across components)
 - `videos` - Video metadata and references
 - `security_docs` - Security documentation
 - `presentations` - Presentation materials
+- `integration` - Integration component data
+- `data_architecture` - Data Architecture component-specific collection
+
+**Component/Collection Convention:**
+> **IMPORTANT**: Each component should have a matching MongoDB collection with the same name.
+> For example, the "integration" component uses the "integration" collection.
+> When creating new components, always create a corresponding MongoDB collection.
 
 ## Technology Stack
 
@@ -73,7 +80,8 @@ DEBUG=True
 - **Framework**: Python FastAPI
 - **Python Version**: 3.11
 - **API Documentation**: OpenAPI/Swagger (available at /docs)
-- **Database Driver**: Motor (async MongoDB driver)
+- **Database**: Uses Database Adapter pattern (see Architecture Patterns)
+- **RAG APIs**: Uses RAG Adapter pattern (see Architecture Patterns)
 - **Validation**: Pydantic v2
 - **Authentication**: python-jose (JWT)
 - **Password Hashing**: bcrypt
@@ -81,8 +89,8 @@ DEBUG=True
 
 ### Database
 - **Primary Database**: MongoDB (Azure Cosmos DB for MongoDB API)
-- **Connection**: Azure Cosmos DB (cloud-hosted)
-- **Driver**: Motor (async MongoDB driver)
+- **Connection**: Via Database Adapter (`app/adapters/database/`)
+- **Current Adapter**: MongoDBAdapter (Motor-based)
 - **No migrations needed**: MongoDB is schema-less
 - **Collections**: Created programmatically with indexes
 
@@ -131,6 +139,7 @@ DEBUG=True
 │  │  • videos                                      │          │
 │  │  • security_docs                               │          │
 │  │  • presentations                               │          │
+│  │  • data_architecture                           │          │
 │  └──────────────────────────────────────────────┘          │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -190,6 +199,14 @@ new_content = {
 }
 await db.content.insert_one(new_content)
 ```
+
+### Component Matching Rule
+**IMPORTANT**: When working on a specific component, ALWAYS ensure you are working with the correct component-specific collection and files:
+- Use `data_architecture` collection for Data Architecture component work
+- Use `security_docs` collection for Security component work
+- Reference component-specific frontend files (e.g., `frontend/src/components/data-architecture/`)
+- Reference component-specific backend files (e.g., `backend/app/api/v1/endpoints/data_architecture.py`)
+- Always verify component ID matches: `data-architecture` (frontend/API) = `data_architecture` (database)
 
 This ensures data consistency and proper component isolation across the platform.
 
@@ -310,10 +327,8 @@ bsg-demo-platform/
 │   │   ├── middleware/
 │   │   └── main.py
 │   ├── requirements.txt
-│   ├── Dockerfile
 │   └── create_collections.py
 ├── ARCHITECTURE.md
-├── docker-compose.yml
 └── README.md
 ```
 
@@ -324,6 +339,7 @@ bsg-demo-platform/
 - No direct inter-component dependencies
 - Shared infrastructure through common services layer
 - Independent MongoDB collections per component
+- **Convention**: Component name = MongoDB collection name (e.g., "integration" component → "integration" collection)
 
 ### API Design Principles
 - RESTful API structure
@@ -348,15 +364,42 @@ bsg-demo-platform/
 - Prometheus-compatible metrics
 - Distributed tracing support (OpenTelemetry)
 
+## Architecture Patterns
+
+### Connection Adapter Pattern (MANDATORY)
+
+**CRITICAL**: All external connections MUST use adapter pattern. Never connect directly to databases, APIs, or external services.
+
+#### Database Connections
+- **ALWAYS** use `app/adapters/database/get_database_adapter()` 
+- **NEVER** import Motor, psycopg2, or database drivers directly in business logic
+- **NEVER** create database connections outside of adapters
+- Create new adapters in `app/adapters/database/` if needed (e.g., PostgreSQL, MySQL)
+
+#### RAG/API Connections
+- **ALWAYS** use `app/adapters/rag/get_rag_adapter()` for RAG APIs
+- **NEVER** use httpx, requests, or API clients directly in business logic
+- **NEVER** hardcode API URLs or authentication in services
+- Create new adapters in `app/adapters/rag/` if needed (e.g., OpenAI, Anthropic)
+
+#### Other External Services
+- **ALWAYS** create adapters in `app/adapters/` for any external service
+- Examples: Azure services, MSSQL, Redis, third-party APIs
+- Adapters must implement abstract base interfaces
+- Use factory pattern for adapter selection based on configuration
+
+**Why**: Enables easy switching of implementations without code changes. Core application logic remains decoupled from external dependencies.
+
 ## Important Notes
 
 - All services run locally for development
 - Database is hosted in Azure Cloud (Azure Cosmos DB)
-- No Docker containers are currently used (services run as native processes)
+- **NO Docker containers** - services run as native processes
 - Backend auto-reloads on code changes (development mode)
 - Frontend hot-reloads on code changes (Vite dev server)
 - MongoDB is schema-less - no migrations needed
 - Collections are created programmatically with indexes
+- **All external connections use adapter pattern** - see Architecture Patterns above
 
 ## Important Files to Reference
 

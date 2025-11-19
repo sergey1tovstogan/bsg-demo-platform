@@ -1,137 +1,309 @@
 import { useState, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Cloud, RefreshCw } from 'lucide-react'
 import { apiService } from '../../services/api'
 
+const CACHE_KEY = 'deployment_rag_content_cache'
+const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp'
+const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days (1 month)
+
 export function DeploymentContentViewer() {
-  const [content, setContent] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  // TEMPORARY: Removed Temenos API state - using DB content only
+  const [ragContent, setRagContent] = useState<any>(null)
+  const [ragLoading, setRagLoading] = useState(true)
+  const [ragError, setRagError] = useState<string | null>(null)
+  const [isFromCache, setIsFromCache] = useState(false)
 
   useEffect(() => {
-    loadContent()
-    // TEMPORARY: Disabled Temenos API call - using DB content only
-    // loadTemenosContent()
+    // Check cache immediately on mount
+    const cached = loadCachedContent()
+    if (cached) {
+      setRagContent(cached)
+      setRagLoading(false)
+      setIsFromCache(true)
+      console.log('Loaded RAG content from cache')
+    } else {
+      // Only load from API if no cache
+      loadRAGContent()
+    }
   }, [])
 
-  // TEMPORARY: Disabled Temenos API call - using DB content only
-  // const loadTemenosContent = async () => {
-  //   try {
-  //     setLoadingTemenos(true)
-  //     setTemenosError(null)
-  //     
-  //     // Query Temenos API with deployment-specific questions
-  //     const questions = [
-  //       "What are the deployment options in cloud for Temenos products?",
-  //       "How to deploy Temenos components on Azure?",
-  //       "What are the best practices for cloud deployment of Temenos banking solutions?"
-  //     ]
-  //     
-  //     // Query the first question to get relevant information
-  //     const response = await apiService.queryDeploymentChatbot(
-  //       questions[0],
-  //       undefined,
-  //       "This is about Azure deployment and cloud infrastructure for Temenos components."
-  //     )
-  //     
-  //     const responseData = (response && response.data) ? response.data : response
-  //     setTemenosData({
-  //       question: questions[0],
-  //       answer: responseData?.answer || '',
-  //       sources: responseData?.sources || []
-  //     })
-  //   } catch (err: any) {
-  //     console.error('Temenos query error:', err)
-  //     setTemenosError(err.response?.data?.detail || err.message || 'Failed to load Temenos information')
-  //   } finally {
-  //     setLoadingTemenos(false)
-  //   }
-  // }
-
-  const loadContent = async () => {
+  const loadCachedContent = () => {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await apiService.getDeploymentContent()
-      // API returns { status: "success", data: {...} }
-      // apiService returns response.data which is { status: "success", data: {...} }
-      // So we need response.data to get the actual content
-      if (response && response.data) {
-        setContent(response.data)
-      } else if (response && response.status === 'success') {
-        setContent(response.data)
-      } else {
-        setContent(response)
+      const cached = localStorage.getItem(CACHE_KEY)
+      const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY)
+      if (cached && timestamp) {
+        const age = Date.now() - parseInt(timestamp, 10)
+        if (age < CACHE_DURATION) {
+          return JSON.parse(cached)
+        }
       }
-    } catch (err: any) {
-      console.error('Content load error:', err)
-      setError(err.response?.data?.detail || err.message || 'Failed to load content')
-    } finally {
-      setLoading(false)
+    } catch (err) {
+      console.warn('Failed to load cached content:', err)
+    }
+    return null
+  }
+
+  const saveCachedContent = (content: any) => {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(content))
+      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
+    } catch (err) {
+      console.warn('Failed to save cached content:', err)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#283054]" />
-      </div>
-    )
+  const loadRAGContent = async (forceRefresh: boolean = false) => {
+    try {
+      // Check cache first unless forcing refresh
+      if (!forceRefresh) {
+        const cached = loadCachedContent()
+        if (cached) {
+          setRagContent(cached)
+          setRagLoading(false)
+          setIsFromCache(true)
+          console.log('Loaded RAG content from cache (30 day expiry)')
+          return
+        }
+      }
+
+      // Store cached content before refresh in case refresh fails
+      const cachedContent = forceRefresh ? loadCachedContent() : null
+      
+      // Clear cache flag when forcing refresh
+      if (forceRefresh) {
+        setIsFromCache(false)
+      }
+      
+      setRagLoading(true)
+      setRagError(null)
+      
+      // Query RAG API for Temenos cloud architecture models
+      const questions = [
+        "What are the Temenos cloud architecture models?",
+        "What are the deployment options in cloud for Temenos products?",
+        "How does Temenos support cloud-native deployments?",
+        "What are the best practices for deploying Temenos components on Azure?"
+      ]
+      
+      // Query multiple questions and combine results
+      const ragResults = []
+      const errors: string[] = []
+      
+      for (const question of questions) {
+        try {
+          const response = await apiService.queryRAG({
+            question,
+            region: 'global',
+            RAGmodelId: 'ModularBanking, TechnologyOverview',
+            context: 'This is about Temenos cloud architecture models and deployment strategies for Temenos banking solutions.'
+          })
+
+          // Handle different response structures
+          // queryRAG returns ApiResponse<{answer: string, sources?: ...}>
+          // Backend returns: {status: "success", data: {answer: "...", sources: [...]}}
+          // Or: {data: {answer: "...", sources: [...]}}
+          const ragData = response.data && typeof response.data === 'object' && 'data' in response.data
+            ? (response.data as any).data
+            : response.data
+
+          if (ragData?.answer) {
+            ragResults.push({
+              question,
+              answer: ragData.answer,
+              sources: ragData.sources || []
+            })
+          } else {
+            errors.push(`No answer returned for: "${question}". Response structure: ${JSON.stringify(response).substring(0, 200)}`)
+            console.warn(`No answer in RAG response for question: ${question}`, response)
+          }
+        } catch (err: any) {
+          // Extract detailed error message from backend response
+          let errorMsg = 'Unknown error'
+          
+          // Log full error for debugging
+          console.error(`Full error object for question "${question}":`, {
+            error: err,
+            response: err.response,
+            responseData: err.response?.data,
+            responseDetail: err.response?.data?.detail,
+            message: err.message
+          })
+          
+          // Try multiple ways to extract the error message
+          if (err.response?.data?.detail) {
+            const detail = err.response.data.detail
+            if (typeof detail === 'object') {
+              // Backend returns detail as object with error field
+              errorMsg = detail.error || detail.message || JSON.stringify(detail)
+            } else if (typeof detail === 'string') {
+              // Backend returns detail as string
+              errorMsg = detail
+            }
+          } else if (err.response?.data?.error) {
+            errorMsg = err.response.data.error
+          } else if (err.response?.data?.message) {
+            errorMsg = err.response.data.message
+          } else if (err.message) {
+            errorMsg = err.message
+          }
+          
+          // If we still have a generic message, try to get more info
+          if (errorMsg === 'Request failed with status code 500' && err.response?.data) {
+            errorMsg = `Server error: ${JSON.stringify(err.response.data).substring(0, 200)}`
+          }
+          
+          errors.push(`Failed to query "${question}": ${errorMsg}`)
+          console.warn(`Failed to query RAG for question: ${question}`, err)
+        }
+      }
+      
+      if (ragResults.length > 0) {
+        setRagContent(ragResults)
+        saveCachedContent(ragResults)
+        setIsFromCache(false)
+        setRagError(null)
+        console.log('Loaded RAG content from API and cached')
+        
+        // If some queries failed, show a warning but still display successful results
+        if (errors.length > 0) {
+          const partialErrorMsg = `Some queries failed (${errors.length}/${questions.length}). Showing available results.`
+          console.warn(partialErrorMsg, errors)
+          // Don't set as error since we have some results, just log it
+        }
+      } else {
+        // All queries failed - restore cached content if available
+        if (forceRefresh && cachedContent) {
+          setRagContent(cachedContent)
+          setIsFromCache(true)
+          setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
+          console.warn('Refresh failed, restored cached content', errors)
+        } else {
+          setRagError(`No content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
+        }
+      }
+    } catch (err: any) {
+      console.error('RAG query error:', err)
+      const errorMsg = err.response?.data?.detail?.error || 
+                      err.response?.data?.error || 
+                      err.message || 
+                      'Failed to load RAG information'
+      
+      // If refresh failed, try to restore cached content
+      if (forceRefresh) {
+        const cachedContent = loadCachedContent()
+        if (cachedContent) {
+          setRagContent(cachedContent)
+          setIsFromCache(true)
+          setRagError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
+        } else {
+          setRagError(errorMsg)
+        }
+      } else {
+        setRagError(errorMsg)
+      }
+    } finally {
+      setRagLoading(false)
+    }
   }
 
-  if (error) {
+  if (ragLoading) {
     return (
-      <div className="card">
-        <p className="text-red-600">{error}</p>
-      </div>
-    )
-  }
-
-  if (!content) {
-    return (
-      <div className="card">
-        <p className="text-[#4A5568]">No content available.</p>
+      <div className="bg-white dark:bg-gray-100 rounded-lg shadow-lg border border-gray-300 dark:border-gray-400 p-8">
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="w-12 h-12 animate-spin text-[#283054] mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-900 mb-2">
+            Retrieving Cloud Architecture Information
+          </h3>
+          <p className="text-gray-600 dark:text-gray-700 text-center max-w-md">
+            Querying Temenos RAG Knowledge Base for cloud architecture models and deployment strategies. This may take a few moments...
+          </p>
+          <div className="mt-6 w-full max-w-md">
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-[#283054] h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Database Content - High visibility styling */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-lg shadow-lg border-2 border-blue-200 dark:border-blue-700 p-6">
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold mb-3 text-blue-900 dark:text-blue-50" style={{ color: '#1e3a8a' }}>
-            {content.title}
-          </h2>
-          {content.description && (
-            <p className="text-lg text-blue-800 dark:text-blue-200" style={{ color: '#1e40af' }}>
-              {content.description}
-            </p>
-          )}
-        </div>
-        
-        <div className="space-y-6">
-          {content.sections && content.sections.map((section: any, idx: number) => (
-            <div 
-              key={idx} 
-              className="bg-white dark:bg-gray-800 rounded-lg p-6 border-2 border-blue-300 dark:border-blue-600 shadow-md"
-              style={{ backgroundColor: '#ffffff' }}
-            >
-              <h3 
-                className="text-2xl font-bold mb-4 border-b-2 border-blue-400 dark:border-blue-500 pb-3"
-                style={{ color: '#111827', borderBottomColor: '#3b82f6' }}
-              >
-                {section.heading}
-              </h3>
-              <p 
-                className="whitespace-pre-wrap leading-relaxed text-lg"
-                style={{ color: '#1f2937', lineHeight: '1.75' }}
-              >
-                {section.content}
+      {/* RAG Content - Temenos Cloud Architecture */}
+      <div className="bg-white dark:bg-gray-100 rounded-lg shadow-lg border border-gray-300 dark:border-gray-400 p-6">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Cloud className="w-8 h-8 text-[#283054]" />
+            <div>
+              <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-900">
+                Temenos Cloud Architecture Models
+              </h2>
+              <p className="text-lg text-gray-700 dark:text-gray-800">
+                Information from Temenos RAG Knowledge Base
+                {isFromCache && (
+                  <span className="ml-2 text-sm text-green-600 dark:text-green-700 font-medium">
+                    (Cached - 30 day expiry)
+                  </span>
+                )}
               </p>
             </div>
-          ))}
+          </div>
+          <button
+            onClick={() => loadRAGContent(true)}
+            disabled={ragLoading}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <RefreshCw className={`w-5 h-5 ${ragLoading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
         </div>
+
+
+        {ragError && (
+          <div className={`mb-4 p-4 rounded ${
+            ragError.includes('Showing cached data') 
+              ? 'bg-yellow-100 dark:bg-yellow-200 border border-yellow-300 dark:border-yellow-400 text-yellow-800 dark:text-yellow-900'
+              : 'bg-red-100 dark:bg-red-200 border border-red-300 dark:border-red-400 text-red-800 dark:text-red-900'
+          }`}>
+            <p className="font-semibold">
+              {ragError.includes('Showing cached data') ? 'Warning:' : 'Error loading RAG content:'}
+            </p>
+            <p className="text-sm">{ragError}</p>
+          </div>
+        )}
+
+        {ragContent && ragContent.length > 0 && (
+          <div className="space-y-6">
+            {ragContent.map((item: any, idx: number) => (
+              <div 
+                key={idx} 
+                className="bg-gray-50 dark:bg-white rounded-lg p-6 border border-gray-300 dark:border-gray-400 shadow-sm"
+              >
+                <h3 className="text-xl font-bold mb-3 border-b border-gray-400 dark:border-gray-500 pb-2 text-gray-900 dark:text-gray-900">
+                  {item.question}
+                </h3>
+                <div className="whitespace-pre-wrap leading-relaxed text-base text-gray-800 dark:text-gray-900">
+                  {item.answer}
+                </div>
+                {item.sources && item.sources.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-400">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-900 mb-2">Sources:</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-800">
+                      {item.sources.map((source: any, sidx: number) => (
+                        <li key={sidx}>{source.title || source.url || 'Temenos Documentation'}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!ragLoading && !ragError && (!ragContent || ragContent.length === 0) && (
+          <div className="text-center py-8 text-gray-700 dark:text-gray-800">
+            <p>No cloud architecture information available at this time.</p>
+          </div>
+        )}
       </div>
     </div>
   )

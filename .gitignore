@@ -224,3 +224,14 @@ backup/
 # Test files
 test-results/
 playwright-report/
+.claude/settings.local.json
+
+# Windows reserved filenames
+nul
+NUL
+con
+CON
+prn
+PRN
+aux
+AUX

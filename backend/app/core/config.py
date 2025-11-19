@@ -5,7 +5,8 @@ Handles environment-based configuration with validation.
 Supports environment variables, .env files, and secret injection.
 """
 
-from typing import List, Optional
+import os
+from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import secrets
@@ -23,14 +24,18 @@ class Settings(BaseSettings):
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     HOST: str = Field(default="0.0.0.0", description="API host")
-    PORT: int = Field(default=8000, description="API port")
+    PORT: int = Field(
+        default_factory=lambda: int(os.getenv("PORT", "8000")),
+        description="API port (Azure App Service sets PORT automatically)"
+    )
 
     # Database Settings
+    DATABASE_TYPE: str = Field(default="mongodb", description="Database type: mongodb, postgresql, etc.")
     DATABASE_URL: str = Field(
-        default="mongodb://localhost:27017/bsg_demo",
-        description="MongoDB connection string"
+        default="mongodb://bsg-demo-platform-mongodb:wC418aLYO4SazuhljALVOclZc48spvoHidWukgFDOoBCjO5Z4wjjKPziuJ44TAUyVlOs89HeL4a5ACDbdAs80w==@bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@bsg-demo-platform-mongodb@",
+        description="Database connection string (Azure Cosmos DB MongoDB API)"
     )
-    DATABASE_NAME: str = Field(default="bsg_demo", description="MongoDB database name")
+    DATABASE_NAME: str = Field(default="bsg_demo", description="Database name")
     DB_MAX_POOL_SIZE: int = Field(default=50, description="Database connection pool size")
     DB_MIN_POOL_SIZE: int = Field(default=10, description="Minimum connection pool size")
     DB_CONNECT_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
@@ -43,6 +48,9 @@ class Settings(BaseSettings):
     MSSQL_DATABASE: str = Field(default="ODS", description="MSSQL database name")
     MSSQL_SCHEMA: str = Field(default="ODS", description="MSSQL default schema")
 
+    # External API Integration
+    TEMENOS_DEV_PORTAL_APIKEY: str = Field(default="", description="Temenos Developer Portal API Key")
+
     # JWT Authentication
     JWT_SECRET_KEY: str = Field(
         default_factory=lambda: secrets.token_urlsafe(32),
@@ -52,14 +60,8 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, description="Access token expiry")
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, description="Refresh token expiry")
 
-    # CORS Settings
-    CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:5173"],
-        description="Allowed CORS origins"
-    )
+    # CORS Settings (not loaded from environment variables to avoid parsing issues)
     CORS_CREDENTIALS: bool = Field(default=True, description="Allow credentials in CORS")
-    CORS_METHODS: List[str] = Field(default=["*"], description="Allowed CORS methods")
-    CORS_HEADERS: List[str] = Field(default=["*"], description="Allowed CORS headers")
 
     # Logging Settings
     LOG_LEVEL: str = Field(default="INFO", description="Logging level")
@@ -100,8 +102,25 @@ class Settings(BaseSettings):
     # Health Check
     HEALTH_CHECK_TIMEOUT: int = Field(default=5, description="Health check timeout in seconds")
 
+    # RAG Tool (Temenos tbsg.temenos.com)
+    RAG_TYPE: str = Field(default="temenos", description="RAG provider type: temenos, openai, etc.")
+    RAG_JWT_TOKEN: Optional[str] = Field(
+        default=None,
+        description="JWT token for RAG tool API authentication (tbsg.temenos.com)"
+    )
+    RAG_API_URL: str = Field(
+        default="https://tbsg.temenos.com",
+        description="RAG tool API base URL"
+    )
+
+    # Azure Default Subscription
+    AZURE_SUBSCRIPTION_ID: Optional[str] = Field(
+        default=None,
+        description="Default Azure subscription ID (used if not provided by user)"
+    )
+
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=[".env", "../.env"],  # Check current dir and parent dir
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"
@@ -124,19 +143,27 @@ class Settings(BaseSettings):
             raise ValueError(f"LOG_LEVEL must be one of {allowed}")
         return v
 
-    @field_validator("CORS_ORIGINS", mode="before")
-    def parse_cors_origins(cls, v):
-        """Parse CORS origins from string or list."""
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
-
     @field_validator("JWT_SECRET_KEY")
     def validate_jwt_secret(cls, v, info):
         """Ensure JWT secret is set in production."""
         if info.data.get("ENVIRONMENT") == "production" and len(v) < 32:
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters in production")
         return v
+
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        """Get CORS origins (hardcoded to avoid environment variable parsing issues)."""
+        return ["http://localhost:3000", "http://localhost:5173"]
+
+    @property
+    def CORS_METHODS(self) -> List[str]:
+        """Get CORS methods (hardcoded to avoid environment variable parsing issues)."""
+        return ["*"]
+
+    @property
+    def CORS_HEADERS(self) -> List[str]:
+        """Get CORS headers (hardcoded to avoid environment variable parsing issues)."""
+        return ["*"]
 
     @property
     def is_production(self) -> bool:
