@@ -99,8 +99,11 @@ app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
 
 # Serve static files (frontend) if directory exists
 static_dir = os.path.join(os.path.dirname(__file__), "static")
+index_path = os.path.join(static_dir, "index.html") if static_dir else None
+
 if os.path.exists(static_dir) and os.path.isdir(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    logger.info(f"Static files mounted at /static from {static_dir}")
     
     # Serve index.html for all non-API routes (SPA routing)
     @app.get("/{full_path:path}")
@@ -111,24 +114,33 @@ if os.path.exists(static_dir) and os.path.isdir(static_dir):
             return {"detail": "Not Found"}
         
         # Serve index.html for frontend routes
-        index_path = os.path.join(static_dir, "index.html")
-        if os.path.exists(index_path):
+        if index_path and os.path.exists(index_path):
             return FileResponse(index_path)
-        return {"detail": "Frontend not found"}
+        logger.warning(f"index.html not found at {index_path}, static_dir exists: {os.path.exists(static_dir)}")
+        return {"detail": "Frontend not found", "static_dir": str(static_dir), "exists": os.path.exists(static_dir)}
 
 # Root endpoint (only if static files not mounted)
-if not os.path.exists(static_dir):
-    @app.get("/")
-    async def root():
-        """Root endpoint with API information."""
-        return {
-            "name": settings.APP_NAME,
-            "version": settings.APP_VERSION,
-            "environment": settings.ENVIRONMENT,
-            "api_version": "v1",
-            "docs": f"{settings.API_V1_PREFIX}/docs" if not settings.is_production else None,
-            "health": f"{settings.API_V1_PREFIX}/health"
-        }
+@app.get("/")
+async def root():
+    """Root endpoint - serves frontend if available, otherwise API info."""
+    # Try to serve frontend index.html if it exists
+    if index_path and os.path.exists(index_path):
+        logger.info(f"Serving frontend index.html from {index_path}")
+        return FileResponse(index_path)
+    
+    # Fallback to API information if frontend not available
+    logger.warning(f"Frontend not found at {index_path}, serving API info instead")
+    return {
+        "name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "environment": settings.ENVIRONMENT,
+        "api_version": "v1",
+        "docs": f"{settings.API_V1_PREFIX}/docs" if not settings.is_production else None,
+        "health": f"{settings.API_V1_PREFIX}/health",
+        "frontend_available": False,
+        "static_dir": str(static_dir) if static_dir else None,
+        "index_exists": os.path.exists(index_path) if index_path else False
+    }
 
 
 if __name__ == "__main__":
