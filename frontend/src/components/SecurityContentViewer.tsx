@@ -144,7 +144,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             border-radius: 4px;
             padding: 12px;
             max-width: 450px;
-            font-size: 12px;
+            font-size: 16px;
             line-height: 1.5;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             z-index: 2000;
@@ -160,13 +160,14 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         
         .tooltip-title {
             font-weight: bold;
-            font-size: 14px;
+            font-size: 16px;
             margin-bottom: 8px;
             color: #283054;
         }
         
         .tooltip-description {
             color: #333;
+            font-size: 16px;
         }
         
         .tooltip-button {
@@ -666,7 +667,7 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
         }
         
         .small-text {
-            font-size: 11px;
+            font-size: 14px;
         }
         
         .light-blue-box {
@@ -719,11 +720,52 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
             stroke: #000;
             stroke-width: 2;
         }
+        
+        .clickable {
+            cursor: pointer;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: white;
+            border: 2px solid #ff0000;
+            border-radius: 4px;
+            padding: 12px;
+            max-width: 500px;
+            font-size: 16px;
+            line-height: 1.5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 2000;
+            display: none;
+            pointer-events: none;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .tooltip.show {
+            display: block;
+        }
+        
+        .tooltip-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #283054;
+        }
+        
+        .tooltip-description {
+            color: #333;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="title-label">Here is the Temenos Authentication</div>
+        <div id="tooltip" class="tooltip">
+            <div class="tooltip-title" id="tooltip-title"></div>
+            <div class="tooltip-description" id="tooltip-description"></div>
+        </div>
         
         <!-- Text Sections -->
         <div class="text-section">
@@ -756,12 +798,12 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
                 </defs>
                 
                 <!-- UI Configuration of Users, Roles, SSO etc. (Light Blue Box) -->
-                <rect x="50" y="100" width="200" height="80" class="light-blue-box" rx="5"/>
+                <rect id="ui-configuration" x="50" y="100" width="200" height="80" class="light-blue-box clickable" rx="5"/>
                 <text x="150" y="130" text-anchor="middle" class="text-black title-text-11pt">UI Configuration of</text>
                 <text x="150" y="150" text-anchor="middle" class="text-black title-text-11pt">Users, Roles, SSO etc.</text>
                 
                 <!-- Keycloak / External IdM (Dark Blue Box) -->
-                <rect x="50" y="220" width="200" height="100" class="dark-blue-box" rx="5"/>
+                <rect id="keycloak" x="50" y="220" width="200" height="100" class="dark-blue-box clickable" rx="5"/>
                 <text x="150" y="250" text-anchor="middle" class="text-white title-text-11pt">Keycloak /</text>
                 <text x="150" y="275" text-anchor="middle" class="text-white title-text-11pt">External IdM</text>
                 
@@ -772,25 +814,25 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
                 <text x="220" y="375" text-anchor="middle" class="text-white title-text">DB</text>
                 
                 <!-- Authentication Service (Purple Box) -->
-                <rect x="350" y="220" width="220" height="100" class="purple-box" rx="5"/>
+                <rect id="authentication-service" x="350" y="220" width="220" height="100" class="purple-box clickable" rx="5"/>
                 <text x="460" y="250" text-anchor="middle" class="text-white title-text-11pt">Authentication Service</text>
                 <text x="460" y="275" text-anchor="middle" class="text-white small-text-14pt">SAML / OIDC / Federated</text>
                 
                 <!-- Temenos Application (Dark Blue Box) -->
-                <rect x="650" y="220" width="200" height="100" class="dark-blue-box" rx="5"/>
+                <rect id="temenos-application" x="650" y="220" width="200" height="100" class="dark-blue-box clickable" rx="5"/>
                 <text x="750" y="260" text-anchor="middle" class="text-white title-text-11pt">Temenos</text>
                 <text x="750" y="285" text-anchor="middle" class="text-white title-text-11pt">Application</text>
                 
                 <!-- Temenos Security (Teal Container) -->
-                <rect x="950" y="180" width="300" height="180" class="teal-container" rx="5"/>
+                <rect id="temenos-security" x="950" y="180" width="300" height="180" class="teal-container clickable" rx="5"/>
                 <text x="1100" y="210" text-anchor="middle" class="text-white title-text-11pt">Temenos Security</text>
                 
                 <!-- Auth Filter (Teal Box inside Temenos Security) -->
-                <rect x="970" y="230" width="260" height="50" class="teal-box" rx="3"/>
+                <rect x="970" y="230" width="260" height="50" class="teal-box" rx="5"/>
                 <text x="1100" y="260" text-anchor="middle" class="text-white title-text">Auth Filter</text>
                 
                 <!-- Security Token Validation (Teal Box inside Temenos Security) -->
-                <rect x="970" y="300" width="260" height="50" class="teal-box" rx="3"/>
+                <rect x="970" y="300" width="260" height="50" class="teal-box" rx="5"/>
                 <text x="1100" y="325" text-anchor="middle" class="text-white small-text">Security Token Validation</text>
                 <text x="1100" y="340" text-anchor="middle" class="text-white small-text">SAML / OIDC / FS</text>
                 
@@ -801,25 +843,142 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
                 
                 <!-- Keycloak to Authentication Service (from right border to left border) -->
                 <line x1="250" y1="270" x2="350" y2="270" class="arrow-red"/>
-                <text x="300" y="265" text-anchor="middle" class="text-black small-text">Identity &amp; Attributes</text>
+                <text x="300" y="205" text-anchor="middle" class="text-black small-text">Identity &amp; Attributes</text>
                 
                 <!-- Authentication Service to Temenos Application (from right border to left border) -->
                 <line x1="570" y1="270" x2="650" y2="270" class="arrow-red"/>
-                <text x="610" y="265" text-anchor="middle" class="text-black small-text">Security Token</text>
+                <text x="610" y="205" text-anchor="middle" class="text-black small-text">Security Token</text>
                 
                 <!-- Temenos Application to Auth Filter (from right border to left border of Temenos Security container) -->
                 <line x1="850" y1="270" x2="950" y2="255" class="arrow-red"/>
-                <text x="900" y="260" text-anchor="middle" class="text-black small-text">Security Token</text>
+                <text x="900" y="200" text-anchor="middle" class="text-black small-text">Security Token</text>
                 
                 <!-- Auth Filter to Security Token Validation (from bottom border to top border) -->
                 <line x1="1100" y1="280" x2="1100" y2="300" class="arrow-red"/>
                 
                 <!-- Security Token Validation back to Temenos Application (from left border of Temenos Security to right border of Temenos Application) -->
                 <line x1="950" y1="325" x2="850" y2="270" class="arrow-red"/>
-                <text x="900" y="300" text-anchor="middle" class="text-black small-text">Identity &amp; Attributes</text>
+                <text x="900" y="240" text-anchor="middle" class="text-black small-text">Identity &amp; Attributes</text>
             </svg>
         </div>
     </div>
+    
+    <script>
+        // Tooltip Configuration
+        const tooltips = [
+            {
+                id: 'ui-configuration',
+                title: 'UI Configuration of Users, Roles',
+                description: 'Temenos UI Explorer application redirects a user\\'s browser from the application to the Keycloak authentication server where they enter their credentials. This redirection is important because users are completely isolated from applications and applications never see a user\\'s credentials.\\n\\nIdentity token or assertion (for SAML protocol) is cryptographically signed.\\n\\nThese tokens can have identity information like username, address, email, and other profile data.\\n\\nTemenos Security Management System (SMS) based on Role Based Access in which the ability to access or perform action is tied to the permission granted. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. When a user attempts to log in, they are authenticated via the bank\\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization. The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.',
+                position: 'bottom'
+            },
+            {
+                id: 'keycloak',
+                title: 'Keycloak',
+                description: 'Temenos solutions use Keycloak, an open-source Identity and Access Management (IAM) tool, to manage authentication. Keycloak enables Single Sign-On (SSO) based on federated security, letting users log in once to access multiple applications seamlessly.\\n\\nKeycloak integrates with the bank\\'s existing Identity Provider (IdP), like Entra ID (AD), which manages users and passwords. This integration uses standard protocols such as SAML 2.0 or OpenID Connect. Keycloak acts here as an identity broker, redirecting authentication requests to Banks\\' preferred IAM. After successful authentication, Bank\\' IAM issues JSON Web Tokens (JWTs) that carry user identity and role information, which the solution uses to enforce authorization based on assigned permissions.',
+                position: 'right'
+            },
+            {
+                id: 'authentication-service',
+                title: 'Authentication Service',
+                description: '1. User Identity, authentication externalised and SSO with enterprise IAM e.g.,\\n\\n2. Entra ID Establish user identity and trust through security token oAuth 2.0 JWT,\\n\\n3. All products integrate and validate with KeyCloak IaM',
+                position: 'bottom'
+            },
+            {
+                id: 'temenos-application',
+                title: 'Temenos Application',
+                description: 'User activities, including successful and failed login attempts, are logged. Session IDs do not contain sensitive data and are invalidated upon logout.',
+                position: 'top'
+            },
+            {
+                id: 'temenos-security',
+                title: 'Temenos Security',
+                description: 'Choosing between OpenID Connect and SAML is not just a matter of using a newer protocol (OIDC) instead of the older more mature protocol (SAML). In most cases Keycloak recommends using OIDC. SAML 2.0 tends to be a bit more verbose than OIDC. Beyond verbosity of exchanged data, OIDC was designed to work with the web while SAML2.0 was retrofitted to work on top of the web.',
+                position: 'left'
+            }
+        ];
+        
+        const tooltip = document.getElementById('tooltip');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipDescription = document.getElementById('tooltip-description');
+        
+        function showTooltip(config, element) {
+            tooltipTitle.textContent = config.title;
+            tooltipDescription.textContent = config.description;
+            tooltip.classList.add('show');
+            
+            setTimeout(function() {
+                const rect = element.getBoundingClientRect();
+                const containerRect = document.querySelector('.container').getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                
+                let left, top;
+                
+                switch(config.position) {
+                    case 'right':
+                        left = rect.right + 15;
+                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+                        break;
+                    case 'left':
+                        left = rect.left - tooltipRect.width - 15;
+                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+                        break;
+                    case 'top':
+                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                        top = rect.top - tooltipRect.height - 15;
+                        break;
+                    case 'bottom':
+                    default:
+                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                        top = rect.bottom + 15;
+                        break;
+                }
+                
+                // Ensure tooltip stays within container bounds
+                if (left < containerRect.left) {
+                    left = containerRect.left + 10;
+                }
+                if (left + tooltipRect.width > containerRect.right) {
+                    left = containerRect.right - tooltipRect.width - 10;
+                }
+                if (top < containerRect.top) {
+                    top = containerRect.top + 10;
+                }
+                if (top + tooltipRect.height > containerRect.bottom) {
+                    top = containerRect.bottom - tooltipRect.height - 10;
+                }
+                
+                tooltip.style.left = (left - containerRect.left) + 'px';
+                tooltip.style.top = (top - containerRect.top) + 'px';
+            }, 10);
+        }
+        
+        function hideTooltip() {
+            tooltip.classList.remove('show');
+        }
+        
+        // Attach click handlers to all elements with tooltips
+        tooltips.forEach(function(config) {
+            const element = document.getElementById(config.id);
+            if (element) {
+                element.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (tooltip.classList.contains('show') && tooltipTitle.textContent === config.title) {
+                        hideTooltip();
+                    } else {
+                        showTooltip(config, element);
+                    }
+                });
+            }
+        });
+        
+        // Hide tooltip when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!tooltip.contains(e.target) && !e.target.classList.contains('clickable')) {
+                hideTooltip();
+            }
+        });
+    </script>
 </body>
 </html>`
 
