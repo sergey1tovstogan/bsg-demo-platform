@@ -375,8 +375,9 @@ export function IntegrationDemo() {
 
   return (
     <div className="space-y-6">
-      {/* API Key Management Button */}
-      <div className="flex justify-end">
+      {/* Page Title and API Key Management */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-[#283054]">Useful APIs</h2>
         <button
           onClick={() => setShowApiKeyModal(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
@@ -767,7 +768,7 @@ export function IntegrationDemo() {
               <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
               <h3 className="text-lg font-bold text-[#283054]">Customer</h3>
               <a
-                href={`https://api.temenos.com/api/v5.7.0/party/customers/${customerId}`}
+                href="https://developer.temenos.com/service/customer-management#tag/RETAIL/operation/getCustomer"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-purple-600 hover:text-purple-800 transition-colors"
@@ -863,15 +864,6 @@ export function IntegrationDemo() {
             <div className="flex items-center space-x-2 mb-3">
               <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
               <h3 className="text-lg font-bold text-[#283054]">Accounts</h3>
-              <a
-                href={`https://transactwb.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=${currencyId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-purple-600 hover:text-purple-800 transition-colors"
-                title="View API documentation"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
             </div>
             <div className="flex items-center space-x-2">
               <p className="text-sm text-gray-500">
