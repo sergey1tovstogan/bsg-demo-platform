@@ -65,6 +65,9 @@ export function DeploymentContentViewer() {
         }
       }
 
+      // Store cached content before refresh in case refresh fails
+      const cachedContent = forceRefresh ? loadCachedContent() : null
+      
       // Clear cache flag when forcing refresh
       if (forceRefresh) {
         setIsFromCache(false)
@@ -83,6 +86,8 @@ export function DeploymentContentViewer() {
       
       // Query multiple questions and combine results
       const ragResults = []
+      const errors: string[] = []
+      
       for (const question of questions) {
         try {
           const response = await apiService.queryRAG({
@@ -92,14 +97,58 @@ export function DeploymentContentViewer() {
             context: 'This is about Temenos cloud architecture models and deployment strategies for Temenos banking solutions.'
           })
           
-          if (response.data?.answer) {
+          // Handle different response structures
+          // Backend returns: {status: "success", data: {answer: "...", sources: [...]}}
+          // Or: {data: {answer: "...", sources: [...]}}
+          const ragData = response.data?.data || response.data
+          
+          if (ragData?.answer) {
             ragResults.push({
               question,
-              answer: response.data.answer,
-              sources: response.data.sources || []
+              answer: ragData.answer,
+              sources: ragData.sources || []
             })
+          } else {
+            errors.push(`No answer returned for: "${question}". Response structure: ${JSON.stringify(response).substring(0, 200)}`)
+            console.warn(`No answer in RAG response for question: ${question}`, response)
           }
-        } catch (err) {
+        } catch (err: any) {
+          // Extract detailed error message from backend response
+          let errorMsg = 'Unknown error'
+          
+          // Log full error for debugging
+          console.error(`Full error object for question "${question}":`, {
+            error: err,
+            response: err.response,
+            responseData: err.response?.data,
+            responseDetail: err.response?.data?.detail,
+            message: err.message
+          })
+          
+          // Try multiple ways to extract the error message
+          if (err.response?.data?.detail) {
+            const detail = err.response.data.detail
+            if (typeof detail === 'object') {
+              // Backend returns detail as object with error field
+              errorMsg = detail.error || detail.message || JSON.stringify(detail)
+            } else if (typeof detail === 'string') {
+              // Backend returns detail as string
+              errorMsg = detail
+            }
+          } else if (err.response?.data?.error) {
+            errorMsg = err.response.data.error
+          } else if (err.response?.data?.message) {
+            errorMsg = err.response.data.message
+          } else if (err.message) {
+            errorMsg = err.message
+          }
+          
+          // If we still have a generic message, try to get more info
+          if (errorMsg === 'Request failed with status code 500' && err.response?.data) {
+            errorMsg = `Server error: ${JSON.stringify(err.response.data).substring(0, 200)}`
+          }
+          
+          errors.push(`Failed to query "${question}": ${errorMsg}`)
           console.warn(`Failed to query RAG for question: ${question}`, err)
         }
       }
@@ -108,13 +157,46 @@ export function DeploymentContentViewer() {
         setRagContent(ragResults)
         saveCachedContent(ragResults)
         setIsFromCache(false)
+        setRagError(null)
         console.log('Loaded RAG content from API and cached')
+        
+        // If some queries failed, show a warning but still display successful results
+        if (errors.length > 0) {
+          const partialErrorMsg = `Some queries failed (${errors.length}/${questions.length}). Showing available results.`
+          console.warn(partialErrorMsg, errors)
+          // Don't set as error since we have some results, just log it
+        }
       } else {
-        setRagError('No content retrieved from RAG API')
+        // All queries failed - restore cached content if available
+        if (forceRefresh && cachedContent) {
+          setRagContent(cachedContent)
+          setIsFromCache(true)
+          setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
+          console.warn('Refresh failed, restored cached content', errors)
+        } else {
+          setRagError(`No content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
+        }
       }
     } catch (err: any) {
       console.error('RAG query error:', err)
-      setRagError(err.response?.data?.detail?.error || err.message || 'Failed to load RAG information')
+      const errorMsg = err.response?.data?.detail?.error || 
+                      err.response?.data?.error || 
+                      err.message || 
+                      'Failed to load RAG information'
+      
+      // If refresh failed, try to restore cached content
+      if (forceRefresh) {
+        const cachedContent = loadCachedContent()
+        if (cachedContent) {
+          setRagContent(cachedContent)
+          setIsFromCache(true)
+          setRagError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
+        } else {
+          setRagError(errorMsg)
+        }
+      } else {
+        setRagError(errorMsg)
+      }
     } finally {
       setRagLoading(false)
     }
@@ -174,8 +256,14 @@ export function DeploymentContentViewer() {
 
 
         {ragError && (
-          <div className="mb-4 p-4 bg-red-100 dark:bg-red-200 border border-red-300 dark:border-red-400 rounded text-red-800 dark:text-red-900">
-            <p className="font-semibold">Error loading RAG content:</p>
+          <div className={`mb-4 p-4 rounded ${
+            ragError.includes('Showing cached data') 
+              ? 'bg-yellow-100 dark:bg-yellow-200 border border-yellow-300 dark:border-yellow-400 text-yellow-800 dark:text-yellow-900'
+              : 'bg-red-100 dark:bg-red-200 border border-red-300 dark:border-red-400 text-red-800 dark:text-red-900'
+          }`}>
+            <p className="font-semibold">
+              {ragError.includes('Showing cached data') ? 'Warning:' : 'Error loading RAG content:'}
+            </p>
             <p className="text-sm">{ragError}</p>
           </div>
         )}

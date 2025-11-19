@@ -405,22 +405,34 @@ class ApiService {
   }
 
   async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[]) {
-    const response = await this.client.post<ApiResponse<{
-      data: Array<{
-        cluster_name: string
-        resource_group: string
-        namespaces: string[]
-        error?: string
-      }>
-      count: number
-    }>>('/deployment/aks/namespaces', {
+    console.log('[API] getAKSNamespaces called with:', { subscriptionId, resourceGroupNames })
+    const url = '/deployment/aks/namespaces'
+    const payload = {
       subscription_id: subscriptionId,
       resource_group_names: resourceGroupNames
-    })
-    return response.data
+    }
+    console.log('[API] POST', url, payload)
+    try {
+      const response = await this.client.post<ApiResponse<{
+        data: Array<{
+          cluster_name: string
+          resource_group: string
+          namespaces: string[]
+          error?: string
+        }>
+        count: number
+      }>>(url, payload)
+      console.log('[API] Response received:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('[API] Error in getAKSNamespaces:', error)
+      console.error('[API] Error response:', error.response?.data)
+      throw error
+    }
   }
 
-  async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[]) {
+  async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[], forceRefresh?: boolean) {
+    const endpoint = forceRefresh ? '/deployment/temenos/analyze/refresh' : '/deployment/temenos/analyze'
     const response = await this.client.post<ApiResponse<{
       data: Array<{
         service: any
@@ -442,10 +454,11 @@ class ApiService {
       count: number
       processed: number
       analysisId: string
-    }>>('/deployment/temenos/analyze', {
+    }>>(endpoint, {
       services,
       analysis_id: analysisId,
-      selected_namespaces: selectedNamespaces
+      selected_namespaces: selectedNamespaces,
+      force_refresh: forceRefresh || false
     })
     return response.data
   }
@@ -465,6 +478,51 @@ class ApiService {
       answer: string
       sources?: Array<{ title?: string; url?: string }>
     }>>('/deployment/temenos/query', params)
+    return response.data
+  }
+
+  // Cache APIs
+  async getCachedContent(cacheKey: string) {
+    const response = await this.client.get<ApiResponse<{
+      cache_key: string
+      content: string
+      content_type: string
+      metadata?: Record<string, any>
+      updated_at: string
+    }>>(`/cache/${cacheKey}`)
+    return response.data
+  }
+
+  async updateCachedContent(cacheKey: string, content: string, contentType: string = 'text', metadata?: Record<string, any>) {
+    const response = await this.client.post<ApiResponse<{
+      cache_key: string
+      content: string
+      content_type: string
+      metadata?: Record<string, any>
+      updated_at: string
+    }>>(`/cache/${cacheKey}`, {
+      cache_key: cacheKey,
+      content,
+      content_type: contentType,
+      metadata
+    })
+    return response.data
+  }
+
+  // JWT Token Info API
+  async getJWTInfo() {
+    const response = await this.client.get<ApiResponse<{
+      configured: boolean
+      has_expiration: boolean
+      is_expired?: boolean
+      expires_at?: string
+      issued_at?: string
+      days_remaining?: number
+      user_id?: string
+      email?: string
+      issuer?: string
+      audience?: string
+    }>>('/deployment/temenos/jwt-info')
     return response.data
   }
 }

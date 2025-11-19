@@ -65,10 +65,15 @@ class TemenosRAGAdapter(RAGAdapter):
             if context:
                 payload["context"] = context
             
-            async with httpx.AsyncClient(timeout=12.0) as client:
+            # Increase timeout significantly for comprehensive RAG queries
+            # Use 70 seconds to allow for 60s asyncio.wait_for timeout plus overhead
+            async with httpx.AsyncClient(timeout=70.0) as client:
+                logger.info(f"Sending RAG query to {url} with timeout 70s")
+                logger.debug(f"Query payload: {payload.get('question', '')[:200]}...")
                 response = await client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
                 result = response.json()
+                logger.info(f"RAG API response received: {len(str(result))} characters")
                 
                 # RAG API may return data directly or wrapped in 'data' field
                 # Return consistent format

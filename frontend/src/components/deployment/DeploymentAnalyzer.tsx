@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search, ExternalLink } from 'lucide-react'
 import { apiService } from '../../services/api'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
@@ -26,6 +26,7 @@ interface AzureResource {
   resourceGroup: string
   tags?: Record<string, string>
   properties?: Record<string, any>
+  portalUrl?: string
 }
 
 interface ComponentInfo {
@@ -77,19 +78,58 @@ export function DeploymentAnalyzer() {
     } catch (err: any) {
       // Handle different error formats
       let errorMessage = 'Failed to connect to Azure'
+      let recoverySteps: string[] = []
+      
       if (err.response?.data?.detail) {
         if (typeof err.response.data.detail === 'string') {
           errorMessage = err.response.data.detail
         } else if (err.response.data.detail.error) {
           errorMessage = err.response.data.detail.error
-          // Add recovery steps if available
+          // Extract recovery steps if available
           if (err.response.data.detail.recoverySteps && Array.isArray(err.response.data.detail.recoverySteps)) {
-            errorMessage += '\n\n' + err.response.data.detail.recoverySteps.join('\n')
+            recoverySteps = err.response.data.detail.recoverySteps
           }
         }
       } else if (err.message) {
         errorMessage = err.message
       }
+      
+      // Check for common Azure authentication errors
+      if (errorMessage.includes('refresh token has expired') || errorMessage.includes('AADSTS70043')) {
+        errorMessage = 'Azure authentication token has expired. Please re-authenticate.'
+        recoverySteps = [
+          'Open PowerShell or Command Prompt',
+          'Run: az logout',
+          'Run: az login --use-device-code',
+          'Complete authentication in browser',
+          'After logging in, refresh this page and try again'
+        ]
+      } else if (errorMessage.includes('CredentialUnavailableError') || errorMessage.includes('authentication') || errorMessage.includes('not logged in')) {
+        errorMessage = 'Azure authentication failed. You need to log in to Azure CLI first.'
+        recoverySteps = [
+          'Open PowerShell or Command Prompt',
+          'Run: az login --use-device-code',
+          'A browser will open - complete authentication',
+          'Select your subscription (usually option 1)',
+          'After login completes, refresh this page and try again'
+        ]
+      } else if (errorMessage.includes('Failed to connect') || errorMessage.includes('Azure authentication failed')) {
+        errorMessage = 'Unable to connect to Azure. Please ensure Azure CLI is installed and you are logged in.'
+        recoverySteps = [
+          'Check if Azure CLI is installed: az --version',
+          'If not installed, download from: https://aka.ms/installazurecliwindows',
+          'Login to Azure: az login --use-device-code',
+          'Complete authentication in browser',
+          'Verify login: az account show',
+          'Refresh this page and try connecting again'
+        ]
+      }
+      
+      // Format error message with recovery steps
+      if (recoverySteps.length > 0) {
+        errorMessage += '\n\nTo fix this:\n' + recoverySteps.map((step, i) => `${i + 1}. ${step}`).join('\n')
+      }
+      
       setError(errorMessage)
       console.error('Azure connection error:', err)
     } finally {
@@ -114,12 +154,21 @@ export function DeploymentAnalyzer() {
       if (hasAKS) {
         // Get namespaces from AKS clusters
         try {
+          console.log('[DeploymentAnalyzer] Calling getAKSNamespaces with:', { subscriptionId, selected })
           const namespacesResponse = await apiService.getAKSNamespaces(subscriptionId, selected)
+          console.log('[DeploymentAnalyzer] Namespaces response:', namespacesResponse)
           const namespacesData = (namespacesResponse.data as any)?.data || namespacesResponse.data || []
+          console.log('[DeploymentAnalyzer] Parsed namespaces data:', namespacesData)
           setClusterNamespaces(namespacesData)
           setCurrentStep('namespaces')
         } catch (nsErr: any) {
-          console.warn('Failed to get namespaces, proceeding without namespace selection:', nsErr)
+          console.error('[DeploymentAnalyzer] ERROR getting namespaces:', nsErr)
+          console.error('[DeploymentAnalyzer] Error details:', {
+            message: nsErr.message,
+            response: nsErr.response?.data,
+            status: nsErr.response?.status,
+            url: nsErr.config?.url
+          })
           // Continue to analysis without namespace selection
           setCurrentStep('analysis')
           analyzeServices(servicesData).catch(err => {
@@ -300,9 +349,31 @@ function SubscriptionInput({
       </p>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
-          <div className="text-red-800 font-semibold mb-2">Connection Error</div>
-          <div className="text-red-700 whitespace-pre-line text-sm">{error}</div>
+        <div className="mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+          <div className="flex items-start">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="flex-1">
+              <div className="text-red-800 font-semibold mb-2 text-base">Connection Error</div>
+              <div className="text-red-700 whitespace-pre-line text-sm mb-3">
+                {error.includes('\n\nTo fix this:') ? error.split('\n\nTo fix this:')[0] : error}
+              </div>
+              {error.includes('\n\nTo fix this:') && (
+                <div className="mt-3 pt-3 border-t border-red-200">
+                  <div className="text-sm font-semibold text-red-800 mb-2">📋 Steps to Fix:</div>
+                  <ol className="text-sm text-red-700 space-y-2 list-decimal list-inside">
+                    {error.split('\n\nTo fix this:\n')[1]?.split('\n').filter((line: string) => line.trim() && !line.match(/^\d+\.\s*$/)).map((step: string, idx: number) => (
+                      <li key={idx} className="ml-2 bg-red-100 px-2 py-1 rounded">
+                        <code className="text-xs bg-red-200 px-1 rounded font-mono">{step.replace(/^\d+\.\s*/, '')}</code>
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                    <strong>💡 Tip:</strong> After completing these steps, refresh this page and try connecting again.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -805,6 +876,57 @@ function ComponentCard({
 
       {expanded && (
         <div className="mt-4 space-y-4 pt-4 border-t border-gray-200">
+          {/* Action Buttons */}
+          <div className="mb-4 flex items-center space-x-2">
+            {service.portalUrl && (
+              <a
+                href={service.portalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>Open in Azure Portal</span>
+              </a>
+            )}
+            <button
+              onClick={async (e) => {
+                e.stopPropagation()
+                // Refresh this component's information
+                const button = e.currentTarget
+                const originalText = button.innerHTML
+                button.disabled = true
+                button.innerHTML = '<span class="animate-spin">⟳</span> Refreshing...'
+                
+                try {
+                  const response = await apiService.analyzeAzureServices(
+                    [service],
+                    undefined,
+                    undefined,
+                    true // forceRefresh
+                  )
+                  if (response.data && response.data.length > 0 && response.data[0].componentInfo) {
+                    // Update the component info
+                    result.componentInfo = response.data[0].componentInfo
+                    // Trigger re-render by updating parent state
+                    window.location.reload() // Simple refresh for now
+                  }
+                } catch (error) {
+                  console.error('Failed to refresh component info:', error)
+                  alert('Failed to refresh component information. Please try again.')
+                } finally {
+                  button.disabled = false
+                  button.innerHTML = originalText
+                }
+              }}
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh Info</span>
+            </button>
+          </div>
+          
           <div>
             <h5 className="font-semibold text-gray-900 mb-2">Architectural Overview</h5>
             <div className="text-sm text-gray-700 whitespace-pre-line">

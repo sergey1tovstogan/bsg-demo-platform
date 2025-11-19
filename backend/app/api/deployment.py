@@ -38,6 +38,7 @@ class AnalyzeRequest(BaseModel):
     services: List[Dict[str, Any]] = Field(..., description="List of Azure resources")
     analysis_id: Optional[str] = Field(None, description="Analysis ID for progress tracking")
     selected_namespaces: Optional[List[str]] = Field(None, description="Selected AKS namespaces to analyze")
+    force_refresh: Optional[bool] = Field(False, description="Force refresh RAG queries even if cached")
 
 
 class NamespacesRequest(BaseModel):
@@ -206,9 +207,23 @@ async def get_aks_namespaces(request: NamespacesRequest):
     Returns:
         List of namespaces grouped by cluster
     """
+    # CRITICAL: Use both logger AND print for visibility
+    print("=" * 80)
+    print("=== API ENDPOINT CALLED: /aks/namespaces ===")
+    print(f"Request subscription_id: {request.subscription_id}")
+    print(f"Request resource_group_names: {request.resource_group_names}")
+    print("=" * 80)
+    logger.info("=" * 80)
+    logger.info("=== API ENDPOINT CALLED: /aks/namespaces ===")
+    logger.info(f"Request subscription_id: {request.subscription_id}")
+    logger.info(f"Request resource_group_names: {request.resource_group_names}")
+    logger.info("=" * 80)
+    
     try:
         subscription_id = request.subscription_id
         resource_group_names = request.resource_group_names
+        
+        logger.info(f"Step 1: Validating request...")
         
         if not subscription_id:
             raise HTTPException(status_code=400, detail="Subscription ID is required")
@@ -223,12 +238,18 @@ async def get_aks_namespaces(request: NamespacesRequest):
         resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
         
         # Find AKS clusters
+        logger.info(f"Searching for AKS clusters in {len(resources)} resources...")
         aks_clusters = [
             r for r in resources 
             if "microsoft.containerservice/managedclusters" in r.type.lower()
         ]
         
+        logger.info(f"Found {len(aks_clusters)} AKS cluster(s)")
+        for cluster in aks_clusters:
+            logger.info(f"  - Cluster: {cluster.name}, Type: {cluster.type}, RG: {cluster.resource_group}")
+        
         if not aks_clusters:
+            logger.warning("No AKS clusters found in selected resource groups")
             return {
                 "status": "success",
                 "data": [],
@@ -236,13 +257,28 @@ async def get_aks_namespaces(request: NamespacesRequest):
             }
         
         # Get namespaces from each cluster
+        logger.info(f"Initializing AKS service for subscription: {subscription_id}")
         aks_service = AKSService(subscription_id)
         cluster_namespaces = {}
         
-        for cluster in aks_clusters:
+        logger.info(f"Step 4: Processing {len(aks_clusters)} cluster(s) for namespace discovery...")
+        for idx, cluster in enumerate(aks_clusters, 1):
             try:
+                logger.info("=" * 80)
+                logger.info(f"=== CLUSTER {idx}/{len(aks_clusters)}: {cluster.name} ===")
+                logger.info(f"Cluster type: {cluster.type}")
+                logger.info(f"Cluster ID: {cluster.id}")
+                logger.info(f"Resource Group: {cluster.resource_group}")
+                logger.info("Calling aks_service.list_cluster_namespaces()...")
+                logger.info("=" * 80)
                 namespaces = await aks_service.list_cluster_namespaces(cluster)
+                logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name}")
+                if namespaces:
+                    logger.info(f"Namespaces: {namespaces[:5]}...")  # Show first 5
+                else:
+                    logger.warning(f"⚠ No namespaces returned for cluster {cluster.name}")
                 logger.info(f"Retrieved {len(namespaces)} namespaces from cluster {cluster.name}")
+                logger.info(f"Namespaces list: {namespaces}")
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
                     "resource_group": cluster.resource_group,
@@ -251,9 +287,10 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 if len(namespaces) == 0:
                     logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
                     logger.warning("  1. kubectl is not installed or not in PATH")
-                    logger.warning("  2. Cluster credentials are not configured")
+                    logger.warning("  2. Cluster credentials are not configured (run: az aks get-credentials)")
                     logger.warning("  3. No non-system namespaces exist in the cluster")
-                    logger.warning("  4. Backend is running in an environment without kubectl access")
+                    logger.warning("  4. Backend is running in an environment without kubectl access (e.g., Azure App Service)")
+                    logger.warning("  Note: In Azure App Service, kubectl must be installed via startup script or extension")
             except Exception as e:
                 logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}", exc_info=True)
                 cluster_namespaces[cluster.name] = {
@@ -356,6 +393,18 @@ async def get_resources(request: ResourcesRequest):
 
 @router.post("/temenos/analyze")
 async def analyze_services(request: AnalyzeRequest):
+    """Analyze Azure services for Temenos components (uses cache by default)."""
+    return await _analyze_services_impl(request)
+
+
+@router.post("/temenos/analyze/refresh")
+async def refresh_analysis(request: AnalyzeRequest):
+    """Refresh analysis - forces RAG queries even if cached."""
+    request.force_refresh = True
+    return await _analyze_services_impl(request)
+
+
+async def _analyze_services_impl(request: AnalyzeRequest):
     """
     Analyze Azure services and identify Temenos components.
     
@@ -388,38 +437,50 @@ async def analyze_services(request: AnalyzeRequest):
                 properties=svc_data.get("properties", {})
             ))
         
-        # Discover AKS pods if namespaces are selected
+        # Discover AKS pods from ALL Temenos namespaces (not just selected ones)
+        # This ensures we find all pods, then we can filter if needed
         selected_namespaces = request.selected_namespaces if request.selected_namespaces else None
         
-        if selected_namespaces and len(selected_namespaces) > 0:
-            logger.info(f"Selected namespaces for AKS pod discovery: {selected_namespaces}")
-            # Extract subscription ID from first resource
-            subscription_id = None
-            if services and services[0].id:
-                id_parts = services[0].id.split("/")
-                if "subscriptions" in id_parts:
-                    subscription_id = id_parts[id_parts.index("subscriptions") + 1]
-            
-            if subscription_id:
-                try:
-                    # Find AKS clusters in the resources
-                    aks_clusters = [s for s in services if "microsoft.containerservice/managedclusters" in s.type.lower()]
-                    if aks_clusters:
-                        aks_service = AKSService(subscription_id)
-                        # Discover pods only from selected namespaces
-                        aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=selected_namespaces)
+        # Extract subscription ID from first resource
+        subscription_id = None
+        if services and services[0].id:
+            id_parts = services[0].id.split("/")
+            if "subscriptions" in id_parts:
+                subscription_id = id_parts[id_parts.index("subscriptions") + 1]
+        
+        if subscription_id:
+            try:
+                # Find AKS clusters in the resources
+                aks_clusters = [s for s in services if "microsoft.containerservice/managedclusters" in s.type.lower()]
+                if aks_clusters:
+                    aks_service = AKSService(subscription_id)
+                    
+                    # ALWAYS discover from ALL Temenos namespaces (auto-detection)
+                    # This ensures we find all pods regardless of selection
+                    logger.info(f"Discovering pods from ALL Temenos namespaces (auto-detection)...")
+                    aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=None)
+                    
+                    # Log what we found
+                    if aks_pods:
+                        all_pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
+                        logger.info(f"✓ Discovered pods from {len(all_pod_namespaces)} namespaces: {all_pod_namespaces}")
                         
-                        if aks_pods:
-                            logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods from {len(selected_namespaces)} selected namespaces")
-                            pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
-                            logger.info(f"Pod namespaces found: {pod_namespaces}")
-                            services.extend(aks_pods)
-                            logger.info(f"Total services after adding pods: {len(services)}")
-                        else:
-                            logger.warning(f"No pods found in selected namespaces: {selected_namespaces}")
-                except Exception as e:
-                    logger.error(f"Failed to discover AKS pods: {e}", exc_info=True)
-                    # Continue with analysis even if AKS discovery fails
+                        # If namespaces were selected, log which ones match
+                        if selected_namespaces and len(selected_namespaces) > 0:
+                            matching_namespaces = [ns for ns in all_pod_namespaces if ns in selected_namespaces]
+                            logger.info(f"Selected namespaces {selected_namespaces} match {len(matching_namespaces)} discovered namespaces: {matching_namespaces}")
+                    
+                    if aks_pods:
+                        logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods")
+                        pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
+                        logger.info(f"Pod namespaces found: {pod_namespaces}")
+                        services.extend(aks_pods)
+                        logger.info(f"Total services after adding pods: {len(services)}")
+                    else:
+                        logger.warning("No AKS pods discovered")
+            except Exception as e:
+                logger.error(f"Failed to discover AKS pods: {e}", exc_info=True)
+                # Continue with analysis even if AKS discovery fails
         
         # Log what we're analyzing
         pod_count = sum(1 for s in services if "managedclusters/pods" in s.type.lower())
@@ -431,8 +492,9 @@ async def analyze_services(request: AnalyzeRequest):
         # Initialize Temenos service
         temenos_service = TemenosService()
         
-        # Analyze services
-        results = await temenos_service.analyze_services(services)
+        # Analyze services (use cache by default, unless force_refresh is True)
+        force_refresh = getattr(request, 'force_refresh', False)
+        results = await temenos_service.analyze_services(services, use_cache=True, force_refresh=force_refresh)
         
         # Deduplicate components (simplified version)
         deduplicated_results = _deduplicate_components(results)
@@ -584,13 +646,112 @@ async def query_rag(request: Dict[str, Any]):
             "status": "success",
             "data": result.get("data", result)
         }
-    except Exception as e:
-        logger.error(f"RAG query error: {e}", exc_info=True)
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except ValueError as e:
+        # Configuration errors
+        logger.error(f"RAG configuration error: {e}", exc_info=True)
+        error_detail = f"RAG configuration error: {str(e)}. Please check RAG_JWT_TOKEN and RAG_API_URL environment variables."
         raise HTTPException(
             status_code=500,
-            detail={
-                "status": "error",
-                "error": str(e)
+            detail=error_detail
+        )
+    except RuntimeError as e:
+        # Runtime errors (e.g., adapter not initialized)
+        logger.error(f"RAG runtime error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+    except Exception as e:
+        # Other exceptions - provide more context
+        error_msg = str(e)
+        error_type = type(e).__name__
+        logger.error(f"RAG query error ({error_type}): {e}", exc_info=True)
+        
+        # Provide more helpful error messages based on error type
+        if "timeout" in error_msg.lower() or "TimeoutException" in error_type:
+            error_msg = f"RAG API request timed out. The RAG service may be slow or unavailable. Original error: {error_msg}"
+        elif "401" in error_msg or "403" in error_msg or "unauthorized" in error_msg.lower():
+            error_msg = f"RAG API authentication failed. Please check RAG_JWT_TOKEN. Original error: {error_msg}"
+        elif "connection" in error_msg.lower() or "network" in error_msg.lower():
+            error_msg = f"Failed to connect to RAG API. Please check RAG_API_URL and network connectivity. Original error: {error_msg}"
+        elif "RAG_JWT_TOKEN" in error_msg or "RAG_API_URL" in error_msg:
+            error_msg = f"RAG configuration issue: {error_msg}. Please check environment variables."
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"[{error_type}] {error_msg}"
+        )
+
+
+@router.get("/temenos/jwt-info")
+async def get_jwt_info(settings: Settings = Depends(get_settings)):
+    """
+    Get JWT token information including expiration status.
+
+    Returns:
+        JWT token expiration information
+    """
+    import jwt
+    from datetime import datetime
+
+    try:
+        if not settings.RAG_JWT_TOKEN:
+            raise HTTPException(
+                status_code=500,
+                detail="RAG_JWT_TOKEN not configured"
+            )
+
+        # Decode JWT without verification to get payload
+        payload = jwt.decode(
+            settings.RAG_JWT_TOKEN,
+            options={"verify_signature": False}
+        )
+
+        exp_timestamp = payload.get("exp")
+        iat_timestamp = payload.get("iat")
+
+        if not exp_timestamp:
+            jwt_data = {
+                "configured": True,
+                "has_expiration": False,
+                "user_id": payload.get("user_id"),
+                "email": payload.get("email")
             }
+            return {"success": True, "data": jwt_data}
+
+        exp_date = datetime.fromtimestamp(exp_timestamp)
+        iat_date = datetime.fromtimestamp(iat_timestamp) if iat_timestamp else None
+        now = datetime.now()
+
+        is_expired = exp_date < now
+        days_remaining = (exp_date - now).days if not is_expired else 0
+
+        jwt_data = {
+            "configured": True,
+            "has_expiration": True,
+            "is_expired": is_expired,
+            "expires_at": exp_date.isoformat(),
+            "issued_at": iat_date.isoformat() if iat_date else None,
+            "days_remaining": days_remaining,
+            "user_id": payload.get("user_id"),
+            "email": payload.get("email"),
+            "issuer": payload.get("iss"),
+            "audience": payload.get("aud")
+        }
+
+        return {"success": True, "data": jwt_data}
+    except jwt.DecodeError:
+        raise HTTPException(
+            status_code=500,
+            detail="Invalid JWT token format"
+        )
+    except Exception as e:
+        logger.error(f"Error getting JWT info: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving JWT information: {str(e)}"
         )
 

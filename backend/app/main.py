@@ -17,7 +17,7 @@ from app.core.database import init_db, close_db
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
-from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot
+from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache
 
 # Setup logging
 setup_logging()
@@ -95,6 +95,7 @@ app.include_router(grafana_auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(security.router, prefix=settings.API_V1_PREFIX)
 app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
+app.include_router(cache.router, prefix=settings.API_V1_PREFIX)
 
 # Serve static files (frontend) if directory exists
 static_dir = os.path.join(os.path.dirname(__file__), "static")
