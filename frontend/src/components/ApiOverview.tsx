@@ -27,14 +27,14 @@ export function ApiOverview() {
   const [showApprovalModal, setShowApprovalModal] = useState(false)
   const [newKafkaContent, setNewKafkaContent] = useState<string>('')
   const [publicCatalogContent, setPublicCatalogContent] = useState<string>('')
-  const [publicCatalogLoading, setPublicCatalogLoading] = useState(true)
+  const [, setPublicCatalogLoading] = useState(true)
   const [showPublicCatalogApproval, setShowPublicCatalogApproval] = useState(false)
   const [newPublicCatalogContent, setNewPublicCatalogContent] = useState<string>('')
   const [isRefreshingCatalog, setIsRefreshingCatalog] = useState(false)
-  const [tooltipTimeout, setTooltipTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [tooltipTimeout, setTooltipTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
   const [pinnedTooltip, setPinnedTooltip] = useState<string | null>(null)
   const [openStandardsContent, setOpenStandardsContent] = useState<string>('')
-  const [openStandardsLoading, setOpenStandardsLoading] = useState(true)
+  const [, setOpenStandardsLoading] = useState(true)
   const [showOpenStandardsApproval, setShowOpenStandardsApproval] = useState(false)
   const [newOpenStandardsContent, setNewOpenStandardsContent] = useState<string>('')
   const [isRefreshingOpenStandards, setIsRefreshingOpenStandards] = useState(false)
@@ -138,7 +138,7 @@ export function ApiOverview() {
     const fetchKafkaInfo = async () => {
       try {
         const response = await apiService.getCachedContent('kafka_tooltip')
-        const cacheData = response.data?.data || response.data
+        const cacheData = response.data
         if (cacheData?.content) {
           setKafkaTooltipContent(cacheData.content)
         } else {
@@ -160,7 +160,7 @@ export function ApiOverview() {
     const fetchPublicCatalogInfo = async () => {
       try {
         const response = await apiService.getCachedContent('public_catalog_tooltip')
-        const cacheData = response.data?.data || response.data
+        const cacheData = response.data
         if (cacheData?.content) {
           setPublicCatalogContent(cacheData.content)
         }
@@ -179,7 +179,7 @@ export function ApiOverview() {
     const fetchOpenStandardsInfo = async () => {
       try {
         const response = await apiService.getCachedContent('open_standards_tooltip')
-        const cacheData = response.data?.data || response.data
+        const cacheData = response.data
         if (cacheData?.content) {
           setOpenStandardsContent(cacheData.content)
         }
@@ -198,7 +198,7 @@ export function ApiOverview() {
     const fetchJWTInfo = async () => {
       try {
         const response = await apiService.getJWTInfo()
-        const data = response.data?.data || response.data
+        const data = response.data
         setJwtInfo(data)
       } catch (err) {
         console.error('Failed to load JWT info:', err)
@@ -221,7 +221,7 @@ export function ApiOverview() {
         context: 'This is about Kafka messaging capabilities and CloudEvents integration in Temenos platform for integration and event-driven architecture.'
       })
 
-      const ragData = response.data?.data || response.data
+      const ragData = response.data
       if (ragData?.answer) {
         // Show the new content in approval modal
         setNewKafkaContent(ragData.answer)
@@ -271,7 +271,7 @@ export function ApiOverview() {
         context: 'This is about the public API catalog, developer portal, and API documentation capabilities in Temenos platform.'
       })
 
-      const ragData = response.data?.data || response.data
+      const ragData = response.data
       if (ragData?.answer) {
         setNewPublicCatalogContent(ragData.answer)
         setShowPublicCatalogApproval(true)
@@ -320,7 +320,7 @@ export function ApiOverview() {
         context: 'This is about open standards for APIs including Berlin Group, OpenAPI specifications, and PSD2 compliance in Temenos platform.'
       })
 
-      const ragData = response.data?.data || response.data
+      const ragData = response.data
       if (ragData?.answer) {
         setNewOpenStandardsContent(ragData.answer)
         setShowOpenStandardsApproval(true)
