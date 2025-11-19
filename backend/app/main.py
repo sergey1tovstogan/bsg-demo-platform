@@ -105,7 +105,18 @@ if os.path.exists(static_dir) and os.path.isdir(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
     logger.info(f"Static files mounted at /static from {static_dir}")
     
+    # Root endpoint - must be defined BEFORE catch-all route
+    @app.get("/")
+    async def root():
+        """Root endpoint - serves frontend index.html."""
+        if index_path and os.path.exists(index_path):
+            logger.info(f"Serving frontend index.html from {index_path}")
+            return FileResponse(index_path)
+        logger.warning(f"index.html not found at {index_path}")
+        return {"detail": "Frontend not found", "static_dir": str(static_dir), "exists": os.path.exists(static_dir)}
+    
     # Serve index.html for all non-API routes (SPA routing)
+    # This catch-all must be AFTER the root route
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         """Serve frontend SPA or API routes."""
@@ -113,34 +124,27 @@ if os.path.exists(static_dir) and os.path.isdir(static_dir):
         if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
             return {"detail": "Not Found"}
         
-        # Serve index.html for frontend routes
+        # Serve index.html for frontend routes (SPA routing)
         if index_path and os.path.exists(index_path):
             return FileResponse(index_path)
         logger.warning(f"index.html not found at {index_path}, static_dir exists: {os.path.exists(static_dir)}")
         return {"detail": "Frontend not found", "static_dir": str(static_dir), "exists": os.path.exists(static_dir)}
-
-# Root endpoint (only if static files not mounted)
-@app.get("/")
-async def root():
-    """Root endpoint - serves frontend if available, otherwise API info."""
-    # Try to serve frontend index.html if it exists
-    if index_path and os.path.exists(index_path):
-        logger.info(f"Serving frontend index.html from {index_path}")
-        return FileResponse(index_path)
-    
-    # Fallback to API information if frontend not available
-    logger.warning(f"Frontend not found at {index_path}, serving API info instead")
-    return {
-        "name": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "environment": settings.ENVIRONMENT,
-        "api_version": "v1",
-        "docs": f"{settings.API_V1_PREFIX}/docs" if not settings.is_production else None,
-        "health": f"{settings.API_V1_PREFIX}/health",
-        "frontend_available": False,
-        "static_dir": str(static_dir) if static_dir else None,
-        "index_exists": os.path.exists(index_path) if index_path else False
-    }
+else:
+    # Root endpoint (only if static files not mounted)
+    @app.get("/")
+    async def root():
+        """Root endpoint with API information."""
+        logger.warning(f"Static directory not found at {static_dir}, serving API info")
+        return {
+            "name": settings.APP_NAME,
+            "version": settings.APP_VERSION,
+            "environment": settings.ENVIRONMENT,
+            "api_version": "v1",
+            "docs": f"{settings.API_V1_PREFIX}/docs" if not settings.is_production else None,
+            "health": f"{settings.API_V1_PREFIX}/health",
+            "frontend_available": False,
+            "static_dir": str(static_dir) if static_dir else None
+        }
 
 
 if __name__ == "__main__":
