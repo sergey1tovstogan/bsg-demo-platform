@@ -433,7 +433,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             {
                 id: 'certificate-management',
                 title: 'Certificate Management',
-                description: '',
+                description: 'Certificates management (DigiCert used) procedures for Temenos SaaS\\n\\nTemenos renews the certificates annually for the Temenos cloud hosted environments for clients. During deployment of application, we leverage Temenos managed domain for App deployment and secure it with our SSL certificates for Application endpoint. These certificates are renewed every year.',
                 position: 'right'
             },
             {
@@ -445,7 +445,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             {
                 id: 'authentication-box',
                 title: 'Authentication',
-                description: 'The external authentication mechanism for Temenos solution leverages Keycloak solution. Temenos SaaS leverages Keycloak as authentication and authorization. Keycloak can be federated to another Bank\\'s identity management system. A bank can replace Keycloak with any existing fit-for-purpose IAM solution capable of OIDC AZ Code & PKCE & client grant type private key JSON Web Token (JWT).',
+                description: 'In Temenos solution, authentication is primarily managed through Keycloak, an open-source identity and access management system. The process involves several key steps:\\n\\n1. Integration with Identity Management: Temenos applications are integrated with the bank\\'s Identity and Access Management (IAM) solutions, such as Active Directory. Keycloak acts as an identity broker, redirecting authentication requests to the bank\\'s IAM system.\\n\\n2. User Authentication: When a user attempts to log in, they are authenticated via the bank\\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization.\\n\\n3. Token Exchange: The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.',
                 position: 'top'
             },
             {
@@ -463,7 +463,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             {
                 id: 'tls-entry-points',
                 title: 'TLS 1.2 Entry Points Container',
-                description: 'All access to web applications and API endpoints is over HTTPS, using modern TLS ciphers (TLS 1.2).',
+                description: 'Within Temenos solution, data in transit security is implemented through a structured approach that includes the following steps:\\n\\n1. Encryption Protocols: All data transmitted over networks is secured using TLS 1.2, ensuring that data is encrypted during transmission to protect against interception.\\n\\n2. Secure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilized, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\\n\\n3. Logging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorized access attempts and ensuring compliance with security policies.',
                 position: 'right'
             }
         ];
@@ -982,13 +982,368 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
+// HTML5 Authorization Diagram Content
+const TemenosAuthorizationHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Authorization - Role Based Access</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            padding: 60px 40px 40px 120px;
+            gap: 80px;
+            align-items: flex-start;
+        }
+        
+        .left-section {
+            flex: 0 0 45%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .right-section {
+            flex: 0 0 45%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-top: 30px;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+        }
+        
+        /* Left Section Styles */
+        .icon-group {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .icon-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #10b981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+        }
+        
+        .flow-box {
+            border: 3px solid #9333ea;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 16px;
+            color: #9333ea;
+            min-width: 150px;
+            text-align: center;
+        }
+        
+        .arrow-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #000;
+            margin: 5px 0;
+        }
+        
+        .arrow-examples {
+            font-size: 12px;
+            color: #333;
+            margin-left: 10px;
+        }
+        
+        .list-section {
+            margin-top: 30px;
+        }
+        
+        .list-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #000;
+            margin-bottom: 10px;
+        }
+        
+        .list-items {
+            font-size: 13px;
+            color: #333;
+            line-height: 1.8;
+        }
+        
+        /* Right Section Styles */
+        .example-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 20px;
+        }
+        
+        .hierarchy-block {
+            background: #1e3a8a;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            min-width: 400px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .hierarchy-block::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 0;
+            bottom: -15px;
+            width: 3px;
+            background: #6b7280;
+        }
+        
+        .hierarchy-block:first-child::before {
+            display: none;
+        }
+        
+        .hierarchy-block:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: -25px;
+            bottom: -15px;
+            width: 3px;
+            height: 15px;
+            background: #6b7280;
+        }
+        
+        .padlock-icon {
+            font-size: 24px;
+            color: #6b7280;
+        }
+        
+        .block-title {
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+        
+        .block-examples {
+            font-size: 13px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .block-icon {
+            font-size: 20px;
+            color: #6b7280;
+            margin-left: auto;
+        }
+        
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Role Based Access</div>
+    <div class="container">
+        <!-- Left Section: Role-Based Access Model -->
+        <div class="left-section">
+            <!-- Flow Diagram and Bottom Lists Container -->
+            <div style="display: flex; align-items: flex-start; gap: 30px; margin-top: 90px;">
+                <!-- Bottom Lists -->
+                <div class="list-section" style="margin-top: 0;">
+                    <div class="list-title">User Groups:</div>
+                    <div class="list-items">
+                        Back-office Team,<br>
+                        Front office team<br>
+                        Audit Group.
+                    </div>
+                    
+                    <div class="list-title" style="margin-top: 20px;">Actual users with profiles:</div>
+                    <div class="list-items">
+                        John Doe
+                    </div>
+                    
+                    <div class="list-title" style="margin-top: 20px;">Role Based Access:</div>
+                    <div class="list-items">
+                        Payments Operator,<br>
+                        Check Issuer,<br>
+                        Wire Room Authorizer,<br>
+                        Account Executive
+                    </div>
+                </div>
+                
+                <!-- Vertical Purple Line -->
+                <div style="width: 4px; background-color: #9333ea; align-self: stretch; flex-shrink: 0;"></div>
+                
+                <!-- Flow Diagram -->
+                <div style="position: relative;">
+                    <!-- User Group Box with Icon -->
+                    <div style="display: flex; align-items: center; gap: 40px; margin-bottom: 20px;">
+                        <div class="icon-circle">👥</div>
+                        <div class="flow-box">User Group</div>
+                    </div>
+                    
+                    <!-- Arrow to User -->
+                    <div style="margin-left: 30px; margin-bottom: 10px;">
+                        <div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 15px solid #000; margin-bottom: 5px;"></div>
+                        <div class="arrow-label">Properties</div>
+                        <div class="arrow-examples">
+                            Start Date/Time<br>
+                            End Date/Time
+                        </div>
+                    </div>
+                    
+                    <!-- User Box with Icon -->
+                    <div style="display: flex; align-items: center; gap: 40px; margin-bottom: 20px;">
+                        <div class="icon-circle">👤</div>
+                        <div class="flow-box" style="background: #ff0000; color: white;">User</div>
+                    </div>
+                    
+                    <!-- Arrow to Role -->
+                    <div style="margin-left: 30px; margin-bottom: 10px;">
+                        <div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 15px solid #000; margin-bottom: 5px;"></div>
+                        <div class="arrow-label">Access</div>
+                        <div class="arrow-examples">
+                            Belongs to US Entity,<br>
+                            Can process Payments,<br>
+                            Only Checks,<br>
+                            Authorize Checks,<br>
+                            Edit Ben. Account #
+                        </div>
+                    </div>
+                    
+                    <!-- Role Box with Icon -->
+                    <div style="display: flex; align-items: center; gap: 40px;">
+                        <div class="icon-circle">🔒</div>
+                        <div class="flow-box">Role</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Section: Hierarchical System Components -->
+        <div class="right-section">
+            <div class="example-label">Example</div>
+            
+            <!-- ENTITY Block -->
+            <div class="hierarchy-block">
+                <span class="padlock-icon">🔒</span>
+                <div style="flex: 1;">
+                    <div class="block-title">ENTITY (Company)</div>
+                    <div class="block-examples">
+                        <span>Entity A</span>
+                        <span>Entity B</span>
+                    </div>
+                </div>
+                <span class="block-icon">🏢</span>
+            </div>
+            
+            <!-- PRODUCT Block -->
+            <div class="hierarchy-block">
+                <span class="padlock-icon">🔒</span>
+                <div style="flex: 1;">
+                    <div class="block-title">PRODUCT (Module)</div>
+                    <div class="block-examples">
+                        <span>Payments</span>
+                        <span>Forex</span>
+                    </div>
+                </div>
+                <span class="block-icon">⊞</span>
+            </div>
+            
+            <!-- SUB-PRODUCT Block -->
+            <div class="hierarchy-block">
+                <span class="padlock-icon">🔒</span>
+                <div style="flex: 1;">
+                    <div class="block-title">SUB-PRODUCT (Application)</div>
+                    <div class="block-examples">
+                        <span>ACH, Wires, Checks, Swift</span>
+                        <span>Forex, Spot</span>
+                    </div>
+                </div>
+                <span class="block-icon">🔍</span>
+            </div>
+            
+            <!-- ACTIVITY Block -->
+            <div class="hierarchy-block">
+                <span class="padlock-icon">🔒</span>
+                <div style="flex: 1;">
+                    <div class="block-title">ACTIVITY (Function)</div>
+                    <div class="block-examples" style="flex-direction: column; gap: 5px;">
+                        <div>
+                            <span>Create, Amend, View,</span><br>
+                            <span>First Level Approval,</span><br>
+                            <span>Second Level Approval</span>
+                        </div>
+                        <div>
+                            <span>Creator, Authorizer,</span><br>
+                            <span>Manager, Reviewer</span>
+                        </div>
+                    </div>
+                </div>
+                <span class="block-icon">👆</span>
+            </div>
+            
+            <!-- DATA Block -->
+            <div class="hierarchy-block">
+                <span class="padlock-icon">🔒</span>
+                <div style="flex: 1;">
+                    <div class="block-title">DATA (Fields)</div>
+                    <div class="block-examples">
+                        <span>Payment Amount, Beneficiary</span>
+                    </div>
+                </div>
+                <span class="block-icon">📄</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`
+
 export function SecurityContentViewer() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const handleCardClick = (cardId: number) => {
-    if (cardId === 1) {
+    if (cardId === 1 || cardId === 2) {
       setSelectedCard(cardId)
     }
   }
@@ -1015,6 +1370,30 @@ export function SecurityContentViewer() {
       window.removeEventListener('message', handleMessage)
     }
   }, [])
+
+  // Show HTML5 diagram when card 2 is selected
+  if (selectedCard === 2) {
+    return (
+      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+          >
+            <X className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+        </div>
+        <iframe
+          srcDoc={TemenosAuthorizationHTML}
+          className="w-full h-full border-0 rounded-lg"
+          title="Temenos Authorization"
+          sandbox="allow-same-origin allow-scripts"
+          style={{ minHeight: '600px' }}
+        />
+      </div>
+    )
+  }
 
   // Show HTML5 diagram when card 1 is selected
   if (selectedCard === 1) {
