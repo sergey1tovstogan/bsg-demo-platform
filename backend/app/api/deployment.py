@@ -685,3 +685,73 @@ async def query_rag(request: Dict[str, Any]):
             detail=f"[{error_type}] {error_msg}"
         )
 
+
+@router.get("/temenos/jwt-info")
+async def get_jwt_info(settings: Settings = Depends(get_settings)):
+    """
+    Get JWT token information including expiration status.
+
+    Returns:
+        JWT token expiration information
+    """
+    import jwt
+    from datetime import datetime
+
+    try:
+        if not settings.RAG_JWT_TOKEN:
+            raise HTTPException(
+                status_code=500,
+                detail="RAG_JWT_TOKEN not configured"
+            )
+
+        # Decode JWT without verification to get payload
+        payload = jwt.decode(
+            settings.RAG_JWT_TOKEN,
+            options={"verify_signature": False}
+        )
+
+        exp_timestamp = payload.get("exp")
+        iat_timestamp = payload.get("iat")
+
+        if not exp_timestamp:
+            jwt_data = {
+                "configured": True,
+                "has_expiration": False,
+                "user_id": payload.get("user_id"),
+                "email": payload.get("email")
+            }
+            return {"success": True, "data": jwt_data}
+
+        exp_date = datetime.fromtimestamp(exp_timestamp)
+        iat_date = datetime.fromtimestamp(iat_timestamp) if iat_timestamp else None
+        now = datetime.now()
+
+        is_expired = exp_date < now
+        days_remaining = (exp_date - now).days if not is_expired else 0
+
+        jwt_data = {
+            "configured": True,
+            "has_expiration": True,
+            "is_expired": is_expired,
+            "expires_at": exp_date.isoformat(),
+            "issued_at": iat_date.isoformat() if iat_date else None,
+            "days_remaining": days_remaining,
+            "user_id": payload.get("user_id"),
+            "email": payload.get("email"),
+            "issuer": payload.get("iss"),
+            "audience": payload.get("aud")
+        }
+
+        return {"success": True, "data": jwt_data}
+    except jwt.DecodeError:
+        raise HTTPException(
+            status_code=500,
+            detail="Invalid JWT token format"
+        )
+    except Exception as e:
+        logger.error(f"Error getting JWT info: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving JWT information: {str(e)}"
+        )
+

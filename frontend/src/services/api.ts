@@ -508,6 +508,23 @@ class ApiService {
     })
     return response.data
   }
+
+  // JWT Token Info API
+  async getJWTInfo() {
+    const response = await this.client.get<ApiResponse<{
+      configured: boolean
+      has_expiration: boolean
+      is_expired?: boolean
+      expires_at?: string
+      issued_at?: string
+      days_remaining?: number
+      user_id?: string
+      email?: string
+      issuer?: string
+      audience?: string
+    }>>('/deployment/temenos/jwt-info')
+    return response.data
+  }
 }
 
 export const apiService = new ApiService()

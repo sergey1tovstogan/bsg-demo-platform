@@ -36,6 +36,16 @@ export function ApiOverview() {
   const [showOpenStandardsApproval, setShowOpenStandardsApproval] = useState(false)
   const [newOpenStandardsContent, setNewOpenStandardsContent] = useState<string>('')
   const [isRefreshingOpenStandards, setIsRefreshingOpenStandards] = useState(false)
+  const [jwtInfo, setJwtInfo] = useState<{
+    is_expired?: boolean
+    expires_at?: string
+    days_remaining?: number
+    email?: string
+  } | null>(null)
+  const [jwtLoading, setJwtLoading] = useState(true)
+  const [kafkaPrompt, setKafkaPrompt] = useState('What are the Kafka capabilities in Temenos platform for event-driven architecture and messaging, including CloudEvents support?')
+  const [publicCatalogPrompt, setPublicCatalogPrompt] = useState('What is the Temenos public API catalog and what are its key capabilities for banks and developers?')
+  const [openStandardsPrompt, setOpenStandardsPrompt] = useState('Elaborate about API and related open standards such as Berlin Group, OpenAPI and PSD2')
 
   const tooltips: TooltipConfig[] = [
     {
@@ -183,12 +193,29 @@ export function ApiOverview() {
     fetchOpenStandardsInfo()
   }, [])
 
+  // Fetch JWT token information
+  useEffect(() => {
+    const fetchJWTInfo = async () => {
+      try {
+        const response = await apiService.getJWTInfo()
+        const data = response.data?.data || response.data
+        setJwtInfo(data)
+      } catch (err) {
+        console.error('Failed to load JWT info:', err)
+      } finally {
+        setJwtLoading(false)
+      }
+    }
+
+    fetchJWTInfo()
+  }, [])
+
   // Refresh Kafka tooltip from RAG API - shows approval modal
   const refreshKafkaTooltip = async () => {
     setIsRefreshing(true)
     try {
       const response = await apiService.queryRAG({
-        question: 'What are the Kafka capabilities in Temenos platform for event-driven architecture and messaging, including CloudEvents support?',
+        question: kafkaPrompt,
         region: 'global',
         RAGmodelId: 'TechnologyOverview, ModularBanking',
         context: 'This is about Kafka messaging capabilities and CloudEvents integration in Temenos platform for integration and event-driven architecture.'
@@ -238,7 +265,7 @@ export function ApiOverview() {
     setIsRefreshingCatalog(true)
     try {
       const response = await apiService.queryRAG({
-        question: 'What is the Temenos public API catalog and what are its key capabilities for banks and developers?',
+        question: publicCatalogPrompt,
         region: 'global',
         RAGmodelId: 'TechnologyOverview, ModularBanking',
         context: 'This is about the public API catalog, developer portal, and API documentation capabilities in Temenos platform.'
@@ -287,7 +314,7 @@ export function ApiOverview() {
     setIsRefreshingOpenStandards(true)
     try {
       const response = await apiService.queryRAG({
-        question: 'Elaborate about API and related open standards such as Berlin Group, OpenAPI and PSD2',
+        question: openStandardsPrompt,
         region: 'global',
         RAGmodelId: 'TechnologyOverview, ModularBanking',
         context: 'This is about open standards for APIs including Berlin Group, OpenAPI specifications, and PSD2 compliance in Temenos platform.'
@@ -795,6 +822,7 @@ export function ApiOverview() {
       {showDemoSettings && (
         <div className="mt-4 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-lg">
           <h3 className="text-lg font-bold text-purple-900 mb-3">Demo Settings</h3>
+
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div>
@@ -877,6 +905,59 @@ export function ApiOverview() {
               </button>
             </div>
           </div>
+
+          {/* JWT Token Information - at the end with purple background */}
+          <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+            <h4 className="text-sm font-bold text-purple-900 mb-3">RAG API JWT Token Status</h4>
+            {jwtLoading ? (
+              <div className="flex items-center space-x-2 text-gray-600">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-xs">Loading JWT info...</span>
+              </div>
+            ) : jwtInfo ? (
+              <div className="space-y-1">
+                {jwtInfo.email && (
+                  <p className="text-xs text-gray-700">
+                    <span className="font-semibold">User:</span> {jwtInfo.email}
+                  </p>
+                )}
+                {jwtInfo.expires_at && (
+                  <p className="text-xs text-gray-700">
+                    <span className="font-semibold">Expires:</span> {new Date(jwtInfo.expires_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                )}
+                {jwtInfo.is_expired !== undefined && (
+                  <div className={`flex items-center space-x-2 mt-2 ${jwtInfo.is_expired ? 'text-red-600' : 'text-green-600'}`}>
+                    {jwtInfo.is_expired ? (
+                      <>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm font-bold">Token Expired - A new JWT token needs to be used</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm font-bold">
+                          Token Valid ({jwtInfo.days_remaining !== undefined ? `${jwtInfo.days_remaining} days remaining` : 'active'})
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-600">JWT token information not available</p>
+            )}
+          </div>
         </div>
       )}
 
@@ -886,12 +967,27 @@ export function ApiOverview() {
           <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col">
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Review RAG API Response</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Review RAG API Response - Kafka</h2>
               <p className="text-sm text-gray-600 mt-1">Please review the content below before approving the update</p>
             </div>
 
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
+              {/* RAG Prompt Section */}
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
+                <textarea
+                  value={kafkaPrompt}
+                  onChange={(e) => setKafkaPrompt(e.target.value)}
+                  className="w-full p-3 border border-blue-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Enter your RAG query prompt..."
+                />
+                <p className="text-xs text-blue-700 mt-2">
+                  <span className="font-semibold">Tip:</span> You can edit this prompt and click "Refresh" again to get a new response
+                </p>
+              </div>
+
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">New Kafka Tooltip Content:</h3>
                 <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
@@ -934,6 +1030,21 @@ export function ApiOverview() {
 
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
+              {/* RAG Prompt Section */}
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
+                <textarea
+                  value={publicCatalogPrompt}
+                  onChange={(e) => setPublicCatalogPrompt(e.target.value)}
+                  className="w-full p-3 border border-blue-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Enter your RAG query prompt..."
+                />
+                <p className="text-xs text-blue-700 mt-2">
+                  <span className="font-semibold">Tip:</span> You can edit this prompt and click "Refresh" again to get a new response
+                </p>
+              </div>
+
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">New Public API Catalog Tooltip Content:</h3>
                 <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
@@ -976,6 +1087,21 @@ export function ApiOverview() {
 
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
+              {/* RAG Prompt Section */}
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
+                <textarea
+                  value={openStandardsPrompt}
+                  onChange={(e) => setOpenStandardsPrompt(e.target.value)}
+                  className="w-full p-3 border border-blue-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Enter your RAG query prompt..."
+                />
+                <p className="text-xs text-blue-700 mt-2">
+                  <span className="font-semibold">Tip:</span> You can edit this prompt and click "Refresh" again to get a new response
+                </p>
+              </div>
+
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">New Open Standards Tooltip Content:</h3>
                 <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
