@@ -480,6 +480,51 @@ class ApiService {
     }>>('/deployment/temenos/query', params)
     return response.data
   }
+
+  // Cache APIs
+  async getCachedContent(cacheKey: string) {
+    const response = await this.client.get<ApiResponse<{
+      cache_key: string
+      content: string
+      content_type: string
+      metadata?: Record<string, any>
+      updated_at: string
+    }>>(`/cache/${cacheKey}`)
+    return response.data
+  }
+
+  async updateCachedContent(cacheKey: string, content: string, contentType: string = 'text', metadata?: Record<string, any>) {
+    const response = await this.client.post<ApiResponse<{
+      cache_key: string
+      content: string
+      content_type: string
+      metadata?: Record<string, any>
+      updated_at: string
+    }>>(`/cache/${cacheKey}`, {
+      cache_key: cacheKey,
+      content,
+      content_type: contentType,
+      metadata
+    })
+    return response.data
+  }
+
+  // JWT Token Info API
+  async getJWTInfo() {
+    const response = await this.client.get<ApiResponse<{
+      configured: boolean
+      has_expiration: boolean
+      is_expired?: boolean
+      expires_at?: string
+      issued_at?: string
+      days_remaining?: number
+      user_id?: string
+      email?: string
+      issuer?: string
+      audience?: string
+    }>>('/deployment/temenos/jwt-info')
+    return response.data
+  }
 }
 
 export const apiService = new ApiService()

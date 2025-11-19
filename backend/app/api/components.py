@@ -63,9 +63,12 @@ async def get_component_content(
         # Calculate skip
         skip = (page - 1) * page_size
         
-        # Fetch items
-        cursor = db.content.find(query_filter).sort("order", 1).skip(skip).limit(page_size)
+        # Fetch items (removed sort by order due to Cosmos DB indexing constraints)
+        cursor = db.content.find(query_filter).skip(skip).limit(page_size)
         items = await cursor.to_list(length=page_size)
+
+        # Sort in memory if order field exists
+        items = sorted(items, key=lambda x: x.get("order", 0))
         
         # Convert to Content models and then to dict
         content_list = [Content(**item).to_dict() for item in items]

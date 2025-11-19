@@ -75,6 +75,11 @@
   .card p, .card span, .card div {
     @apply text-[#4A5568];
   }
+
+  /* Override for button text - ensure white text on buttons */
+  button span {
+    color: inherit !important;
+  }
   
   .light-surface {
     color: #1F2937;

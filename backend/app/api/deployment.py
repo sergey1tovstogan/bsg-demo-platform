@@ -91,11 +91,9 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
             error_type = "authentication"
             recovery_steps = [
                 "Check if Azure CLI is installed: Run `az --version`",
-                "For interactive login: Run `az login`",
-                "For non-interactive environments (CI/CD, remote servers, Azure App Service): Run `az login --use-device-code`",
+                "Login to Azure: Run `az login`",
                 "Verify your login: Run `az account show`",
                 "Set the correct subscription: Run `az account set --subscription <subscription-id>`",
-                "For Azure App Service: Configure Managed Identity or Service Principal (see documentation)",
                 "After logging in, restart the backend server"
             ]
         elif "permission" in error_msg.lower() or "authorization" in error_msg.lower():
@@ -120,12 +118,14 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
                 "Try restarting the backend server"
             ]
         
-        # Format error message for better frontend display
-        error_detail = f"Azure connection failed: {error_msg}\n\nError Type: {error_type}\n\nRecovery Steps:\n" + "\n".join(f"- {step}" for step in recovery_steps)
-        logger.error(f"Azure connection error: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=error_detail
+            detail={
+                "status": "error",
+                "error": error_msg,
+                "errorType": error_type,
+                "recoverySteps": recovery_steps
+            }
         )
     except Exception as e:
         logger.error(f"Connect error: {e}", exc_info=True)
@@ -145,12 +145,14 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
         if "azure" in error_msg.lower() or "subscription" in error_msg.lower():
             recovery_steps.insert(0, f"Verify you have access to subscription '{request.subscription_id}' in Azure Portal")
         
-        # Format error message for better frontend display
-        error_detail = f"Azure connection failed: {error_msg}\n\nError Type: {error_type}\n\nRecovery Steps:\n" + "\n".join(f"- {step}" for step in recovery_steps)
-        logger.error(f"Azure connection error: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=error_detail
+            detail={
+                "status": "error",
+                "error": error_msg,
+                "errorType": error_type,
+                "recoverySteps": recovery_steps
+            }
         )
 
 
@@ -178,11 +180,19 @@ async def get_resource_groups(subscriptionId: str):
             "count": len(resource_groups)
         }
     except Exception as e:
-        error_detail = f"Error getting resource groups: {str(e)}\n\nRecovery Steps:\n- Check backend server logs\n- Verify Azure CLI is installed and logged in\n- Try restarting the backend server"
-        logger.error(f"Resource groups error: {error_detail}")
+        logger.error(f"Error getting resource groups: {e}")
         raise HTTPException(
             status_code=500,
-            detail=error_detail
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": "unknown",
+                "recoverySteps": [
+                    "Check backend server logs",
+                    "Verify Azure CLI is installed and logged in",
+                    "Try restarting the backend server"
+                ]
+            }
         )
 
 
@@ -298,9 +308,12 @@ async def get_aks_namespaces(request: NamespacesRequest):
     except Exception as e:
             logger.error(f"Error getting AKS namespaces: {e}", exc_info=True)
             import traceback
-            error_traceback = traceback.format_exc()
-            error_detail = f"Error getting AKS namespaces: {str(e)}\n\nTraceback:\n{error_traceback}\n\nRecovery Steps:\n- Check backend server logs\n- Verify kubectl is installed\n- Verify Azure CLI is logged in\n- Check AKS cluster access permissions"
-            logger.error(f"Full traceback: {error_traceback}")
+            error_detail = {
+                "status": "error",
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            }
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             raise HTTPException(
                 status_code=500,
                 detail=error_detail
@@ -362,11 +375,19 @@ async def get_resources(request: ResourcesRequest):
             "count": len(resources)
         }
     except Exception as e:
-        error_detail = f"Error getting resources: {str(e)}\n\nRecovery Steps:\n- Check backend server logs\n- Verify Azure CLI is installed and logged in\n- Try restarting the backend server"
-        logger.error(f"Resources error: {error_detail}")
+        logger.error(f"Error getting resources: {e}")
         raise HTTPException(
             status_code=500,
-            detail=error_detail
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": "unknown",
+                "recoverySteps": [
+                    "Check backend server logs",
+                    "Verify Azure CLI is installed and logged in",
+                    "Try restarting the backend server"
+                ]
+            }
         )
 
 
@@ -486,12 +507,14 @@ async def _analyze_services_impl(request: AnalyzeRequest):
             "analysisId": analysis_id
         }
     except Exception as e:
-        service_count = len(request.services) if request.services else 0
-        error_detail = f"Analysis error: {str(e)}\n\nService count: {service_count}\n\nRecovery Steps:\n- Check backend server logs\n- Verify RAG_JWT_TOKEN is set\n- Verify Azure connection is working"
-        logger.error(f"Analysis error: {error_detail}")
+        logger.error(f"Analysis error: {e}")
         raise HTTPException(
             status_code=500,
-            detail=error_detail
+            detail={
+                "status": "error",
+                "error": str(e),
+                "serviceCount": len(request.services) if request.services else 0
+            }
         )
 
 
@@ -660,5 +683,75 @@ async def query_rag(request: Dict[str, Any]):
         raise HTTPException(
             status_code=500,
             detail=f"[{error_type}] {error_msg}"
+        )
+
+
+@router.get("/temenos/jwt-info")
+async def get_jwt_info(settings: Settings = Depends(get_settings)):
+    """
+    Get JWT token information including expiration status.
+
+    Returns:
+        JWT token expiration information
+    """
+    import jwt
+    from datetime import datetime
+
+    try:
+        if not settings.RAG_JWT_TOKEN:
+            raise HTTPException(
+                status_code=500,
+                detail="RAG_JWT_TOKEN not configured"
+            )
+
+        # Decode JWT without verification to get payload
+        payload = jwt.decode(
+            settings.RAG_JWT_TOKEN,
+            options={"verify_signature": False}
+        )
+
+        exp_timestamp = payload.get("exp")
+        iat_timestamp = payload.get("iat")
+
+        if not exp_timestamp:
+            jwt_data = {
+                "configured": True,
+                "has_expiration": False,
+                "user_id": payload.get("user_id"),
+                "email": payload.get("email")
+            }
+            return {"success": True, "data": jwt_data}
+
+        exp_date = datetime.fromtimestamp(exp_timestamp)
+        iat_date = datetime.fromtimestamp(iat_timestamp) if iat_timestamp else None
+        now = datetime.now()
+
+        is_expired = exp_date < now
+        days_remaining = (exp_date - now).days if not is_expired else 0
+
+        jwt_data = {
+            "configured": True,
+            "has_expiration": True,
+            "is_expired": is_expired,
+            "expires_at": exp_date.isoformat(),
+            "issued_at": iat_date.isoformat() if iat_date else None,
+            "days_remaining": days_remaining,
+            "user_id": payload.get("user_id"),
+            "email": payload.get("email"),
+            "issuer": payload.get("iss"),
+            "audience": payload.get("aud")
+        }
+
+        return {"success": True, "data": jwt_data}
+    except jwt.DecodeError:
+        raise HTTPException(
+            status_code=500,
+            detail="Invalid JWT token format"
+        )
+    except Exception as e:
+        logger.error(f"Error getting JWT info: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving JWT information: {str(e)}"
         )
 

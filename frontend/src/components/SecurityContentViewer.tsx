@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Key, UserCheck, Lock, Shield, Eye, Server, Cloud, KeyRound, FileCheck, X, type LucideIcon } from 'lucide-react'
 
 interface SecurityCard {
@@ -123,18 +123,14 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         .label {
             position: absolute;
             top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            right: 20px;
             background: rgba(255, 255, 255, 0.95);
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 5px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             font-weight: bold;
-            font-size: 16px;
             color: #283054;
             z-index: 1000;
-            text-align: center;
-            line-height: 1.4;
         }
         
         .tooltip {
@@ -144,7 +140,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             border-radius: 4px;
             padding: 12px;
             max-width: 450px;
-            font-size: 16px;
+            font-size: 12px;
             line-height: 1.5;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             z-index: 2000;
@@ -160,14 +156,13 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         
         .tooltip-title {
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
             margin-bottom: 8px;
             color: #283054;
         }
         
         .tooltip-description {
             color: #333;
-            font-size: 16px;
         }
         
         .tooltip-button {
@@ -210,9 +205,9 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         }
         
         .temenos-box {
-            fill: #d3d3d3;
-            stroke: #3B82F6;
-            stroke-width: 3;
+            fill: #1e3a8a;
+            stroke: #000;
+            stroke-width: 2;
         }
         
         .purple-box {
@@ -263,10 +258,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
 </head>
 <body>
     <div class="container">
-        <div class="label">
-            Here is the Temenos Security Architecture<br>
-            <span style="font-size: 14px; font-weight: normal;">click on elements to get more details</span>
-        </div>
+        <div class="label">Here is the Temenos Security Architecture</div>
         <div id="tooltip" class="tooltip">
             <div class="tooltip-title" id="tooltip-title"></div>
             <div class="tooltip-description" id="tooltip-description"></div>
@@ -276,64 +268,63 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             <rect id="tls-entry-points" x="50" y="200" width="80" height="400" class="entry-bar clickable"/>
             <text x="90" y="230" text-anchor="middle" class="text-white title-text">TLS 1.2</text>
             
-            <!-- Temenos Software (Central Light Grey Block with Blue Border) - Moved 40px right -->
-            <rect x="240" y="150" width="500" height="500" class="temenos-box" rx="5"/>
-            <text x="490" y="180" text-anchor="middle" class="text-black title-text">Temenos software</text>
+            <!-- User Interface (Grey) -->
+            <rect x="55" y="270" width="70" height="50" class="entry-item-grey"/>
+            <text x="90" y="290" text-anchor="middle" class="text-white">User</text>
+            <text x="90" y="310" text-anchor="middle" class="text-white">Interface</text>
             
-            <!-- User Interface (Grey) - Moved between TLS 1.2 and Temenos Software, right border moved 50px right -->
-            <rect x="135" y="270" width="120" height="50" class="entry-item-grey"/>
-            <text x="195" y="290" text-anchor="middle" class="text-white">User</text>
-            <text x="195" y="310" text-anchor="middle" class="text-white">Interface</text>
+            <!-- APIs (Grey) -->
+            <rect x="55" y="340" width="70" height="40" class="entry-item-grey"/>
+            <text x="90" y="365" text-anchor="middle" class="text-white">APIs</text>
             
-            <!-- APIs (Grey) - Moved between TLS 1.2 and Temenos Software, right border moved 50px right -->
-            <rect x="135" y="340" width="120" height="40" class="entry-item-grey"/>
-            <text x="195" y="365" text-anchor="middle" class="text-white">APIs</text>
+            <!-- Events (Grey) -->
+            <rect x="55" y="400" width="70" height="40" class="entry-item-grey"/>
+            <text x="90" y="425" text-anchor="middle" class="text-white">Events</text>
             
-            <!-- Events (Grey) - Moved between TLS 1.2 and Temenos Software, right border moved 50px right -->
-            <rect x="135" y="400" width="120" height="40" class="entry-item-grey"/>
-            <text x="195" y="425" text-anchor="middle" class="text-white">Events</text>
+            <!-- Temenos Software (Central Dark Blue Block) -->
+            <rect x="200" y="150" width="500" height="500" class="temenos-box" rx="5"/>
+            <text x="450" y="180" text-anchor="middle" class="text-white title-text">Temenos software</text>
             
-            <!-- Authentication Box - Moved 40px right -->
-            <rect id="authentication-box" x="290" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="380" y="245" text-anchor="middle" class="text-white title-text">Authentication</text>
-            <text x="380" y="270" text-anchor="middle" class="text-white small-text">oAuth 2.0</text>
-            <text x="380" y="290" text-anchor="middle" class="text-white small-text">OpenID Connect</text>
-            <text x="380" y="310" text-anchor="middle" class="text-white small-text">JWT, SAML</text>
+            <!-- Authentication Box -->
+            <rect id="authentication-box" x="250" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="340" y="245" text-anchor="middle" class="text-white title-text">Authentication</text>
+            <text x="340" y="270" text-anchor="middle" class="text-white small-text">oAuth 2.0</text>
+            <text x="340" y="290" text-anchor="middle" class="text-white small-text">OpenID Connect</text>
+            <text x="340" y="310" text-anchor="middle" class="text-white small-text">JWT, SAML</text>
             
-            <!-- Authorization Box - Moved 40px right -->
-            <rect id="authorization-box" x="510" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="600" y="245" text-anchor="middle" class="text-white title-text">Authorization</text>
-            <text x="600" y="270" text-anchor="middle" class="text-white small-text">RBAC, ABAC</text>
+            <!-- Authorization Box -->
+            <rect id="authorization-box" x="470" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="560" y="245" text-anchor="middle" class="text-white title-text">Authorization</text>
+            <text x="560" y="270" text-anchor="middle" class="text-white small-text">RBAC, ABAC</text>
             
-            <!-- Audit Box - Moved 40px right -->
-            <rect id="audit-box" x="390" y="360" width="100" height="50" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="440" y="385" text-anchor="middle" class="text-white">Audit</text>
+            <!-- Audit Box -->
+            <rect id="audit-box" x="350" y="360" width="100" height="50" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="400" y="385" text-anchor="middle" class="text-white">Audit</text>
             
-            <!-- DB Box - Green Cylinder outside Temenos Software - Moved 40px right -->
+            <!-- DB Box - Green Cylinder outside Temenos Software, aligned with Data Encryption -->
             <!-- Cylinder shape: ellipse on top, rectangle in middle, ellipse on bottom -->
-            <ellipse cx="350" cy="580" rx="60" ry="15" class="db-cylinder"/>
-            <rect x="290" y="580" width="120" height="100" class="db-cylinder"/>
-            <ellipse cx="350" cy="680" rx="60" ry="15" class="db-cylinder"/>
-            <text x="350" y="625" text-anchor="middle" class="text-white title-text">DB</text>
-            <text x="420" y="625" text-anchor="start" class="text-black small-text" style="font-weight: bold;">Transparent Data Encryption TDE</text>
+            <ellipse cx="310" cy="580" rx="60" ry="15" class="db-cylinder"/>
+            <rect x="250" y="580" width="120" height="100" class="db-cylinder"/>
+            <ellipse cx="310" cy="680" rx="60" ry="15" class="db-cylinder"/>
+            <text x="310" y="625" text-anchor="middle" class="text-white title-text">DB</text>
             
-            <!-- Temenos Vault Box - Positioned in lower right corner of Temenos Software -->
-            <rect id="temenos-vault" x="590" y="570" width="150" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="665" y="595" text-anchor="middle" class="text-white title-text">Temenos</text>
-            <text x="665" y="615" text-anchor="middle" class="text-white title-text">Vault</text>
+            <!-- Temenos Vault Box -->
+            <rect id="temenos-vault" x="400" y="450" width="150" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="475" y="485" text-anchor="middle" class="text-white title-text">Temenos</text>
+            <text x="475" y="505" text-anchor="middle" class="text-white title-text">Vault</text>
             
-            <!-- Externalized authorization Box - Moved 40px right -->
-            <rect id="externalized-auth" x="630" y="450" width="80" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="670" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
-            <text x="670" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
-            <text x="670" y="520" text-anchor="middle" class="text-white small-text">(XACML)</text>
+            <!-- Externalized authorization Box -->
+            <rect id="externalized-auth" x="590" y="450" width="80" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="630" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
+            <text x="630" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
+            <text x="630" y="520" text-anchor="middle" class="text-white small-text">(XACML)</text>
             
-            <!-- Bank's IAM (Purple Box) - Aligned with upper border of Temenos Software -->
-            <rect id="bank-iam" x="800" y="150" width="200" height="120" class="purple-box clickable" rx="5"/>
-            <text x="900" y="180" text-anchor="middle" class="text-white title-text">Bank's identity</text>
-            <text x="900" y="205" text-anchor="middle" class="text-white title-text">access</text>
-            <text x="900" y="230" text-anchor="middle" class="text-white title-text">management</text>
-            <text x="900" y="255" text-anchor="middle" class="text-white small-text">(IAM)</text>
+            <!-- Bank's IAM (Purple Box) -->
+            <rect id="bank-iam" x="800" y="220" width="200" height="120" class="purple-box clickable" rx="5"/>
+            <text x="900" y="250" text-anchor="middle" class="text-white title-text">Bank's identity</text>
+            <text x="900" y="275" text-anchor="middle" class="text-white title-text">access</text>
+            <text x="900" y="300" text-anchor="middle" class="text-white title-text">management</text>
+            <text x="900" y="325" text-anchor="middle" class="text-white small-text">(IAM)</text>
             
             <!-- Secrets management (Purple Box) -->
             <rect id="secrets-management" x="1050" y="220" width="180" height="100" class="purple-box clickable" rx="5"/>
@@ -350,51 +341,66 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             <text x="1140" y="530" text-anchor="middle" class="text-white title-text">Certificate</text>
             <text x="1140" y="555" text-anchor="middle" class="text-white title-text">Management</text>
             
-            <!-- Data Encryption (Purple Box) - Centered horizontally with DB, 30px below DB - Moved 40px right -->
-            <rect id="data-encryption" x="250" y="710" width="200" height="80" class="purple-box clickable" rx="5"/>
-            <text x="350" y="740" text-anchor="middle" class="text-white title-text">Data Encryption</text>
-            <text x="350" y="765" text-anchor="middle" class="text-white small-text">(Data-at-rest,</text>
-            <text x="350" y="780" text-anchor="middle" class="text-white small-text">in transit)</text>
+            <!-- Data Encryption (Purple Box) - Aligned horizontally with DB (same y position) -->
+            <rect id="data-encryption" x="800" y="580" width="200" height="80" class="purple-box clickable" rx="5"/>
+            <text x="900" y="610" text-anchor="middle" class="text-white title-text">Data Encryption</text>
+            <text x="900" y="635" text-anchor="middle" class="text-white small-text">(Data-at-rest,</text>
+            <text x="900" y="650" text-anchor="middle" class="text-white small-text">in transit)</text>
             
             <!-- Lines - All Red -->
             
-            <!-- REMOVED: Entry Points to Temenos lines (User Interface, APIs, Events) -->
+            <!-- Entry Points to Temenos -->
+            <line x1="130" y1="295" x2="200" y2="280" class="line-red"/>
+            <line x1="130" y1="360" x2="200" y2="350" class="line-red"/>
+            <line x1="130" y1="420" x2="200" y2="400" class="line-red"/>
             
-            <!-- Authentication to Authorization (role) - Updated coordinates -->
-            <line x1="470" y1="280" x2="510" y2="280" class="line-red"/>
-            <text x="490" y="275" text-anchor="middle" class="text-black small-text">role</text>
+            <!-- Authentication to Authorization (role) -->
+            <line x1="430" y1="280" x2="470" y2="280" class="line-red"/>
+            <text x="450" y="275" text-anchor="middle" class="text-black small-text">role</text>
             
             <!-- REMOVED: Authentication to Audit line (as requested) -->
             
-            <!-- Bank's IAM to Temenos Software right border -->
-            <line x1="800" y1="210" x2="740" y2="210" class="line-red"/>
+            <!-- Bank's IAM to Authentication -->
+            <line x1="800" y1="280" x2="430" y2="280" class="line-red"/>
             
-            <!-- Authorization to Externalized authorization - Updated coordinates -->
-            <line x1="690" y1="280" x2="670" y2="490" class="line-red"/>
+            <!-- Authorization to Externalized authorization -->
+            <line x1="650" y1="280" x2="630" y2="490" class="line-red"/>
             
-            <!-- REMOVED: All lines linked to DB -->
+            <!-- DB to Temenos Vault (dotted line - Transparent data encryption) -->
+            <line x1="310" y1="580" x2="475" y2="530" class="line-dotted"/>
+            <text x="390" y="555" text-anchor="middle" class="text-black small-text">Transparent data encryption</text>
             
-            <!-- REMOVED: All lines linked to Data Encryption -->
+            <!-- Events to DB -->
+            <line x1="200" y1="400" x2="310" y2="630" class="line-red"/>
             
-            <!-- Externalized authorization to Secrets management - Updated coordinates -->
-            <line x1="670" y1="450" x2="1050" y2="270" class="line-red"/>
+            <!-- Authorization to DB -->
+            <line x1="560" y1="340" x2="310" y2="630" class="line-red"/>
             
-            <!-- Externalized authorization to Key management - Updated coordinates -->
-            <line x1="670" y1="490" x2="1050" y2="410" class="line-red"/>
+            <!-- DB to Data Encryption (horizontal alignment) -->
+            <line x1="370" y1="630" x2="800" y2="620" class="line-red"/>
             
-            <!-- Externalized authorization to Certificate Management - Updated coordinates -->
-            <line x1="670" y1="530" x2="1050" y2="550" class="line-red"/>
+            <!-- Events to Data Encryption -->
+            <line x1="200" y1="400" x2="800" y2="660" class="line-red"/>
             
-            <!-- Temenos Vault to Secrets management - Updated coordinates (Temenos Vault in lower right corner) -->
-            <line x1="665" y1="570" x2="1050" y2="270" class="line-red"/>
+            <!-- Externalized authorization to Secrets management -->
+            <line x1="630" y1="450" x2="1050" y2="270" class="line-red"/>
             
-            <!-- Temenos Vault to Key management - Updated coordinates -->
-            <line x1="665" y1="610" x2="1050" y2="410" class="line-red"/>
+            <!-- Externalized authorization to Key management -->
+            <line x1="630" y1="490" x2="1050" y2="410" class="line-red"/>
             
-            <!-- Temenos Vault to Certificate Management - Updated coordinates -->
-            <line x1="665" y1="650" x2="1050" y2="550" class="line-red"/>
+            <!-- Externalized authorization to Certificate Management -->
+            <line x1="630" y1="530" x2="1050" y2="550" class="line-red"/>
+            
+            <!-- Temenos Vault to Secrets management -->
+            <line x1="475" y1="450" x2="1050" y2="270" class="line-red"/>
+            
+            <!-- Temenos Vault to Key management -->
+            <line x1="475" y1="490" x2="1050" y2="410" class="line-red"/>
+            
+            <!-- Temenos Vault to Certificate Management -->
+            <line x1="475" y1="530" x2="1050" y2="550" class="line-red"/>
         </svg>
-        <button class="tooltip-button" onclick="window.parent.postMessage({type: 'showDetailedExplanation'}, '*')">Move to Detailed Explanation</button>
+        <button class="tooltip-button" onclick="alert('Move to Detailed Explanation')">Move to Detailed Explanation</button>
     </div>
     
     <script>
@@ -552,440 +558,8 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
-// HTML5 Temenos Authentication Diagram Content
-const TemenosAuthenticationHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temenos Authentication</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background: #f5f5f5;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-        }
-        
-        .container {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
-        
-        .title-label {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 12px 24px;
-            border-radius: 5px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            font-weight: bold;
-            font-size: 18px;
-            color: #283054;
-            z-index: 1000;
-            text-align: center;
-        }
-        
-        .text-section {
-            display: flex;
-            justify-content: space-between;
-            padding: 80px 40px 20px 40px;
-            margin-bottom: 20px;
-        }
-        
-        .bank-staff-auth {
-            flex: 1;
-            padding-right: 40px;
-        }
-        
-        .customer-auth {
-            flex: 1;
-            padding-left: 40px;
-        }
-        
-        .text-section h3 {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 12px;
-            color: #283054;
-        }
-        
-        .text-section ul {
-            list-style-type: disc;
-            padding-left: 20px;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #333;
-        }
-        
-        .text-section li {
-            margin-bottom: 8px;
-        }
-        
-        .diagram-container {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        svg {
-            width: 100%;
-            height: 100%;
-        }
-        
-        text {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            fill: #000;
-        }
-        
-        .title-text {
-            font-size: 14px;
-            font-weight: bold;
-        }
-        
-        .title-text-11pt {
-            font-size: 14pt;
-            font-weight: bold;
-        }
-        
-        .small-text-14pt {
-            font-size: 14pt;
-        }
-        
-        .small-text {
-            font-size: 14px;
-        }
-        
-        .light-blue-box {
-            fill: #ADD8E6;
-            stroke: #000;
-            stroke-width: 2;
-        }
-        
-        .dark-blue-box {
-            fill: #1E3A8A;
-            stroke: #000;
-            stroke-width: 2;
-        }
-        
-        .purple-box {
-            fill: #9333ea;
-            stroke: #000;
-            stroke-width: 2;
-        }
-        
-        .teal-box {
-            fill: #14B8A6;
-            stroke: #000;
-            stroke-width: 2;
-        }
-        
-        .teal-container {
-            fill: #0D9488;
-            stroke: #000;
-            stroke-width: 2;
-        }
-        
-        .arrow-red {
-            stroke: #ff0000;
-            stroke-width: 2.5;
-            fill: none;
-            marker-end: url(#arrowhead-red);
-        }
-        
-        .text-white {
-            fill: #fff;
-        }
-        
-        .text-black {
-            fill: #000;
-        }
-        
-        .db-cylinder {
-            fill: #10b981;
-            stroke: #000;
-            stroke-width: 2;
-        }
-        
-        .clickable {
-            cursor: pointer;
-        }
-        
-        .tooltip {
-            position: absolute;
-            background: white;
-            border: 2px solid #ff0000;
-            border-radius: 4px;
-            padding: 12px;
-            max-width: 500px;
-            font-size: 16px;
-            line-height: 1.5;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 2000;
-            display: none;
-            pointer-events: none;
-            word-wrap: break-word;
-            white-space: pre-wrap;
-        }
-        
-        .tooltip.show {
-            display: block;
-        }
-        
-        .tooltip-title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: #283054;
-        }
-        
-        .tooltip-description {
-            color: #333;
-            font-size: 16px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="title-label">Here is the Temenos Authentication</div>
-        <div id="tooltip" class="tooltip">
-            <div class="tooltip-title" id="tooltip-title"></div>
-            <div class="tooltip-description" id="tooltip-description"></div>
-        </div>
-        
-        <!-- Text Sections -->
-        <div class="text-section">
-            <div class="bank-staff-auth">
-                <h3>Bank Staff Authentication</h3>
-                <ul>
-                    <li>User Identity and authentication are externalized, utilizing Single Sign-On (SSO) with enterprise Identity Management (IdM) systems, specifically mentioning "Azure Entra ID" as an example.</li>
-                    <li>User identity and trust are established through a "security token oAuth 2.0 JWT".</li>
-                    <li>All product integration and validation are handled with "KeyCloak IdM".</li>
-                </ul>
-            </div>
-            <div class="customer-auth">
-                <h3>Customer Authentication</h3>
-                <ul>
-                    <li>Based on the open standards "OIDC" (OpenID Connect) and "JWT" (JSON Web Token), integrated with "Temenos Digital".</li>
-                    <li>"SCA Authentication partner" is the preferred approach for compliance with "PSD2" (Payment Services Directive 2) and open banking regulatory requirements.</li>
-                    <li>"HID, Uniken" are identified as exchange partners for "Temenos Digital SCA integration & certification".</li>
-                </ul>
-            </div>
-        </div>
-        
-        <!-- Diagram Container -->
-        <div class="diagram-container">
-            <svg viewBox="0 0 1400 600" preserveAspectRatio="xMidYMid meet">
-                <!-- Arrow marker definition -->
-                <defs>
-                    <marker id="arrowhead-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                        <polygon points="0 0, 10 3, 0 6" fill="#ff0000" />
-                    </marker>
-                </defs>
-                
-                <!-- UI Configuration of Users, Roles, SSO etc. (Light Blue Box) -->
-                <rect id="ui-configuration" x="50" y="100" width="200" height="80" class="light-blue-box clickable" rx="5"/>
-                <text x="150" y="130" text-anchor="middle" class="text-black title-text-11pt">UI Configuration of</text>
-                <text x="150" y="150" text-anchor="middle" class="text-black title-text-11pt">Users, Roles, SSO etc.</text>
-                
-                <!-- Keycloak / External IdM (Dark Blue Box) -->
-                <rect id="keycloak" x="50" y="220" width="200" height="100" class="dark-blue-box clickable" rx="5"/>
-                <text x="150" y="250" text-anchor="middle" class="text-white title-text-11pt">Keycloak /</text>
-                <text x="150" y="275" text-anchor="middle" class="text-white title-text-11pt">External IdM</text>
-                
-                <!-- DB Cylinder (Green) - Outside Keycloak, close to lower border (Keycloak lower border is at y=320) -->
-                <ellipse cx="220" cy="340" rx="40" ry="12" class="db-cylinder"/>
-                <rect x="180" y="340" width="80" height="60" class="db-cylinder"/>
-                <ellipse cx="220" cy="400" rx="40" ry="12" class="db-cylinder"/>
-                <text x="220" y="375" text-anchor="middle" class="text-white title-text">DB</text>
-                
-                <!-- Authentication Service (Purple Box) -->
-                <rect id="authentication-service" x="350" y="220" width="220" height="100" class="purple-box clickable" rx="5"/>
-                <text x="460" y="250" text-anchor="middle" class="text-white title-text-11pt">Authentication Service</text>
-                <text x="460" y="275" text-anchor="middle" class="text-white small-text-14pt">SAML / OIDC / Federated</text>
-                
-                <!-- Temenos Application (Dark Blue Box) -->
-                <rect id="temenos-application" x="650" y="220" width="200" height="100" class="dark-blue-box clickable" rx="5"/>
-                <text x="750" y="260" text-anchor="middle" class="text-white title-text-11pt">Temenos</text>
-                <text x="750" y="285" text-anchor="middle" class="text-white title-text-11pt">Application</text>
-                
-                <!-- Temenos Security (Teal Container) -->
-                <rect id="temenos-security" x="950" y="180" width="300" height="180" class="teal-container clickable" rx="5"/>
-                <text x="1100" y="210" text-anchor="middle" class="text-white title-text-11pt">Temenos Security</text>
-                
-                <!-- Auth Filter (Teal Box inside Temenos Security) -->
-                <rect x="970" y="230" width="260" height="50" class="teal-box" rx="5"/>
-                <text x="1100" y="260" text-anchor="middle" class="text-white title-text">Auth Filter</text>
-                
-                <!-- Security Token Validation (Teal Box inside Temenos Security) -->
-                <rect x="970" y="300" width="260" height="50" class="teal-box" rx="5"/>
-                <text x="1100" y="325" text-anchor="middle" class="text-white small-text">Security Token Validation</text>
-                <text x="1100" y="340" text-anchor="middle" class="text-white small-text">SAML / OIDC / FS</text>
-                
-                <!-- Arrows - All Red, connecting to borders -->
-                
-                <!-- UI Configuration to Keycloak (from bottom border to top border) -->
-                <line x1="150" y1="180" x2="150" y2="220" class="arrow-red"/>
-                
-                <!-- Keycloak to Authentication Service (from right border to left border) -->
-                <line x1="250" y1="270" x2="350" y2="270" class="arrow-red"/>
-                <text x="300" y="205" text-anchor="middle" class="text-black small-text">Identity &amp; Attributes</text>
-                
-                <!-- Authentication Service to Temenos Application (from right border to left border) -->
-                <line x1="570" y1="270" x2="650" y2="270" class="arrow-red"/>
-                <text x="610" y="205" text-anchor="middle" class="text-black small-text">Security Token</text>
-                
-                <!-- Temenos Application to Auth Filter (from right border to left border of Temenos Security container) -->
-                <line x1="850" y1="270" x2="950" y2="255" class="arrow-red"/>
-                <text x="900" y="200" text-anchor="middle" class="text-black small-text">Security Token</text>
-                
-                <!-- Auth Filter to Security Token Validation (from bottom border to top border) -->
-                <line x1="1100" y1="280" x2="1100" y2="300" class="arrow-red"/>
-                
-                <!-- Security Token Validation back to Temenos Application (from left border of Temenos Security to right border of Temenos Application) -->
-                <line x1="950" y1="325" x2="850" y2="270" class="arrow-red"/>
-                <text x="900" y="240" text-anchor="middle" class="text-black small-text">Identity &amp; Attributes</text>
-            </svg>
-        </div>
-    </div>
-    
-    <script>
-        // Tooltip Configuration
-        const tooltips = [
-            {
-                id: 'ui-configuration',
-                title: 'UI Configuration of Users, Roles',
-                description: 'Temenos UI Explorer application redirects a user\\'s browser from the application to the Keycloak authentication server where they enter their credentials. This redirection is important because users are completely isolated from applications and applications never see a user\\'s credentials.\\n\\nIdentity token or assertion (for SAML protocol) is cryptographically signed.\\n\\nThese tokens can have identity information like username, address, email, and other profile data.\\n\\nTemenos Security Management System (SMS) based on Role Based Access in which the ability to access or perform action is tied to the permission granted. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. When a user attempts to log in, they are authenticated via the bank\\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization. The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.',
-                position: 'bottom'
-            },
-            {
-                id: 'keycloak',
-                title: 'Keycloak',
-                description: 'Temenos solutions use Keycloak, an open-source Identity and Access Management (IAM) tool, to manage authentication. Keycloak enables Single Sign-On (SSO) based on federated security, letting users log in once to access multiple applications seamlessly.\\n\\nKeycloak integrates with the bank\\'s existing Identity Provider (IdP), like Entra ID (AD), which manages users and passwords. This integration uses standard protocols such as SAML 2.0 or OpenID Connect. Keycloak acts here as an identity broker, redirecting authentication requests to Banks\\' preferred IAM. After successful authentication, Bank\\' IAM issues JSON Web Tokens (JWTs) that carry user identity and role information, which the solution uses to enforce authorization based on assigned permissions.',
-                position: 'right'
-            },
-            {
-                id: 'authentication-service',
-                title: 'Authentication Service',
-                description: '1. User Identity, authentication externalised and SSO with enterprise IAM e.g.,\\n\\n2. Entra ID Establish user identity and trust through security token oAuth 2.0 JWT,\\n\\n3. All products integrate and validate with KeyCloak IaM',
-                position: 'bottom'
-            },
-            {
-                id: 'temenos-application',
-                title: 'Temenos Application',
-                description: 'User activities, including successful and failed login attempts, are logged. Session IDs do not contain sensitive data and are invalidated upon logout.',
-                position: 'top'
-            },
-            {
-                id: 'temenos-security',
-                title: 'Temenos Security',
-                description: 'Choosing between OpenID Connect and SAML is not just a matter of using a newer protocol (OIDC) instead of the older more mature protocol (SAML). In most cases Keycloak recommends using OIDC. SAML 2.0 tends to be a bit more verbose than OIDC. Beyond verbosity of exchanged data, OIDC was designed to work with the web while SAML2.0 was retrofitted to work on top of the web.',
-                position: 'left'
-            }
-        ];
-        
-        const tooltip = document.getElementById('tooltip');
-        const tooltipTitle = document.getElementById('tooltip-title');
-        const tooltipDescription = document.getElementById('tooltip-description');
-        
-        function showTooltip(config, element) {
-            tooltipTitle.textContent = config.title;
-            tooltipDescription.textContent = config.description;
-            tooltip.classList.add('show');
-            
-            setTimeout(function() {
-                const rect = element.getBoundingClientRect();
-                const containerRect = document.querySelector('.container').getBoundingClientRect();
-                const tooltipRect = tooltip.getBoundingClientRect();
-                
-                let left, top;
-                
-                switch(config.position) {
-                    case 'right':
-                        left = rect.right + 15;
-                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                        break;
-                    case 'left':
-                        left = rect.left - tooltipRect.width - 15;
-                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                        break;
-                    case 'top':
-                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                        top = rect.top - tooltipRect.height - 15;
-                        break;
-                    case 'bottom':
-                    default:
-                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                        top = rect.bottom + 15;
-                        break;
-                }
-                
-                // Ensure tooltip stays within container bounds
-                if (left < containerRect.left) {
-                    left = containerRect.left + 10;
-                }
-                if (left + tooltipRect.width > containerRect.right) {
-                    left = containerRect.right - tooltipRect.width - 10;
-                }
-                if (top < containerRect.top) {
-                    top = containerRect.top + 10;
-                }
-                if (top + tooltipRect.height > containerRect.bottom) {
-                    top = containerRect.bottom - tooltipRect.height - 10;
-                }
-                
-                tooltip.style.left = (left - containerRect.left) + 'px';
-                tooltip.style.top = (top - containerRect.top) + 'px';
-            }, 10);
-        }
-        
-        function hideTooltip() {
-            tooltip.classList.remove('show');
-        }
-        
-        // Attach click handlers to all elements with tooltips
-        tooltips.forEach(function(config) {
-            const element = document.getElementById(config.id);
-            if (element) {
-                element.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    if (tooltip.classList.contains('show') && tooltipTitle.textContent === config.title) {
-                        hideTooltip();
-                    } else {
-                        showTooltip(config, element);
-                    }
-                });
-            }
-        });
-        
-        // Hide tooltip when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!tooltip.contains(e.target) && !e.target.classList.contains('clickable')) {
-                hideTooltip();
-            }
-        });
-    </script>
-</body>
-</html>`
-
 export function SecurityContentViewer() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
-  const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 1) {
@@ -995,54 +569,10 @@ export function SecurityContentViewer() {
 
   const handleBack = () => {
     setSelectedCard(null)
-    setShowDetailedExplanation(false)
   }
-
-  const handleBackToArchitecture = () => {
-    setShowDetailedExplanation(false)
-  }
-
-  // Listen for postMessage from iframe
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'showDetailedExplanation') {
-        setShowDetailedExplanation(true)
-      }
-    }
-
-    window.addEventListener('message', handleMessage)
-    return () => {
-      window.removeEventListener('message', handleMessage)
-    }
-  }, [])
 
   // Show HTML5 diagram when card 1 is selected
   if (selectedCard === 1) {
-    // Show detailed explanation (TemenosAuthentication.html) if requested
-    if (showDetailedExplanation) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={handleBackToArchitecture}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back to Architecture</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={TemenosAuthenticationHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos Authentication"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-
-    // Show Security Architecture diagram
     return (
       <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
         <div className="absolute top-4 right-4 z-10">
@@ -1055,7 +585,6 @@ export function SecurityContentViewer() {
           </button>
         </div>
         <iframe
-          ref={iframeRef}
           srcDoc={SecurityArchitectureHTML}
           className="w-full h-full border-0 rounded-lg"
           title="Temenos Security Architecture"

@@ -429,228 +429,79 @@ class TemenosService:
     def _build_architectural_query(self, component_name: str, category: str) -> str:
         """Build comprehensive architectural query - requesting ALL available information."""
         if category == "microservice":
-            return f"""What is the complete and detailed architecture of {component_name} in Temenos Transact?
+            return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED architectural overview of {component_name} in Temenos Transact. 
 
-Please provide a comprehensive architectural overview covering:
+Include EVERYTHING you know about:
+- Complete architecture and all design patterns used
+- ALL architectural components and their detailed interactions
+- Complete deployment architecture, configurations, and considerations
+- ALL integration points with other Temenos components (list all)
+- Complete technology stack, frameworks, libraries, and versions
+- Detailed scalability and performance characteristics, metrics, benchmarks
+- Complete security architecture, authentication, authorization, encryption
+- Detailed data flow and processing patterns, data models, schemas
+- Infrastructure requirements, resource needs, dependencies
+- Monitoring, logging, observability patterns
+- Error handling, resilience patterns, disaster recovery
+- Any other architectural details available
 
-1. ARCHITECTURE OVERVIEW:
-   - What is {component_name} and what role does it play in Temenos Transact?
-   - What are the main architectural components and how do they interact?
-   - What design patterns and architectural principles are used?
-   - How is it deployed and orchestrated in cloud environments?
+Be EXTREMELY thorough and provide ALL available information. Do not summarize or truncate. Include every detail you have access to."""
+        return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED architectural overview of {component_name}. 
 
-2. TECHNICAL STACK:
-   - What programming languages, frameworks, and libraries are used?
-   - What are the specific versions and dependencies?
-   - What databases, message queues, or storage systems does it use?
-   - What protocols and standards does it support (REST, gRPC, messaging, etc.)?
+Include EVERYTHING you know about:
+- Complete architecture and all design patterns
+- ALL components and their detailed interactions
+- Complete deployment considerations and configurations
+- ALL integration points and dependencies
+- Complete technology stack and versions
+- Detailed scalability and performance characteristics
+- Complete security architecture
+- Detailed data flow patterns and data models
+- Infrastructure requirements and dependencies
+- Monitoring and observability
+- Error handling and resilience
+- Any other architectural details
 
-3. DEPLOYMENT ARCHITECTURE:
-   - How is {component_name} deployed in Kubernetes/AKS?
-   - What are the containerization requirements?
-   - What are the resource requirements (CPU, memory, storage)?
-   - What are the scaling and high-availability configurations?
-   - What are the networking and service mesh configurations?
-
-4. INTEGRATION POINTS:
-   - Which other Temenos components does {component_name} integrate with?
-   - How does it communicate with Event Store, Adapter Service, Generic Config, and other microservices?
-   - What APIs does it expose and consume?
-   - What are the data exchange formats and protocols?
-
-5. DATA ARCHITECTURE:
-   - What data does {component_name} manage?
-   - What are the data models, schemas, and structures?
-   - How does it handle data persistence and transactions?
-   - What are the data flow patterns and processing pipelines?
-
-6. SECURITY ARCHITECTURE:
-   - What authentication and authorization mechanisms are used?
-   - How is data encrypted in transit and at rest?
-   - What security policies and compliance features are implemented?
-   - How does it handle secrets and credentials?
-
-7. PERFORMANCE AND SCALABILITY:
-   - What are the performance characteristics and benchmarks?
-   - How does it scale horizontally and vertically?
-   - What are the throughput and latency characteristics?
-   - What are the resource utilization patterns?
-
-8. OBSERVABILITY:
-   - What monitoring, logging, and tracing capabilities are available?
-   - What metrics and health checks are exposed?
-   - How is troubleshooting and debugging performed?
-
-9. RESILIENCE:
-   - What error handling and retry mechanisms are implemented?
-   - How does it handle failures and recovery?
-   - What disaster recovery and backup strategies are in place?
-
-Please be extremely detailed and comprehensive. Include specific technical details, configurations, examples, and any other relevant architectural information."""
-        return f"""What is the complete and detailed architecture of {component_name}?
-
-Please provide a comprehensive architectural overview covering:
-
-1. ARCHITECTURE OVERVIEW:
-   - What is {component_name} and what role does it play?
-   - What are the main architectural components?
-   - What design patterns are used?
-   - How is it deployed?
-
-2. TECHNICAL STACK:
-   - What technologies, frameworks, and libraries are used?
-   - What are the versions and dependencies?
-   - What infrastructure components does it use?
-
-3. DEPLOYMENT:
-   - How is {component_name} deployed?
-   - What are the resource requirements?
-   - What are the scaling configurations?
-
-4. INTEGRATIONS:
-   - Which other components does it integrate with?
-   - What APIs does it expose and consume?
-   - How does it communicate with other services?
-
-5. DATA ARCHITECTURE:
-   - What data does it manage?
-   - What are the data models and structures?
-   - How does it handle data persistence?
-
-6. SECURITY:
-   - What security mechanisms are implemented?
-   - How is authentication and authorization handled?
-   - How is data protected?
-
-7. PERFORMANCE:
-   - What are the performance characteristics?
-   - How does it scale?
-   - What are the resource requirements?
-
-8. OBSERVABILITY:
-   - What monitoring and logging capabilities are available?
-   - What metrics are exposed?
-
-Please be extremely detailed and comprehensive. Include specific technical details, configurations, examples, and any other relevant architectural information."""
+Be EXTREMELY thorough and provide ALL available information. Do not summarize or truncate. Include every detail you have access to."""
 
     def _build_functional_query(self, component_name: str, category: str) -> str:
         """Build comprehensive functional query - requesting ALL available information."""
         if category == "microservice":
-            return f"""What are the complete functional capabilities and features of {component_name} in Temenos Transact?
+            return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED functional overview of {component_name} in Temenos Transact. 
 
-Please provide a comprehensive functional overview covering:
+Include EVERYTHING you know about:
+- ALL core functional capabilities and responsibilities (list all)
+- ALL business functions and features it supports (complete list)
+- ALL use cases and scenarios (detailed examples)
+- ALL key business processes it handles (step-by-step)
+- ALL data it manages and processes (data types, structures, volumes)
+- ALL APIs and interfaces it exposes (endpoints, methods, parameters, responses)
+- ALL business rules and validations (complete list)
+- ALL workflow and process orchestration capabilities
+- ALL reporting and analytics capabilities
+- Configuration options and settings
+- Feature flags and capabilities
+- Business logic details
+- Any other functional details available
 
-1. CORE FUNCTIONALITY:
-   - What is the primary purpose and responsibility of {component_name}?
-   - What core banking functions does it support?
-   - What business domains does it cover (e.g., deposits, lending, payments, accounts)?
-   - What are the main functional modules and features?
+Be EXTREMELY thorough and provide ALL available information. Do not summarize or truncate. Include every detail you have access to."""
+        return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED functional overview of {component_name}. 
 
-2. BUSINESS CAPABILITIES:
-   - What specific business capabilities does {component_name} provide?
-   - What banking operations can be performed through this component?
-   - What are the key business processes it handles?
-   - What business rules and validations does it enforce?
+Include EVERYTHING you know about:
+- ALL core functional capabilities (complete list)
+- ALL business functions and features (complete list)
+- ALL use cases and scenarios (detailed)
+- ALL key business processes (detailed)
+- ALL data management capabilities
+- ALL APIs and interfaces (complete list)
+- ALL business rules (complete list)
+- ALL workflow capabilities
+- ALL reporting features
+- Configuration and settings
+- Feature details
+- Any other functional information
 
-3. USE CASES AND SCENARIOS:
-   - What are the primary use cases for {component_name}?
-   - Can you provide specific examples of how it's used in banking operations?
-   - What customer-facing and internal operations does it support?
-   - What workflows and business processes does it enable?
-
-4. DATA MANAGEMENT:
-   - What types of data does {component_name} manage?
-   - What are the key data entities and their relationships?
-   - How does it handle data validation, transformation, and enrichment?
-   - What are the data processing and storage capabilities?
-
-5. API AND INTEGRATION CAPABILITIES:
-   - What REST APIs does {component_name} expose? (List endpoints, methods, request/response formats)
-   - What events does it publish and subscribe to?
-   - How does it integrate with other Temenos components?
-   - What integration patterns does it support (synchronous, asynchronous, event-driven)?
-
-6. BUSINESS RULES AND VALIDATIONS:
-   - What business rules does {component_name} enforce?
-   - What validation rules are applied to data and transactions?
-   - What compliance and regulatory features are supported?
-   - How are business rules configured and managed?
-
-7. WORKFLOW AND PROCESSING:
-   - What workflow capabilities does {component_name} provide?
-   - How does it handle multi-step business processes?
-   - What orchestration and coordination features are available?
-   - How does it handle long-running processes and state management?
-
-8. REPORTING AND ANALYTICS:
-   - What reporting capabilities does {component_name} provide?
-   - What analytics and insights can be derived?
-   - What data can be queried and exported?
-   - What dashboards and visualizations are available?
-
-9. CONFIGURATION AND CUSTOMIZATION:
-   - What configuration options are available?
-   - How can {component_name} be customized for different banks?
-   - What feature flags and toggles are available?
-   - How are business parameters and settings managed?
-
-10. OPERATIONAL FEATURES:
-    - What operational capabilities does it provide?
-    - How does it handle batch processing and scheduled jobs?
-    - What maintenance and administrative functions are available?
-    - How does it support testing and simulation?
-
-Please be extremely detailed and comprehensive. Include specific examples, API details, data structures, business rules, and any other functional information."""
-        return f"""What are the complete functional capabilities and features of {component_name}?
-
-Please provide a comprehensive functional overview covering:
-
-1. CORE FUNCTIONALITY:
-   - What is the primary purpose of {component_name}?
-   - What core functions does it support?
-   - What are the main features and capabilities?
-
-2. BUSINESS CAPABILITIES:
-   - What business capabilities does it provide?
-   - What operations can be performed?
-   - What business processes does it handle?
-
-3. USE CASES:
-   - What are the primary use cases?
-   - Can you provide specific examples?
-   - What scenarios does it support?
-
-4. DATA MANAGEMENT:
-   - What data does it manage?
-   - What are the key data entities?
-   - How does it handle data processing?
-
-5. API CAPABILITIES:
-   - What APIs does it expose?
-   - How does it integrate with other components?
-   - What integration patterns are supported?
-
-6. BUSINESS RULES:
-   - What business rules does it enforce?
-   - What validations are applied?
-   - What compliance features are supported?
-
-7. WORKFLOW:
-   - What workflow capabilities does it provide?
-   - How does it handle business processes?
-   - What orchestration features are available?
-
-8. REPORTING:
-   - What reporting capabilities are available?
-   - What analytics can be derived?
-   - What data can be queried?
-
-9. CONFIGURATION:
-   - What configuration options are available?
-   - How can it be customized?
-   - What settings can be managed?
-
-Please be extremely detailed and comprehensive. Include specific examples, API details, data structures, and any other functional information."""
+Be EXTREMELY thorough and provide ALL available information. Do not summarize or truncate. Include every detail you have access to."""
 
     async def query_rag(
         self,
@@ -848,52 +699,13 @@ Please be extremely detailed and comprehensive. Include specific examples, API d
             
             if not has_rag:
                 # If RAG is not available, create component info from namespace/name only
-                logger.warning(f"✗ RAG not available for {component_name}, using detailed fallback description")
-                arch_overview = f"""{component_name} is a Temenos microservice component deployed in Azure Kubernetes Service (AKS).
-
-ARCHITECTURE OVERVIEW:
-{component_name} is part of the Temenos Transact microservices architecture, designed for cloud-native deployment and scalability. It follows modern microservices principles and integrates seamlessly with the broader Temenos ecosystem.
-
-DEPLOYMENT ARCHITECTURE:
-- Containerized using Docker and deployed in Azure Kubernetes Service (AKS)
-- Orchestrated via Kubernetes for automated scaling, health management, and service discovery
-- Supports horizontal scaling based on load and demand
-- Implements high-availability patterns with multiple replicas and health checks
-
-INTEGRATION POINTS:
-- Communicates with Event Store Microservice for event sourcing and event streaming
-- Integrates with Adapter Service for external system connectivity
-- Uses Generic Config Microservice for centralized configuration management
-- Connects with other Temenos microservices through well-defined APIs"""
-                
-                func_overview = f"""{component_name} provides core banking functionality as part of the Temenos Transact platform.
-
-CORE FUNCTIONALITY:
-{component_name} is responsible for specific banking operations and business logic within the Temenos Transact ecosystem. It handles critical banking processes and supports the overall banking platform functionality.
-
-BUSINESS CAPABILITIES:
-- Processes core banking transactions and operations
-- Enforces business rules and validations
-- Manages business data and state
-- Supports banking workflows and processes
-
-API CAPABILITIES:
-- Exposes RESTful APIs for external and internal consumption
-- Supports synchronous and asynchronous communication patterns
-- Provides event publishing and subscription capabilities"""
-                
+                logger.warning(f"✗ RAG not available for {component_name}, using minimal fallback description")
                 component_info = TemenosComponentInfo(
                     component_name=component_name,
                     component_type=self._determine_component_type(service),
-                    architectural_overview=arch_overview,
-                    functional_overview=func_overview,
-                    capabilities=[
-                        f"Core {component_name} functionality",
-                        "Transaction processing and validation",
-                        "Business rule enforcement",
-                        "API integration capabilities",
-                        "Event-driven communication"
-                    ],
+                    architectural_overview=f"{component_name} is a Temenos microservice component deployed in Azure Kubernetes Service.",
+                    functional_overview=f"{component_name} provides core banking functionality as part of the Temenos Transact platform.",
+                    capabilities=[f"Core {component_name} functionality"],
                     related_services=[],
                     relationships=[]
                 )
@@ -967,94 +779,47 @@ API CAPABILITIES:
             # If RAG returned "Information not available", provide more detailed fallback description
             if arch_formatted in ["Information not available", "Information not available - timeout"]:
                 logger.warning(f"RAG returned no information for {component_name} - using detailed fallback")
-                arch_formatted = f"""{component_name} is a Temenos microservice component deployed in Azure Kubernetes Service (AKS).
+                arch_formatted = f"""{component_name} is a Temenos microservice component deployed in Azure Kubernetes Service. 
 
-ARCHITECTURE OVERVIEW:
-{component_name} is part of the Temenos Transact microservices architecture, designed for cloud-native deployment and scalability. It follows modern microservices principles and integrates seamlessly with the broader Temenos ecosystem.
+Architecture:
+- Deployed as containerized microservices in Azure Kubernetes Service (AKS)
+- Follows microservices architecture patterns for scalability and resilience
+- Integrates with other Temenos components through well-defined APIs
+- Uses cloud-native technologies for deployment and orchestration
 
-DEPLOYMENT ARCHITECTURE:
-- Containerized using Docker and deployed in Azure Kubernetes Service (AKS)
-- Orchestrated via Kubernetes for automated scaling, health management, and service discovery
-- Supports horizontal scaling based on load and demand
-- Implements high-availability patterns with multiple replicas and health checks
-- Uses Kubernetes ConfigMaps and Secrets for configuration management
+Key Components:
+- Core service components handling business logic
+- API endpoints for external and internal communication
+- Data access layers for persistence
+- Integration layers for component communication
 
-TECHNICAL STACK:
-- Built using modern cloud-native technologies
-- Supports RESTful APIs and event-driven communication patterns
-- Integrates with Temenos Event Store for event sourcing and CQRS patterns
-- Uses standard protocols for inter-service communication (HTTP/gRPC)
-
-INTEGRATION POINTS:
-- Communicates with Event Store Microservice for event sourcing and event streaming
-- Integrates with Adapter Service for external system connectivity
-- Uses Generic Config Microservice for centralized configuration management
-- Connects with other Temenos microservices through well-defined APIs
-- Supports integration with Temenos Transact core banking system
-
-DATA ARCHITECTURE:
-- Manages component-specific data with appropriate data models
-- Supports both transactional and analytical data patterns
-- Implements data persistence through database connections
-- Handles data synchronization and consistency across distributed components
-
-SECURITY:
-- Implements authentication and authorization mechanisms
-- Supports secure communication over HTTPS/TLS
-- Integrates with Azure Key Vault for secrets management
-- Follows Temenos security best practices and compliance requirements
-
-OBSERVABILITY:
-- Exposes health check endpoints for Kubernetes liveness and readiness probes
-- Provides logging and metrics for monitoring and troubleshooting
-- Supports distributed tracing for request flow analysis
-- Integrates with Azure Monitor and Application Insights"""
+Deployment:
+- Containerized using Docker
+- Orchestrated via Kubernetes
+- Scalable and resilient architecture
+- Cloud-native design patterns"""
             
             if func_formatted in ["Information not available", "Information not available - timeout"]:
                 logger.warning(f"RAG returned no information for {component_name} - using detailed fallback")
                 func_formatted = f"""{component_name} provides core banking functionality as part of the Temenos Transact platform.
 
-CORE FUNCTIONALITY:
-{component_name} is responsible for specific banking operations and business logic within the Temenos Transact ecosystem. It handles critical banking processes and supports the overall banking platform functionality.
-
-BUSINESS CAPABILITIES:
-- Processes core banking transactions and operations
-- Enforces business rules and validations
-- Manages business data and state
-- Supports banking workflows and processes
-- Handles customer and account-related operations
-
-FUNCTIONAL FEATURES:
+Functional Capabilities:
+- Core banking operations and business logic processing
 - Transaction processing and validation
-- Business rule enforcement and compliance
+- Business rule enforcement
 - Data management and persistence
-- Workflow orchestration and process management
-- Integration with other Temenos components
 
-API CAPABILITIES:
-- Exposes RESTful APIs for external and internal consumption
-- Supports synchronous and asynchronous communication patterns
-- Provides event publishing and subscription capabilities
-- Enables integration with other microservices and external systems
+Business Functions:
+- Handles critical banking operations
+- Supports core banking workflows
+- Manages business data and state
+- Provides APIs for integration with other components
 
-DATA MANAGEMENT:
-- Manages component-specific business data
-- Handles data validation, transformation, and enrichment
-- Supports transactional data operations
-- Implements data consistency and integrity checks
-
-INTEGRATION:
-- Integrates with Event Store for event-driven communication
-- Connects with Adapter Service for external system integration
-- Uses Generic Config for configuration management
-- Communicates with other Temenos microservices via APIs
-- Supports event-driven and request-response patterns
-
-OPERATIONAL FEATURES:
-- Supports batch processing and scheduled operations
-- Provides administrative and maintenance functions
-- Enables monitoring and health checking
-- Supports testing and simulation capabilities"""
+Integration:
+- Integrates with other Temenos microservices
+- Communicates via standard APIs and protocols
+- Supports event-driven architectures
+- Enables distributed system patterns"""
             
             component_info = TemenosComponentInfo(
                 component_name=component_name,

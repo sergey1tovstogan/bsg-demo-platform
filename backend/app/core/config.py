@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     MSSQL_DATABASE: str = Field(default="ODS", description="MSSQL database name")
     MSSQL_SCHEMA: str = Field(default="ODS", description="MSSQL default schema")
 
+    # External API Integration
+    TEMENOS_DEV_PORTAL_APIKEY: str = Field(default="", description="Temenos Developer Portal API Key")
+
     # JWT Authentication
     JWT_SECRET_KEY: str = Field(
         default_factory=lambda: secrets.token_urlsafe(32),
@@ -140,6 +143,20 @@ class Settings(BaseSettings):
             raise ValueError(f"LOG_LEVEL must be one of {allowed}")
         return v
 
+
+    @field_validator("CORS_METHODS", mode="before")
+    def parse_cors_methods(cls, v):
+        """Parse CORS methods from string or list."""
+        if isinstance(v, str):
+            return [method.strip() for method in v.split(",")]
+        return v
+
+    @field_validator("CORS_HEADERS", mode="before")
+    def parse_cors_headers(cls, v):
+        """Parse CORS headers from string or list."""
+        if isinstance(v, str):
+            return [header.strip() for header in v.split(",")]
+        return v
 
     @field_validator("JWT_SECRET_KEY")
     def validate_jwt_secret(cls, v, info):
