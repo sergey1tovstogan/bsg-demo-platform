@@ -46,7 +46,7 @@
             border-radius: 5px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14pt;
             color: #283054;
             z-index: 1000;
             text-align: center;
@@ -60,7 +60,7 @@
             border-radius: 4px;
             padding: 12px;
             max-width: 450px;
-            font-size: 16px;
+            font-size: 14pt;
             line-height: 1.5;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             z-index: 2000;
@@ -76,14 +76,14 @@
         
         .tooltip-title {
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14pt;
             margin-bottom: 8px;
             color: #283054;
         }
         
         .tooltip-description {
             color: #333;
-            font-size: 16px;
+            font-size: 14pt;
         }
         
         .tooltip-button {
@@ -95,7 +95,7 @@
             border: none;
             padding: 12px 24px;
             border-radius: 5px;
-            font-size: 14px;
+            font-size: 14pt;
             font-weight: bold;
             cursor: pointer;
             z-index: 1000;
@@ -112,17 +112,17 @@
         
         text {
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: 14pt;
             fill: #000;
         }
         
         .title-text {
-            font-size: 14px;
+            font-size: 14pt;
             font-weight: bold;
         }
         
         .small-text {
-            font-size: 10px;
+            font-size: 14pt;
         }
         
         .temenos-box {
@@ -181,7 +181,7 @@
     <div class="container">
         <div class="label">
             Here is the Temenos Security Architecture<br>
-            <span style="font-size: 14px; font-weight: normal;">click on elements to get more details</span>
+            <span style="font-size: 14pt; font-weight: normal;">click on elements to get more details</span>
         </div>
         <div id="tooltip" class="tooltip">
             <div class="tooltip-title" id="tooltip-title"></div>
@@ -231,7 +231,7 @@
             <rect x="290" y="580" width="120" height="100" class="db-cylinder"/>
             <ellipse cx="350" cy="680" rx="60" ry="15" class="db-cylinder"/>
             <text x="350" y="625" text-anchor="middle" class="text-white title-text">DB</text>
-            <text x="420" y="625" text-anchor="start" class="text-black small-text" style="font-weight: bold;">Transparent Data Encryption TDE</text>
+            <text x="420" y="705" text-anchor="start" class="text-black small-text" style="font-weight: bold;">Transparent Data Encryption TDE</text>
             
             <!-- Temenos Vault Box - Positioned in lower right corner of Temenos Software -->
             <rect id="temenos-vault" x="590" y="570" width="150" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
@@ -239,10 +239,9 @@
             <text x="665" y="615" text-anchor="middle" class="text-white title-text">Vault</text>
             
             <!-- Externalized authorization Box - Moved 40px right -->
-            <rect id="externalized-auth" x="630" y="450" width="80" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="670" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
-            <text x="670" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
-            <text x="670" y="520" text-anchor="middle" class="text-white small-text">(XACML)</text>
+            <rect id="externalized-auth" x="590" y="450" width="140" height="110" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="660" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
+            <text x="660" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
             
             <!-- Bank's IAM (Purple Box) - Aligned with upper border of Temenos Software -->
             <rect id="bank-iam" x="800" y="150" width="200" height="120" class="purple-box clickable" rx="5"/>
@@ -286,29 +285,29 @@
             <line x1="800" y1="210" x2="740" y2="210" class="line-red"/>
             
             <!-- Authorization to Externalized authorization - Updated coordinates -->
-            <line x1="690" y1="280" x2="670" y2="490" class="line-red"/>
+            <line x1="600" y1="340" x2="660" y2="450" class="line-red"/>
             
             <!-- REMOVED: All lines linked to DB -->
             
             <!-- REMOVED: All lines linked to Data Encryption -->
             
             <!-- Externalized authorization to Secrets management - Updated coordinates -->
-            <line x1="670" y1="450" x2="1050" y2="270" class="line-red"/>
+            <line x1="730" y1="505" x2="1050" y2="270" class="line-red"/>
             
             <!-- Externalized authorization to Key management - Updated coordinates -->
-            <line x1="670" y1="490" x2="1050" y2="410" class="line-red"/>
+            <line x1="1050" y1="410" x2="730" y2="505" class="line-red"/>
             
             <!-- Externalized authorization to Certificate Management - Updated coordinates -->
-            <line x1="670" y1="530" x2="1050" y2="550" class="line-red"/>
+            <line x1="1050" y1="550" x2="730" y2="505" class="line-red"/>
             
             <!-- Temenos Vault to Secrets management - Updated coordinates (Temenos Vault in lower right corner) -->
-            <line x1="665" y1="570" x2="1050" y2="270" class="line-red"/>
+            <line x1="740" y1="610" x2="1050" y2="270" class="line-red"/>
             
             <!-- Temenos Vault to Key management - Updated coordinates -->
-            <line x1="665" y1="610" x2="1050" y2="410" class="line-red"/>
+            <line x1="740" y1="610" x2="1050" y2="410" class="line-red"/>
             
             <!-- Temenos Vault to Certificate Management - Updated coordinates -->
-            <line x1="665" y1="650" x2="1050" y2="550" class="line-red"/>
+            <line x1="740" y1="610" x2="1050" y2="550" class="line-red"/>
         </svg>
         <button class="tooltip-button" onclick="alert('Move to Detailed Explanation')">Move to Detailed Explanation</button>
     </div>

@@ -130,7 +130,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             border-radius: 5px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14pt;
             color: #283054;
             z-index: 1000;
             text-align: center;
@@ -144,7 +144,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             border-radius: 4px;
             padding: 12px;
             max-width: 450px;
-            font-size: 16px;
+            font-size: 14pt;
             line-height: 1.5;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             z-index: 2000;
@@ -160,14 +160,14 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         
         .tooltip-title {
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14pt;
             margin-bottom: 8px;
             color: #283054;
         }
         
         .tooltip-description {
             color: #333;
-            font-size: 16px;
+            font-size: 14pt;
         }
         
         .tooltip-button {
@@ -179,7 +179,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             border: none;
             padding: 12px 24px;
             border-radius: 5px;
-            font-size: 14px;
+            font-size: 14pt;
             font-weight: bold;
             cursor: pointer;
             z-index: 1000;
@@ -196,17 +196,17 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         
         text {
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: 14pt;
             fill: #000;
         }
         
         .title-text {
-            font-size: 14px;
+            font-size: 14pt;
             font-weight: bold;
         }
         
         .small-text {
-            font-size: 10px;
+            font-size: 14pt;
         }
         
         .temenos-box {
@@ -265,7 +265,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
     <div class="container">
         <div class="label">
             Here is the Temenos Security Architecture<br>
-            <span style="font-size: 14px; font-weight: normal;">click on elements to get more details</span>
+            <span style="font-size: 14pt; font-weight: normal;">click on elements to get more details</span>
         </div>
         <div id="tooltip" class="tooltip">
             <div class="tooltip-title" id="tooltip-title"></div>
@@ -315,7 +315,7 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             <rect x="290" y="580" width="120" height="100" class="db-cylinder"/>
             <ellipse cx="350" cy="680" rx="60" ry="15" class="db-cylinder"/>
             <text x="350" y="625" text-anchor="middle" class="text-white title-text">DB</text>
-            <text x="420" y="625" text-anchor="start" class="text-black small-text" style="font-weight: bold;">Transparent Data Encryption TDE</text>
+            <text x="420" y="705" text-anchor="start" class="text-black small-text" style="font-weight: bold;">Transparent Data Encryption TDE</text>
             
             <!-- Temenos Vault Box - Positioned in lower right corner of Temenos Software -->
             <rect id="temenos-vault" x="590" y="570" width="150" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
@@ -323,10 +323,9 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             <text x="665" y="615" text-anchor="middle" class="text-white title-text">Vault</text>
             
             <!-- Externalized authorization Box - Moved 40px right -->
-            <rect id="externalized-auth" x="630" y="450" width="80" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="670" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
-            <text x="670" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
-            <text x="670" y="520" text-anchor="middle" class="text-white small-text">(XACML)</text>
+            <rect id="externalized-auth" x="590" y="450" width="140" height="110" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="660" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
+            <text x="660" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
             
             <!-- Bank's IAM (Purple Box) - Aligned with upper border of Temenos Software -->
             <rect id="bank-iam" x="800" y="150" width="200" height="120" class="purple-box clickable" rx="5"/>
@@ -370,29 +369,29 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             <line x1="800" y1="210" x2="740" y2="210" class="line-red"/>
             
             <!-- Authorization to Externalized authorization - Updated coordinates -->
-            <line x1="690" y1="280" x2="670" y2="490" class="line-red"/>
+            <line x1="600" y1="340" x2="660" y2="450" class="line-red"/>
             
             <!-- REMOVED: All lines linked to DB -->
             
             <!-- REMOVED: All lines linked to Data Encryption -->
             
             <!-- Externalized authorization to Secrets management - Updated coordinates -->
-            <line x1="670" y1="450" x2="1050" y2="270" class="line-red"/>
+            <line x1="730" y1="505" x2="1050" y2="270" class="line-red"/>
             
             <!-- Externalized authorization to Key management - Updated coordinates -->
-            <line x1="670" y1="490" x2="1050" y2="410" class="line-red"/>
+            <line x1="1050" y1="410" x2="730" y2="505" class="line-red"/>
             
             <!-- Externalized authorization to Certificate Management - Updated coordinates -->
-            <line x1="670" y1="530" x2="1050" y2="550" class="line-red"/>
+            <line x1="1050" y1="550" x2="730" y2="505" class="line-red"/>
             
             <!-- Temenos Vault to Secrets management - Updated coordinates (Temenos Vault in lower right corner) -->
-            <line x1="665" y1="570" x2="1050" y2="270" class="line-red"/>
+            <line x1="740" y1="610" x2="1050" y2="270" class="line-red"/>
             
             <!-- Temenos Vault to Key management - Updated coordinates -->
-            <line x1="665" y1="610" x2="1050" y2="410" class="line-red"/>
+            <line x1="740" y1="610" x2="1050" y2="410" class="line-red"/>
             
             <!-- Temenos Vault to Certificate Management - Updated coordinates -->
-            <line x1="665" y1="650" x2="1050" y2="550" class="line-red"/>
+            <line x1="740" y1="610" x2="1050" y2="550" class="line-red"/>
         </svg>
         <button class="tooltip-button" onclick="window.parent.postMessage({type: 'showDetailedExplanation'}, '*')">Move to Detailed Explanation</button>
     </div>
@@ -617,16 +616,16 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
         }
         
         .text-section h3 {
-            font-size: 16px;
+            font-size: 16pt;
             font-weight: bold;
             margin-bottom: 12px;
-            color: #283054;
+            color: #ff0000;
         }
         
         .text-section ul {
             list-style-type: disc;
             padding-left: 20px;
-            font-size: 14px;
+            font-size: 14pt;
             line-height: 1.6;
             color: #333;
         }
@@ -1169,13 +1168,61 @@ const TemenosAuthorizationHTML = `<!DOCTYPE html>
             margin-left: auto;
         }
         
-        svg {
+        /* Tooltip Styles */
+        .tooltip {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
+            background: white;
+            border: 2px solid #ff0000;
+            border-radius: 8px;
+            padding: 12px 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            display: none;
+            max-width: 500px;
+            width: auto;
+            min-width: 200px;
+        }
+        
+        .tooltip.show {
+            display: block;
+        }
+        
+        .tooltip-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #000;
+        }
+        
+        .tooltip-description {
+            color: #333;
+            font-size: 16px;
+            line-height: 1.5;
+            white-space: pre-line;
+        }
+        
+        .clickable {
+            cursor: pointer;
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
         }
     </style>
 </head>
@@ -1233,7 +1280,7 @@ const TemenosAuthorizationHTML = `<!DOCTYPE html>
                     <!-- User Box with Icon -->
                     <div style="display: flex; align-items: center; gap: 40px; margin-bottom: 20px;">
                         <div class="icon-circle">👤</div>
-                        <div class="flow-box" style="background: #ff0000; color: white;">User</div>
+                        <div id="user-box" class="flow-box clickable" style="background: #ff0000; color: white;">User</div>
                     </div>
                     
                     <!-- Arrow to Role -->
@@ -1252,14 +1299,14 @@ const TemenosAuthorizationHTML = `<!DOCTYPE html>
                     <!-- Role Box with Icon -->
                     <div style="display: flex; align-items: center; gap: 40px;">
                         <div class="icon-circle">🔒</div>
-                        <div class="flow-box">Role</div>
+                        <div id="role-box" class="flow-box clickable">Role</div>
                     </div>
                 </div>
             </div>
         </div>
         
         <!-- Right Section: Hierarchical System Components -->
-        <div class="right-section">
+        <div id="right-section" class="right-section clickable">
             <div class="example-label">Example</div>
             
             <!-- ENTITY Block -->
@@ -1334,12 +1381,513 @@ const TemenosAuthorizationHTML = `<!DOCTYPE html>
             </div>
         </div>
     </div>
+    
+    <!-- Tooltip Element -->
+    <div id="tooltip" class="tooltip">
+        <div class="tooltip-title" id="tooltip-title"></div>
+        <div class="tooltip-description" id="tooltip-description"></div>
+    </div>
+    
+    <script>
+        // Tooltip Configuration
+        const tooltips = [
+            {
+                id: 'right-section',
+                title: 'Right Section',
+                description: 'Access rights are defined and managed centrally by Bank\\' administrators, allowing precise control over what users can view or do within the system. At the core, user roles determine access permissions, which can be configured to cover multiple levels including:\\n\\n1. Organization or business unit level (e.g., company or branch level), enabling Bank to restrict access to data and functions relevant only to specific legal entities or subsidiaries.\\n\\n2. Application or module level, controlling which banking products or services a user can access.\\n\\n3. Screen and menu levels, allowing fine-grained control over user interface elements and navigation options.\\n\\n4. Functional level, specifying allowed actions such as input, authorization, viewing, or deletion.\\n\\n5. Data element or field level, enabling restrictions on specific data fields or values, for example limiting transaction amounts or excluding certain account types',
+                position: 'right'
+            },
+            {
+                id: 'user-box',
+                title: 'User',
+                description: 'Each user profile contains a unique user identifier, password, language, and conditions.\\n\\nUser roles and permissions are managed within the solution, with role-based access control (RBAC) ensuring that users access only the data and functions authorized for their specific roles. After successful authentication, user identity and permissions are propagated via tokens, enabling consistent enforcement of access rights across all components and services. This identity propagation supports granular authorization at multiple levels, including company, application, API, screen, and field levels.',
+                position: 'right'
+            },
+            {
+                id: 'role-box',
+                title: 'Role',
+                description: 'So, permissions and rights are assigned to roles rather than directly to users.\\n\\nThus, a single role for the whole group of users who perform the same task.\\n\\nThis is mapped to the organizational structure so that the users can be assigned with a different role if they physically change their roles in the organization.',
+                position: 'right'
+            }
+        ];
+        
+        const tooltip = document.getElementById('tooltip');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipDescription = document.getElementById('tooltip-description');
+        
+        function showTooltip(config, element) {
+            tooltipTitle.textContent = config.title;
+            tooltipDescription.textContent = config.description;
+            tooltip.classList.add('show');
+            
+            setTimeout(function() {
+                const rect = element.getBoundingClientRect();
+                const containerRect = document.querySelector('.container').getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                
+                let left, top;
+                
+                switch(config.position) {
+                    case 'right':
+                        left = rect.right + 15;
+                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+                        break;
+                    case 'left':
+                        left = rect.left - tooltipRect.width - 15;
+                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+                        break;
+                    case 'top':
+                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                        top = rect.top - tooltipRect.height - 15;
+                        break;
+                    case 'bottom':
+                    default:
+                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                        top = rect.bottom + 15;
+                        break;
+                }
+                
+                // Ensure tooltip stays within container bounds
+                if (left < containerRect.left) {
+                    left = containerRect.left + 10;
+                }
+                if (left + tooltipRect.width > containerRect.right) {
+                    left = containerRect.right - tooltipRect.width - 10;
+                }
+                if (top < containerRect.top) {
+                    top = containerRect.top + 10;
+                }
+                if (top + tooltipRect.height > containerRect.bottom - 80) {
+                    top = containerRect.bottom - tooltipRect.height - 90;
+                }
+                
+                tooltip.style.left = (left - containerRect.left) + 'px';
+                tooltip.style.top = (top - containerRect.top) + 'px';
+            }, 10);
+        }
+        
+        function hideTooltip() {
+            tooltip.classList.remove('show');
+        }
+        
+        // Attach click handlers to all elements with tooltips
+        tooltips.forEach(function(config) {
+            const element = document.getElementById(config.id);
+            if (element) {
+                element.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (tooltip.classList.contains('show') && tooltipTitle.textContent === config.title) {
+                        hideTooltip();
+                    } else {
+                        showTooltip(config, element);
+                    }
+                });
+            }
+        });
+        
+        // Hide tooltip when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!tooltip.contains(e.target) && !e.target.classList.contains('clickable') && !e.target.closest('.clickable')) {
+                hideTooltip();
+            }
+        });
+    </script>
+    
+    <!-- Action Button -->
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showUserManagement'}, '*')">Move to User Management Explanation</button>
+</body>
+</html>`
+
+const UserManagementHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            padding: 80px 40px 40px 40px;
+            gap: 40px;
+            align-items: flex-start;
+        }
+        
+        .left-section {
+            flex: 0 0 35%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            font-size: 16pt;
+        }
+        
+        .right-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .explanation-box {
+            background: #f0f0f0;
+            border: 2px solid #333;
+            border-radius: 5px;
+            padding: 12px 15px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #000;
+            position: relative;
+        }
+        
+        .arrow-line {
+            position: absolute;
+            right: -30px;
+            width: 30px;
+            height: 2px;
+            background: #000;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .arrow-head {
+            position: absolute;
+            right: -35px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid #000;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+        }
+        
+        .form-container {
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .tab.active {
+            background: #fff;
+            border-bottom: 2px solid #fff;
+            margin-bottom: -2px;
+        }
+        
+        .tab-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .check-icon {
+            width: 24px;
+            height: 24px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .form-label {
+            min-width: 140px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .form-input {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1px solid #999;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        
+        .form-input-small {
+            width: 100px;
+            padding: 6px 10px;
+            border: 1px solid #999;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .dropdown {
+            padding: 6px 10px;
+            border: 1px solid #999;
+            border-radius: 3px;
+            font-size: 13px;
+            background: white;
+        }
+        
+        .icon-button {
+            width: 24px;
+            height: 24px;
+            border: 1px solid #999;
+            border-radius: 3px;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            margin-top: 15px;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">User Management main points</div>
+    <div class="container">
+        <!-- Left Section: Explanatory Text Boxes -->
+        <div class="left-section">
+            <!-- Explanation Box 1: User Identification -->
+            <div class="explanation-box" style="margin-top: 60px; background: #00BFFF;">
+                <div>Sign-on name</div>
+                <div>Is the user a bank employee (e.g., internal)</div>
+                <div>Language</div>
+                <div>Company the user can access</div>
+                <div class="arrow-line"></div>
+                <div class="arrow-head"></div>
+            </div>
+            
+            <!-- Explanation Box 2: User Validity Period -->
+            <div class="explanation-box" style="margin-top: 140px; background: #C9D9E2;">
+                <div>Validity of the User</div>
+                <div class="arrow-line"></div>
+                <div class="arrow-head"></div>
+            </div>
+            
+            <!-- Explanation Box 3: Daily Work Duration -->
+            <div class="explanation-box" style="margin-top: 60px; background: #CCFF00;">
+                <div>Duration for which the user can work in CBS (e.g., or all 7 days)</div>
+                <div class="arrow-line"></div>
+                <div class="arrow-head"></div>
+            </div>
+            
+            <!-- Explanation Box 4: Application and Function Access -->
+            <div class="explanation-box" style="margin-top: 100px; background: #F4C430;">
+                <div>Give access to applications, company wise</div>
+                <div>and operations allowed (e.g., authorize)</div>
+                <div class="arrow-line"></div>
+                <div class="arrow-head"></div>
+            </div>
+            
+            <!-- Explanation Box 5: Specific Day and Time Access -->
+            <div class="explanation-box" style="margin-top: 100px; background: #f0f8ff;">
+                <div>Specific time of access for certain days</div>
+                <div>1 – Mon , 2 – Tue and so on</div>
+                <div class="arrow-line"></div>
+                <div class="arrow-head"></div>
+            </div>
+        </div>
+        
+        <!-- Right Section: Form -->
+        <div class="right-section">
+            <div class="form-container">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active">USER</div>
+                    <div class="tab">INPUTTER</div>
+                </div>
+                
+                <!-- Tab Header with Check Icon -->
+                <div class="tab-header">
+                    <div></div>
+                    <div class="check-icon">✓</div>
+                </div>
+                
+                <!-- Form Fields -->
+                <!-- User Identification Section -->
+                <div class="form-group">
+                    <div class="form-row">
+                        <div class="form-label">User Name</div>
+                        <input type="text" class="form-input" value="INPUTTER">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Sign On Name</div>
+                        <input type="text" class="form-input" value="INPUTT">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Classification</div>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" name="classification" id="ext" value="Ext">
+                                <label for="ext">Ext</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" name="classification" id="int" value="Int" checked>
+                                <label for="int">Int</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Language</div>
+                        <input type="text" class="form-input-small" value="1">
+                        <select class="dropdown">
+                            <option>English</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Company.1</div>
+                        <input type="text" class="form-input" value="GB0010001">
+                        <div style="margin-left: 10px;">Model Bank</div>
+                        <div class="icon-button">+</div>
+                    </div>
+                </div>
+                
+                <!-- User Validity Period Section -->
+                <div class="section-title">User Validity Period</div>
+                <div class="form-group">
+                    <div class="form-row">
+                        <div class="form-label">Start Date</div>
+                        <input type="text" class="form-input" value="09 OCT 2018">
+                        <div class="icon-button">📅</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">End Date</div>
+                        <input type="text" class="form-input" value="31 DEC 2099">
+                        <div class="icon-button">📅</div>
+                    </div>
+                </div>
+                
+                <!-- Daily Work Duration Section -->
+                <div class="section-title">Daily Work Duration</div>
+                <div class="form-group">
+                    <div class="form-row">
+                        <div class="form-label">Start Time.1</div>
+                        <input type="text" class="form-input-small" value="0">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">End Time.1</div>
+                        <input type="text" class="form-input-small" value="2400">
+                    </div>
+                </div>
+                
+                <!-- Application and Function Access Section -->
+                <div class="section-title">Application and Function Access</div>
+                <div class="form-group">
+                    <div class="form-row">
+                        <div class="form-label">Company Restr.1</div>
+                        <input type="text" class="form-input" value="ALL">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">User Group.1</div>
+                        <input type="text" class="form-input" value="ALL.PG">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Version.1</div>
+                        <input type="text" class="form-input" value="">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Function Allowed.1</div>
+                        <input type="text" class="form-input" value="A2BCDEFHILPRSV">
+                    </div>
+                </div>
+                
+                <!-- Specific Day and Time Access Section -->
+                <div class="section-title">Specific Day and Time Access</div>
+                <div class="form-group">
+                    <div class="form-row">
+                        <div class="form-label">Allowed Days.1</div>
+                        <input type="text" class="form-input-small" value="1">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Day St Time.1</div>
+                        <input type="text" class="form-input-small" value="1000">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Day End Time.1</div>
+                        <input type="text" class="form-input-small" value="2000">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>`
 
 export function SecurityContentViewer() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
+  const [showUserManagement, setShowUserManagement] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const handleCardClick = (cardId: number) => {
@@ -1351,6 +1899,7 @@ export function SecurityContentViewer() {
   const handleBack = () => {
     setSelectedCard(null)
     setShowDetailedExplanation(false)
+    setShowUserManagement(false)
   }
 
   const handleBackToArchitecture = () => {
@@ -1363,6 +1912,9 @@ export function SecurityContentViewer() {
       if (event.data && event.data.type === 'showDetailedExplanation') {
         setShowDetailedExplanation(true)
       }
+      if (event.data && event.data.type === 'showUserManagement') {
+        setShowUserManagement(true)
+      }
     }
 
     window.addEventListener('message', handleMessage)
@@ -1373,6 +1925,31 @@ export function SecurityContentViewer() {
 
   // Show HTML5 diagram when card 2 is selected
   if (selectedCard === 2) {
+    // Show UserManagement if button was clicked
+    if (showUserManagement) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowUserManagement(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={UserManagementHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="User Management"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show TemenosAuthorization by default
     return (
       <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
         <div className="absolute top-4 right-4 z-10">
