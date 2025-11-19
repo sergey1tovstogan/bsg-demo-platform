@@ -6,10 +6,18 @@ Provides REST API for querying external MSSQL databases
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
-from app.services.mssql_service import MSSQLService
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Try to import MSSQL service, but don't fail if ODBC drivers are missing
+try:
+    from app.services.mssql_service import MSSQLService
+    MSSQL_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"MSSQL service not available: {e}")
+    MSSQL_AVAILABLE = False
+    MSSQLService = None
 
 router = APIRouter(prefix="/database", tags=["database"])
 
@@ -19,6 +27,11 @@ async def get_mssql_service() -> MSSQLService:
     Get MSSQL service instance with connection details from MongoDB.
     Falls back to settings if MongoDB connection details are not found.
     """
+    if not MSSQL_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="MSSQL service is not available. ODBC drivers may not be installed."
+        )
     return await MSSQLService.from_mongodb(
         connection_name="demo_sql_server",
         component_id="data-architecture"

@@ -67,13 +67,19 @@ export function IntegrationDemo() {
   const [getResult, setGetResult] = useState<ApiResult>({ loading: false })
   const [postResult, setPostResult] = useState<ApiResult>({ loading: false })
   const [portfolioResult, setPortfolioResult] = useState<ApiResult>({ loading: false })
+  const [customerResult, setCustomerResult] = useState<ApiResult>({ loading: false })
+  const [accountsResult, setAccountsResult] = useState<ApiResult>({ loading: false })
   const [balance, setBalance] = useState<BalanceInfo>({ loading: false })
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
   const [getResultCollapsed, setGetResultCollapsed] = useState(false)
   const [postResultCollapsed, setPostResultCollapsed] = useState(false)
   const [portfolioResultCollapsed, setPortfolioResultCollapsed] = useState(false)
+  const [customerResultCollapsed, setCustomerResultCollapsed] = useState(false)
+  const [accountsResultCollapsed, setAccountsResultCollapsed] = useState(false)
   const [portfolioMethod, setPortfolioMethod] = useState<'GET' | 'POST'>('POST')
   const [portfolioId, setPortfolioId] = useState('100291-3')
+  const [customerId, setCustomerId] = useState('100291')
+  const [currencyId, setCurrencyId] = useState('EUR')
 
   // POST request body
   const [postBody, setPostBody] = useState(JSON.stringify({
@@ -295,6 +301,72 @@ export function IntegrationDemo() {
       }
     } catch (error: any) {
       setPortfolioResult({
+        loading: false,
+        error: error.response?.data?.detail || error.message || 'Request failed'
+      })
+    }
+  }
+
+  // Customer API call
+  const executeCustomerRequest = async () => {
+    setCustomerResult({ loading: true })
+    try {
+      const customerUrl = `https://api.temenos.com/api/v5.7.0/party/customers/${customerId}`
+
+      const response = await axios.get(
+        'http://localhost:8000/api/v1/integration/proxy',
+        {
+          params: {
+            url: customerUrl
+          },
+          headers: {
+            'X-User-Id': 'demo_user'
+          },
+          timeout: 30000
+        }
+      )
+
+      const proxyData = response.data
+      setCustomerResult({
+        loading: false,
+        status: proxyData.status,
+        data: proxyData.data
+      })
+    } catch (error: any) {
+      setCustomerResult({
+        loading: false,
+        error: error.response?.data?.detail || error.message || 'Request failed'
+      })
+    }
+  }
+
+  // Accounts API call
+  const executeAccountsRequest = async () => {
+    setAccountsResult({ loading: true })
+    try {
+      const accountsUrl = `https://transactwb.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=${currencyId}`
+
+      const response = await axios.get(
+        'http://localhost:8000/api/v1/integration/proxy',
+        {
+          params: {
+            url: accountsUrl
+          },
+          headers: {
+            'X-User-Id': 'demo_user'
+          },
+          timeout: 30000
+        }
+      )
+
+      const proxyData = response.data
+      setAccountsResult({
+        loading: false,
+        status: proxyData.status,
+        data: proxyData.data
+      })
+    } catch (error: any) {
+      setAccountsResult({
         loading: false,
         error: error.response?.data?.detail || error.message || 'Request failed'
       })
@@ -680,6 +752,200 @@ export function IntegrationDemo() {
                   <pre className="text-xs text-red-700 whitespace-pre-wrap">{portfolioResult.error}</pre>
                 ) : (
                   <JsonView data={portfolioResult.data} />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Customer API - GET */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-3">
+              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
+              <h3 className="text-lg font-bold text-[#283054]">Customer</h3>
+              <a
+                href={`https://api.temenos.com/api/v5.7.0/party/customers/${customerId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-600 hover:text-purple-800 transition-colors"
+                title="View API documentation"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+            <div className="flex items-center space-x-2">
+              <p className="text-sm text-gray-500">
+                https://api.temenos.com/api/v5.7.0/party/customers/
+              </p>
+              <input
+                type="text"
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#097BED] focus:border-transparent"
+                style={{ width: '100px' }}
+                placeholder="100291"
+              />
+            </div>
+          </div>
+          <button
+            onClick={executeCustomerRequest}
+            disabled={customerResult.loading}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#097BED] text-white rounded-lg hover:bg-[#0868CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm hover:shadow-md font-medium"
+          >
+            {customerResult.loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span style={{ color: '#FFFFFF' }}>Loading...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                <span style={{ color: '#FFFFFF' }}>Execute</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Customer Response */}
+        {(customerResult.data || customerResult.error) && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {customerResult.error ? (
+                  <>
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <span className="text-sm font-semibold text-red-700">Error</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-semibold text-green-700">
+                      Status: {customerResult.status}
+                    </span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setCustomerResultCollapsed(!customerResultCollapsed)}
+                className="text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1"
+                title={customerResultCollapsed ? "Expand result" : "Collapse result"}
+              >
+                <span className="font-medium">
+                  {customerResultCollapsed ? 'Show' : 'Hide'}
+                </span>
+                {customerResultCollapsed ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            {!customerResultCollapsed && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-96 overflow-auto">
+                {customerResult.error ? (
+                  <pre className="text-xs text-red-700 whitespace-pre-wrap">{customerResult.error}</pre>
+                ) : (
+                  <JsonView data={customerResult.data} />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Accounts API - GET */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-3">
+              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
+              <h3 className="text-lg font-bold text-[#283054]">Accounts</h3>
+              <a
+                href={`https://transactwb.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=${currencyId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-600 hover:text-purple-800 transition-colors"
+                title="View API documentation"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+            <div className="flex items-center space-x-2">
+              <p className="text-sm text-gray-500">
+                https://transactwb.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=
+              </p>
+              <input
+                type="text"
+                value={currencyId}
+                onChange={(e) => setCurrencyId(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#097BED] focus:border-transparent"
+                style={{ width: '80px' }}
+                placeholder="EUR"
+              />
+            </div>
+          </div>
+          <button
+            onClick={executeAccountsRequest}
+            disabled={accountsResult.loading}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#097BED] text-white rounded-lg hover:bg-[#0868CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm hover:shadow-md font-medium"
+          >
+            {accountsResult.loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span style={{ color: '#FFFFFF' }}>Loading...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                <span style={{ color: '#FFFFFF' }}>Execute</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Accounts Response */}
+        {(accountsResult.data || accountsResult.error) && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {accountsResult.error ? (
+                  <>
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <span className="text-sm font-semibold text-red-700">Error</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-semibold text-green-700">
+                      Status: {accountsResult.status}
+                    </span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setAccountsResultCollapsed(!accountsResultCollapsed)}
+                className="text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1"
+                title={accountsResultCollapsed ? "Expand result" : "Collapse result"}
+              >
+                <span className="font-medium">
+                  {accountsResultCollapsed ? 'Show' : 'Hide'}
+                </span>
+                {accountsResultCollapsed ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            {!accountsResultCollapsed && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-96 overflow-auto">
+                {accountsResult.error ? (
+                  <pre className="text-xs text-red-700 whitespace-pre-wrap">{accountsResult.error}</pre>
+                ) : (
+                  <JsonView data={accountsResult.data} />
                 )}
               </div>
             )}
