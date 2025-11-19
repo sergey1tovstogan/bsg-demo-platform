@@ -15,7 +15,8 @@ async def create_collections():
         "presentations",
         "integration",  # Component/Collection convention: integration component uses integration collection
         "security_items",
-        "security_presentation"
+        "security_presentation",
+        "data_architecture"  # Data Architecture component collection
     ]
     
     try:
