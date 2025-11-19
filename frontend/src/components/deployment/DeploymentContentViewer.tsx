@@ -98,9 +98,12 @@ export function DeploymentContentViewer() {
           })
           
           // Handle different response structures
-          // Backend returns: {status: "success", data: {answer: "...", sources: [...]}}
-          // Or: {data: {answer: "...", sources: [...]}}
-          const ragData = response.data?.data || response.data
+          // queryRAG returns ApiResponse<{answer: string, sources?: ...}>
+          // So response.data is {answer: string, sources?: ...}
+          // But backend might wrap it again, so check both
+          const ragData = response.data && typeof response.data === 'object' && 'data' in response.data 
+            ? (response.data as any).data 
+            : response.data
           
           if (ragData?.answer) {
             ragResults.push({

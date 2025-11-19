@@ -37,12 +37,14 @@ async def lifespan(app: FastAPI):
     logger.info(f"Debug mode: {settings.DEBUG}")
 
     # Initialize MongoDB connection
+    # Don't fail startup if DB is temporarily unavailable - health check will report it
     try:
         await init_db()
         logger.info(f"Database: {settings.DATABASE_NAME}")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
-        raise
+        logger.warning("Application will start but database-dependent features may not work")
+        # Don't raise - allow app to start for health checks
 
     # Log configuration
     logger.info(f"CORS origins: {settings.CORS_ORIGINS}")

@@ -7,6 +7,7 @@ import { DemoFrame } from '../components/DemoFrame'
 import { ObservabilityContent } from '../components/observability/ObservabilityContent'
 import { DeploymentAnalyzer } from '../components/deployment/DeploymentAnalyzer'
 import { DeploymentContentViewer } from '../components/deployment/DeploymentContentViewer'
+import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
@@ -62,6 +63,8 @@ export function ComponentPage({ componentId }: ComponentPageProps) {
             <ObservabilityContent />
           ) : componentId === 'deployment' ? (
             <DeploymentContentViewer />
+          ) : componentId === 'data-architecture' ? (
+            <DataArchitectureContent />
           ) : (
             <ContentViewer componentId={componentId} />
           )

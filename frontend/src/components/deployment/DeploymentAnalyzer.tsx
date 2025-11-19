@@ -714,10 +714,34 @@ function ServiceAnalysis({
   onBack: () => void
   onRefresh: () => void
 }) {
-  const [expandedService, setExpandedService] = useState<string | null>(null)
-
   const identifiedComponents = analysisResults.filter(r => r.componentInfo)
+  
+  // Default to first component, or null if none
+  const getFirstComponentId = () => {
+    if (identifiedComponents.length > 0) {
+      return identifiedComponents[0].service.id || null
+    }
+    return null
+  }
+  
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(getFirstComponentId())
+  const [expandedService, setExpandedService] = useState<string | null>(getFirstComponentId())
+  
+  // Update selected service when components change
+  useEffect(() => {
+    if (!selectedServiceId && identifiedComponents.length > 0) {
+      const firstId = getFirstComponentId()
+      setSelectedServiceId(firstId)
+      setExpandedService(firstId)
+    }
+  }, [identifiedComponents.length, selectedServiceId])
+
   const unidentifiedServices = analysisResults.filter(r => !r.componentInfo && !r.error)
+  
+  // Get the currently selected component
+  const selectedComponent = identifiedComponents.find(
+    r => (r.service.id || null) === selectedServiceId
+  ) || identifiedComponents[0] || null
 
   // Always render something, even if services is empty
   if (!services || services.length === 0) {
@@ -729,8 +753,30 @@ function ServiceAnalysis({
     )
   }
 
+  const [scrollToId, setScrollToId] = useState<string | null>(null)
+
+  // Scroll to component when scrollToId changes
+  useEffect(() => {
+    if (scrollToId) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        const element = document.getElementById(`component-${scrollToId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          // Highlight briefly
+          element.classList.add('ring-2', 'ring-purple-500', 'ring-offset-2')
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-purple-500', 'ring-offset-2')
+          }, 2000)
+        }
+        setScrollToId(null)
+      }, 100)
+    }
+  }, [scrollToId])
+
   return (
     <div className="space-y-6">
+      {/* Header Section */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Deployment Analysis</h2>
@@ -750,94 +796,164 @@ function ServiceAnalysis({
         </div>
       </div>
 
-      {loading && (
-        <div className="card text-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-700 font-medium mb-2">Analyzing Azure services and identifying Temenos components...</p>
-          {analysisProgress && (
-            <div className="mt-4">
-              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                <div 
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                  style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
-                ></div>
+        {loading && (
+          <div className="card text-center py-12">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-700 font-medium mb-2">Analyzing Azure services and identifying Temenos components...</p>
+            {analysisProgress && (
+              <div className="mt-4">
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                  <div 
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-gray-600">
+                  {analysisProgress.message} ({analysisProgress.current}/{analysisProgress.total})
+                </p>
               </div>
-              <p className="text-sm text-gray-600">
-                {analysisProgress.message} ({analysisProgress.current}/{analysisProgress.total})
-              </p>
+            )}
+          </div>
+        )}
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="card bg-green-50 border-green-200">
+            <div className="flex items-center space-x-3">
+              <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <div>
+                <p className="text-sm text-green-700 font-medium">Temenos Components</p>
+                <p className="text-2xl font-bold text-green-900">{identifiedComponents.length}</p>
+              </div>
             </div>
-          )}
+          </div>
+          <div className="card bg-blue-50 border-blue-200">
+            <div className="flex items-center space-x-3">
+              <Cloud className="w-8 h-8 text-blue-600" />
+              <div>
+                <p className="text-sm text-blue-700 font-medium">Azure Services</p>
+                <p className="text-2xl font-bold text-blue-900">{services.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card bg-gray-50 border-gray-200">
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="w-8 h-8 text-gray-600" />
+              <div>
+                <p className="text-sm text-gray-700 font-medium">Unclassified Services</p>
+                <p className="text-2xl font-bold text-gray-900">{unidentifiedServices.length}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      {/* Quick Overview - Horizontal Component Selector */}
+      {identifiedComponents.length > 0 && (
+        <div className="card bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <h3 className="font-bold text-gray-900">Quick Overview</h3>
+              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                {identifiedComponents.length} Components
+              </span>
+            </div>
+            <div className="text-xs text-gray-500">
+              Select a component to view details
+            </div>
+          </div>
+          
+          {/* Horizontal Scrollable Component List */}
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-transparent">
+            {identifiedComponents.map((result, index) => {
+              const componentId = result.service.id || `component-${index}`
+              const isSelected = selectedServiceId === result.service.id
+              return (
+                <button
+                  key={componentId}
+                  onClick={() => {
+                    const newSelectedId = result.service.id || null
+                    setSelectedServiceId(newSelectedId)
+                    setExpandedService(newSelectedId)
+                    setScrollToId(componentId)
+                  }}
+                  className={`flex-shrink-0 min-w-[200px] max-w-[280px] p-4 rounded-lg transition-all transform hover:scale-105 ${
+                    isSelected
+                      ? 'bg-white border-2 border-purple-500 shadow-lg ring-2 ring-purple-200'
+                      : 'bg-white/80 border border-gray-200 hover:border-purple-300 hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+                      isSelected ? 'bg-purple-100' : 'bg-gray-100'
+                    }`}>
+                      <Cloud className={`w-5 h-5 ${
+                        isSelected ? 'text-purple-600' : 'text-gray-500'
+                      }`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <p className={`font-semibold text-sm truncate ${
+                          isSelected ? 'text-purple-900' : 'text-gray-900'
+                        }`}>
+                          {result.componentInfo?.componentName || 'Unknown Component'}
+                        </p>
+                        {isSelected && (
+                          <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 truncate mb-1">
+                        {result.componentInfo?.componentType || result.service.type}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {result.service.resourceGroup}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card bg-green-50 border-green-200">
-          <div className="flex items-center space-x-3">
-            <CheckCircle2 className="w-8 h-8 text-green-600" />
-            <div>
-              <p className="text-sm text-green-700 font-medium">Temenos Components</p>
-              <p className="text-2xl font-bold text-green-900">{identifiedComponents.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="card bg-blue-50 border-blue-200">
-          <div className="flex items-center space-x-3">
-            <Cloud className="w-8 h-8 text-blue-600" />
-            <div>
-              <p className="text-sm text-blue-700 font-medium">Azure Services</p>
-              <p className="text-2xl font-bold text-blue-900">{services.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="card bg-gray-50 border-gray-200">
-          <div className="flex items-center space-x-3">
-            <AlertCircle className="w-8 h-8 text-gray-600" />
-            <div>
-              <p className="text-sm text-gray-700 font-medium">Unclassified Services</p>
-              <p className="text-2xl font-bold text-gray-900">{unidentifiedServices.length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Temenos Components */}
-      {identifiedComponents.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-            <CheckCircle2 className="w-6 h-6 text-green-600" />
-            <span>Temenos Components</span>
-          </h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {identifiedComponents.map((result, index) => (
+      {/* Main Content Area */}
+      <div className="space-y-6">
+        {/* Temenos Components - Show only selected component */}
+        {selectedComponent && (
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
+              <CheckCircle2 className="w-6 h-6 text-green-600" />
+              <span>Temenos Components</span>
+            </h3>
+            <div id={`component-${selectedComponent.service.id || 0}`}>
               <ComponentCard
-                key={result.service.id || index}
-                result={result}
-                expanded={expandedService === result.service.id}
+                result={selectedComponent}
+                expanded={expandedService === selectedComponent.service.id}
                 onToggle={() => setExpandedService(
-                  expandedService === result.service.id ? null : result.service.id || null
+                  expandedService === selectedComponent.service.id ? null : selectedComponent.service.id || null
                 )}
               />
-            ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Other Services */}
-      {unidentifiedServices.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Other Azure Services</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {unidentifiedServices.map((result, index) => (
-              <div key={result.service.id || index} className="card">
-                <h4 className="font-semibold text-gray-900">{result.service.name}</h4>
-                <p className="text-sm text-gray-500 mt-1">{result.service.type}</p>
-                <p className="text-xs text-gray-400 mt-1">{result.service.location}</p>
-              </div>
-            ))}
+        {/* Other Services */}
+        {unidentifiedServices.length > 0 && (
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Other Azure Services</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {unidentifiedServices.map((result, index) => (
+                <div key={result.service.id || index} className="card">
+                  <h4 className="font-semibold text-gray-900">{result.service.name}</h4>
+                  <p className="text-sm text-gray-500 mt-1">{result.service.type}</p>
+                  <p className="text-xs text-gray-400 mt-1">{result.service.location}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
@@ -906,9 +1022,9 @@ function ComponentCard({
                     undefined,
                     true // forceRefresh
                   )
-                  if (response.data && response.data.length > 0 && response.data[0].componentInfo) {
+                  if (response.data?.data && Array.isArray(response.data.data) && response.data.data.length > 0 && response.data.data[0].componentInfo) {
                     // Update the component info
-                    result.componentInfo = response.data[0].componentInfo
+                    result.componentInfo = response.data.data[0].componentInfo
                     // Trigger re-render by updating parent state
                     window.location.reload() // Simple refresh for now
                   }
@@ -954,7 +1070,7 @@ function ComponentCard({
 
       {!expanded && (
         <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-          {componentInfo.architecturalOverview.substring(0, 150)}...
+          {componentInfo.architecturalOverview}
         </p>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { Shield, FileText } from 'lucide-react'
+import { Shield } from 'lucide-react'
 
 export function TrustSaaSDocuments() {
   return (
