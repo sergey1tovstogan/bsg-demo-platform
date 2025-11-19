@@ -45,36 +45,18 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
 
   return (
     <div className="space-y-6">
-      {/* SharePoint Video Links */}
-      <div className="card bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-purple-900 mb-2">New API creation (Customer) via Workbench</h3>
-            <p className="text-sm text-purple-700 mb-3">
-              Watch the comprehensive demo video on SharePoint
-            </p>
-          </div>
-          <a
-            href="https://temenosgroup.sharepoint.com/:v:/g/temenosteams/Technical_BSG/ESgc8dewQ_ZPhZnVzTTyXYsBg9F74YtaGagFOCl1CJrBpQ?e=xSPAtQ&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center space-x-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md hover:shadow-lg font-medium"
-          >
-            <ExternalLink className="w-5 h-5" />
-            <span style={{ color: '#FFFFFF' }}>Watch on SharePoint</span>
-          </a>
-        </div>
-
-        <div className="border-t border-purple-200 pt-4">
-          <div className="flex items-center justify-between">
+      {/* SharePoint Video Links - Only for Integration component */}
+      {componentId === 'integration' && (
+        <div className="card bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-purple-900 mb-2">New API creation (Payment) via Workbench with RVT and GIT</h3>
+              <h3 className="text-lg font-bold text-purple-900 mb-2">New API creation (Customer) via Workbench</h3>
               <p className="text-sm text-purple-700 mb-3">
-                Complete walkthrough of Payment API implementation
+                Watch the comprehensive demo video on SharePoint
               </p>
             </div>
             <a
-              href="https://temenosgroup.sharepoint.com/temenosteams/technology/def/DS%20%20Documents/Design%20Framework/Presentations/Workbench2.0/WB24_EF_PaymentAPI_full.webm"
+              href="https://temenosgroup.sharepoint.com/:v:/g/temenosteams/Technical_BSG/ESgc8dewQ_ZPhZnVzTTyXYsBg9F74YtaGagFOCl1CJrBpQ?e=xSPAtQ&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md hover:shadow-lg font-medium"
@@ -83,8 +65,28 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
               <span style={{ color: '#FFFFFF' }}>Watch on SharePoint</span>
             </a>
           </div>
+
+          <div className="border-t border-purple-200 pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-purple-900 mb-2">New API creation (Payment) via Workbench with RVT and GIT</h3>
+                <p className="text-sm text-purple-700 mb-3">
+                  Complete walkthrough of Payment API implementation
+                </p>
+              </div>
+              <a
+                href="https://temenosgroup.sharepoint.com/temenosteams/technology/def/DS%20%20Documents/Design%20Framework/Presentations/Workbench2.0/WB24_EF_PaymentAPI_full.webm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md hover:shadow-lg font-medium"
+              >
+                <ExternalLink className="w-5 h-5" />
+                <span style={{ color: '#FFFFFF' }}>Watch on SharePoint</span>
+              </a>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Loading State */}
       {loading && (
