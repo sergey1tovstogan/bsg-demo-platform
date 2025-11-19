@@ -194,12 +194,12 @@ jobs:
           
           # Set startup command (with logging for better debugging)
           # Azure App Service sets PORT automatically - use it via environment variable
-          # Note: Azure will expand $PORT when executing the command
+          # Note: Azure App Service Linux uses PORT env var, default is 8000
           echo "Setting startup command..."
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "gunicorn app.main:app --bind 0.0.0.0:\${PORT:-8000} --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info" \
+            --startup-file "gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info" \
             --output none
           
           # Enable Always On (critical for App Service to prevent sleep)
@@ -229,7 +229,7 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
-          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:${PORT:-8000} --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info'
+          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info'
           python-version: '3.11'
       
       - name: Health Check
