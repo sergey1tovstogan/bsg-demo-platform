@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Play, Loader2, AlertCircle, CheckCircle, Key, ChevronUp, ChevronDown } from 'lucide-react'
 import { Play, Loader2, AlertCircle, CheckCircle, Key, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react'
 import axios from 'axios'
 import { ApiKeyModal } from './ApiKeyModal'
@@ -369,6 +370,13 @@ export function IntegrationDemo() {
               className="absolute top-0 left-0 w-full h-48 px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent bg-transparent text-transparent caret-black resize-none z-10"
               placeholder="Enter JSON request body..."
               spellCheck={false}
+            />
+            <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
+              <JsonView
+                data={(() => { try { return JSON.parse(postBody) } catch { return null } })()}
+                rawText={postBody}
+              />
+            </div>
               style={{ caretColor: 'black' }}
             />
           </div>
@@ -634,6 +642,13 @@ export function IntegrationDemo() {
                 className="absolute top-0 left-0 w-full h-48 px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent bg-transparent text-transparent caret-black resize-none z-10"
                 placeholder="Enter JSON request body..."
                 spellCheck={false}
+              />
+              <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
+                <JsonView
+                  data={(() => { try { return JSON.parse(portfolioBody) } catch { return null } })()}
+                  rawText={portfolioBody}
+                />
+              </div>
                 style={{ caretColor: 'black' }}
               />
             </div>
