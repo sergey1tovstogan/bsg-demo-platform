@@ -5,6 +5,7 @@ Handles environment-based configuration with validation.
 Supports environment variables, .env files, and secret injection.
 """
 
+import os
 from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,7 +24,10 @@ class Settings(BaseSettings):
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     HOST: str = Field(default="0.0.0.0", description="API host")
-    PORT: int = Field(default=8000, description="API port")
+    PORT: int = Field(
+        default_factory=lambda: int(os.getenv("PORT", "8000")),
+        description="API port (Azure App Service sets PORT automatically)"
+    )
 
     # Database Settings
     DATABASE_TYPE: str = Field(default="mongodb", description="Database type: mongodb, postgresql, etc.")

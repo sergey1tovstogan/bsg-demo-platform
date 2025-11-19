@@ -127,6 +127,7 @@ jobs:
           fi
           
           # Set build settings FIRST so Azure can build during deployment
+          # Note: Azure App Service will auto-detect Python and install dependencies
           echo "Setting build settings..."
           az webapp config appsettings set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
@@ -134,7 +135,6 @@ jobs:
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=true \
               ENABLE_ORYX_BUILD=true \
-              SCM_BUILD_ARGS="--build-arg REQUIREMENTS_FILE=requirements.txt" \
             --output none
           
           # Set other app settings
@@ -175,12 +175,14 @@ jobs:
             echo "⚠ Warning: RAG_JWT_TOKEN secret is not set. RAG features will not work."
           fi
           
-          # Set startup command
+          # Set startup command (with logging for better debugging)
+          # Azure App Service sets PORT automatically - use it via environment variable
+          # Note: Azure will expand $PORT when executing the command
           echo "Setting startup command..."
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120" \
+            --startup-file "gunicorn app.main:app --bind 0.0.0.0:\${PORT:-8000} --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info" \
             --output none
           
           # Enable Always On (critical for App Service to prevent sleep)
@@ -210,29 +212,30 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
-          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120'
+          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:${PORT:-8000} --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info'
           python-version: '3.11'
       
       - name: Health Check
         run: |
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-          echo "Waiting for app to start..."
-          sleep 60
+          echo "Waiting for app to start (allowing 90 seconds for first-time startup)..."
+          sleep 90
           
           # First check liveness endpoint (doesn't require DB)
           echo "Checking liveness endpoint..."
-          MAX_RETRIES=15
+          MAX_RETRIES=20
           RETRY_DELAY=10
           LIVENESS_PASSED=false
           
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Liveness check attempt $i/$MAX_RETRIES..."
-            if curl -f -s --max-time 30 $WEBAPP_URL/api/v1/live > /dev/null 2>&1; then
-              echo "✓ Liveness check passed!"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 $WEBAPP_URL/api/v1/live || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✓ Liveness check passed! (HTTP $HTTP_CODE)"
               LIVENESS_PASSED=true
               break
             else
-              echo "Liveness check failed, retrying in $RETRY_DELAY seconds..."
+              echo "Liveness check returned HTTP $HTTP_CODE, retrying in $RETRY_DELAY seconds..."
               if [ $i -lt $MAX_RETRIES ]; then
                 sleep $RETRY_DELAY
               fi
@@ -241,21 +244,34 @@ jobs:
           
           if [ "$LIVENESS_PASSED" = false ]; then
             echo "❌ Liveness check failed after $MAX_RETRIES attempts"
-            echo "Checking app logs..."
+            echo "Checking app status..."
+            az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "{state: state, defaultHostName: defaultHostName}" || true
+            echo ""
+            echo "Checking recent logs..."
             az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --timeout 10 || true
+            echo ""
+            echo "Troubleshooting steps:"
+            echo "1. Check App Service logs: az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}"
+            echo "2. Verify startup command: az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query appCommandLine"
+            echo "3. Check Always On: az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query alwaysOn"
             exit 1
           fi
           
           # Now check full health endpoint
+          echo ""
           echo "Checking full health endpoint..."
-          if curl -f -s --max-time 30 $WEBAPP_URL/api/v1/health; then
-            echo "✓ Full health check passed!"
+          HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 $WEBAPP_URL/api/v1/health || echo "000")
+          if [ "$HEALTH_CODE" = "200" ]; then
+            echo "✓ Full health check passed! (HTTP $HEALTH_CODE)"
+            curl -s --max-time 30 $WEBAPP_URL/api/v1/health | head -20
           else
-            echo "⚠ Full health check returned non-200, but app is alive"
+            echo "⚠ Full health check returned HTTP $HEALTH_CODE"
             echo "This may indicate database connectivity issues, but app is running"
+            echo "Liveness endpoint confirms the app is alive"
           fi
           
-          echo "Deployment successful!"
+          echo ""
+          echo "✓ Deployment successful!"
       
       - name: Deployment Summary
         run: |
@@ -269,4 +285,3 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🌐 Live Application" >> $GITHUB_STEP_SUMMARY
           echo "Your application is now live at: **$WEBAPP_URL**" >> $GITHUB_STEP_SUMMARY
-
