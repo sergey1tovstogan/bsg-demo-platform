@@ -5,7 +5,7 @@
 The **BSG Demo Platform** serves as the central hub for demonstrating Temenos products and capabilities.  
 It provides a unified environment where architecture, deployments, presentations, videos, and technical documentation are consolidated and maintained in one place.  
 
-This repository is designed to support the **Banking Software Group (BSG)** in preparing and delivering high-quality demonstrations and proof-of-concepts that highlight the full range of Temenos technologies, from **Transact** and **Infinity** to supporting microservices and integration layers.
+This repository is designed to support the **Business Solution Group (BSG)** in preparing and delivering high-quality demonstrations and proof-of-concepts that highlight the full range of Temenos technologies, from **Transact** and **Infinity** to supporting microservices and integration layers.
 
 ---
 

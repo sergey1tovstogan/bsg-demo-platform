@@ -17,7 +17,7 @@ from app.core.database import init_db, close_db
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
-from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, deployment, chatbot
+from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot
 
 # Setup logging
 setup_logging()
@@ -89,6 +89,7 @@ app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(database.router, prefix=settings.API_V1_PREFIX)
 app.include_router(components.router, prefix=settings.API_V1_PREFIX)
+app.include_router(integration.router, prefix=settings.API_V1_PREFIX)
 app.include_router(grafana_proxy.router, prefix=settings.API_V1_PREFIX)
 app.include_router(grafana_auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(security.router, prefix=settings.API_V1_PREFIX)
