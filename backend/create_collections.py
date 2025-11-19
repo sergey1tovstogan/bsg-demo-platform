@@ -5,22 +5,21 @@ from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 
 async def create_collections():
     """Create required collections in MongoDB."""
-    # Use local MongoDB for development
-    connection_string = "mongodb://localhost:27017"
+    connection_string = "mongodb://bsg-demo-platform-mongodb:wC418aLYO4SazuhljALVOclZc48spvoHidWukgFDOoBCjO5Z4wjjKPziuJ44TAUyVlOs89HeL4a5ACDbdAs80w==@bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@bsg-demo-platform-mongodb@"
     database_name = "bsg_demo"
-
+    
     collections_to_create = [
         "videos",
         "security_docs",  # MongoDB collection names can't have spaces, using underscore
         "presentations",
-        "integration",  # Component/Collection convention: integration component uses integration collection
         "security_items",
-        "security_presentation"
+        "security_presentation",
+        "data_architecture"  # Data Architecture component collection
     ]
     
     try:
         print(f"Connecting to MongoDB...")
-        print(f"Host: localhost:27017")
+        print(f"Host: bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255")
         
         client = AsyncIOMotorClient(
             connection_string,
@@ -72,22 +71,68 @@ async def create_collections():
         await db["presentations"].create_index("title")
         await db["presentations"].create_index("component_id")
         print("  [OK] Indexes created for 'presentations' collection")
-
-        # Integration collection indexes
-        await db["integration"].create_index("integration_id", unique=True)
-        await db["integration"].create_index("name")
-        await db["integration"].create_index("status")
-        print("  [OK] Indexes created for 'integration' collection")
-
+        
         # Security items collection indexes
         await db["security_items"].create_index("document_number", unique=True)
         await db["security_items"].create_index("document_name")
         print("  [OK] Indexes created for 'security_items' collection")
-
+        
         # Security presentation collection indexes
         await db["security_presentation"].create_index("presentation_number", unique=True)
         await db["security_presentation"].create_index("presentation_name")
         print("  [OK] Indexes created for 'security_presentation' collection")
+
+        # Data Architecture collection indexes
+        await db["data_architecture"].create_index("content_id", unique=True)
+        await db["data_architecture"].create_index("title")
+        await db["data_architecture"].create_index("type")
+        await db["data_architecture"].create_index("order")
+        # Add index for database connection configs
+        await db["data_architecture"].create_index([
+            ("config_type", 1),
+            ("connection_name", 1),
+            ("component_id", 1)
+        ], unique=True)
+        print("  [OK] Indexes created for 'data_architecture' collection")
+
+        # Insert SQL Server connection configuration
+        print(f"\nInserting SQL Server connection configuration...")
+        connection_config = {
+            "config_type": "database_connection",
+            "connection_name": "demo_sql_server",
+            "component_id": "data-architecture",
+            "host": "10.1.4.135",
+            "port": 1433,
+            "user": "dist1",
+            "password": "dist1",
+            "database": "ODS",
+            "schemas": ["ODS"],
+            "description": "Demo SQL Server for Data Architecture component",
+            "is_active": True
+        }
+
+        # Check if connection config already exists
+        existing_config = await db["data_architecture"].find_one({
+            "config_type": "database_connection",
+            "connection_name": "demo_sql_server",
+            "component_id": "data-architecture"
+        })
+
+        if existing_config:
+            # Update existing config
+            await db["data_architecture"].update_one(
+                {
+                    "config_type": "database_connection",
+                    "connection_name": "demo_sql_server",
+                    "component_id": "data-architecture"
+                },
+                {"$set": connection_config}
+            )
+            print("  [OK] Updated existing SQL Server connection configuration")
+        else:
+            # Insert new config
+            await db["data_architecture"].insert_one(connection_config)
+            print("  [OK] Inserted SQL Server connection configuration")
 
         # List all collections
         print(f"\nAll collections in database:")

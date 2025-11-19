@@ -5,7 +5,8 @@ Handles environment-based configuration with validation.
 Supports environment variables, .env files, and secret injection.
 """
 
-from typing import List, Optional
+import os
+from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import secrets
@@ -23,7 +24,10 @@ class Settings(BaseSettings):
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     HOST: str = Field(default="0.0.0.0", description="API host")
-    PORT: int = Field(default=8000, description="API port")
+    PORT: int = Field(
+        default_factory=lambda: int(os.getenv("PORT", "8000")),
+        description="API port (Azure App Service sets PORT automatically)"
+    )
 
     # Database Settings
     DATABASE_TYPE: str = Field(default="mongodb", description="Database type: mongodb, postgresql, etc.")
@@ -56,14 +60,8 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, description="Access token expiry")
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, description="Refresh token expiry")
 
-    # CORS Settings
-    CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:5173"],
-        description="Allowed CORS origins"
-    )
+    # CORS Settings (not loaded from environment variables to avoid parsing issues)
     CORS_CREDENTIALS: bool = Field(default=True, description="Allow credentials in CORS")
-    CORS_METHODS: List[str] = Field(default=["*"], description="Allowed CORS methods")
-    CORS_HEADERS: List[str] = Field(default=["*"], description="Allowed CORS headers")
 
     # Logging Settings
     LOG_LEVEL: str = Field(default="INFO", description="Logging level")
@@ -145,12 +143,6 @@ class Settings(BaseSettings):
             raise ValueError(f"LOG_LEVEL must be one of {allowed}")
         return v
 
-    @field_validator("CORS_ORIGINS", mode="before")
-    def parse_cors_origins(cls, v):
-        """Parse CORS origins from string or list."""
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
 
     @field_validator("CORS_METHODS", mode="before")
     def parse_cors_methods(cls, v):
@@ -172,6 +164,21 @@ class Settings(BaseSettings):
         if info.data.get("ENVIRONMENT") == "production" and len(v) < 32:
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters in production")
         return v
+
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        """Get CORS origins (hardcoded to avoid environment variable parsing issues)."""
+        return ["http://localhost:3000", "http://localhost:5173"]
+
+    @property
+    def CORS_METHODS(self) -> List[str]:
+        """Get CORS methods (hardcoded to avoid environment variable parsing issues)."""
+        return ["*"]
+
+    @property
+    def CORS_HEADERS(self) -> List[str]:
+        """Get CORS headers (hardcoded to avoid environment variable parsing issues)."""
+        return ["*"]
 
     @property
     def is_production(self) -> bool:

@@ -367,15 +367,25 @@ class AKSService:
                             r"transact", r"eventstore", r"adapter", r"genericconfig",
                             r"holdings", r"party", r"modular", r"temenos", r"tap",
                             r"stmtgen", r"notification", r"audit", r"file", r"workflow",
-                            r"deposits", r"lending", r"webingress", r"ingress"
+                            r"deposits", r"lending", r"webingress", r"ingress", r"payment",
+                            r"card", r"account", r"transaction", r"core", r"banking",
+                            r"integration", r"api", r"gateway", r"service", r"microservice"
                         ]
                         # Also check if namespace starts with or contains these patterns
                         # This handles cases like "deposits202507", "ingress-nginx-transact", etc.
+                        # Be more permissive - include if it matches any pattern
                         if any(re.search(pattern, ns_name, re.IGNORECASE) for pattern in temenos_patterns):
                             namespaces.append(ns_name)
-                            logger.debug(f"Including namespace '{ns_name}' (matched Temenos pattern)")
+                            logger.info(f"Including namespace '{ns_name}' (matched Temenos pattern)")
                         else:
-                            logger.debug(f"Skipping namespace '{ns_name}' (doesn't match Temenos patterns)")
+                            # If no explicit filter and namespace doesn't match patterns, still include it
+                            # This ensures we don't miss any potential Temenos namespaces
+                            # Only skip if it's clearly a system namespace
+                            if not ns_name.startswith(("kube-", "system-", "default")):
+                                namespaces.append(ns_name)
+                                logger.info(f"Including namespace '{ns_name}' (non-system namespace)")
+                            else:
+                                logger.debug(f"Skipping namespace '{ns_name}' (system namespace)")
                 
                 logger.info(f"Found {len(namespaces)} Temenos-related namespaces in {cluster_name}: {namespaces}")
                 

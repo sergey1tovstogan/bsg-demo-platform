@@ -53,11 +53,12 @@ DEBUG=True
 - `users` - User accounts and authentication
 - `user_sessions` - Active user sessions
 - `components` - Component definitions
-- `content` - Component content
+- `content` - Component content (shared across components)
 - `videos` - Video metadata and references
 - `security_docs` - Security documentation
 - `presentations` - Presentation materials
 - `integration` - Integration component data
+- `data_architecture` - Data Architecture component-specific collection
 
 **Component/Collection Convention:**
 > **IMPORTANT**: Each component should have a matching MongoDB collection with the same name.
@@ -138,6 +139,7 @@ DEBUG=True
 │  │  • videos                                      │          │
 │  │  • security_docs                               │          │
 │  │  • presentations                               │          │
+│  │  • data_architecture                           │          │
 │  └──────────────────────────────────────────────┘          │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -168,6 +170,14 @@ Each demo component operates independently while sharing common infrastructure:
 - `security` - Security
 - `observability` - Observability
 - `design-time` - Design Time
+
+### Component Matching Rule
+**IMPORTANT**: When working on a specific component, ALWAYS ensure you are working with the correct component-specific collection and files:
+- Use `data_architecture` collection for Data Architecture component work
+- Use `security_docs` collection for Security component work
+- Reference component-specific frontend files (e.g., `frontend/src/components/data-architecture/`)
+- Reference component-specific backend files (e.g., `backend/app/api/v1/endpoints/data_architecture.py`)
+- Always verify component ID matches: `data-architecture` (frontend/API) = `data_architecture` (database)
 
 ## API Design
 

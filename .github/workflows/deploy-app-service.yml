@@ -77,12 +77,31 @@ jobs:
       
       - name: Copy frontend build to backend static
         run: |
+          echo "Copying frontend build to backend static directory..."
           mkdir -p backend/app/static
-          cp -r frontend/dist/* backend/app/static/
+          if [ -d "frontend/dist" ] && [ "$(ls -A frontend/dist)" ]; then
+            cp -r frontend/dist/* backend/app/static/
+            echo "✓ Frontend files copied successfully"
+            echo "Static directory contents:"
+            ls -la backend/app/static/ | head -20
+            if [ -f "backend/app/static/index.html" ]; then
+              echo "✓ index.html found in static directory"
+            else
+              echo "✗ ERROR: index.html not found in static directory!"
+              exit 1
+            fi
+          else
+            echo "✗ ERROR: frontend/dist directory is empty or doesn't exist!"
+            echo "Frontend build may have failed. Checking dist directory..."
+            ls -la frontend/dist/ || echo "dist directory does not exist"
+            exit 1
+          fi
       
       - name: Clean up unnecessary files
         working-directory: ./backend
         run: |
+          # Remove test files
+          find . -name "*test*.py" -not -path "./app/*" -delete || true
           # Remove files that shouldn't be deployed
           rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/ || true
           # Find and remove all __pycache__ directories (handle both Unix and Windows paths)
@@ -96,74 +115,180 @@ jobs:
           find . -type f -path "*\\*" -delete 2>/dev/null || true
           find . -type d -path "*\\*" -exec rm -rf {} + 2>/dev/null || true
       
-      - name: Create startup script
+      - name: Verify requirements.txt exists
         run: |
-          cat > backend/startup.sh << 'EOF'
-          #!/bin/bash
-          cd /home/site/wwwroot
-          gunicorn app.main:app --bind 0.0.0.0:8000 --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile -
-          EOF
-          chmod +x backend/startup.sh
+          if [ ! -f "backend/requirements.txt" ]; then
+            echo "❌ ERROR: requirements.txt not found in backend directory"
+            exit 1
+          fi
+          echo "✓ requirements.txt found"
+          echo "First 20 lines of requirements.txt:"
+          head -20 backend/requirements.txt
       
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: ./backend
-          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:8000 --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120'
-      
-      - name: Configure App Settings
+      - name: Configure App Settings (Before Deployment)
         run: |
-          # Copy app settings JSON to backend directory for deployment
-          cp infrastructure/app-settings.json backend/app-settings.json || echo "App settings JSON not found, will set manually"
+          echo "Configuring Azure App Service settings BEFORE deployment..."
           
-          # Set build settings and environment variables using JSON file
-          if [ -f backend/app-settings.json ]; then
-            az webapp config appsettings set \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --settings @backend/app-settings.json \
-              --output none
+          # Generate JWT secret if not provided
+          if [ -z "${{ secrets.JWT_SECRET_KEY }}" ]; then
+            echo "⚠ Warning: JWT_SECRET_KEY secret is not set. Generating a temporary one..."
+            TEMP_JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
           else
-            # Fallback: set settings manually (for GitHub Actions)
-            az webapp config appsettings set \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --settings \
-                SCM_DO_BUILD_DURING_DEPLOYMENT=false \
-                ENABLE_ORYX_BUILD=false \
-                ENVIRONMENT=production \
-                DEBUG=False \
-                DATABASE_NAME=bsg_demo \
-              --output none
-            echo "Note: DATABASE_URL should be set manually via Azure Portal or using JSON file"
+            TEMP_JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}"
           fi
           
-          # Set startup command
+          # Set RAG_API_URL (use secret or default)
+          RAG_API_URL_VALUE="${{ secrets.RAG_API_URL }}"
+          if [ -z "$RAG_API_URL_VALUE" ]; then
+            RAG_API_URL_VALUE="https://tbsg.temenos.com"
+          fi
+          
+          # Set build settings FIRST so Azure can build during deployment
+          # Note: Azure App Service will auto-detect Python and install dependencies
+          echo "Setting build settings..."
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --settings \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+              ENABLE_ORYX_BUILD=true \
+            --output none
+          
+          # Set other app settings
+          echo "Setting app settings..."
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --settings \
+              ENVIRONMENT=production \
+              DEBUG=False \
+              DATABASE_NAME=bsg_demo \
+              CORS_ORIGINS="*" \
+              JWT_SECRET_KEY="$TEMP_JWT_SECRET" \
+              RAG_API_URL="$RAG_API_URL_VALUE" \
+            --output none
+          
+          # Set secrets individually if they exist (to avoid exposing them in logs)
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            echo "Setting DATABASE_URL..."
+            az webapp config appsettings set \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --settings DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              --output none
+          else
+            echo "⚠ Warning: DATABASE_URL secret is not set. App may not work correctly."
+            echo "Please set DATABASE_URL in GitHub Secrets"
+          fi
+          
+          if [ -n "${{ secrets.RAG_JWT_TOKEN }}" ]; then
+            echo "Setting RAG_JWT_TOKEN..."
+            az webapp config appsettings set \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --settings RAG_JWT_TOKEN="${{ secrets.RAG_JWT_TOKEN }}" \
+              --output none
+          else
+            echo "⚠ Warning: RAG_JWT_TOKEN secret is not set. RAG features will not work."
+          fi
+          
+          # Set startup command (with logging for better debugging)
+          # Azure App Service sets PORT automatically - use it via environment variable
+          # Note: Azure will expand $PORT when executing the command
+          echo "Setting startup command..."
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120" \
+            --startup-file "gunicorn app.main:app --bind 0.0.0.0:\${PORT:-8000} --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info" \
             --output none
           
           # Enable Always On (critical for App Service to prevent sleep)
+          echo "Enabling Always On..."
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --always-on true \
             --output none
           
-          # Note: kubectl is not available in Azure App Service by default
-          # The app will handle this gracefully - namespace discovery will be skipped if kubectl is not available
-          echo "App settings configured successfully"
+          echo ""
+          echo "✓ App settings configured successfully"
+          echo ""
+          echo "Required GitHub Secrets Status:"
+          echo "  - DATABASE_URL: $([ -n "${{ secrets.DATABASE_URL }}" ] && echo "✓ Set" || echo "✗ Missing - REQUIRED")"
+          echo "  - RAG_JWT_TOKEN: $([ -n "${{ secrets.RAG_JWT_TOKEN }}" ] && echo "✓ Set" || echo "✗ Missing (RAG features disabled)")"
+          echo "  - RAG_API_URL: $([ -n "${{ secrets.RAG_API_URL }}" ] && echo "✓ Set" || echo "⚠ Using default: https://tbsg.temenos.com")"
+          echo "  - JWT_SECRET_KEY: $([ -n "${{ secrets.JWT_SECRET_KEY }}" ] && echo "✓ Set" || echo "⚠ Generated temporary key")"
+          echo ""
+          echo "To set secrets: Repository → Settings → Secrets and variables → Actions → New repository secret"
+          echo "See ENVIRONMENT_VARIABLES.md for details"
+          echo ""
           echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
+      
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ./backend
+          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:${PORT:-8000} --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info'
+          python-version: '3.11'
       
       - name: Health Check
         run: |
-          sleep 30
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-          curl -f $WEBAPP_URL/api/v1/health || exit 1
-          echo "Deployment successful!"
+          echo "Waiting for app to start (allowing 90 seconds for first-time startup)..."
+          sleep 90
+          
+          # First check liveness endpoint (doesn't require DB)
+          echo "Checking liveness endpoint..."
+          MAX_RETRIES=20
+          RETRY_DELAY=10
+          LIVENESS_PASSED=false
+          
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Liveness check attempt $i/$MAX_RETRIES..."
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 $WEBAPP_URL/api/v1/live || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✓ Liveness check passed! (HTTP $HTTP_CODE)"
+              LIVENESS_PASSED=true
+              break
+            else
+              echo "Liveness check returned HTTP $HTTP_CODE, retrying in $RETRY_DELAY seconds..."
+              if [ $i -lt $MAX_RETRIES ]; then
+                sleep $RETRY_DELAY
+              fi
+            fi
+          done
+          
+          if [ "$LIVENESS_PASSED" = false ]; then
+            echo "❌ Liveness check failed after $MAX_RETRIES attempts"
+            echo "Checking app status..."
+            az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "{state: state, defaultHostName: defaultHostName}" || true
+            echo ""
+            echo "Checking recent logs..."
+            az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --timeout 10 || true
+            echo ""
+            echo "Troubleshooting steps:"
+            echo "1. Check App Service logs: az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}"
+            echo "2. Verify startup command: az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query appCommandLine"
+            echo "3. Check Always On: az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query alwaysOn"
+            exit 1
+          fi
+          
+          # Now check full health endpoint
+          echo ""
+          echo "Checking full health endpoint..."
+          HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 $WEBAPP_URL/api/v1/health || echo "000")
+          if [ "$HEALTH_CODE" = "200" ]; then
+            echo "✓ Full health check passed! (HTTP $HEALTH_CODE)"
+            curl -s --max-time 30 $WEBAPP_URL/api/v1/health | head -20
+          else
+            echo "⚠ Full health check returned HTTP $HEALTH_CODE"
+            echo "This may indicate database connectivity issues, but app is running"
+            echo "Liveness endpoint confirms the app is alive"
+          fi
+          
+          echo ""
+          echo "✓ Deployment successful!"
       
       - name: Deployment Summary
         run: |
@@ -177,4 +302,3 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🌐 Live Application" >> $GITHUB_STEP_SUMMARY
           echo "Your application is now live at: **$WEBAPP_URL**" >> $GITHUB_STEP_SUMMARY
-

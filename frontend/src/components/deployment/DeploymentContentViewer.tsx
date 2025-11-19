@@ -96,12 +96,15 @@ export function DeploymentContentViewer() {
             RAGmodelId: 'ModularBanking, TechnologyOverview',
             context: 'This is about Temenos cloud architecture models and deployment strategies for Temenos banking solutions.'
           })
-          
+
           // Handle different response structures
+          // queryRAG returns ApiResponse<{answer: string, sources?: ...}>
           // Backend returns: {status: "success", data: {answer: "...", sources: [...]}}
           // Or: {data: {answer: "...", sources: [...]}}
-          const ragData = response.data?.data || response.data
-          
+          const ragData = response.data && typeof response.data === 'object' && 'data' in response.data
+            ? (response.data as any).data
+            : response.data
+
           if (ragData?.answer) {
             ragResults.push({
               question,

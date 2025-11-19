@@ -9,13 +9,15 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database, get_db_health
 from app.core.config import settings
+from app.core.logging import get_logger
 from app.utils.datetime_utils import utc_now, format_iso8601
 
 router = APIRouter(tags=["Health"])
+logger = get_logger(__name__)
 
 
 @router.get("/health", status_code=status.HTTP_200_OK)
-async def health_check(db: AsyncIOMotorDatabase = Depends(get_database)):
+async def health_check():
     """
     Comprehensive health check endpoint.
 
@@ -35,9 +37,19 @@ async def health_check(db: AsyncIOMotorDatabase = Depends(get_database)):
         "checks": {}
     }
 
-    # Check database
-    db_health = await get_db_health()
-    health_status["checks"]["database"] = db_health
+    # Check database - handle errors gracefully
+    # Don't use Depends(get_database) here to avoid failing if DB is down
+    try:
+        db_health = await get_db_health()
+        health_status["checks"]["database"] = db_health
+    except Exception as e:
+        health_status["checks"]["database"] = {
+            "status": "unhealthy",
+            "error": str(e),
+            "connected": False
+        }
+        # Don't fail the health check if DB is down - app can still serve some endpoints
+        logger.warning(f"Database health check failed: {e}")
 
     # Check video storage
     from app.services.video_service import video_service
@@ -100,13 +112,15 @@ async def liveness_check():
     Kubernetes liveness probe endpoint.
 
     Simple check to verify the application is running.
+    This endpoint does NOT require database connectivity.
 
     Returns:
         Live status
     """
     return {
         "alive": True,
-        "timestamp": format_iso8601(utc_now())
+        "timestamp": format_iso8601(utc_now()),
+        "version": settings.APP_VERSION
     }
 
 

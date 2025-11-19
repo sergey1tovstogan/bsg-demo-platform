@@ -37,19 +37,95 @@ jobs:
         working-directory: ./frontend
         run: npm run build
         env:
-          VITE_API_URL: /api/v1
+          VITE_API_URL: https://bsg-demo-platform-app.azurewebsites.net/api/v1
           NODE_ENV: production
+      
+      - name: Copy Static Web App config
+        run: |
+          if [ -f "frontend/staticwebapp.config.json" ]; then
+            # Copy to dist (where files are deployed from)
+            cp frontend/staticwebapp.config.json frontend/dist/staticwebapp.config.json
+            echo "✓ Copied staticwebapp.config.json to dist"
+            # Also copy to repository root (Azure Static Web Apps may look here)
+            cp frontend/staticwebapp.config.json staticwebapp.config.json
+            echo "✓ Copied staticwebapp.config.json to repository root"
+            # Verify both copies exist
+            echo "Verifying copies..."
+            ls -la frontend/dist/staticwebapp.config.json || echo "✗ Not in dist"
+            ls -la staticwebapp.config.json || echo "✗ Not in root"
+          else
+            echo "⚠ staticwebapp.config.json not found in frontend/"
+            exit 1
+          fi
+      
+      - name: Verify build output
+        run: |
+          echo "Checking build output..."
+          echo "=== Contents of frontend/dist ==="
+          ls -la frontend/dist/ || echo "Build output not found"
+          echo ""
+          echo "=== Checking for index.html ==="
+          if [ -f "frontend/dist/index.html" ]; then
+            echo "✓ index.html found"
+            echo "=== Full index.html content ==="
+            cat frontend/dist/index.html
+            echo ""
+            echo "=== Checking script tags ==="
+            grep -i "script" frontend/dist/index.html || echo "No script tags found"
+          else
+            echo "✗ index.html not found - build may have failed"
+            exit 1
+          fi
+          echo ""
+          echo "=== Checking for config file ==="
+          if [ -f "frontend/dist/staticwebapp.config.json" ]; then
+            echo "✓ staticwebapp.config.json found in dist"
+            cat frontend/dist/staticwebapp.config.json
+          else
+            echo "✗ staticwebapp.config.json not found in dist"
+          fi
+          echo ""
+          echo "=== Checking for assets ==="
+          if [ -d "frontend/dist/assets" ]; then
+            echo "✓ Assets folder found"
+            ls -la frontend/dist/assets/ | head -10
+            echo "=== Checking for JS files ==="
+            find frontend/dist/assets -name "*.js" | head -5
+          else
+            echo "✗ No assets folder found - build may have failed"
+            exit 1
+          fi
+      
+      - name: Check deployment token
+        run: |
+          if [ -z "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" ]; then
+            echo "⚠️ ERROR: AZURE_STATIC_WEB_APPS_API_TOKEN secret is not set!"
+            echo ""
+            echo "To fix this:"
+            echo "1. Go to Azure Portal → Static Web App (bsg-demo-platform-4077)"
+            echo "2. Click 'Manage deployment token'"
+            echo "3. Copy the deployment token"
+            echo "4. Go to GitHub → Repository Settings → Secrets and variables → Actions"
+            echo "5. Add new secret: AZURE_STATIC_WEB_APPS_API_TOKEN with the token value"
+            echo ""
+            echo "⚠️ Deployment will be skipped without the token!"
+            exit 1
+          else
+            echo "✓ Deployment token is set"
+          fi
       
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ env.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           app_location: "/frontend"
           output_location: "dist"
           skip_app_build: true
-          skip_deploy_on_missing_secrets: true
+          skip_deploy_on_missing_secrets: false
+          api_location: ""
+          api_build_command: ""
       
       - name: Deployment Summary
         run: |

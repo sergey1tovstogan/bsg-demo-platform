@@ -1,10 +1,16 @@
 name: Deploy to Azure VM
 
+# DISABLED: This workflow is no longer used. We now deploy to:
+# - Azure App Service (backend) via deploy-app-service.yml
+# - Azure Static Web Apps (frontend) via deploy-static-webapp.yml
+# The VM resource no longer exists.
+
 on:
-  push:
-    branches:
-      - develop
-  workflow_dispatch:
+  # Disabled - VM no longer exists
+  # push:
+  #   branches:
+  #     - develop
+  workflow_dispatch:  # Keep manual trigger for emergency use only
 
 env:
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -50,6 +56,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
+      - name: Clean up test files
+        run: |
+          find . -name "*test*.py" -not -path "./backend/app/*" -not -path "./.venv/*" -not -path "./venv/*" -delete || true
+          find . -name "*.pyc" -delete || true
+          find . -type d -name "__pycache__" -exec rm -rf {} + || true
+      
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -58,9 +70,13 @@ jobs:
       - name: Get VM IP
         id: get-vm-ip
         run: |
-          VM_IP=$(az vm show -d -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.VM_NAME }} --query publicIps -o tsv)
-          echo "vm_ip=$VM_IP" >> $GITHUB_OUTPUT
-          echo "VM IP: $VM_IP"
+          echo "⚠️ WARNING: This workflow is disabled. VM no longer exists."
+          echo "⚠️ Backend is deployed to Azure App Service via deploy-app-service.yml"
+          echo "⚠️ Frontend is deployed to Azure Static Web Apps via deploy-static-webapp.yml"
+          exit 1  # Fail early to prevent further steps
+          # VM_IP=$(az vm show -d -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.VM_NAME }} --query publicIps -o tsv)
+          # echo "vm_ip=$VM_IP" >> $GITHUB_OUTPUT
+          # echo "VM IP: $VM_IP"
       
       - name: Setup SSH key
         run: |
