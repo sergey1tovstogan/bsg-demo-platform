@@ -171,12 +171,12 @@ class Settings(BaseSettings):
     @property
     def CORS_METHODS(self) -> List[str]:
         """Get CORS methods (hardcoded to avoid environment variable parsing issues)."""
-        return ["*"]
+        return ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"]
 
     @property
     def CORS_HEADERS(self) -> List[str]:
         """Get CORS headers (hardcoded to avoid environment variable parsing issues)."""
-        return ["*"]
+        return ["*", "Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"]
 
     @property
     def is_production(self) -> bool:
