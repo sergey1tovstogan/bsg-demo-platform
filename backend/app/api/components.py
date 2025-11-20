@@ -62,7 +62,7 @@ async def get_component_content(
         
         # Calculate skip
         skip = (page - 1) * page_size
-        
+
         # Fetch items (removed sort by order due to Cosmos DB indexing constraints)
         cursor = db.content.find(query_filter).skip(skip).limit(page_size)
         items = await cursor.to_list(length=page_size)

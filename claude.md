@@ -171,6 +171,35 @@ Each demo component operates independently while sharing common infrastructure:
 - `observability` - Observability
 - `design-time` - Design Time
 
+### Important: Component Data Organization
+
+**ALWAYS work with the matching component collection when developing component-specific features:**
+
+- Each component has a corresponding entry in the `components` collection with a unique `component_id`
+- Component-specific content is stored in the `content` collection with a matching `component_id` field
+- When creating, updating, or querying data for a component (e.g., observability):
+  1. Query the `components` collection for the component definition using `component_id`
+  2. Query/update the `content` collection filtering by `component_id`
+  3. Ensure all component-related data references the correct `component_id`
+
+**Example for observability component:**
+```python
+# Get observability component
+component = await db.components.find_one({"component_id": "observability"})
+
+# Get observability content
+content = await db.content.find({"component_id": "observability"}).to_list(length=None)
+
+# Create new observability content
+new_content = {
+    "content_id": "obs-001",
+    "component_id": "observability",  # Must match component_id
+    "title": "Monitoring Dashboard",
+    ...
+}
+await db.content.insert_one(new_content)
+```
+
 ### Component Matching Rule
 **IMPORTANT**: When working on a specific component, ALWAYS ensure you are working with the correct component-specific collection and files:
 - Use `data_architecture` collection for Data Architecture component work
@@ -178,6 +207,8 @@ Each demo component operates independently while sharing common infrastructure:
 - Reference component-specific frontend files (e.g., `frontend/src/components/data-architecture/`)
 - Reference component-specific backend files (e.g., `backend/app/api/v1/endpoints/data_architecture.py`)
 - Always verify component ID matches: `data-architecture` (frontend/API) = `data_architecture` (database)
+
+This ensures data consistency and proper component isolation across the platform.
 
 ## API Design
 
