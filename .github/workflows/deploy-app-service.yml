@@ -97,6 +97,12 @@ jobs:
             exit 1
           fi
       
+      - name: Make startup script executable
+        run: |
+          echo "Making startup.sh executable..."
+          chmod +x backend/startup.sh
+          echo "✓ startup.sh is now executable"
+      
       - name: Clean up unnecessary files
         working-directory: ./backend
         run: |
@@ -195,12 +201,14 @@ jobs:
           # Set startup command (with logging for better debugging)
           # Azure App Service sets PORT automatically - use it via environment variable
           # Note: Azure App Service Linux uses PORT env var, default is 8000
+          # Use startup.sh script which handles PORT env var correctly
           echo "Setting startup command..."
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info" \
+            --startup-file "bash startup.sh" \
             --output none
+          echo "✓ Startup command configured to use startup.sh"
           
           # Enable Always On (critical for App Service to prevent sleep)
           echo "Enabling Always On..."
@@ -224,13 +232,27 @@ jobs:
           echo ""
           echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
       
+      - name: Configure Python Version
+        run: |
+          echo "Setting Python version to 3.11..."
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --linux-fx-version "PYTHON|3.11" \
+            --output none
+          echo "✓ Python version configured"
+      
+      - name: Wait before deployment (avoid SCM restart conflicts)
+        run: |
+          echo "Waiting 15 seconds before deployment to avoid SCM container restart conflicts..."
+          sleep 15
+          echo "✓ Ready to deploy"
+      
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
-          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info'
-          python-version: '3.11'
       
       - name: Health Check
         run: |
