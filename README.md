@@ -27,8 +27,9 @@ bsg-demo-platform/
 ├── frontend/             # React frontend application
 ├── infrastructure/       # Azure deployment infrastructure
 ├── docs/                 # Documentation files
-├── scripts/              # Root-level utility scripts
+├── scripts/              # Start/Stop all scripts
 ├── tools/                # Development tools and utilities
+├── claude/               # Claude AI context (synced with .cursor/rules)
 ├── design/               # Design files and component specs
 └── logs/                 # Application logs (git-ignored)
 ```
@@ -41,8 +42,9 @@ bsg-demo-platform/
 | `frontend/` | React frontend with components, pages, and services |
 | `infrastructure/` | Azure deployment scripts, GitHub Actions workflows |
 | `docs/` | All documentation including ARCHITECTURE.md, USAGE.md, and guides |
-| `scripts/` | Utility scripts for starting, stopping, and managing services |
-| `tools/` | Development tools and catalog update scripts |
+| `scripts/` | Start/Stop/Restart all services scripts only |
+| `tools/` | Development tools, utilities, and other scripts |
+| `claude/` | Claude AI development context (synced with .cursor/rules) |
 
 For detailed structure, see [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md).
 

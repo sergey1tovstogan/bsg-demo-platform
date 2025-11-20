@@ -1,4 +1,4 @@
-> **Note**: This file is synchronized with `.cursor/rules`. Keep both files in sync (except for this first line which references the other file).
+> **Note**: This file is synchronized with `.cursor/rules` and `claude/rules`. Keep all three files in sync (except for this first line).
 
 # BSG Demo Platform - Development Context
 
