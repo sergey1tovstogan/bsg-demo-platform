@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Key, UserCheck, Lock, Shield, Eye, Server, Cloud, KeyRound, FileCheck, X, type LucideIcon } from 'lucide-react'
 
 interface SecurityCard {
@@ -123,15 +123,19 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         .label {
             position: absolute;
             top: 20px;
-            right: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(255, 255, 255, 0.95);
-            padding: 10px 20px;
+            padding: 15px 30px;
             border-radius: 5px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             font-weight: bold;
-            font-size: 14pt;
+            font-size: 16pt;
             color: #283054;
             z-index: 1000;
+            text-align: center;
+            line-height: 1.6;
+            white-space: normal;
         }
         
         .tooltip {
@@ -207,7 +211,13 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         }
         
         .temenos-box {
-            fill: #1e3a8a;
+            fill: #d3d3d3;
+            stroke: #3B82F6;
+            stroke-width: 3;
+        }
+        
+        .grey-box {
+            fill: #9ca3af;
             stroke: #000;
             stroke-width: 2;
         }
@@ -270,67 +280,67 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         </div>
         <svg viewBox="0 0 1400 800" preserveAspectRatio="xMidYMid meet">
             <!-- Entry Points Bar (Left Vertical) - TLS 1.2 Container -->
-            <rect id="tls-entry-points" x="50" y="200" width="80" height="400" class="entry-bar clickable"/>
+            <rect id="tls-entry-points" x="50" y="200" width="80" height="400" class="entry-bar clickable" rx="5"/>
             <text x="90" y="230" text-anchor="middle" class="text-white title-text">TLS 1.2</text>
             
-            <!-- User Interface (Grey) -->
-            <rect x="55" y="270" width="70" height="50" class="entry-item-grey"/>
-            <text x="90" y="290" text-anchor="middle" class="text-white">User</text>
-            <text x="90" y="310" text-anchor="middle" class="text-white">Interface</text>
+            <!-- User Interface (Grey) - Positioned between TLS 1.2 and Temenos Software -->
+            <rect x="155" y="270" width="120" height="50" class="grey-box"/>
+            <text x="215" y="290" text-anchor="middle" class="text-white">User</text>
+            <text x="215" y="310" text-anchor="middle" class="text-white">Interface</text>
             
-            <!-- APIs (Grey) -->
-            <rect x="55" y="340" width="70" height="40" class="entry-item-grey"/>
-            <text x="90" y="365" text-anchor="middle" class="text-white">APIs</text>
+            <!-- APIs (Grey) - Positioned between TLS 1.2 and Temenos Software -->
+            <rect x="155" y="340" width="120" height="40" class="grey-box"/>
+            <text x="215" y="365" text-anchor="middle" class="text-white">APIs</text>
             
-            <!-- Events (Grey) -->
-            <rect x="55" y="400" width="70" height="40" class="entry-item-grey"/>
-            <text x="90" y="425" text-anchor="middle" class="text-white">Events</text>
+            <!-- Events (Grey) - Positioned between TLS 1.2 and Temenos Software -->
+            <rect x="155" y="400" width="120" height="40" class="grey-box"/>
+            <text x="215" y="425" text-anchor="middle" class="text-white">Events</text>
             
-            <!-- Temenos Software (Central Dark Blue Block) -->
-            <rect x="200" y="150" width="500" height="500" class="temenos-box" rx="5"/>
-            <text x="450" y="180" text-anchor="middle" class="text-white title-text">Temenos software</text>
+            <!-- Temenos Software (Central Light Grey Block with Blue Border) -->
+            <rect x="290" y="150" width="500" height="500" class="temenos-box" rx="5"/>
+            <text x="540" y="180" text-anchor="middle" class="text-black title-text" style="font-size: 14pt; font-weight: bold;">Temenos software</text>
             
             <!-- Authentication Box -->
-            <rect id="authentication-box" x="250" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="340" y="245" text-anchor="middle" class="text-white title-text">Authentication</text>
-            <text x="340" y="270" text-anchor="middle" class="text-white small-text">oAuth 2.0</text>
-            <text x="340" y="290" text-anchor="middle" class="text-white small-text">OpenID Connect</text>
-            <text x="340" y="310" text-anchor="middle" class="text-white small-text">JWT, SAML</text>
+            <rect id="authentication-box" x="340" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="430" y="245" text-anchor="middle" class="text-white title-text">Authentication</text>
+            <text x="430" y="270" text-anchor="middle" class="text-white small-text">oAuth 2.0</text>
+            <text x="430" y="290" text-anchor="middle" class="text-white small-text">OpenID Connect</text>
+            <text x="430" y="310" text-anchor="middle" class="text-white small-text">JWT, SAML</text>
             
             <!-- Authorization Box -->
-            <rect id="authorization-box" x="470" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="560" y="245" text-anchor="middle" class="text-white title-text">Authorization</text>
-            <text x="560" y="270" text-anchor="middle" class="text-white small-text">RBAC, ABAC</text>
+            <rect id="authorization-box" x="560" y="220" width="180" height="120" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="650" y="245" text-anchor="middle" class="text-white title-text">Authorization</text>
+            <text x="650" y="270" text-anchor="middle" class="text-white small-text">RBAC, ABAC</text>
             
             <!-- Audit Box -->
-            <rect id="audit-box" x="350" y="360" width="100" height="50" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="400" y="385" text-anchor="middle" class="text-white">Audit</text>
+            <rect id="audit-box" x="440" y="360" width="100" height="50" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="490" y="385" text-anchor="middle" class="text-white">Audit</text>
             
-            <!-- DB Box - Green Cylinder outside Temenos Software, aligned with Data Encryption -->
+            <!-- DB Box - Green Cylinder outside Temenos Software, close to lower border -->
             <!-- Cylinder shape: ellipse on top, rectangle in middle, ellipse on bottom -->
-            <ellipse cx="350" cy="580" rx="60" ry="15" class="db-cylinder"/>
-            <rect x="290" y="580" width="120" height="100" class="db-cylinder"/>
-            <ellipse cx="350" cy="680" rx="60" ry="15" class="db-cylinder"/>
-            <text x="350" y="625" text-anchor="middle" class="text-white title-text">DB</text>
-            <text x="420" y="705" text-anchor="start" class="text-black small-text" style="font-weight: bold;">Transparent Data Encryption TDE</text>
+            <ellipse cx="150" cy="700" rx="60" ry="15" class="db-cylinder"/>
+            <rect x="90" y="700" width="120" height="100" class="db-cylinder"/>
+            <ellipse cx="150" cy="800" rx="60" ry="15" class="db-cylinder"/>
+            <text x="150" y="745" text-anchor="middle" class="text-white title-text">DB</text>
+            <text x="220" y="825" text-anchor="start" class="text-black small-text" style="font-weight: bold;">Transparent Data Encryption TDE</text>
             
             <!-- Temenos Vault Box -->
-            <rect id="temenos-vault" x="400" y="450" width="150" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="475" y="485" text-anchor="middle" class="text-white title-text">Temenos</text>
-            <text x="475" y="505" text-anchor="middle" class="text-white title-text">Vault</text>
+            <rect id="temenos-vault" x="640" y="570" width="150" height="80" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="715" y="595" text-anchor="middle" class="text-white title-text">Temenos</text>
+            <text x="715" y="615" text-anchor="middle" class="text-white title-text">Vault</text>
             
             <!-- Externalized authorization Box - Moved 40px right -->
-            <rect id="externalized-auth" x="590" y="450" width="140" height="110" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
-            <text x="660" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
-            <text x="660" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
-            <text x="660" y="520" text-anchor="middle" class="text-white small-text">(XACML)</text>
+            <rect id="externalized-auth" x="640" y="450" width="140" height="110" fill="#2563eb" stroke="#000" stroke-width="1" class="clickable"/>
+            <text x="710" y="485" text-anchor="middle" class="text-white small-text">Externalized</text>
+            <text x="710" y="505" text-anchor="middle" class="text-white small-text">authorization</text>
+            <text x="710" y="520" text-anchor="middle" class="text-white small-text">(XACML)</text>
             
             <!-- Bank's IAM (Purple Box) -->
-            <rect id="bank-iam" x="800" y="220" width="200" height="120" class="purple-box clickable" rx="5"/>
-            <text x="900" y="250" text-anchor="middle" class="text-white title-text">Bank's identity</text>
-            <text x="900" y="275" text-anchor="middle" class="text-white title-text">access</text>
-            <text x="900" y="300" text-anchor="middle" class="text-white title-text">management</text>
-            <text x="900" y="325" text-anchor="middle" class="text-white small-text">(IAM)</text>
+            <rect id="bank-iam" x="800" y="150" width="200" height="120" class="purple-box clickable" rx="5"/>
+            <text x="900" y="180" text-anchor="middle" class="text-white title-text">Bank's identity</text>
+            <text x="900" y="205" text-anchor="middle" class="text-white title-text">access</text>
+            <text x="900" y="230" text-anchor="middle" class="text-white title-text">management</text>
+            <text x="900" y="255" text-anchor="middle" class="text-white small-text">(IAM)</text>
             
             <!-- Secrets management (Purple Box) -->
             <rect id="secrets-management" x="1050" y="220" width="180" height="100" class="purple-box clickable" rx="5"/>
@@ -347,136 +357,140 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
             <text x="1140" y="530" text-anchor="middle" class="text-white title-text">Certificate</text>
             <text x="1140" y="555" text-anchor="middle" class="text-white title-text">Management</text>
             
-            <!-- Data Encryption (Purple Box) - Aligned horizontally with DB (same y position) -->
-            <rect id="data-encryption" x="800" y="580" width="200" height="80" class="purple-box clickable" rx="5"/>
-            <text x="900" y="610" text-anchor="middle" class="text-white title-text">Data Encryption</text>
-            <text x="900" y="635" text-anchor="middle" class="text-white small-text">(Data-at-rest,</text>
-            <text x="900" y="650" text-anchor="middle" class="text-white small-text">in transit)</text>
+            <!-- Data Encryption (Purple Box) - Centered horizontally with DB, 30px below DB -->
+            <rect id="data-encryption" x="50" y="830" width="200" height="80" class="purple-box clickable" rx="5"/>
+            <text x="150" y="860" text-anchor="middle" class="text-white title-text">Data Encryption</text>
+            <text x="150" y="885" text-anchor="middle" class="text-white small-text">(Data-at-rest,</text>
+            <text x="150" y="900" text-anchor="middle" class="text-white small-text">in transit)</text>
             
-            <!-- Lines - All Red -->
+            <!-- Lines - All Red, connecting to borders -->
             
-            <!-- Entry Points to Temenos -->
-            <line x1="130" y1="295" x2="200" y2="280" class="line-red"/>
-            <line x1="130" y1="360" x2="200" y2="350" class="line-red"/>
-            <line x1="130" y1="420" x2="200" y2="400" class="line-red"/>
+            <!-- TLS 1.2 to User Interface -->
+            <line x1="130" y1="295" x2="155" y2="295" class="line-red"/>
+            
+            <!-- TLS 1.2 to APIs -->
+            <line x1="130" y1="360" x2="155" y2="360" class="line-red"/>
+            
+            <!-- TLS 1.2 to Events -->
+            <line x1="130" y1="420" x2="155" y2="420" class="line-red"/>
+            
+            <!-- User Interface to Temenos Software -->
+            <line x1="275" y1="295" x2="290" y2="280" class="line-red"/>
+            
+            <!-- APIs to Temenos Software -->
+            <line x1="275" y1="360" x2="290" y2="350" class="line-red"/>
+            
+            <!-- Events to Temenos Software -->
+            <line x1="275" y1="400" x2="290" y2="400" class="line-red"/>
             
             <!-- Authentication to Authorization (role) -->
-            <line x1="430" y1="280" x2="470" y2="280" class="line-red"/>
-            <text x="450" y="275" text-anchor="middle" class="text-black small-text">role</text>
-            
-            <!-- REMOVED: Authentication to Audit line (as requested) -->
+            <line x1="520" y1="280" x2="560" y2="280" class="line-red"/>
+            <text x="540" y="275" text-anchor="middle" class="text-black small-text">role</text>
             
             <!-- Bank's IAM to Authentication -->
-            <line x1="800" y1="280" x2="430" y2="280" class="line-red"/>
+            <line x1="800" y1="210" x2="430" y2="220" class="line-red"/>
             
-            <!-- Authorization to Externalized authorization - Updated coordinates -->
-            <line x1="600" y1="340" x2="660" y2="450" class="line-red"/>
+            <!-- Authorization to Externalized authorization -->
+            <line x1="650" y1="340" x2="710" y2="450" class="line-red"/>
             
-            <!-- DB to Temenos Vault (dotted line - Transparent data encryption) -->
-            <line x1="310" y1="580" x2="475" y2="530" class="line-dotted"/>
-            <text x="390" y="555" text-anchor="middle" class="text-black small-text">Transparent data encryption</text>
+            <!-- DB top center to TLS bottom center -->
+            <line x1="150" y1="685" x2="90" y2="600" class="line-red"/>
             
-            <!-- Events to DB -->
-            <line x1="200" y1="400" x2="350" y2="630" class="line-red"/>
+            <!-- DB top center to Temenos Software bottom center -->
+            <line x1="150" y1="685" x2="540" y2="650" class="line-red"/>
             
-            <!-- Authorization to DB -->
-            <line x1="560" y1="340" x2="350" y2="630" class="line-red"/>
+            <!-- DB to Data Encryption -->
+            <line x1="150" y1="800" x2="150" y2="830" class="line-red"/>
             
-            <!-- DB to Data Encryption (horizontal alignment) -->
-            <line x1="410" y1="630" x2="800" y2="620" class="line-red"/>
+            <!-- Externalized authorization to Secrets management -->
+            <line x1="780" y1="505" x2="1050" y2="270" class="line-red"/>
             
-            <!-- Events to Data Encryption -->
-            <line x1="200" y1="400" x2="800" y2="660" class="line-red"/>
+            <!-- Externalized authorization to Key management -->
+            <line x1="780" y1="505" x2="1050" y2="410" class="line-red"/>
             
-            <!-- Externalized authorization to Secrets management - Updated coordinates -->
-            <line x1="730" y1="505" x2="1050" y2="270" class="line-red"/>
+            <!-- Externalized authorization to Certificate Management -->
+            <line x1="780" y1="505" x2="1050" y2="550" class="line-red"/>
             
-            <!-- Externalized authorization to Key management - Updated coordinates -->
-            <line x1="730" y1="505" x2="1050" y2="410" class="line-red"/>
+            <!-- Temenos Vault to Secrets management -->
+            <line x1="790" y1="610" x2="1050" y2="270" class="line-red"/>
             
-            <!-- Externalized authorization to Certificate Management - Updated coordinates -->
-            <line x1="730" y1="505" x2="1050" y2="550" class="line-red"/>
+            <!-- Temenos Vault to Key management -->
+            <line x1="790" y1="610" x2="1050" y2="410" class="line-red"/>
             
-            <!-- Temenos Vault to Secrets management - Updated coordinates -->
-            <line x1="550" y1="490" x2="1050" y2="270" class="line-red"/>
-            
-            <!-- Temenos Vault to Key management - Updated coordinates -->
-            <line x1="550" y1="490" x2="1050" y2="410" class="line-red"/>
-            
-            <!-- Temenos Vault to Certificate Management - Updated coordinates -->
-            <line x1="550" y1="530" x2="1050" y2="550" class="line-red"/>
+            <!-- Temenos Vault to Certificate Management -->
+            <line x1="790" y1="610" x2="1050" y2="550" class="line-red"/>
         </svg>
-        <button class="tooltip-button" onclick="alert('Move to Detailed Explanation')">Move to Detailed Explanation</button>
+        <button class="tooltip-button" onclick="window.parent.postMessage({type: 'showDetailedExplanation'}, '*')">Move to Detailed Explanation</button>
     </div>
     
     <script>
         // Tooltip Configuration
         const tooltips = [
             {
-                id: 'key-management',
-                title: 'Key Management',
-                description: 'The system checks for file integrity upon upload and download using checksums and cryptographic hashing methods. SSH keys and certificates are stored in Azure Key Vault to ensure secure key management practices.',
-                position: 'right'
+                id: "key-management",
+                title: "Key Management",
+                description: "The system checks for file integrity upon upload and download using checksums and cryptographic hashing methods. SSH keys and certificates are stored in Azure Key Vault to ensure secure key management practices.",
+                position: "right"
             },
             {
-                id: 'secrets-management',
-                title: 'Secrets Management',
-                description: 'Secrets management depends on stack deployment and requirements. Runtime secrets can be held within Hashicorp Vault, and minimum privilege should be used around key issuance, with audit logging of issued secrets. Good practice dictates that all runtime secrets are rotated at each deploy, and Cryptographic keys are rotated every 3 months, or whenever required by the organization. For Azure deployment, Temenos recommend using Azure Key Vault - Azure Key Vault: Azure Key Vault is a secure and centralized key management service that helps you safeguard cryptographic keys, certificates, and secrets used by cloud applications and services. Azure Key Vault is a cloud service that provides secure storage of keys for encrypting data. Multiple keys, and multiple versions of the same key, can be kept in the Azure Key Vault. Cryptographic keys in Azure Key Vault are represented as JSON Web Key [JWK] objects.',
-                position: 'right'
+                id: "secrets-management",
+                title: "Secrets Management",
+                description: "Secrets management depends on stack deployment and requirements. Runtime secrets can be held within Hashicorp Vault, and minimum privilege should be used around key issuance, with audit logging of issued secrets. Good practice dictates that all runtime secrets are rotated at each deploy, and Cryptographic keys are rotated every 3 months, or whenever required by the organization. For Azure deployment, Temenos recommend using Azure Key Vault - Azure Key Vault: Azure Key Vault is a secure and centralized key management service that helps you safeguard cryptographic keys, certificates, and secrets used by cloud applications and services. Azure Key Vault is a cloud service that provides secure storage of keys for encrypting data. Multiple keys, and multiple versions of the same key, can be kept in the Azure Key Vault. Cryptographic keys in Azure Key Vault are represented as JSON Web Key (JWK) objects.",
+                position: "right"
             },
             {
-                id: 'temenos-vault',
-                title: 'Temenos Vault',
-                description: 'Users should be able to create and store the application Certificates into the Vault (Azure Key vault). Applications should be able to retrieve the Certificates from the vault (Azure Key vault) and use it on the fly without any storing mechanism. Temenos Vault APIs should be created to support the above requirements to interact with the Vault (Azure Key vault). Temenos Vault – provides common framework for our products to integrate with underlaying platform Secrets services. Temenos Vault provides a facade that can be used by products and can be configured to point to the relevant Vault implementation based on the deployment environment. As well as this it can be used by the SaaS platform for provisioning the secrets, keys, and certificates for product or for the platform. We will support Azure Key Vault, AWS Secret, Key and Certificate Manager as well as Hashicorp Vault for On Premise solutions.',
-                position: 'bottom'
+                id: "temenos-vault",
+                title: "Temenos Vault",
+                description: "Users should be able to create and store the application Certificates into the Vault (Azure Key vault). Applications should be able to retrieve the Certificates from the vault (Azure Key vault) and use it on the fly without any storing mechanism. Temenos Vault APIs should be created to support the above requirements to interact with the Vault (Azure Key vault). Temenos Vault – provides common framework for our products to integrate with underlaying platform Secrets services. Temenos Vault provides a facade that can be used by products and can be configured to point to the relevant Vault implementation based on the deployment environment. As well as this it can be used by the SaaS platform for provisioning the secrets, keys, and certificates for product or for the platform. We will support Azure Key Vault, AWS Secret, Key and Certificate Manager as well as Hashicorp Vault for On Premise solutions.",
+                position: "bottom"
             },
             {
-                id: 'externalized-auth',
-                title: 'Externalized Authorization',
-                description: 'Temenos solution supports the externalized mechanism based on SAML 2.0, OIDC/ JSON Web Token (JWT) for authentication.  OAuth is an open standard authorization protocol. It enables your account information to be obtained by third-party services. Without exposing user credentials, OAuth provides an access token and a refresh token for third-party services.',
-                position: 'bottom'
+                id: "externalized-auth",
+                title: "Externalized Authorization",
+                description: "Temenos solution supports the externalized mechanism based on SAML 2.0, OIDC/ JSON Web Token (JWT) for authentication.  OAuth is an open standard authorization protocol. It enables your account information to be obtained by third-party services. Without exposing user credentials, OAuth provides an access token and a refresh token for third-party services.",
+                position: "bottom"
             },
             {
-                id: 'data-encryption',
-                title: 'Data Encryption',
-                description: 'Temenos uses a range of security controls to protect data at rest, at use and in transit.  One of these mechanisms is Transparent Data Encryption (TDE) which provides real-time encryption and decryption of the database, associated backups, and transaction log files at rest. TDE protects data and log files, using AES (256-bit encryption) encryption algorithms. Temenos can offer encryption today via eXate as part of the Temenos Exchange ecosystem.  (requiring a dedicated discussion and license with eXate company).',
-                position: 'top'
+                id: "data-encryption",
+                title: "Data Encryption",
+                description: "Temenos uses a range of security controls to protect data at rest, at use and in transit.  One of these mechanisms is Transparent Data Encryption (TDE) which provides real-time encryption and decryption of the database, associated backups, and transaction log files at rest. TDE protects data and log files, using AES (256-bit encryption) encryption algorithms. Temenos can offer encryption today via eXate as part of the Temenos Exchange ecosystem.  (requiring a dedicated discussion and license with eXate company).",
+                position: "top"
             },
             {
-                id: 'certificate-management',
-                title: 'Certificate Management',
-                description: 'Certificates management (DigiCert used) procedures for Temenos SaaS\n\nTemenos renews the certificates annually for the Temenos cloud hosted environments for clients. During deployment of application, we leverage Temenos managed domain for App deployment and secure it with our SSL certificates for Application endpoint. These certificates are renewed every year.',
-                position: 'right'
+                id: "certificate-management",
+                title: "Certificate Management",
+                description: "Certificates management (DigiCert used) procedures for Temenos SaaS\\n\\nTemenos renews the certificates annually for the Temenos cloud hosted environments for clients. During deployment of application, we leverage Temenos managed domain for App deployment and secure it with our SSL certificates for Application endpoint. These certificates are renewed every year.",
+                position: "right"
             },
             {
-                id: 'bank-iam',
-                title: 'Bank\\'s Identity and Access Management',
-                description: 'For authentication, Temenos solution makes use of Bank\\'s Identity and Access Management (IaM) solution like Active Directory. The bank\\'s individual employees are authenticated at Active Directory. Temenos comes pre-integrated with KeyCloak. KeyCloak will become the defacto IaM system for Temenos applications. It acts as the identity broker for redirecting authentication requests to the Bank managed IaM solution.',
-                position: 'left'
+                id: "bank-iam",
+                title: "Bank's Identity and Access Management",
+                description: "For authentication, Temenos solution makes use of Bank's Identity and Access Management (IaM) solution like Active Directory. The bank's individual employees are authenticated at Active Directory. Temenos comes pre-integrated with KeyCloak. KeyCloak will become the defacto IaM system for Temenos applications. It acts as the identity broker for redirecting authentication requests to the Bank managed IaM solution.",
+                position: "left"
             },
             {
-                id: 'authentication-box',
-                title: 'Authentication',
-                description: 'In Temenos solution, authentication is primarily managed through Keycloak, an open-source identity and access management system. The process involves several key steps:\n\n1. Integration with Identity Management: Temenos applications are integrated with the bank\'s Identity and Access Management (IAM) solutions, such as Active Directory. Keycloak acts as an identity broker, redirecting authentication requests to the bank\'s IAM system.\n\n2. User Authentication: When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization.\n\n3. Token Exchange: The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.',
-                position: 'top'
+                id: "authentication-box",
+                title: "Authentication",
+                description: "In Temenos solution, authentication is primarily managed through Keycloak, an open-source identity and access management system. The process involves several key steps:\\n\\n1. Integration with Identity Management: Temenos applications are integrated with the bank's Identity and Access Management (IAM) solutions, such as Active Directory. Keycloak acts as an identity broker, redirecting authentication requests to the bank's IAM system.\\n\\n2. User Authentication: When a user attempts to log in, they are authenticated via the bank's IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization.\\n\\n3. Token Exchange: The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.",
+                position: "top"
             },
             {
-                id: 'authorization-box',
-                title: 'Authorization',
-                description: 'Temenos has embedded internal mechanism, native to the solution. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. The Temenos Security Management System (SMS) provides role-based access limits and full transaction and user activity audit. Each user has their own profile within the SMS which contains full user details and security settings to control the user\\'s access within the system. SMS managing the access control, executing the following steps: Checks each user activity against the profile to determine validity; unacceptable actions are prevented and recorded (User Profile), Validates each contract against conditions, such as limits and exchange rate tolerance bands, before it is accepted (User Authority), Make specific data inaccessible to specified users or user groups based on conditions (Data Security).',
-                position: 'top'
+                id: "authorization-box",
+                title: "Authorization",
+                description: "Temenos has embedded internal mechanism, native to the solution. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. The Temenos Security Management System (SMS) provides role-based access limits and full transaction and user activity audit. Each user has their own profile within the SMS which contains full user details and security settings to control the user's access within the system. SMS managing the access control, executing the following steps: Checks each user activity against the profile to determine validity; unacceptable actions are prevented and recorded (User Profile), Validates each contract against conditions, such as limits and exchange rate tolerance bands, before it is accepted (User Authority), Make specific data inaccessible to specified users or user groups based on conditions (Data Security).",
+                position: "top"
             },
             {
-                id: 'audit-box',
-                title: 'Audit',
-                description: 'Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.\\n\\nAuditing includes: User activity auditing includes details of; Applications accessed, ID of transactions executed, Time connected, No. of operations executed etc. Application activity auditing includes details of; ID of new transactions, Inputter and Authorizer,  Security violation reports store details of unauthorised access attempts including who accessed the system, when and the target application',
-                position: 'top'
+                id: "audit-box",
+                title: "Audit",
+                description: "Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.\\n\\nAuditing includes: User activity auditing includes details of; Applications accessed, ID of transactions executed, Time connected, No. of operations executed etc. Application activity auditing includes details of; ID of new transactions, Inputter and Authorizer,  Security violation reports store details of unauthorised access attempts including who accessed the system, when and the target application",
+                position: "top"
             },
             {
-                id: 'tls-entry-points',
-                title: 'TLS 1.2 Entry Points Container',
-                description: 'Within Temenos solution, data in transit security is implemented through a structured approach that includes the following steps:\n\n1. Encryption Protocols: All data transmitted over networks is secured using TLS 1.2, ensuring that data is encrypted during transmission to protect against interception.\n\n2. Secure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilized, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\n\n3. Logging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorized access attempts and ensuring compliance with security policies.',
-                position: 'right'
+                id: "tls-entry-points",
+                title: "TLS 1.2 Entry Points Container",
+                description: "Within Temenos solution, data in transit security is implemented through a structured approach that includes the following steps:\\n\\n1. Encryption Protocols: All data transmitted over networks is secured using TLS 1.2, ensuring that data is encrypted during transmission to protect against interception.\\n\\n2. Secure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilized, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\\n\\n3. Logging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorized access attempts and ensuring compliance with security policies.",
+                position: "right"
             }
         ];
         
@@ -1901,7 +1915,6 @@ export function SecurityContentViewer() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
   const [showUserManagement, setShowUserManagement] = useState(false)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 1 || cardId === 2) {
@@ -1987,6 +2000,31 @@ export function SecurityContentViewer() {
 
   // Show HTML5 diagram when card 1 is selected
   if (selectedCard === 1) {
+    // Show TemenosAuthentication if button was clicked
+    if (showDetailedExplanation) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={handleBackToArchitecture}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={TemenosAuthenticationHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos Authentication"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show SecurityArchitecture by default
     return (
       <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
         <div className="absolute top-4 right-4 z-10">
@@ -2002,7 +2040,7 @@ export function SecurityContentViewer() {
           srcDoc={SecurityArchitectureHTML}
           className="w-full h-full border-0 rounded-lg"
           title="Temenos Security Architecture"
-          sandbox="allow-same-origin allow-scripts"
+          sandbox="allow-scripts"
           style={{ minHeight: '600px' }}
         />
       </div>
