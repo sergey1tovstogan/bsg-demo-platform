@@ -1,4 +1,4 @@
-> **Note**: This file is synchronized with `.cursor/rules` and `claude/rules`. Keep all three files in sync (except for this first line).
+> **Note**: This file is synchronized with `.cursor/rules` and `.claude/claude.md`. Keep all three files in sync (except for this first line).
 
 # BSG Demo Platform - Development Context
 
@@ -57,13 +57,7 @@ DEBUG=True
 - `videos` - Video metadata and references
 - `security_docs` - Security documentation
 - `presentations` - Presentation materials
-- `integration` - Integration component data
 - `data_architecture` - Data Architecture component-specific collection
-
-**Component/Collection Convention:**
-> **IMPORTANT**: Each component should have a matching MongoDB collection with the same name.
-> For example, the "integration" component uses the "integration" collection.
-> When creating new components, always create a corresponding MongoDB collection.
 
 ## Technology Stack
 
@@ -400,6 +394,7 @@ bsg-demo-platform/
 - Frontend hot-reloads on code changes (Vite dev server)
 - MongoDB is schema-less - no migrations needed
 - Collections are created programmatically with indexes
+- Always work with matching component/collection
 - **All external connections use adapter pattern** - see Architecture Patterns above
 
 ## Important Files to Reference
@@ -413,4 +408,3 @@ bsg-demo-platform/
 
 **Last Updated**: November 13, 2025
 **Maintained By**: BSG Team
-
