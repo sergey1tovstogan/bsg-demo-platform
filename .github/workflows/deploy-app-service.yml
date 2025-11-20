@@ -106,10 +106,13 @@ jobs:
       - name: Clean up unnecessary files
         working-directory: ./backend
         run: |
+          echo "Cleaning up unnecessary files..."
           # Remove test files
           find . -name "*test*.py" -not -path "./app/*" -delete || true
           # Remove files that shouldn't be deployed
-          rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/ || true
+          rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/ .vscode/ .idea/ || true
+          # Remove node_modules if accidentally copied
+          rm -rf node_modules/ || true
           # Find and remove all __pycache__ directories (handle both Unix and Windows paths)
           find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
           find . -type d -name "*__pycache__*" -exec rm -rf {} + 2>/dev/null || true
@@ -120,6 +123,12 @@ jobs:
           # Remove any Windows-style paths that might have been created
           find . -type f -path "*\\*" -delete 2>/dev/null || true
           find . -type d -path "*\\*" -exec rm -rf {} + 2>/dev/null || true
+          # Remove .git directories if any
+          find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
+          # Remove large unnecessary files
+          find . -name "*.zip" -delete 2>/dev/null || true
+          find . -name "*.tar.gz" -delete 2>/dev/null || true
+          echo "✓ Cleanup complete"
       
       - name: Verify requirements.txt exists
         run: |
@@ -242,6 +251,27 @@ jobs:
             --output none
           echo "✓ Python version configured"
       
+      - name: Check package size before deployment
+        run: |
+          echo "Checking package size..."
+          cd backend
+          PACKAGE_SIZE=$(du -sh . | cut -f1)
+          FILE_COUNT=$(find . -type f | wc -l)
+          echo "Package size: $PACKAGE_SIZE"
+          echo "File count: $FILE_COUNT"
+          echo ""
+          echo "Largest directories:"
+          du -sh */ 2>/dev/null | sort -hr | head -10
+          echo ""
+          echo "Checking if static directory exists and size:"
+          if [ -d "app/static" ]; then
+            STATIC_SIZE=$(du -sh app/static | cut -f1)
+            STATIC_FILES=$(find app/static -type f | wc -l)
+            echo "  Static directory size: $STATIC_SIZE ($STATIC_FILES files)"
+          else
+            echo "  ⚠ Static directory not found!"
+          fi
+      
       - name: Wait before deployment (avoid SCM restart conflicts)
         run: |
           echo "Waiting 15 seconds before deployment to avoid SCM container restart conflicts..."
@@ -253,6 +283,7 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
+        timeout-minutes: 20
       
       - name: Health Check
         run: |
