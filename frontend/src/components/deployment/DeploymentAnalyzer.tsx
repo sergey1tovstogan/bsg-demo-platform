@@ -983,7 +983,7 @@ function formatRAGText(text: string): JSX.Element | null {
 }
 
 // Format inline text (bold, italic, etc.)
-function formatInlineText(text: string): JSX.Element | string {
+function formatInlineText(text: string): JSX.Element | string | null {
   if (!text) return null
 
   // Split by ** for bold text

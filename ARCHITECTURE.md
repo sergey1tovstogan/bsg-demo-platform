@@ -1,327 +1,369 @@
 # BSG Demo Platform - Architecture Documentation
 
-This document describes the current architecture and deployment setup for the BSG Demo Platform.
-
 ## Overview
 
-The BSG Demo Platform is a full-stack application consisting of a React frontend and FastAPI backend, with data stored in Azure Cosmos DB (MongoDB API).
+The BSG Demo Platform is a full-stack web application designed to demonstrate Temenos products and capabilities. It consists of a React frontend, FastAPI backend, and Azure Cosmos DB (MongoDB API) for data storage.
 
----
+## System Architecture
 
-## LOCAL (Windows Machine)
-
-### Frontend (React/Vite)
-
-- **Port**: 3000
-- **Process**: Node.js
-- **Type**: Development server running directly on your machine
-- **Framework**: React 18+ with Vite
-- **URL**: http://localhost:3000
-- **Status**: Running
-
-**To Start:**
-```bash
-cd frontend
-npm run dev
-```
-
-### Backend (FastAPI)
-
-- **Port**: 8000
-- **Process**: Python
-- **Command**: `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
-- **Type**: Python process running directly (not in container)
-- **Framework**: FastAPI (Python)
-- **URL**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/api/v1/health
-- **Status**: Running and connected to Azure MongoDB
-
-**To Start:**
-```bash
-cd backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-**Environment Variables Required:**
-```bash
-DATABASE_URL=mongodb://bsg-demo-platform-mongodb:wC418aLYO4SazuhljALVOclZc48spvoHidWukgFDOoBCjO5Z4wjjKPziuJ44TAUyVlOs89HeL4a5ACDbdAs80w==@bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@bsg-demo-platform-mongodb@
-DATABASE_NAME=bsg_demo
-ENVIRONMENT=development
-DEBUG=True
-```
-
----
-
-## CLOUD (Azure)
-
-### MongoDB Database (Azure Cosmos DB)
-
-- **Account**: bsg-demo-platform-mongodb
-- **Host**: bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255
-- **Database**: bsg_demo
-- **Resource Group**: bsg-demo-platform
-- **Status**: Cloud-hosted, accessible via connection string
-- **Type**: Fully managed MongoDB service in Azure
-- **API**: MongoDB API (compatible with MongoDB 4.2.0)
-- **Connection**: SSL/TLS encrypted
-
-**Collections:**
-- `users` - User accounts and authentication
-- `user_sessions` - Active user sessions
-- `components` - Component definitions
-- `content` - Component content
-- `videos` - Video metadata and references
-- `security_docs` - Security documentation
-- `presentations` - Presentation materials
-
-**Connection String:**
-```
-mongodb://bsg-demo-platform-mongodb:wC418aLYO4SazuhljALVOclZc48spvoHidWukgFDOoBCjO5Z4wjjKPziuJ44TAUyVlOs89HeL4a5ACDbdAs80w==@bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@bsg-demo-platform-mongodb@
-```
-
----
-
-## Architecture Summary
+### High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    LOCAL (Windows Machine)                  │
+│                    CLIENT LAYER                              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  ┌──────────────┐         ┌──────────────┐                 │
-│  │   Frontend   │         │   Backend    │                 │
-│  │  React/Vite  │────────▶│   FastAPI    │                 │
-│  │  Port: 3000  │  HTTP   │  Port: 8000  │                 │
-│  │  Node.js     │         │  Python      │                 │
-│  └──────────────┘         └──────┬───────┘                 │
-│                                   │                          │
-└───────────────────────────────────┼──────────────────────────┘
-                                     │ MongoDB Connection
-                                     │ (SSL/TLS)
-                                     ▼
+│  ┌────────────────────────────────────────────────────┐   │
+│  │  React Frontend (Vite + TypeScript)                 │   │
+│  │  - Port: 3000 (dev) / Static Web App (prod)         │   │
+│  │  - Components: Integration, Security, Deployment,    │   │
+│  │    Observability, Data Architecture, Design-Time    │   │
+│  └────────────────────────────────────────────────────┘   │
+│                          │                                  │
+│                          │ HTTP/REST API                    │
+│                          ▼                                  │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          │
 ┌─────────────────────────────────────────────────────────────┐
-│                    CLOUD (Azure)                             │
+│                    APPLICATION LAYER                        │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  ┌──────────────────────────────────────────────┐          │
-│  │  Azure Cosmos DB (MongoDB API)                │          │
-│  │  Account: bsg-demo-platform-mongodb           │          │
-│  │  Database: bsg_demo                           │          │
-│  │                                                │          │
-│  │  Collections:                                  │          │
-│  │  • users                                       │          │
-│  │  • user_sessions                               │          │
-│  │  • components                                  │          │
-│  │  • content                                     │          │
-│  │  • videos                                      │          │
-│  │  • security_docs                               │          │
-│  │  • presentations                               │          │
-│  └──────────────────────────────────────────────┘          │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │  FastAPI Backend (Python 3.11)                     │   │
+│  │  - Port: 8000 (dev) / Azure App Service (prod)     │   │
+│  │  - API Version: /api/v1                            │   │
+│  │  - Authentication: JWT                              │   │
+│  │  - Middleware: CORS, Rate Limiting, Security       │   │
+│  └────────────────────────────────────────────────────┘   │
+│                          │                                  │
+│                          │ Adapter Pattern                  │
+│                          ▼                                  │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │  Adapter Layer                                     │   │
+│  │  - Database Adapter (MongoDB)                      │   │
+│  │  - RAG Adapter (Temenos RAG API)                   │   │
+│  └────────────────────────────────────────────────────┘   │
+│                          │                                  │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          │
+┌─────────────────────────────────────────────────────────────┐
+│                    DATA LAYER                               │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │  Azure Cosmos DB (MongoDB API)                     │   │
+│  │  - Account: bsg-demo-platform-mongodb              │   │
+│  │  - Database: bsg_demo                               │   │
+│  │  - Collections: users, content, videos, etc.        │   │
+│  └────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │  External Services                                  │   │
+│  │  - Temenos RAG API (tbsg.temenos.com)               │   │
+│  │  - Azure Services (AKS, Resource Groups)           │   │
+│  └────────────────────────────────────────────────────┘   │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
----
+## Component Architecture
 
-## Service URLs
+### Frontend Architecture
 
-### Development Environment
+**Technology Stack:**
+- **Framework**: React 18+ with TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **HTTP Client**: Axios
+- **State Management**: React Context API
+- **Routing**: Component-based navigation
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/api/v1/health
-- **Readiness Probe**: http://localhost:8000/api/v1/ready
-- **Liveness Probe**: http://localhost:8000/api/v1/live
-
----
-
-## Technology Stack
-
-### Frontend
-- React 18+
-- Vite (build tool)
-- TypeScript
-- Tailwind CSS
-- Axios (HTTP client)
-
-### Backend
-- Python 3.11
-- FastAPI
-- Motor (async MongoDB driver)
-- Pydantic v2 (validation)
-- Uvicorn (ASGI server)
-
-### Database
-- Azure Cosmos DB for MongoDB API
-- MongoDB 4.2.0 compatible
-- Motor async driver
-
----
-
-## Data Storage
-
-### MongoDB Collections
-
-1. **users** - User accounts and authentication data
-2. **user_sessions** - Active user sessions and refresh tokens
-3. **components** - Component definitions and metadata
-4. **content** - Component content (slides, explanations, etc.)
-5. **videos** - Video metadata and references
-6. **security_docs** - Security documentation and materials
-7. **presentations** - Presentation materials and slides
-
----
-
-## Development Workflow
-
-### Starting Services
-
-1. **Start Backend:**
-   ```bash
-   cd backend
-   python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
-2. **Start Frontend:**
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-
-### Environment Setup
-
-Backend requires the following environment variables (set in PowerShell):
-```powershell
-$env:DATABASE_URL="mongodb://bsg-demo-platform-mongodb:wC418aLYO4SazuhljALVOclZc48spvoHidWukgFDOoBCjO5Z4wjjKPziuJ44TAUyVlOs89HeL4a5ACDbdAs80w==@bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@bsg-demo-platform-mongodb@"
-$env:DATABASE_NAME="bsg_demo"
-$env:ENVIRONMENT="development"
-$env:DEBUG="True"
+**Component Structure:**
+```
+frontend/src/
+├── components/
+│   ├── integration/          # Integration & APIs component
+│   ├── data-architecture/    # Data Architecture component
+│   ├── deployment/           # Deployment & Cloud component
+│   ├── security/             # Security component
+│   ├── observability/        # Observability component
+│   └── design-time/          # Design Time component
+├── pages/
+│   ├── HomePage.tsx          # Main landing page
+│   └── ComponentPage.tsx     # Component detail page
+├── services/
+│   └── api.ts                # API service layer
+└── types/
+    └── index.ts              # TypeScript type definitions
 ```
 
----
+**Key Frontend Patterns:**
+- Component-based architecture with isolated component modules
+- Service layer for API communication
+- Type-safe API calls with TypeScript
+- Responsive design with Tailwind CSS
+- Client-side routing for SPA behavior
 
-## Architecture Patterns
+### Backend Architecture
 
-### Connection Adapter Pattern
+**Technology Stack:**
+- **Framework**: FastAPI (Python 3.11)
+- **ASGI Server**: Uvicorn
+- **Database**: Motor (async MongoDB driver)
+- **Authentication**: JWT (python-jose)
+- **Validation**: Pydantic v2
+- **Logging**: Structured JSON logging
 
-The backend uses an **Adapter Pattern** for external connections (database and RAG APIs) to enable easy swapping of implementations without affecting core application logic.
+**Backend Structure:**
+```
+backend/app/
+├── api/                      # API route handlers
+│   ├── auth.py              # Authentication endpoints
+│   ├── components.py        # Component management
+│   ├── deployment.py         # Azure deployment analysis
+│   ├── chatbot.py            # RAG chatbot integration
+│   └── ...
+├── services/                 # Business logic layer
+│   ├── temenos_service.py    # Temenos component identification
+│   ├── azure_service.py      # Azure resource management
+│   ├── aks_service.py        # Kubernetes namespace discovery
+│   └── ...
+├── adapters/                 # External service adapters
+│   ├── database/             # Database adapters
+│   │   ├── base.py          # Database adapter interface
+│   │   ├── mongodb_adapter.py # MongoDB implementation
+│   │   └── factory.py       # Adapter factory
+│   └── rag/                  # RAG API adapters
+│       ├── base.py          # RAG adapter interface
+│       ├── temenos_adapter.py # Temenos RAG implementation
+│       └── factory.py       # Adapter factory
+├── models/                   # Pydantic data models
+├── middleware/               # Request/response middleware
+│   ├── auth_middleware.py   # JWT authentication
+│   ├── rate_limiter.py      # Rate limiting
+│   └── request_middleware.py # Request logging
+└── core/                     # Core configuration
+    ├── config.py            # Application settings
+    ├── database.py           # Database connection management
+    └── logging.py            # Logging configuration
+```
 
-#### Database Adapter
+## Adapter Pattern
 
-**Location**: `backend/app/adapters/database/`
+### Database Adapter Pattern
 
-- **Interface**: `DatabaseAdapter` (abstract base class)
-- **Current Implementation**: `MongoDBAdapter` (MongoDB via Motor)
-- **Factory**: `get_database_adapter()` - Returns adapter based on `DATABASE_TYPE` config
+**Purpose**: Decouple application logic from database implementation, enabling easy database switching.
 
-**Benefits**:
-- Easy to switch from MongoDB to PostgreSQL or other databases
-- Core application code doesn't need changes when switching databases
-- Configuration-driven: Set `DATABASE_TYPE=mongodb` or `DATABASE_TYPE=postgresql` in `.env`
+**Implementation:**
+- All database operations go through `DatabaseAdapter` interface
+- Factory pattern selects adapter based on configuration
+- Current implementation: `MongoDBAdapter` using Motor
+- Future implementations: PostgreSQL, MySQL, etc.
 
-**Usage**:
+**Usage:**
 ```python
 from app.adapters.database import get_database_adapter
 
-adapter = get_database_adapter()
-await adapter.connect()
-db = await adapter.get_database()
+# Get adapter instance
+db_adapter = get_database_adapter()
+
+# Use adapter methods
+database = await db_adapter.get_database()
+collection = database["users"]
 ```
 
-#### RAG Adapter
+**Benefits:**
+- Easy to switch databases without changing business logic
+- Consistent interface across different database types
+- Testable with mock adapters
 
-**Location**: `backend/app/adapters/rag/`
+### RAG Adapter Pattern
 
-- **Interface**: `RAGAdapter` (abstract base class)
-- **Current Implementation**: `TemenosRAGAdapter` (Temenos tbsg.temenos.com API)
-- **Factory**: `get_rag_adapter()` - Returns adapter based on `RAG_TYPE` config
+**Purpose**: Decouple RAG API calls from business logic, enabling multiple RAG providers.
 
-**Benefits**:
-- Easy to switch from Temenos RAG to OpenAI, Anthropic, or other RAG providers
-- Core application code doesn't need changes when switching RAG providers
-- Configuration-driven: Set `RAG_TYPE=temenos` or `RAG_TYPE=openai` in `.env`
+**Implementation:**
+- All RAG queries go through `RAGAdapter` interface
+- Factory pattern selects adapter based on configuration
+- Current implementation: `TemenosAdapter` for Temenos RAG API
+- Future implementations: OpenAI, Anthropic, etc.
 
-**Usage**:
+**Usage:**
 ```python
 from app.adapters.rag import get_rag_adapter
 
-adapter = get_rag_adapter()
-result = await adapter.query(question="...", rag_model_id="...")
+# Get adapter instance
+rag_adapter = get_rag_adapter()
+
+# Query RAG API
+result = await rag_adapter.query(
+    question="What is Temenos Transact?",
+    region="global",
+    rag_model_id="ModularBanking"
+)
 ```
 
-### Adding New Adapters
+## Data Model
 
-To add a new database adapter:
-1. Create `backend/app/adapters/database/postgresql_adapter.py`
-2. Implement `DatabaseAdapter` interface
-3. Update factory to support new type
-4. Set `DATABASE_TYPE=postgresql` in `.env`
+### MongoDB Collections
 
-To add a new RAG adapter:
-1. Create `backend/app/adapters/rag/openai_adapter.py`
-2. Implement `RAGAdapter` interface
-3. Update factory to support new type
-4. Set `RAG_TYPE=openai` in `.env`
+**Core Collections:**
+- `users` - User accounts and authentication
+- `user_sessions` - Active user sessions
+- `components` - Component definitions
+- `content` - Component content (slides, documents)
+- `videos` - Video metadata and references
+- `security_docs` - Security documentation
+- `presentations` - Presentation materials
+- `data_architecture` - Data Architecture component data
 
-## Notes
+**Component-Based Data Organization:**
+- Each component has a unique `component_id`
+- Component-specific content stored with matching `component_id`
+- Collections can be component-specific (e.g., `data_architecture`)
+- Shared collections use `component_id` field for filtering
 
-- All services run locally for development
-- Database is hosted in Azure Cloud (MongoDB via Azure Cosmos DB)
-- No Docker containers are currently used (services run as native processes)
-- Backend auto-reloads on code changes (development mode)
-- Frontend hot-reloads on code changes (Vite dev server)
-- Connection adapters enable easy database and RAG provider switching
+## API Design
+
+### RESTful API Structure
+
+**Base URL:**
+- Development: `http://localhost:8000/api/v1`
+- Production: `https://bsg-demo-platform-app.azurewebsites.net/api/v1`
+
+**API Versioning:**
+- URL-based versioning: `/api/v1/*`
+- Current version: v1
+
+**Component API Pattern:**
+```
+GET  /api/v1/components/{component-id}/content
+POST /api/v1/components/{component-id}/content
+GET  /api/v1/components/{component-id}/videos
+GET  /api/v1/components/{component-id}/demo
+POST /api/v1/components/{component-id}/chatbot/query
+```
+
+**Common Endpoints:**
+- `GET /api/v1/health` - System health status
+- `GET /api/v1/ready` - Kubernetes readiness probe
+- `GET /api/v1/live` - Kubernetes liveness probe
+- `GET /api/v1/components` - List all components
+
+### Authentication
+
+**JWT-Based Authentication:**
+- Access tokens: 30 minutes expiration
+- Refresh tokens: 7 days expiration
+- Token format: `Authorization: Bearer <jwt-token>`
+- Role-based access control (RBAC)
+
+## Deployment Architecture
+
+### Development Environment
+
+**Local Setup:**
+- Frontend: React dev server on port 3000
+- Backend: FastAPI with Uvicorn on port 8000
+- Database: Azure Cosmos DB (cloud-hosted)
+- No containers: Native processes
+
+### Production Environment
+
+**Azure Deployment:**
+- **Frontend**: Azure Static Web Apps
+  - URL: `https://kind-beach-01c0a990f.3.azurestaticapps.net`
+  - Build: Vite production build
+  - Deployment: GitHub Actions
+
+- **Backend**: Azure App Service (Linux)
+  - URL: `https://bsg-demo-platform-app.azurewebsites.net`
+  - Runtime: Python 3.11
+  - Server: Gunicorn with Uvicorn workers
+  - Deployment: GitHub Actions
+
+- **Database**: Azure Cosmos DB (MongoDB API)
+  - Account: `bsg-demo-platform-mongodb`
+  - Connection: SSL/TLS encrypted
+  - Resource Group: `bsg-demo-platform`
+
+## Security Architecture
+
+### Authentication & Authorization
+- JWT-based stateless authentication
+- Password hashing with bcrypt
+- Role-based access control (RBAC)
+- Session management via refresh tokens
+
+### API Security
+- CORS configuration for allowed origins
+- Rate limiting on all endpoints
+- Input validation with Pydantic
+- SQL/NoSQL injection prevention
+- Security headers middleware
+
+### Data Security
+- Encrypted database connections (SSL/TLS)
+- Environment variable secrets management
+- No secrets in code or configuration files
+- HTTPS enforcement in production
+
+## Observability
+
+### Logging
+- Structured JSON logging
+- Correlation IDs for request tracing
+- Log levels: DEBUG, INFO, WARNING, ERROR
+- Request/response logging middleware
+
+### Health Monitoring
+- Health check endpoints (`/health`, `/ready`, `/live`)
+- Database connection health checks
+- External service availability checks
+- Kubernetes-compatible probes
+
+### Metrics (Future)
+- Prometheus-compatible metrics
+- OpenTelemetry distributed tracing
+- Performance monitoring
+
+## Key Design Principles
+
+### Component Independence
+- Each component operates independently
+- No direct inter-component dependencies
+- Shared infrastructure through common services
+- Component-specific data collections
+
+### Adapter Pattern (Mandatory)
+- **All external connections MUST use adapters**
+- Never connect directly to databases or APIs
+- Factory pattern for adapter selection
+- Enables easy implementation switching
+
+### API Design
+- RESTful API structure
+- Consistent response format
+- Comprehensive error handling
+- OpenAPI documentation
+
+### Scalability
+- Async/await throughout backend
+- Connection pooling for database
+- Stateless API design
+- Horizontal scaling ready
+
+## Technology Versions
+
+- **Python**: 3.11+
+- **Node.js**: 20+
+- **React**: 18+
+- **FastAPI**: 0.109+
+- **MongoDB**: 4.2.0 compatible (Azure Cosmos DB)
+- **TypeScript**: 5.x
 
 ---
 
-## Deployment
-
-### Production Deployment (Azure App Service)
-
-The application is automatically deployed to Azure App Service when code is pushed to the `develop` branch.
-
-**App Service Details:**
-- **Name**: `bsg-demo-platform-app`
-- **Resource Group**: `bsg-demo-platform`
-- **Location**: `westus2`
-- **Plan**: Basic B1 (Linux)
-- **Runtime**: Python 3.11
-
-**Deployment Process:**
-1. GitHub Actions workflow triggers on push to `develop`
-2. Frontend is built and packaged
-3. Backend dependencies are installed
-4. Frontend static files are copied to backend/static
-5. Code is deployed to App Service via Azure Web Deploy
-6. Gunicorn serves the FastAPI application
-7. Health checks verify deployment
-
-**Access URLs:**
-- **Frontend**: https://bsg-demo-platform-app.azurewebsites.net
-- **Backend API**: https://bsg-demo-platform-app.azurewebsites.net/api/v1
-- **API Docs**: https://bsg-demo-platform-app.azurewebsites.net/docs
-- **Health Check**: https://bsg-demo-platform-app.azurewebsites.net/api/v1/health
-
-**Why App Service over VM:**
-- ✅ No SSH/VM management required
-- ✅ Built-in CI/CD integration
-- ✅ HTTPS by default
-- ✅ Auto-scaling capabilities
-- ✅ Complies with security policies
-- ✅ Lower operational overhead
-- ✅ Pay for what you use
-
-**Setup Instructions:**
-The App Service is already created. Just configure GitHub Secrets:
-- `AZURE_CREDENTIALS` (service principal JSON)
-- `AZURE_SUBSCRIPTION_ID`
-
-Then push to `develop` branch to deploy automatically.
-
----
-
-**Last Updated**: November 13, 2025
+**Last Updated**: November 2025  
 **Maintained By**: BSG Team
-
