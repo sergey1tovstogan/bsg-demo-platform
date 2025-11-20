@@ -17,7 +17,7 @@ from app.core.database import init_db, close_db
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
-from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, deployment, chatbot
+from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache
 
 # Setup logging
 setup_logging()
@@ -91,18 +91,34 @@ app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(database.router, prefix=settings.API_V1_PREFIX)
 app.include_router(components.router, prefix=settings.API_V1_PREFIX)
+app.include_router(integration.router, prefix=settings.API_V1_PREFIX)
 app.include_router(grafana_proxy.router, prefix=settings.API_V1_PREFIX)
 app.include_router(grafana_auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(security.router, prefix=settings.API_V1_PREFIX)
 app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
+app.include_router(cache.router, prefix=settings.API_V1_PREFIX)
 
 # Serve static files (frontend) if directory exists
 static_dir = os.path.join(os.path.dirname(__file__), "static")
+index_path = os.path.join(static_dir, "index.html") if static_dir else None
+
 if os.path.exists(static_dir) and os.path.isdir(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    logger.info(f"Static files mounted at /static from {static_dir}")
+    
+    # Root endpoint - must be defined BEFORE catch-all route
+    @app.get("/")
+    async def root():
+        """Root endpoint - serves frontend index.html."""
+        if index_path and os.path.exists(index_path):
+            logger.info(f"Serving frontend index.html from {index_path}")
+            return FileResponse(index_path)
+        logger.warning(f"index.html not found at {index_path}")
+        return {"detail": "Frontend not found", "static_dir": str(static_dir), "exists": os.path.exists(static_dir)}
     
     # Serve index.html for all non-API routes (SPA routing)
+    # This catch-all must be AFTER the root route
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         """Serve frontend SPA or API routes."""
@@ -110,24 +126,26 @@ if os.path.exists(static_dir) and os.path.isdir(static_dir):
         if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
             return {"detail": "Not Found"}
         
-        # Serve index.html for frontend routes
-        index_path = os.path.join(static_dir, "index.html")
-        if os.path.exists(index_path):
+        # Serve index.html for frontend routes (SPA routing)
+        if index_path and os.path.exists(index_path):
             return FileResponse(index_path)
-        return {"detail": "Frontend not found"}
-
-# Root endpoint (only if static files not mounted)
-if not os.path.exists(static_dir):
+        logger.warning(f"index.html not found at {index_path}, static_dir exists: {os.path.exists(static_dir)}")
+        return {"detail": "Frontend not found", "static_dir": str(static_dir), "exists": os.path.exists(static_dir)}
+else:
+    # Root endpoint (only if static files not mounted)
     @app.get("/")
     async def root():
         """Root endpoint with API information."""
+        logger.warning(f"Static directory not found at {static_dir}, serving API info")
         return {
             "name": settings.APP_NAME,
             "version": settings.APP_VERSION,
             "environment": settings.ENVIRONMENT,
             "api_version": "v1",
             "docs": f"{settings.API_V1_PREFIX}/docs" if not settings.is_production else None,
-            "health": f"{settings.API_V1_PREFIX}/health"
+            "health": f"{settings.API_V1_PREFIX}/health",
+            "frontend_available": False,
+            "static_dir": str(static_dir) if static_dir else None
         }
 
 

@@ -57,7 +57,13 @@ DEBUG=True
 - `videos` - Video metadata and references
 - `security_docs` - Security documentation
 - `presentations` - Presentation materials
+- `integration` - Integration component data
 - `data_architecture` - Data Architecture component-specific collection
+
+**Component/Collection Convention:**
+> **IMPORTANT**: Each component should have a matching MongoDB collection with the same name.
+> For example, the "integration" component uses the "integration" collection.
+> When creating new components, always create a corresponding MongoDB collection.
 
 ## Technology Stack
 
@@ -302,6 +308,7 @@ bsg-demo-platform/
 - No direct inter-component dependencies
 - Shared infrastructure through common services layer
 - Independent MongoDB collections per component
+- **Convention**: Component name = MongoDB collection name (e.g., "integration" component → "integration" collection)
 
 ### API Design Principles
 - RESTful API structure
