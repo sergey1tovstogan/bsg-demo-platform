@@ -76,6 +76,13 @@ export function DeploymentAnalyzer() {
         setError((connectResponse.data as any)?.error || (connectResponse as any).error || 'Failed to connect to Azure')
       }
     } catch (err: any) {
+      console.error('[DeploymentAnalyzer] Azure connection error:', {
+        error: err,
+        message: err.message,
+        response: err.response,
+        code: err.code,
+        config: err.config
+      })
       // Handle different error formats
       let errorMessage = 'Failed to connect to Azure'
       let recoverySteps: string[] = []
