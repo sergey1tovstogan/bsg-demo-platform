@@ -328,7 +328,8 @@ bsg-demo-platform/
 │   │   └── main.py
 │   ├── requirements.txt
 │   └── create_collections.py
-├── ARCHITECTURE.md
+├── docs/
+│   ├── ARCHITECTURE.md
 └── README.md
 ```
 
@@ -403,7 +404,7 @@ bsg-demo-platform/
 
 ## Important Files to Reference
 
-- **Architecture**: `ARCHITECTURE.md`
+- **Architecture**: `docs/ARCHITECTURE.md`
 - **API Docs**: http://localhost:8000/docs (when backend is running)
 - **Development Guide**: `README.md`
 - **Component Requirements**: `design/components/`

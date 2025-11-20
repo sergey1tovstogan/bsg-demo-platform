@@ -410,7 +410,7 @@ The platform is automatically deployed to Azure via GitHub Actions:
 ## Getting Help
 
 - **API Documentation**: http://localhost:8000/docs (when backend is running)
-- **Architecture Documentation**: See `ARCHITECTURE.md`
+- **Architecture Documentation**: See [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Component Documentation**: See component-specific README files
 - **Issues**: Create an issue on GitHub
 
