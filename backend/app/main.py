@@ -69,10 +69,10 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
 )
 
-# Configure CORS
+# Configure CORS with regex pattern to allow Azure Static Web Apps and App Service domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"(http://localhost:\d+|https://.*\.azurestaticapps\.net|https://.*\.azurewebsites\.net)",
     allow_credentials=settings.CORS_CREDENTIALS,
     allow_methods=settings.CORS_METHODS,
     allow_headers=settings.CORS_HEADERS,

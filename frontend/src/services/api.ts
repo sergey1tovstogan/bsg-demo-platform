@@ -13,7 +13,34 @@ import type {
   ComponentId
 } from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
+// Determine API base URL
+// Priority: 1. Environment variable (build-time), 2. Runtime config, 3. Relative path
+const getApiBaseUrl = () => {
+  // Check build-time environment variable (set during npm run build)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  
+  // Check runtime configuration (for production deployments)
+  // If we're on Azure Static Web Apps, use the backend App Service URL
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    // If on Azure Static Web Apps domain, use the backend App Service URL
+    if (hostname.includes('azurestaticapps.net')) {
+      return 'https://bsg-demo-platform-app.azurewebsites.net/api/v1'
+    }
+  }
+  
+  // Default to relative path (for local development or when backend is proxied)
+  return '/api/v1'
+}
+
+const API_BASE_URL = getApiBaseUrl()
+
+// Log the API base URL in development
+if (import.meta.env.DEV) {
+  console.log('API Base URL:', API_BASE_URL)
+}
 
 class ApiService {
   private client: AxiosInstance
