@@ -70,15 +70,15 @@ app = FastAPI(
 )
 
 # Configure CORS - MUST be the outermost middleware to handle preflight OPTIONS requests
-# Using both explicit origins and regex pattern to ensure all Azure domains work
+# Use allow_origin_regex to allow all Azure Static Web Apps and App Service domains
+# This is more flexible than hardcoding specific origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.is_production else settings.CORS_ORIGINS,  # In production, allow all (filtered by regex)
-    allow_origin_regex=r"https://.*\.azurestaticapps\.net|https://.*\.azurewebsites\.net|http://localhost:\d+",  # Pattern for Azure domains
-    allow_credentials=settings.CORS_CREDENTIALS,
-    allow_methods=["*"],  # Allow all methods including OPTIONS
-    allow_headers=["*"],  # Allow all headers
-    expose_headers=["*"],  # Expose all headers
+    allow_origin_regex=r"https://.*\.azurestaticapps\.net|https://.*\.azurewebsites\.net|http://localhost:\d+",
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+    allow_headers=["*"],
+    expose_headers=["*"],
     max_age=3600,  # Cache preflight requests for 1 hour
 )
 
