@@ -105,6 +105,21 @@ class TemenosService:
         
         # Cache for RAG responses - key: component_name, value: TemenosComponentInfo
         self._component_cache: Dict[str, TemenosComponentInfo] = {}
+        
+        # Track if RAG was available at initialization (to detect when it becomes available)
+        self._rag_was_available = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
+        
+        # If RAG is now available but wasn't before (or cache has minimal responses), clear cache
+        if self._rag_was_available and len(self._component_cache) > 0:
+            # Check if cached entries are minimal (from non-RAG fallback)
+            # If so, clear them to force fresh RAG queries
+            has_minimal_entries = any(
+                info.architectural_overview.startswith(f"{info.component_name} is a Temenos microservice component deployed")
+                for info in self._component_cache.values()
+            )
+            if has_minimal_entries:
+                logger.info("Clearing cache with minimal entries - RAG is now available, will fetch fresh data")
+                self._component_cache.clear()
 
     def _is_potential_temenos_component(self, service: AzureResource) -> bool:
         """Quick check if service might be a Temenos component."""
@@ -673,18 +688,28 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             # Check cache first (unless force_refresh is True)
             cache_key = component_name.lower()
             if use_cache and not force_refresh and cache_key in self._component_cache:
-                logger.info(f"Using cached component info for {component_name}")
                 cached_info = self._component_cache[cache_key]
-                # Return a copy with service-specific type
-                return TemenosComponentInfo(
-                    component_name=cached_info.component_name,
-                    component_type=self._determine_component_type(service),
-                    architectural_overview=cached_info.architectural_overview,
-                    functional_overview=cached_info.functional_overview,
-                    capabilities=cached_info.capabilities,
-                    related_services=cached_info.related_services,
-                    relationships=cached_info.relationships
-                )
+                # Check if cached entry is minimal (from non-RAG fallback)
+                # If RAG is now available but cache has minimal data, invalidate and fetch fresh
+                is_minimal = cached_info.architectural_overview.startswith(f"{component_name} is a Temenos microservice component deployed") and len(cached_info.architectural_overview) < 500
+                has_rag_now = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
+                
+                if is_minimal and has_rag_now:
+                    logger.info(f"Cache entry for {component_name} is minimal but RAG is available - invalidating cache and fetching fresh data")
+                    # Remove from cache and continue to fetch fresh data
+                    del self._component_cache[cache_key]
+                else:
+                    logger.info(f"Using cached component info for {component_name}")
+                    # Return a copy with service-specific type
+                    return TemenosComponentInfo(
+                        component_name=cached_info.component_name,
+                        component_type=self._determine_component_type(service),
+                        architectural_overview=cached_info.architectural_overview,
+                        functional_overview=cached_info.functional_overview,
+                        capabilities=cached_info.capabilities,
+                        related_services=cached_info.related_services,
+                        relationships=cached_info.relationships
+                    )
             
             # Check if RAG adapter is available (has JWT token)
             has_rag = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
@@ -722,6 +747,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             # Query RAG API with timeout - use asyncio.wait_for for timeout
             import asyncio
             logger.info(f"Querying RAG for {component_name} - Architectural query...")
+            logger.info(f"  Query: {architectural_query[:200]}...")
             try:
                 architectural_response = await asyncio.wait_for(
                     self._query_rag(
@@ -733,15 +759,20 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     timeout=60.0  # Increased timeout to 60s for complete comprehensive responses
                 )
                 logger.info(f"✓ Architectural query completed for {component_name}")
-                logger.debug(f"Architectural response: {str(architectural_response)[:200]}")
+                logger.info(f"  Response type: {type(architectural_response)}")
+                logger.info(f"  Response keys: {list(architectural_response.keys()) if isinstance(architectural_response, dict) else 'N/A'}")
+                if isinstance(architectural_response, dict) and "data" in architectural_response:
+                    answer_preview = str(architectural_response.get("data", {}).get("answer", ""))[:300]
+                    logger.info(f"  Answer preview: {answer_preview}...")
             except asyncio.TimeoutError:
-                logger.warning(f"Architectural query timeout for {service.name} after 30s")
+                logger.warning(f"⚠ Architectural query timeout for {service.name} after 60s")
                 architectural_response = {"data": {"answer": "Information not available - timeout"}}
             except Exception as e:
-                logger.error(f"Architectural query failed for {service.name}: {e}", exc_info=True)
-                architectural_response = {"data": {"answer": "Information not available - timeout"}}
+                logger.error(f"✗ Architectural query failed for {service.name}: {e}", exc_info=True)
+                architectural_response = {"data": {"answer": "Information not available - error"}}
             
             logger.info(f"Querying RAG for {component_name} - Functional query...")
+            logger.info(f"  Query: {functional_query[:200]}...")
             try:
                 functional_response = await asyncio.wait_for(
                     self._query_rag(
@@ -753,13 +784,17 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     timeout=60.0  # Increased timeout to 60s for complete comprehensive responses
                 )
                 logger.info(f"✓ Functional query completed for {component_name}")
-                logger.debug(f"Functional response: {str(functional_response)[:200]}")
+                logger.info(f"  Response type: {type(functional_response)}")
+                logger.info(f"  Response keys: {list(functional_response.keys()) if isinstance(functional_response, dict) else 'N/A'}")
+                if isinstance(functional_response, dict) and "data" in functional_response:
+                    answer_preview = str(functional_response.get("data", {}).get("answer", ""))[:300]
+                    logger.info(f"  Answer preview: {answer_preview}...")
             except asyncio.TimeoutError:
-                logger.warning(f"Functional query timeout for {service.name} after 30s")
+                logger.warning(f"⚠ Functional query timeout for {service.name} after 60s")
                 functional_response = {"data": {"answer": "Information not available - timeout"}}
             except Exception as e:
-                logger.error(f"Functional query failed for {service.name}: {e}", exc_info=True)
-                functional_response = {"data": {"answer": "Information not available - timeout"}}
+                logger.error(f"✗ Functional query failed for {service.name}: {e}", exc_info=True)
+                functional_response = {"data": {"answer": "Information not available - error"}}
             
             architectural_text = architectural_response.get("data", {}).get("answer", "Information not available")
             functional_text = functional_response.get("data", {}).get("answer", "Information not available")
