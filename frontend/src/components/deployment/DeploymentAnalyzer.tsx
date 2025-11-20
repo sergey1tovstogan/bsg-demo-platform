@@ -892,6 +892,17 @@ function ComponentDetailPanel({
 }) {
   const { service, componentInfo } = result
 
+  // Debug logging
+  useEffect(() => {
+    if (componentInfo) {
+      console.log('Component Info:', componentInfo)
+      console.log('Architectural Overview:', componentInfo.architecturalOverview)
+      console.log('Functional Overview:', componentInfo.functionalOverview)
+      console.log('Capabilities:', componentInfo.capabilities)
+      console.log('Related Services:', componentInfo.relatedServices)
+    }
+  }, [componentInfo])
+
   if (!componentInfo) {
     return (
       <div className="card">
@@ -965,57 +976,75 @@ function ComponentDetailPanel({
         <div className="bg-gray-50 rounded-lg p-4">
           <h5 className="font-semibold text-gray-900 mb-3 text-lg">ARCHITECTURE OVERVIEW</h5>
           <div className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
-            {componentInfo.architecturalOverview}
+            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim() 
+              ? componentInfo.architecturalOverview 
+              : <span className="text-gray-500 italic">No architectural overview available</span>}
           </div>
         </div>
 
         {/* Deployment Architecture */}
-        {componentInfo.architecturalOverview.includes('deployment') || componentInfo.architecturalOverview.includes('AKS') || componentInfo.architecturalOverview.includes('Kubernetes') ? (
+        {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') || 
+          componentInfo.architecturalOverview?.toLowerCase().includes('aks') || 
+          componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes') ||
+          componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
+          service.type?.toLowerCase().includes('containerservice') ||
+          service.type?.toLowerCase().includes('kubernetes')) ? (
           <div className="bg-blue-50 rounded-lg p-4">
             <h5 className="font-semibold text-gray-900 mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
             <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
-              {componentInfo.architecturalOverview.includes('Containerized') && (
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('containerized') || 
+                componentInfo.architecturalOverview?.toLowerCase().includes('docker') ||
+                service.type?.toLowerCase().includes('containerservice')) && (
                 <li>Containerized using Docker and deployed in Azure Kubernetes Service (AKS)</li>
               )}
-              {componentInfo.architecturalOverview.includes('Orchestrated') && (
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('orchestrated') || 
+                componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes')) && (
                 <li>Orchestrated via Kubernetes for automated scaling, health management, and service discovery</li>
               )}
-              {componentInfo.architecturalOverview.includes('scaling') && (
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('scaling') || 
+                componentInfo.architecturalOverview?.toLowerCase().includes('scale')) && (
                 <li>Supports horizontal scaling based on load and demand</li>
               )}
-              {componentInfo.architecturalOverview.includes('high-availability') && (
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('high-availability') || 
+                componentInfo.architecturalOverview?.toLowerCase().includes('availability') ||
+                componentInfo.architecturalOverview?.toLowerCase().includes('replica')) && (
                 <li>Implements high-availability patterns with multiple replicas and health checks</li>
+              )}
+              {service.type && (
+                <li>Azure Service Type: {service.type}</li>
               )}
             </ul>
           </div>
         ) : null}
 
         {/* Functional Overview */}
-        {componentInfo.functionalOverview && (
-          <div className="bg-purple-50 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 mb-3 text-lg">FUNCTIONAL OVERVIEW</h5>
-            <div className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
-              {componentInfo.functionalOverview}
-            </div>
+        <div className="bg-purple-50 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 mb-3 text-lg">FUNCTIONAL OVERVIEW</h5>
+          <div className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+            {componentInfo.functionalOverview && componentInfo.functionalOverview.trim()
+              ? componentInfo.functionalOverview
+              : <span className="text-gray-500 italic">No functional overview available</span>}
           </div>
-        )}
+        </div>
 
         {/* Key Capabilities */}
-        {componentInfo.capabilities && componentInfo.capabilities.length > 0 && (
-          <div className="bg-green-50 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 mb-3 text-lg">KEY CAPABILITIES</h5>
+        <div className="bg-green-50 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 mb-3 text-lg">KEY CAPABILITIES</h5>
+          {componentInfo.capabilities && Array.isArray(componentInfo.capabilities) && componentInfo.capabilities.length > 0 ? (
             <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
               {componentInfo.capabilities.map((cap, idx) => (
                 <li key={idx}>{cap}</li>
               ))}
             </ul>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-gray-500 italic">No capabilities listed</p>
+          )}
+        </div>
 
         {/* Related Services */}
-        {componentInfo.relatedServices && componentInfo.relatedServices.length > 0 && (
-          <div className="bg-yellow-50 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 mb-3 text-lg">RELATED SERVICES</h5>
+        <div className="bg-yellow-50 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 mb-3 text-lg">RELATED SERVICES</h5>
+          {componentInfo.relatedServices && Array.isArray(componentInfo.relatedServices) && componentInfo.relatedServices.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {componentInfo.relatedServices.map((svc, idx) => (
                 <span key={idx} className="px-3 py-1 bg-white rounded-full text-sm text-gray-700 border border-gray-300">
@@ -1023,11 +1052,13 @@ function ComponentDetailPanel({
                 </span>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-gray-500 italic">No related services listed</p>
+          )}
+        </div>
 
         {/* Relationships */}
-        {componentInfo.relationships && componentInfo.relationships.length > 0 && (
+        {componentInfo.relationships && Array.isArray(componentInfo.relationships) && componentInfo.relationships.length > 0 && (
           <div className="bg-indigo-50 rounded-lg p-4">
             <h5 className="font-semibold text-gray-900 mb-3 text-lg">COMPONENT RELATIONSHIPS</h5>
             <div className="space-y-3">
