@@ -1911,13 +1911,883 @@ const UserManagementHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
+// eXate HTML Content
+const eXateHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eXate Solution</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            width: 100vw;
+            height: 100vh;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .header-label {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #283054;
+            margin-bottom: 30px;
+            padding: 10px;
+            width: 100%;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 600px;
+        }
+        
+        .diagram-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 40px 20px;
+            position: relative;
+            min-height: 400px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .temenos-core {
+            background-color: #007BA7;
+            color: white;
+            padding: 30px 20px;
+            border-radius: 8px;
+            width: 180px;
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            line-height: 1.4;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .exate-jdbc {
+            background-color: #E0F2F7;
+            border: 2px solid #B0D4E0;
+            border-radius: 8px;
+            padding: 20px;
+            width: 220px;
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .exate-logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #87CEEB, #9370DB, #FFB6C1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        .jdbc-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #283054;
+            margin-top: 10px;
+        }
+        
+        .protected-storage {
+            background-color: #8A2BE2;
+            color: white;
+            padding: 30px 20px;
+            border-radius: 8px;
+            width: 180px;
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            line-height: 1.4;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .protected-storage::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 15px solid #8A2BE2;
+        }
+        
+        .data-flow {
+            position: absolute;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #283054;
+            background-color: #D0E0F0;
+            border: 2px solid #283054;
+            border-radius: 4px;
+            padding: 8px 12px;
+            white-space: nowrap;
+        }
+        
+        .data-flow-top {
+            top: 180px;
+        }
+        
+        .data-flow-bottom {
+            bottom: 180px;
+        }
+        
+        .data-flow-1 {
+            left: 200px;
+            width: 180px;
+        }
+        
+        .data-flow-2 {
+            right: 200px;
+            width: 180px;
+        }
+        
+        .data-flow-3 {
+            right: 200px;
+            width: 180px;
+        }
+        
+        .data-flow-4 {
+            left: 200px;
+            width: 180px;
+        }
+        
+        .encrypted-text {
+            color: #ff0000;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
+        
+        .arrow {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+        
+        .arrow-right {
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-left: 15px solid #000;
+        }
+        
+        .arrow-left {
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-right: 15px solid #000;
+        }
+        
+        .arrow-up {
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 15px solid #000;
+        }
+        
+        .arrow-1 {
+            left: 380px;
+            top: 205px;
+        }
+        
+        .arrow-2 {
+            right: 380px;
+            top: 205px;
+        }
+        
+        .arrow-3 {
+            right: 380px;
+            bottom: 205px;
+        }
+        
+        .arrow-4 {
+            left: 380px;
+            bottom: 205px;
+        }
+        
+        .arrow-5 {
+            position: absolute;
+            left: calc(50% - 200px);
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .arrow-6 {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 320px;
+        }
+        
+        .supporting-components {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 30px;
+            margin-top: -60px;
+            padding: 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .metadata-management {
+            background-color: #E0F2F7;
+            border: 2px solid #B0D4E0;
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .metadata-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #87CEEB, #9370DB, #FFB6C1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .metadata-text {
+            font-size: 16px;
+            font-weight: bold;
+            color: #283054;
+        }
+        
+        .datagator {
+            background-color: white;
+            border: 2px solid #283054;
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .datagator-logo {
+            width: 40px;
+            height: 40px;
+            background-color: #283054;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .datagator-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .datagator-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #283054;
+        }
+        
+        .datagator-subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .connecting-line {
+            height: 2px;
+            background-color: #ff0000;
+            flex: 0 0 30px;
+            align-self: center;
+        }
+        
+        .benefits-section {
+            margin-top: 50px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .benefits-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #283054;
+            margin-bottom: 15px;
+        }
+        
+        .benefits-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .benefits-list li {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        
+        .benefits-list li::before {
+            content: '• ';
+            font-weight: bold;
+            color: #283054;
+            margin-right: 8px;
+        }
+        
+        .benefits-list li ul {
+            list-style: none;
+            padding-left: 30px;
+            margin-top: 5px;
+        }
+        
+        .benefits-list li ul li::before {
+            content: '• ';
+            font-weight: bold;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-label">eXate (Temenos Exchange) solution for field encryption data at rest</div>
+    
+    <div class="main-container">
+        <div class="diagram-container">
+            <!-- Temenos Banking Core -->
+            <div class="temenos-core">
+                Temenos<br>Banking<br>Core
+            </div>
+            
+            <!-- Data Flow 1: John Smith (top, left to right) -->
+            <div class="data-flow data-flow-top data-flow-1">
+                1. John Smith
+            </div>
+            <div class="arrow arrow-right arrow-1"></div>
+            
+            <!-- eXate JDBC encryption -->
+            <div class="exate-jdbc">
+                <div class="exate-logo">e</div>
+                <div class="jdbc-text">JDBC encryption</div>
+            </div>
+            
+            <!-- Data Flow 2: XY ZI %yusHUhndn98 (top, right) -->
+            <div class="data-flow data-flow-top data-flow-2">
+                3. XY ZI <span class="encrypted-text">%yusHUhndn98</span>
+            </div>
+            <div class="arrow arrow-right arrow-2"></div>
+            
+            <!-- Protected storage -->
+            <div class="protected-storage">
+                Protected<br>storage
+            </div>
+            
+            <!-- Data Flow 3: XY ZI %yusHUhndn98 (bottom, right) -->
+            <div class="data-flow data-flow-bottom data-flow-3">
+                2. XY ZI <span class="encrypted-text">%yusHUhndn98</span>
+            </div>
+            <div class="arrow arrow-left arrow-3"></div>
+            
+            <!-- Data Flow 4: John Smith (bottom, left) -->
+            <div class="data-flow data-flow-bottom data-flow-4">
+                4. John Smith
+            </div>
+            <div class="arrow arrow-left arrow-4"></div>
+        </div>
+        
+        <!-- Supporting Components -->
+        <div class="supporting-components">
+            <div class="metadata-management">
+                <div class="metadata-logo">e</div>
+                <div class="metadata-text">Metadata Management</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            <div class="arrow arrow-right arrow-5"></div>
+            
+            <div class="datagator">
+                <div class="datagator-logo">A</div>
+                <div class="datagator-text">
+                    <div class="datagator-name">datagator</div>
+                    <div class="datagator-subtitle">an exate company</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Arrow from datagator to JDBC -->
+        <div class="arrow arrow-up arrow-6"></div>
+        
+        <!-- Benefits Section -->
+        <div class="benefits-section">
+            <div class="benefits-title">Benefits For Banks:</div>
+            <ul class="benefits-list">
+                <li>Additional layer of security for PII (Personally Identifiable Information) and other regulated sensitive data.
+                    <ul>
+                        <li>For data-at-rest</li>
+                    </ul>
+                </li>
+                <li>Data Protection compliance is more easily auditable and reportable</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>`
+
+// Privacy & Encryption HTML Content
+const PrivacyEncryptionHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy & Encryption</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            width: 100vw;
+            height: 100vh;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .header-label {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #283054;
+            margin-bottom: 25px;
+            padding: 10px;
+            width: 100%;
+        }
+        
+        .intro-statements {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding: 0 20px;
+        }
+        
+        .intro-statement {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            gap: 0;
+            min-height: 0;
+            position: relative;
+        }
+        
+        .divider {
+            width: 2px;
+            background-color: #000;
+            flex-shrink: 0;
+        }
+        
+        .section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0 20px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        
+        .section-description {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .arrow-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .arrow {
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 25px solid #8B5CF6;
+        }
+        
+        .content-box {
+            background: #B0E0E6;
+            border: 2px solid #87CEEB;
+            border-radius: 6px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 150px;
+        }
+        
+        .content-item {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.5;
+        }
+        
+        .exate-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #EF4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transition: background-color 0.3s ease;
+        }
+        
+        .exate-button:hover {
+            background-color: #DC2626;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: white;
+            border: 2px solid #ff0000;
+            border-radius: 4px;
+            padding: 12px;
+            max-width: 500px;
+            width: fit-content;
+            height: fit-content;
+            font-size: 16px;
+            line-height: 1.5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 2000;
+            display: none;
+            pointer-events: none;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            text-align: left;
+            vertical-align: top;
+        }
+        
+        .tooltip.show {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .tooltip-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #283054;
+            text-align: left;
+        }
+        
+        .tooltip-description {
+            color: #333;
+            font-size: 16px;
+            text-align: left;
+        }
+        
+        .section {
+            cursor: pointer;
+        }
+        
+        .section:hover {
+            opacity: 0.9;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .divider {
+                width: 100%;
+                height: 2px;
+                margin: 20px 0;
+            }
+            
+            .section {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-label">Temenos Privacy & Encryption</div>
+    
+    <div class="intro-statements">
+        <div class="intro-statement">
+            1. All components storing data (as a permanent data store or transitory, e.g., Cloud Storage, Event Hub, virtual disks) must support encryption at the block level
+        </div>
+        <div class="intro-statement">
+            2. Encryption in transit - TLS for all traffic (e.g., PostgreSQL, Azure SQL), or encrypted protocol (e.g., SSH)
+        </div>
+        <div class="intro-statement">
+            3. Encrypt data using supplementary encryption, e.g., TLS1.2, SSH, AES256, IPSEC and DLP usage
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <!-- Left Section: Data in Transit -->
+        <div id="left-section" class="section">
+            <div class="section-title">Data in Transit</div>
+            <div class="section-description">
+                Data that is traversing a network or temporarily residing in computer memory to be read or updated.
+            </div>
+            <div class="arrow-container">
+                <div class="arrow"></div>
+            </div>
+            <div class="content-box">
+                <div class="content-item">HTTPS (TLS 1.2)</div>
+                <div class="content-item">SMBv3 / SFTP / FTPS</div>
+                <div class="content-item">Data Loss Prevention</div>
+            </div>
+        </div>
+        
+        <!-- Vertical Divider -->
+        <div class="divider"></div>
+        
+        <!-- Right Section: Data at Rest -->
+        <div id="right-section" class="section">
+            <div class="section-title">Data at Rest</div>
+            <div class="section-description">
+                Inactive data stored physically in databases, data warehouses, spreadsheets, archives, tapes, off-site backups, etc...
+            </div>
+            <div class="arrow-container">
+                <div class="arrow"></div>
+            </div>
+            <div class="content-box">
+                <div class="content-item">Transparent Data Encryption for Databases</div>
+                <div class="content-item">Database audit monitoring</div>
+                <div class="content-item">Block level encryption in storage, queues</div>
+                <div class="content-item">Data Loss Prevention</div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="exate-button" onclick="window.parent.postMessage({type: 'showExate'}, '*');">eXate (Temenos Exchange) solution</button>
+    
+    <div id="tooltip" class="tooltip">
+        <div class="tooltip-title" id="tooltip-title"></div>
+        <div class="tooltip-description" id="tooltip-description"></div>
+    </div>
+    
+    <script>
+        // Tooltip Configuration
+        const tooltips = [
+            {
+                id: "left-section",
+                title: "Left Section",
+                description: "Data in Transit: \\n\\nFor data in transit, all communications are secured using modern Transport Layer Security (TLS) protocols, specifically TLS 1.2.\\n\\nAPI communications are encrypted end-to-end, leveraging partner-supported encryption mechanisms to maintain data security during exchanges. File transfers, including SFTP services, use SSH encryption standards and secure key management practices. Connections to web applications and APIs are exclusively over HTTPS.\\n\\nSecure Access: Access to interfaces that are not classified as public is subject to additional access controls. Public interfaces have to be protected by Web Application Firewalls (WAF) and Denial of Service (DoS) protection (done for Temenos SaaS.\\n\\nSecure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilised, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\\n\\nLogging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorised access attempts and ensuring compliance with security policies.",
+                position: "right"
+            },
+            {
+                id: "right-section",
+                title: "Right Section",
+                description: "Data at Rest: \\n\\nFor data at rest, encryption is applied comprehensively across storage layers. \\n\\n1. Databases utilise Transparent Data Encryption (TDE) with AES 256-bit encryption algorithms. TDE performs real-time I/O encryption and decryption of the data at the page level. Each page is decrypted when it's read into memory and then encrypted before being written to disk. \\n\\n2. TDE encrypts the entire database, including logs and backups, protecting data on disks and during backups.\\n\\n3. Storage devices, including disk volumes and containers, benefit from full disk encryption and block-level encryption.",
+                position: "left"
+            }
+        ];
+        
+        const tooltip = document.getElementById('tooltip');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipDescription = document.getElementById('tooltip-description');
+        
+        function showTooltip(config, element) {
+            if (!tooltip || !tooltipTitle || !tooltipDescription) {
+                console.error('Tooltip elements not found');
+                return;
+            }
+            
+            tooltipTitle.textContent = config.title;
+            tooltipDescription.textContent = config.description.replace(/\\\\n/g, '\\n');
+            
+            // Hide tooltip first to reset state
+            tooltip.style.display = 'none';
+            tooltip.classList.remove('show');
+            
+            // Show tooltip temporarily to measure
+            tooltip.style.display = 'block';
+            tooltip.style.visibility = 'hidden';
+            tooltip.style.opacity = '0';
+            tooltip.style.position = 'absolute';
+            tooltip.style.left = '-9999px';
+            tooltip.style.top = '-9999px';
+            
+            setTimeout(function() {
+                const rect = element.getBoundingClientRect();
+                const container = document.body;
+                const containerRect = container.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                
+                let left, top;
+                
+                // Position based on config
+                if (config.position === 'right') {
+                    left = rect.right + 15;
+                    top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+                } else if (config.position === 'left') {
+                    left = rect.left - tooltipRect.width - 15;
+                    top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+                } else if (config.position === 'top') {
+                    left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                    top = rect.top - tooltipRect.height - 15;
+                } else { // bottom
+                    left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                    top = rect.bottom + 15;
+                }
+                
+                // Ensure tooltip stays within container bounds
+                if (left < containerRect.left) {
+                    left = containerRect.left + 10;
+                }
+                if (left + tooltipRect.width > containerRect.right) {
+                    left = containerRect.right - tooltipRect.width - 10;
+                }
+                if (top < containerRect.top) {
+                    top = containerRect.top + 10;
+                }
+                if (top + tooltipRect.height > containerRect.bottom - 80) {
+                    top = containerRect.bottom - tooltipRect.height - 90;
+                }
+                
+                // Position and show tooltip
+                tooltip.style.left = (left - containerRect.left) + 'px';
+                tooltip.style.top = (top - containerRect.top) + 'px';
+                tooltip.style.visibility = 'visible';
+                tooltip.style.opacity = '1';
+                tooltip.classList.add('show');
+            }, 10);
+        }
+        
+        function hideTooltip() {
+            if (tooltip) {
+                tooltip.classList.remove('show');
+                tooltip.style.display = 'none';
+                tooltip.style.visibility = 'hidden';
+                tooltip.style.opacity = '0';
+            }
+        }
+        
+        function initializeTooltips() {
+            tooltips.forEach(function(config) {
+                const element = document.getElementById(config.id);
+                if (element) {
+                    element.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const isSameTooltip = tooltip && tooltip.classList.contains('show') && tooltipTitle && tooltipTitle.textContent === config.title;
+                        if (isSameTooltip) {
+                            hideTooltip();
+                        } else {
+                            showTooltip(config, element);
+                        }
+                    });
+                }
+            });
+            
+            // Hide tooltip when clicking outside
+            document.addEventListener('click', function(e) {
+                const target = e.target;
+                const isTooltipElement = tooltips.some(function(config) {
+                    const element = document.getElementById(config.id);
+                    return element && element.contains(target);
+                });
+                const isTooltipBox = tooltip && tooltip.contains(target);
+                if (!isTooltipElement && !isTooltipBox) {
+                    hideTooltip();
+                }
+            });
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeTooltips);
+        } else {
+            initializeTooltips();
+        }
+    </script>
+</body>
+</html>`
+
 export function SecurityContentViewer() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
   const [showUserManagement, setShowUserManagement] = useState(false)
+  const [showExate, setShowExate] = useState(false)
 
   const handleCardClick = (cardId: number) => {
-    if (cardId === 1 || cardId === 2) {
+    if (cardId === 1 || cardId === 2 || cardId === 3) {
       setSelectedCard(cardId)
     }
   }
@@ -1926,6 +2796,7 @@ export function SecurityContentViewer() {
     setSelectedCard(null)
     setShowDetailedExplanation(false)
     setShowUserManagement(false)
+    setShowExate(false)
   }
 
   const handleBackToArchitecture = () => {
@@ -1941,6 +2812,9 @@ export function SecurityContentViewer() {
       if (event.data && event.data.type === 'showUserManagement') {
         setShowUserManagement(true)
       }
+      if (event.data && event.data.type === 'showExate') {
+        setShowExate(true)
+      }
     }
 
     window.addEventListener('message', handleMessage)
@@ -1948,6 +2822,55 @@ export function SecurityContentViewer() {
       window.removeEventListener('message', handleMessage)
     }
   }, [])
+
+  // Show HTML5 diagram when card 3 is selected
+  if (selectedCard === 3) {
+    // Show eXate page if button was clicked
+    if (showExate) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowExate(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={eXateHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="eXate Solution"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show PrivacyEncryption by default
+    return (
+      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+          >
+            <X className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+        </div>
+        <iframe
+          srcDoc={PrivacyEncryptionHTML}
+          className="w-full h-full border-0 rounded-lg"
+          title="Privacy & Encryption"
+          sandbox="allow-same-origin allow-scripts"
+          style={{ minHeight: '600px' }}
+        />
+      </div>
+    )
+  }
 
   // Show HTML5 diagram when card 2 is selected
   if (selectedCard === 2) {
