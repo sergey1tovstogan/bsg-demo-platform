@@ -24,7 +24,8 @@ try:
     KUBERNETES_AVAILABLE = True
 except ImportError:
     KUBERNETES_AVAILABLE = False
-    logger.warning("kubernetes Python client library not available. AKS namespace discovery will use kubectl fallback.")
+    # Logger not yet initialized, use print for now
+    print("WARNING: kubernetes Python client library not available. AKS namespace discovery will use kubectl fallback.")
 
 logger = get_logger(__name__)
 
