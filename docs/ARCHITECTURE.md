@@ -377,6 +377,14 @@ POST /api/v1/components/{component-id}/chatbot/query
 - **MongoDB**: 4.2.0 compatible (Azure Cosmos DB)
 - **TypeScript**: 5.x
 
+## Additional Resources
+
+For more information, see:
+- [Azure Services Explained](./AZURE_SERVICES_EXPLAINED.md) - Detailed explanation of Static Web Apps vs App Service
+- [Azure Configuration Guide](./AZURE_CONFIGURATION.md) - Step-by-step Azure setup instructions
+- [Usage Guide](./USAGE.md) - How to use the platform
+- [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
+
 ---
 
 **Last Updated**: November 2025  

@@ -91,13 +91,26 @@ class AKSService:
             subscription_id: Azure subscription ID
         """
         self.subscription_id = subscription_id
+        # Detect if running in Azure App Service
+        import os
+        self.is_azure_app_service = os.getenv("WEBSITE_SITE_NAME") is not None
+        
         try:
-            try:
-                credential = AzureCliCredential()
-                logger.info("Using Azure CLI credential for AKS")
-            except Exception:
+            # For Azure App Service, use DefaultAzureCredential (Managed Identity)
+            # For local development, try Azure CLI first, then DefaultAzureCredential
+            if self.is_azure_app_service:
+                # In Azure App Service, use Managed Identity via DefaultAzureCredential
                 credential = DefaultAzureCredential()
-                logger.info("Using DefaultAzureCredential for AKS")
+                logger.info("Using DefaultAzureCredential (Azure App Service - Managed Identity)")
+            else:
+                # Local development: try Azure CLI first, then DefaultAzureCredential
+                try:
+                    credential = AzureCliCredential()
+                    logger.info("Using Azure CLI credential (local development)")
+                except Exception:
+                    # Fall back to DefaultAzureCredential if Azure CLI credential fails
+                    credential = DefaultAzureCredential()
+                    logger.info("Using DefaultAzureCredential (tries multiple credential sources)")
             
             self.client = ContainerServiceClient(credential, subscription_id)
             logger.info(f"AKS service initialized for subscription: {subscription_id}")
@@ -587,8 +600,18 @@ class AKSService:
             logger.info(f"kubectl command will use: {kubectl_cmd}")
             
             if not kubectl_path:
-                logger.error(f"kubectl not found in PATH! Cannot list namespaces for cluster {cluster_name}")
-                logger.error("To fix: Install kubectl or ensure it's in PATH")
+                if self.is_azure_app_service:
+                    logger.error(f"kubectl not found in PATH! Cannot list namespaces for cluster {cluster_name}")
+                    logger.error("This is expected in Azure App Service - kubectl is not installed by default")
+                    logger.error("AKS namespace discovery requires kubectl, which is not available in Azure App Service")
+                    logger.error("Workaround: The code needs to be updated to use Kubernetes Python client library")
+                    logger.error("For now, namespace discovery will not work in Azure App Service")
+                    logger.error("You can still analyze other Azure resources (App Services, Storage Accounts, etc.)")
+                else:
+                    logger.error(f"kubectl not found in PATH! Cannot list namespaces for cluster {cluster_name}")
+                    logger.error("To fix: Install kubectl or ensure it's in PATH")
+                    logger.error("On Windows: choco install kubernetes-cli")
+                    logger.error("On Linux/Mac: See https://kubernetes.io/docs/tasks/tools/")
                 return namespaces
             
             logger.info(f"✓ kubectl found at: {kubectl_path}, will use '{kubectl_cmd}' command")
