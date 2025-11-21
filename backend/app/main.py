@@ -140,7 +140,7 @@ else:
     @app.get("/")
     async def root():
         """Root endpoint with API information."""
-        logger.warning(f"Static directory not found at {static_dir}, serving API info")
+        logger.info(f"Root endpoint accessed - static directory exists: {os.path.exists(static_dir) if static_dir else False}")
         return {
             "name": settings.APP_NAME,
             "version": settings.APP_VERSION,
@@ -148,8 +148,10 @@ else:
             "api_version": "v1",
             "docs": f"{settings.API_V1_PREFIX}/docs" if not settings.is_production else None,
             "health": f"{settings.API_V1_PREFIX}/health",
-            "frontend_available": False,
-            "static_dir": str(static_dir) if static_dir else None
+            "live": f"{settings.API_V1_PREFIX}/live",
+            "frontend_available": os.path.exists(static_dir) if static_dir else False,
+            "static_dir": str(static_dir) if static_dir else None,
+            "message": "BSG Demo Platform API is running. Use /api/v1/health for health check."
         }
 
 
