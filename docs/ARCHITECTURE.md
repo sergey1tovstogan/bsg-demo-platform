@@ -8,64 +8,35 @@ The BSG Demo Platform is a full-stack web application designed to demonstrate Te
 
 ### High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    CLIENT LAYER                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌────────────────────────────────────────────────────┐   │
-│  │  React Frontend (Vite + TypeScript)                 │   │
-│  │  - Port: 3000 (dev) / Static Web App (prod)         │   │
-│  │  - Components: Integration, Security, Deployment,    │   │
-│  │    Observability, Data Architecture, Design-Time    │   │
-│  └────────────────────────────────────────────────────┘   │
-│                          │                                  │
-│                          │ HTTP/REST API                    │
-│                          ▼                                  │
-└─────────────────────────────────────────────────────────────┘
-                          │
-                          │
-┌─────────────────────────────────────────────────────────────┐
-│                    APPLICATION LAYER                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌────────────────────────────────────────────────────┐   │
-│  │  FastAPI Backend (Python 3.11)                     │   │
-│  │  - Port: 8000 (dev) / Azure App Service (prod)     │   │
-│  │  - API Version: /api/v1                            │   │
-│  │  - Authentication: JWT                              │   │
-│  │  - Middleware: CORS, Rate Limiting, Security       │   │
-│  └────────────────────────────────────────────────────┘   │
-│                          │                                  │
-│                          │ Adapter Pattern                  │
-│                          ▼                                  │
-│  ┌────────────────────────────────────────────────────┐   │
-│  │  Adapter Layer                                     │   │
-│  │  - Database Adapter (MongoDB)                      │   │
-│  │  - RAG Adapter (Temenos RAG API)                   │   │
-│  └────────────────────────────────────────────────────┘   │
-│                          │                                  │
-└─────────────────────────────────────────────────────────────┘
-                          │
-                          │
-┌─────────────────────────────────────────────────────────────┐
-│                    DATA LAYER                               │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌────────────────────────────────────────────────────┐   │
-│  │  Azure Cosmos DB (MongoDB API)                     │   │
-│  │  - Account: bsg-demo-platform-mongodb              │   │
-│  │  - Database: bsg_demo                               │   │
-│  │  - Collections: users, content, videos, etc.        │   │
-│  └────────────────────────────────────────────────────┘   │
-│                                                              │
-│  ┌────────────────────────────────────────────────────┐   │
-│  │  External Services                                  │   │
-│  │  - Temenos RAG API (tbsg.temenos.com)               │   │
-│  │  - Azure Services (AKS, Resource Groups)           │   │
-│  └────────────────────────────────────────────────────┘   │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Client["CLIENT LAYER"]
+        Frontend["React Frontend<br/>Vite + TypeScript<br/><br/>Port: 3000 (dev)<br/>Static Web App (prod)<br/><br/>Components:<br/>• Integration<br/>• Security<br/>• Deployment<br/>• Observability<br/>• Data Architecture<br/>• Design-Time"]
+    end
+    
+    subgraph Application["APPLICATION LAYER"]
+        Backend["FastAPI Backend<br/>Python 3.11<br/><br/>Port: 8000 (dev)<br/>Azure App Service (prod)<br/><br/>API: /api/v1<br/>Auth: JWT<br/>Middleware: CORS, Rate Limiting"]
+        Adapter["Adapter Layer<br/><br/>• Database Adapter (MongoDB)<br/>• RAG Adapter (Temenos RAG API)"]
+    end
+    
+    subgraph Data["DATA LAYER"]
+        MongoDB["Azure Cosmos DB<br/>MongoDB API<br/><br/>Account: bsg-demo-platform-mongodb<br/>Database: bsg_demo<br/>Collections: users, content, videos"]
+        External["External Services<br/><br/>• Temenos RAG API<br/>• Azure Services (AKS, Resource Groups)"]
+    end
+    
+    Frontend -->|HTTP/REST API| Backend
+    Backend -->|Adapter Pattern| Adapter
+    Adapter --> MongoDB
+    Adapter --> External
+    
+    style Client fill:#e1f5ff
+    style Application fill:#fff4e1
+    style Data fill:#e8f5e9
+    style Frontend fill:#bbdefb
+    style Backend fill:#ffe0b2
+    style Adapter fill:#ffe0b2
+    style MongoDB fill:#c8e6c9
+    style External fill:#c8e6c9
 ```
 
 ## Component Architecture
@@ -263,6 +234,27 @@ POST /api/v1/components/{component-id}/chatbot/query
 
 ### Development Environment
 
+```mermaid
+graph LR
+    subgraph Local["Local Development (Windows)"]
+        DevFrontend["React Dev Server<br/>Port: 3000<br/>http://localhost:3000"]
+        DevBackend["FastAPI + Uvicorn<br/>Port: 8000<br/>http://localhost:8000"]
+    end
+    
+    subgraph Cloud["Azure Cloud"]
+        CloudDB["Azure Cosmos DB<br/>(MongoDB API)<br/>Cloud-hosted"]
+    end
+    
+    DevFrontend -->|API Calls| DevBackend
+    DevBackend -->|MongoDB Connection| CloudDB
+    
+    style Local fill:#e3f2fd
+    style Cloud fill:#f3e5f5
+    style DevFrontend fill:#bbdefb
+    style DevBackend fill:#ffe0b2
+    style CloudDB fill:#c8e6c9
+```
+
 **Local Setup:**
 - Frontend: React dev server on port 3000
 - Backend: FastAPI with Uvicorn on port 8000
@@ -271,11 +263,61 @@ POST /api/v1/components/{component-id}/chatbot/query
 
 ### Production Environment
 
+```mermaid
+graph TB
+    subgraph User["Users"]
+        Browser["Web Browser"]
+    end
+    
+    subgraph Azure["Azure Cloud"]
+        subgraph FrontendService["Azure Static Web Apps"]
+            StaticWebApp["React Frontend<br/>(Static Files)<br/><br/>URL: kind-beach-01c0a990f<br/>.3.azurestaticapps.net<br/><br/>• Global CDN<br/>• Auto SSL<br/>• GitHub Deploy"]
+        end
+        
+        subgraph BackendService["Azure App Service"]
+            AppService["FastAPI Backend<br/>(Python 3.11)<br/><br/>URL: bsg-demo-platform-app<br/>.azurewebsites.net<br/><br/>• Gunicorn + Uvicorn<br/>• Managed Identity<br/>• Auto-scaling"]
+        end
+        
+        subgraph Database["Azure Cosmos DB"]
+            CosmosDB["MongoDB API<br/><br/>Account: bsg-demo-platform-mongodb<br/>Database: bsg_demo<br/><br/>• SSL/TLS<br/>• Global replication"]
+        end
+        
+        subgraph AzureServices["Azure Services"]
+            ResourceManager["Azure Resource Manager<br/><br/>• Resource Groups<br/>• AKS Clusters<br/>• App Services<br/><br/>Access via Managed Identity"]
+        end
+    end
+    
+    subgraph CI["GitHub Actions"]
+        Workflow["Deployment Workflows<br/><br/>• Deploy Static Web App<br/>• Deploy App Service"]
+    end
+    
+    Browser -->|HTTPS| StaticWebApp
+    StaticWebApp -->|API Calls<br/>HTTPS| AppService
+    AppService -->|MongoDB Connection<br/>SSL/TLS| CosmosDB
+    AppService -->|Managed Identity| ResourceManager
+    Workflow -.->|Deploy| StaticWebApp
+    Workflow -.->|Deploy| AppService
+    
+    style User fill:#fff9c4
+    style Azure fill:#e1f5fe
+    style FrontendService fill:#bbdefb
+    style BackendService fill:#ffe0b2
+    style Database fill:#c8e6c9
+    style AzureServices fill:#f8bbd0
+    style CI fill:#f3e5f5
+    style StaticWebApp fill:#90caf9
+    style AppService fill:#ffcc80
+    style CosmosDB fill:#a5d6a7
+    style ResourceManager fill:#f48fb1
+```
+
 **Azure Deployment:**
+
 - **Frontend**: Azure Static Web Apps
   - URL: `https://kind-beach-01c0a990f.3.azurestaticapps.net`
   - Build: Vite production build
   - Deployment: GitHub Actions
+  - Features: Global CDN, automatic SSL, fast content delivery
 
 - **Backend**: Azure App Service (Linux)
   - URL: `https://bsg-demo-platform-app.azurewebsites.net`

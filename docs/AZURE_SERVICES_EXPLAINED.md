@@ -171,62 +171,33 @@ Our application is a **full-stack application** with:
 
 ### How Requests Flow Through the System
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    USER BROWSER                              │
-└───────────────────────────┬─────────────────────────────────┘
-                            │
-                            │ 1. User visits application
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│         Azure Static Web Apps                                │
-│         (Frontend - React)                                  │
-│         https://kind-beach-...azurestaticapps.net            │
-│                                                              │
-│  ✓ Serves HTML, CSS, JavaScript files                        │
-│  ✓ Fast global CDN delivery                                  │
-│  ✓ No server-side processing                                 │
-└───────────────────────────┬─────────────────────────────────┘
-                            │
-                            │ 2. Frontend makes API calls
-                            │    (e.g., /api/v1/components)
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│         Azure App Service                                   │
-│         (Backend - FastAPI)                                │
-│         https://bsg-demo-platform-app.azurewebsites.net   │
-│                                                              │
-│  ✓ Runs Python/FastAPI code                                 │
-│  ✓ Processes API requests                                   │
-│  ✓ Handles business logic                                    │
-└───────────┬─────────────────────┬──────────────────────────┘
-            │                     │
-            │ 3a. Query Database  │ 3b. Query Azure Services
-            ▼                     ▼
-┌──────────────────────┐  ┌──────────────────────────────┐
-│  Azure Cosmos DB     │  │  Azure Resource Manager API  │
-│  (MongoDB)           │  │  (via Managed Identity)     │
-│                      │  │                             │
-│  ✓ Stores data       │  │  ✓ Lists resource groups    │
-│  ✓ User sessions     │  │  ✓ Queries AKS clusters     │
-│  ✓ Content, videos    │  │  ✓ Gets resource details    │
-└──────────────────────┘  └──────────────────────────────┘
-            │                     │
-            │ 4. Return data      │
-            └─────────┬───────────┘
-                      │
-                      ▼
-            ┌─────────────────────┐
-            │  Backend processes  │
-            │  and returns JSON   │
-            └──────────┬──────────┘
-                       │
-                       │ 5. API response
-                       ▼
-            ┌─────────────────────┐
-            │  Frontend receives  │
-            │  data and displays   │
-            └─────────────────────┘
+```mermaid
+sequenceDiagram
+    participant User as User Browser
+    participant SWA as Azure Static Web Apps<br/>(Frontend - React)
+    participant App as Azure App Service<br/>(Backend - FastAPI)
+    participant DB as Azure Cosmos DB<br/>(MongoDB)
+    participant Azure as Azure Resource Manager<br/>(via Managed Identity)
+    
+    User->>SWA: 1. Visit application<br/>(HTTPS)
+    Note over SWA: Serves HTML, CSS, JS files<br/>Fast global CDN delivery<br/>No server-side processing
+    SWA-->>User: 2. Serve React app
+    
+    User->>SWA: 3. User interacts<br/>(clicks button)
+    SWA->>App: 4. API Request<br/>GET /api/v1/components
+    
+    alt Query Database
+        App->>DB: 5a. Query MongoDB<br/>(SSL/TLS)
+        Note over DB: Stores data<br/>User sessions<br/>Content, videos
+        DB-->>App: 6a. Return data
+    else Query Azure Services
+        App->>Azure: 5b. Query Azure Resources<br/>(Managed Identity)
+        Note over Azure: Lists resource groups<br/>Queries AKS clusters<br/>Gets resource details
+        Azure-->>App: 6b. Return resources
+    end
+    
+    App-->>SWA: 7. JSON Response
+    SWA-->>User: 8. Display data
 ```
 
 ### Example: User Views Components
