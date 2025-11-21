@@ -48,10 +48,6 @@ export function ApiOverview() {
   const [kafkaPrompt, setKafkaPrompt] = useState('What are the Kafka capabilities in Temenos platform for event-driven architecture and messaging, including CloudEvents support?')
   const [publicCatalogPrompt, setPublicCatalogPrompt] = useState('What is the Temenos public API catalog and what are its key capabilities for banks and developers?')
   const [openStandardsPrompt, setOpenStandardsPrompt] = useState('Elaborate about API and related open standards such as Berlin Group, OpenAPI and PSD2')
-  const [businessLogicTooltipContent, setBusinessLogicTooltipContent] = useState<string>('')
-  const [businessLogicTooltipLoading, setBusinessLogicTooltipLoading] = useState(true)
-  const [showBusinessLogicTooltip, setShowBusinessLogicTooltip] = useState(false)
-  const [businessLogicTooltipPinned, setBusinessLogicTooltipPinned] = useState(false)
 
   const tooltips: TooltipConfig[] = [
     {
