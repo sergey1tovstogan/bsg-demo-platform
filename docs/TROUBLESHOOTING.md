@@ -10,18 +10,58 @@ If you see "Unable to connect to Azure" errors when using the web app (not local
    - Go to: https://portal.azure.com
    - Navigate to: App Services → `bsg-demo-platform-app` → Identity
    - Under "System assigned" tab, click "On" → Save
-   - Copy the **Object (principal) ID**
+   - Copy the **Object (principal) ID** (e.g., `12e9c273-f0f7-4e0b-bdf8-bf950544d4db`)
 
-2. **Grant Reader Role to Managed Identity:**
+2. **Grant Reader Role to Managed Identity at Subscription Level:**
+   
+   **Important**: The role must be assigned at the **subscription level**, not the resource group level.
+   
    ```bash
    az role assignment create \
      --assignee <principal-id> \
      --role "Reader" \
      --scope /subscriptions/<subscription-id>
    ```
+   
+   **Example:**
+   ```bash
+   az role assignment create \
+     --assignee 12e9c273-f0f7-4e0b-bdf8-bf950544d4db \
+     --role "Reader" \
+     --scope /subscriptions/58a91cf0-0f39-45fd-a63e-5a9a28c7072b
+   ```
+   
+   **Verify the assignment:**
+   ```bash
+   az role assignment list \
+     --assignee <principal-id> \
+     --scope /subscriptions/<subscription-id> \
+     --query "[].{Role:roleDefinitionName, Scope:scope}"
+   ```
 
 3. **Restart the App Service:**
    - In Azure Portal: App Services → `bsg-demo-platform-app` → Restart
+   - Or via CLI:
+     ```bash
+     az webapp restart --name bsg-demo-platform-app --resource-group <resource-group-name>
+     ```
+
+### Additional Permissions for AKS Access
+
+If you need to discover AKS namespaces and pods, the Managed Identity needs additional permissions:
+
+1. **Azure Kubernetes Service Cluster User Role:**
+   ```bash
+   az role assignment create \
+     --assignee <principal-id> \
+     --role "Azure Kubernetes Service Cluster User Role" \
+     --scope /subscriptions/<subscription-id>/resourceGroups/<aks-resource-group>/providers/Microsoft.ContainerService/managedClusters/<cluster-name>
+   ```
+
+2. **Note on AKS Namespace Discovery:**
+   - **Local Development**: Works because `kubectl` and Azure CLI are available
+   - **Azure App Service**: Currently requires `kubectl` to be installed (not available by default)
+   - **Workaround**: The application will show "No namespaces found" in Azure App Service until `kubectl` is installed or the code is updated to use Kubernetes Python client library
 
 ### Option 2: Use Service Principal
 
@@ -173,6 +213,46 @@ Check the latest GitHub Actions run:
 2. Click on the latest "Deploy to Azure App Service" run
 3. Check for any errors in the workflow steps
 4. Verify all steps completed successfully
+
+## AKS Namespace Discovery Issues
+
+### Issue: "No namespaces found" in Azure App Service
+
+**Problem**: AKS namespace discovery works locally but shows "No namespaces found" when deployed to Azure App Service.
+
+**Root Cause**: 
+- The AKS service uses `kubectl` and Azure CLI (`az aks get-credentials`) to retrieve namespaces
+- `kubectl` and Azure CLI are not installed in Azure App Service by default
+- The code needs to be updated to use the Kubernetes Python client library instead
+
+**Current Status**:
+- ✅ **Local Development**: Works because `kubectl` and Azure CLI are installed
+- ❌ **Azure App Service**: Fails because `kubectl` is not available
+
+**Solutions**:
+
+#### Option 1: Install kubectl in Azure App Service (Temporary Workaround)
+
+1. **Add a startup script** to install `kubectl`:
+   - Create a script that downloads and installs `kubectl`
+   - Add it to the App Service startup command
+   - This is a temporary workaround and not recommended for production
+
+#### Option 2: Use Kubernetes Python Client (Recommended - Future Fix)
+
+The code should be updated to:
+1. Use `azure.mgmt.containerservice` to get cluster admin credentials
+2. Use `kubernetes` Python client library to query the cluster API directly
+3. This eliminates the need for `kubectl` and Azure CLI
+
+**Required Permissions**:
+- Managed Identity needs "Azure Kubernetes Service Cluster User Role" on each AKS cluster
+- Or "Azure Kubernetes Service Cluster Admin Role" for admin access
+
+**Current Workaround**:
+- Namespace discovery will not work in Azure App Service until the code is updated
+- You can still analyze Azure resources (App Services, Storage Accounts, etc.)
+- AKS pods will not be discovered automatically
 
 ## Common Issues
 

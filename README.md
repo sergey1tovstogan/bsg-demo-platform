@@ -92,6 +92,7 @@ For detailed structure, see [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE
 For detailed documentation, see:
 - [Architecture Documentation](./docs/ARCHITECTURE.md)
 - [Usage Guide](./docs/USAGE.md)
+- [Azure Configuration Guide](./docs/AZURE_CONFIGURATION.md)
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md)
 
 ---

@@ -129,7 +129,7 @@ The **Deployment** component includes an Azure Deployment Analyzer:
 - Automatic Temenos component identification
 - RAG-powered component information
 - Azure resource analysis
-- Kubernetes namespace discovery
+- Kubernetes namespace discovery (local development only - see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for Azure App Service limitations)
 
 ### BSG-Guru Chatbot
 

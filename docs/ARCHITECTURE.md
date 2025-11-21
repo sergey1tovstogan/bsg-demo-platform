@@ -282,11 +282,25 @@ POST /api/v1/components/{component-id}/chatbot/query
   - Runtime: Python 3.11
   - Server: Gunicorn with Uvicorn workers
   - Deployment: GitHub Actions
+  - **Authentication**: System-Assigned Managed Identity
+  - **Permissions**: Reader role at subscription level (required for Azure resource access)
 
 - **Database**: Azure Cosmos DB (MongoDB API)
   - Account: `bsg-demo-platform-mongodb`
   - Connection: SSL/TLS encrypted
   - Resource Group: `bsg-demo-platform`
+
+**Azure Authentication Configuration:**
+- **Managed Identity**: Enabled on App Service
+- **Role Assignment**: Reader role at subscription level
+- **Scope**: `/subscriptions/<subscription-id>`
+- **Purpose**: Allows backend to query Azure resources (resource groups, App Services, Storage Accounts, etc.)
+
+**Known Limitations:**
+- **AKS Namespace Discovery**: Currently requires `kubectl` which is not available in Azure App Service
+  - Works in local development (kubectl installed)
+  - Does not work in Azure App Service (kubectl not installed)
+  - Future fix: Use Kubernetes Python client library instead of kubectl
 
 ## Security Architecture
 
