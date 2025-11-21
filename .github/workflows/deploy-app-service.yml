@@ -241,6 +241,21 @@ jobs:
           echo ""
           echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
       
+      - name: Enable Managed Identity
+        run: |
+          echo "Enabling System-Assigned Managed Identity for Azure App Service..."
+          az webapp identity assign \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --output none || echo "⚠ Managed Identity may already be enabled or failed to enable"
+          echo "✓ Managed Identity configuration attempted"
+          echo ""
+          echo "⚠ IMPORTANT: After deployment, grant the Managed Identity 'Reader' role on the subscription:"
+          echo "   az role assignment create \\"
+          echo "     --assignee <principal-id> \\"
+          echo "     --role 'Reader' \\"
+          echo "     --scope /subscriptions/<subscription-id>"
+      
       - name: Configure Python Version
         run: |
           echo "Setting Python version to 3.11..."
