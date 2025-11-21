@@ -511,12 +511,9 @@ export function IntegrationDemo() {
                             href="https://temenosgroup.sharepoint.com/:v:/g/temenosteams/Technical_BSG/ER35J-t0eCpBvEOfodqJ_JkBWvD27X2p1U6N7Kmcfd7cuA?e=WG9tsW"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center space-x-1 text-xs text-purple-700 hover:text-purple-900 font-medium hover:underline transition-colors"
+                            className="text-xs text-purple-700 hover:text-purple-900 font-medium underline transition-colors"
                           >
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
-                            </svg>
-                            <span>Intro on payment validation via Extensibility Framework</span>
+                            Intro on payment validation via Extensibility Framework
                           </a>
                         </div>
                       </div>
