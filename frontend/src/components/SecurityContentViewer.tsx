@@ -4330,6 +4330,541 @@ const SaaSDataAccessControlHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
+// SaaS PAM HTML Content
+const SaaSPAMHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS Privileged Access Management (PAM)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 80px 40px 100px 40px;
+            gap: 20px;
+        }
+        
+        .left-section {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        .left-section .bullet-list {
+            max-width: 100%;
+        }
+        
+        .bullet-list {
+            list-style-type: disc;
+            padding-left: 25px;
+            font-size: 16px;
+            color: #000;
+            line-height: 2;
+        }
+        
+        .bullet-list li {
+            margin-bottom: 15px;
+        }
+        
+        .right-section {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            width: 100%;
+        }
+        
+        .concentric-circles {
+            position: relative;
+            width: 800px;
+            height: 400px;
+        }
+        
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid #000;
+        }
+        
+        .circle-1 {
+            width: 400px;
+            height: 400px;
+            top: 0;
+            left: 0;
+            background: #14B8A6;
+            border-color: #000;
+        }
+        
+        .circle-2 {
+            width: 320px;
+            height: 320px;
+            top: 40px;
+            left: 40px;
+            background: #1E3A8A;
+            border-color: #000;
+        }
+        
+        .circle-3 {
+            width: 240px;
+            height: 240px;
+            top: 80px;
+            left: 80px;
+            background: #14B8A6;
+            border-color: #000;
+        }
+        
+        .circle-4 {
+            width: 160px;
+            height: 160px;
+            top: 120px;
+            left: 120px;
+            background: #1E3A8A;
+            border-color: #000;
+        }
+        
+        .circle-5 {
+            width: 80px;
+            height: 80px;
+            top: 160px;
+            left: 160px;
+            background: #ffffff;
+            border-color: #000;
+        }
+        
+        .center-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #ffffff;
+            border-radius: 50%;
+            top: 196px;
+            left: 196px;
+            z-index: 10;
+        }
+        
+        .circle-label {
+            position: absolute;
+            font-size: 16px;
+            color: #8B00FF;
+            font-weight: bold;
+        }
+        
+        .circle-label-1 {
+            left: 420px;
+            top: 180px;
+        }
+        
+        .circle-label-2 {
+            left: 420px;
+            top: 140px;
+        }
+        
+        .circle-label-3 {
+            left: 420px;
+            top: 100px;
+            font-weight: bold;
+        }
+        
+        .circle-label-4 {
+            left: 420px;
+            top: 60px;
+        }
+        
+        .circle-label-5 {
+            left: 420px;
+            top: 20px;
+        }
+        
+        .connecting-line {
+            position: absolute;
+            stroke: #000;
+            stroke-width: 2;
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos SaaS Privileged Access Management (PAM)</div>
+    
+    <div class="main-container">
+        <!-- Left Section: Bullet Points -->
+        <div class="left-section">
+            <ul class="bullet-list">
+                <li>PAMS for support users with higher privileges</li>
+                <li>Strict access control and network boundary to SaaS service components</li>
+                <li>Operational access to client environments and infrastructure controlled via PIM/PAM using Azure Entra and MFA authentication</li>
+                <li>Administrative access controlled via Delinea / CyberArk platform from Temenos Cloud Operations</li>
+                <li>All users' sessions are recorded and auditable</li>
+                <li>All production cloud infrastructure is security monitored by the SOC</li>
+                <li>Monitored Data Loss Prevention on all endpoints within Temenos</li>
+            </ul>
+        </div>
+        
+        <!-- Right Section: Concentric Circles -->
+        <div class="right-section">
+            <div class="concentric-circles">
+                <svg width="800" height="400" style="position: absolute; top: 0; left: 0; z-index: 1;">
+                    <!-- Connecting lines from circles to labels -->
+                    <line x1="400" y1="200" x2="420" y2="200" stroke="#ff0000" stroke-width="2" />
+                    <line x1="320" y1="160" x2="420" y2="160" stroke="#ff0000" stroke-width="2" />
+                    <line x1="240" y1="120" x2="420" y2="120" stroke="#ff0000" stroke-width="2" />
+                    <line x1="160" y1="80" x2="420" y2="80" stroke="#ff0000" stroke-width="2" />
+                    <line x1="200" y1="200" x2="420" y2="40" stroke="#ff0000" stroke-width="2" />
+                </svg>
+                
+                <div class="circle circle-1"></div>
+                <div class="circle circle-2"></div>
+                <div class="circle circle-3"></div>
+                <div class="circle circle-4"></div>
+                <div class="circle circle-5"></div>
+                <div class="center-dot"></div>
+                
+                <div class="circle-label circle-label-1">SaaS Environment</div>
+                <div class="circle-label circle-label-2">Azure Sentinel Security Monitoring</div>
+                <div class="circle-label circle-label-3">Privileged Access Management</div>
+                <div class="circle-label circle-label-4">Privileged Identity Management</div>
+                <div class="circle-label circle-label-5">Temenos Cloud Operations</div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showProtectCriticalAssets'}, '*');">Protect Critical Assets</button>
+</body>
+</html>`
+
+// Protect Assets HTML Content
+const ProtectAssetsHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Protect Assets</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 2px;
+            padding: 80px 20px 20px 20px;
+            background: #000;
+        }
+        
+        .section {
+            background: #ffffff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .section-number {
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 15px;
+            min-width: 30px;
+        }
+        
+        .section-description {
+            font-size: 16px;
+            color: #000;
+            line-height: 1.4;
+            flex: 1;
+        }
+        
+        .section-measures {
+            list-style-type: disc;
+            padding-left: 45px;
+            font-size: 14px;
+            color: #000;
+            line-height: 1.6;
+        }
+        
+        .section-measures li {
+            margin-bottom: 8px;
+        }
+        
+        .section-1 {
+            border-left: 4px solid #ff0000;
+        }
+        
+        .section-1 .section-number {
+            color: #ff0000;
+        }
+        
+        .section-2 {
+            border-left: 4px solid #ff8c00;
+        }
+        
+        .section-2 .section-number {
+            color: #ff8c00;
+        }
+        
+        .section-3 {
+            border-left: 4px solid #ffd700;
+        }
+        
+        .section-3 .section-number {
+            color: #ffd700;
+        }
+        
+        .section-4 {
+            border-left: 4px solid #1E3A8A;
+        }
+        
+        .section-4 .section-number {
+            color: #1E3A8A;
+        }
+        
+        .concentric-circles-container {
+            position: absolute;
+            top: 50%;
+            right: 50px;
+            transform: translateY(-50%);
+            width: 300px;
+            height: 300px;
+        }
+        
+        .concentric-circles {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+        
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .circle-1 {
+            width: 80px;
+            height: 80px;
+            top: 110px;
+            left: 110px;
+            background: #ff0000;
+        }
+        
+        .circle-2 {
+            width: 140px;
+            height: 140px;
+            top: 80px;
+            left: 80px;
+            background: #ff8c00;
+        }
+        
+        .circle-3 {
+            width: 200px;
+            height: 200px;
+            top: 50px;
+            left: 50px;
+            background: #ffd700;
+        }
+        
+        .circle-4 {
+            width: 300px;
+            height: 300px;
+            top: 0;
+            left: 0;
+            background: #1E3A8A;
+        }
+        
+        .circle-number {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .circle-1 .circle-number {
+            bottom: 5px;
+            left: 5px;
+        }
+        
+        .circle-2 .circle-number {
+            bottom: 10px;
+            left: 10px;
+        }
+        
+        .circle-3 .circle-number {
+            bottom: 15px;
+            left: 15px;
+        }
+        
+        .circle-4 .circle-number {
+            bottom: 20px;
+            left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Protect Assets</div>
+    
+    <div class="main-container">
+        <!-- Section 1: Client data -->
+        <div class="section section-1">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <div class="section-description">Access is strictly limited, audited, lifecycle managed, and encrypted.</div>
+            </div>
+            <ul class="section-measures">
+                <li>Data scrambling present in Temenos Products</li>
+                <li>TDE implemented for Hyperscaler DB</li>
+                <li>Options include leveraging third-party integration (exate)</li>
+            </ul>
+        </div>
+        
+        <!-- Section 2: Compute Infrastructure -->
+        <div class="section section-2">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <div class="section-description">Built to secure standards, vulnerabilities minimized, access restricted.</div>
+            </div>
+            <ul class="section-measures">
+                <li>Minimizing privileges in Cloud Operations</li>
+                <li>Preventing Public Exposure of Services</li>
+                <li>Logging Standards to improve incident detection/response</li>
+            </ul>
+        </div>
+        
+        <!-- Section 3: Cloud Operations -->
+        <div class="section section-3">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <div class="section-description">Safe operating environment, mature processes, highly available.</div>
+            </div>
+            <ul class="section-measures">
+                <li>Cloud Operations networks segregated from Corporate</li>
+                <li>Standard operating procedures in place</li>
+                <li>Enhancing Cloud Operations Processes</li>
+            </ul>
+        </div>
+        
+        <!-- Section 4: Temenos Corporate IT -->
+        <div class="section section-4">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <div class="section-description">Safe development to protect integrity of product and operations.</div>
+            </div>
+            <ul class="section-measures">
+                <li>Last-generation authentication standards</li>
+                <li>Network and servers centrally managed</li>
+                <li>Consistent approach to security controls, change management, patching or monitoring</li>
+            </ul>
+        </div>
+        
+        <!-- Concentric Circles Graphic -->
+        <div class="concentric-circles-container">
+            <div class="concentric-circles">
+                <div class="circle circle-4">
+                    <div class="circle-number">4</div>
+                </div>
+                <div class="circle circle-3">
+                    <div class="circle-number">3</div>
+                </div>
+                <div class="circle circle-2">
+                    <div class="circle-number">2</div>
+                </div>
+                <div class="circle circle-1">
+                    <div class="circle-number">1</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`
+
 export function SecurityContentViewer() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
@@ -4337,6 +4872,8 @@ export function SecurityContentViewer() {
   const [showExate, setShowExate] = useState(false)
   const [showSaaSDefenceDepth, setShowSaaSDefenceDepth] = useState(false)
   const [showSaaSDataAccessControl, setShowSaaSDataAccessControl] = useState(false)
+  const [showSaaSPAM, setShowSaaSPAM] = useState(false)
+  const [showProtectAssets, setShowProtectAssets] = useState(false)
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6) {
@@ -4351,6 +4888,8 @@ export function SecurityContentViewer() {
     setShowExate(false)
     setShowSaaSDefenceDepth(false)
     setShowSaaSDataAccessControl(false)
+    setShowSaaSPAM(false)
+    setShowProtectAssets(false)
   }
 
   const handleBackToArchitecture = () => {
@@ -4374,6 +4913,12 @@ export function SecurityContentViewer() {
       }
       if (event.data && event.data.type === 'showSaaSAccessData') {
         setShowSaaSDataAccessControl(true)
+      }
+      if (event.data && event.data.type === 'showPAM') {
+        setShowSaaSPAM(true)
+      }
+      if (event.data && event.data.type === 'showProtectCriticalAssets') {
+        setShowProtectAssets(true)
       }
     }
 
@@ -4458,6 +5003,54 @@ export function SecurityContentViewer() {
 
   // Show HTML5 diagram when card 5 is selected
   if (selectedCard === 5) {
+    // Show ProtectAssets if button was clicked
+    if (showProtectAssets) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowProtectAssets(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={ProtectAssetsHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Protect Assets"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show SaaSPAM if button was clicked
+    if (showSaaSPAM) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowSaaSPAM(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={SaaSPAMHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="SaaS PAM"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
     // Show SaaSDataAccessControl if button was clicked
     if (showSaaSDataAccessControl) {
       return (

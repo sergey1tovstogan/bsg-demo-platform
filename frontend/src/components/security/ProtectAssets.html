@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Protect Assets</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 2px;
+            padding: 80px 20px 20px 20px;
+            background: #000;
+        }
+        
+        .section {
+            background: #ffffff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .section-number {
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 15px;
+            min-width: 30px;
+        }
+        
+        .section-description {
+            font-size: 16px;
+            color: #000;
+            line-height: 1.4;
+            flex: 1;
+        }
+        
+        .section-measures {
+            list-style-type: disc;
+            padding-left: 45px;
+            font-size: 14px;
+            color: #000;
+            line-height: 1.6;
+        }
+        
+        .section-measures li {
+            margin-bottom: 8px;
+        }
+        
+        .section-1 {
+            border-left: 4px solid #ff0000;
+        }
+        
+        .section-1 .section-number {
+            color: #ff0000;
+        }
+        
+        .section-2 {
+            border-left: 4px solid #ff8c00;
+        }
+        
+        .section-2 .section-number {
+            color: #ff8c00;
+        }
+        
+        .section-3 {
+            border-left: 4px solid #ffd700;
+        }
+        
+        .section-3 .section-number {
+            color: #ffd700;
+        }
+        
+        .section-4 {
+            border-left: 4px solid #1E3A8A;
+        }
+        
+        .section-4 .section-number {
+            color: #1E3A8A;
+        }
+        
+        .concentric-circles-container {
+            position: absolute;
+            top: 50%;
+            right: 50px;
+            transform: translateY(-50%);
+            width: 300px;
+            height: 300px;
+        }
+        
+        .concentric-circles {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+        
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .circle-1 {
+            width: 80px;
+            height: 80px;
+            top: 110px;
+            left: 110px;
+            background: #ff0000;
+        }
+        
+        .circle-2 {
+            width: 140px;
+            height: 140px;
+            top: 80px;
+            left: 80px;
+            background: #ff8c00;
+        }
+        
+        .circle-3 {
+            width: 200px;
+            height: 200px;
+            top: 50px;
+            left: 50px;
+            background: #ffd700;
+        }
+        
+        .circle-4 {
+            width: 300px;
+            height: 300px;
+            top: 0;
+            left: 0;
+            background: #1E3A8A;
+        }
+        
+        .circle-number {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .circle-1 .circle-number {
+            bottom: 5px;
+            left: 5px;
+        }
+        
+        .circle-2 .circle-number {
+            bottom: 10px;
+            left: 10px;
+        }
+        
+        .circle-3 .circle-number {
+            bottom: 15px;
+            left: 15px;
+        }
+        
+        .circle-4 .circle-number {
+            bottom: 20px;
+            left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Protect Assets</div>
+    
+    <div class="main-container">
+        <!-- Section 1: Client data -->
+        <div class="section section-1">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <div class="section-description">Access is strictly limited, audited, lifecycle managed, and encrypted.</div>
+            </div>
+            <ul class="section-measures">
+                <li>Data scrambling present in Temenos Products</li>
+                <li>TDE implemented for Hyperscaler DB</li>
+                <li>Options include leveraging third-party integration (exate)</li>
+            </ul>
+        </div>
+        
+        <!-- Section 2: Compute Infrastructure -->
+        <div class="section section-2">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <div class="section-description">Built to secure standards, vulnerabilities minimized, access restricted.</div>
+            </div>
+            <ul class="section-measures">
+                <li>Minimizing privileges in Cloud Operations</li>
+                <li>Preventing Public Exposure of Services</li>
+                <li>Logging Standards to improve incident detection/response</li>
+            </ul>
+        </div>
+        
+        <!-- Section 3: Cloud Operations -->
+        <div class="section section-3">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <div class="section-description">Safe operating environment, mature processes, highly available.</div>
+            </div>
+            <ul class="section-measures">
+                <li>Cloud Operations networks segregated from Corporate</li>
+                <li>Standard operating procedures in place</li>
+                <li>Enhancing Cloud Operations Processes</li>
+            </ul>
+        </div>
+        
+        <!-- Section 4: Temenos Corporate IT -->
+        <div class="section section-4">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <div class="section-description">Safe development to protect integrity of product and operations.</div>
+            </div>
+            <ul class="section-measures">
+                <li>Last-generation authentication standards</li>
+                <li>Network and servers centrally managed</li>
+                <li>Consistent approach to security controls, change management, patching or monitoring</li>
+            </ul>
+        </div>
+        
+        <!-- Concentric Circles Graphic -->
+        <div class="concentric-circles-container">
+            <div class="concentric-circles">
+                <div class="circle circle-4">
+                    <div class="circle-number">4</div>
+                </div>
+                <div class="circle circle-3">
+                    <div class="circle-number">3</div>
+                </div>
+                <div class="circle circle-2">
+                    <div class="circle-number">2</div>
+                </div>
+                <div class="circle circle-1">
+                    <div class="circle-number">1</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
