@@ -570,7 +570,13 @@ const SecurityArchitectureHTML = `<!DOCTYPE html>
         
         // Hide tooltip when clicking outside
         document.addEventListener('click', function(e) {
-            if (!tooltip.contains(e.target) && !e.target.classList.contains('clickable')) {
+            const target = e.target;
+            const isTooltipElement = tooltips.some(function(config) {
+                const element = document.getElementById(config.id);
+                return element && element.contains(target);
+            });
+            const isTooltipBox = tooltip && tooltip.contains(target);
+            if (!isTooltipElement && !isTooltipBox) {
                 hideTooltip();
             }
         });
@@ -752,36 +758,59 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
         }
         
         .tooltip {
-            position: absolute;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
             background: white;
-            border: 2px solid #ff0000;
-            border-radius: 4px;
-            padding: 12px;
-            max-width: 500px;
+            border-top: 2px solid #ff0000;
+            border-radius: 0;
+            padding: 15px;
             font-size: 16px;
             line-height: 1.5;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
             z-index: 2000;
             display: none;
-            pointer-events: none;
+            max-height: 300px;
+            overflow-y: auto;
             word-wrap: break-word;
             white-space: pre-wrap;
+            text-align: left;
         }
         
         .tooltip.show {
-            display: block;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
         
         .tooltip-title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: #283054;
+            display: none;
         }
         
         .tooltip-description {
             color: #333;
             font-size: 16px;
+            text-align: left;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .tooltip-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #283054;
+            z-index: 2001;
+        }
+        
+        .tooltip-close:hover {
+            color: #ff0000;
         }
     </style>
 </head>
@@ -789,6 +818,7 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
     <div class="container">
         <div class="title-label">Here is the Temenos Authentication</div>
         <div id="tooltip" class="tooltip">
+            <button class="tooltip-close" id="tooltip-close">&times;</button>
             <div class="tooltip-title" id="tooltip-title"></div>
             <div class="tooltip-description" id="tooltip-description"></div>
         </div>
@@ -927,60 +957,39 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
         const tooltip = document.getElementById('tooltip');
         const tooltipTitle = document.getElementById('tooltip-title');
         const tooltipDescription = document.getElementById('tooltip-description');
+        const tooltipClose = document.getElementById('tooltip-close');
         
         function showTooltip(config, element) {
-            tooltipTitle.textContent = config.title;
-            tooltipDescription.textContent = config.description;
-            tooltip.classList.add('show');
+            if (!tooltip || !tooltipTitle || !tooltipDescription) {
+                console.error('Tooltip elements not found');
+                return;
+            }
             
-            setTimeout(function() {
-                const rect = element.getBoundingClientRect();
-                const containerRect = document.querySelector('.container').getBoundingClientRect();
-                const tooltipRect = tooltip.getBoundingClientRect();
-                
-                let left, top;
-                
-                switch(config.position) {
-                    case 'right':
-                        left = rect.right + 15;
-                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                        break;
-                    case 'left':
-                        left = rect.left - tooltipRect.width - 15;
-                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                        break;
-                    case 'top':
-                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                        top = rect.top - tooltipRect.height - 15;
-                        break;
-                    case 'bottom':
-                    default:
-                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                        top = rect.bottom + 15;
-                        break;
-                }
-                
-                // Ensure tooltip stays within container bounds
-                if (left < containerRect.left) {
-                    left = containerRect.left + 10;
-                }
-                if (left + tooltipRect.width > containerRect.right) {
-                    left = containerRect.right - tooltipRect.width - 10;
-                }
-                if (top < containerRect.top) {
-                    top = containerRect.top + 10;
-                }
-                if (top + tooltipRect.height > containerRect.bottom) {
-                    top = containerRect.bottom - tooltipRect.height - 10;
-                }
-                
-                tooltip.style.left = (left - containerRect.left) + 'px';
-                tooltip.style.top = (top - containerRect.top) + 'px';
-            }, 10);
+            tooltipTitle.textContent = config.title;
+            tooltipDescription.textContent = config.description.replace(/\\\\n/g, '\\n');
+            
+            // Position tooltip at bottom with full width
+            tooltip.style.position = 'fixed';
+            tooltip.style.bottom = '0';
+            tooltip.style.left = '0';
+            tooltip.style.width = '100%';
+            tooltip.style.right = '0';
+            tooltip.style.top = 'auto';
+            
+            // Show tooltip
+            tooltip.style.display = 'block';
+            tooltip.style.visibility = 'visible';
+            tooltip.style.opacity = '1';
+            tooltip.classList.add('show');
         }
         
         function hideTooltip() {
-            tooltip.classList.remove('show');
+            if (tooltip) {
+                tooltip.classList.remove('show');
+                tooltip.style.display = 'none';
+                tooltip.style.visibility = 'hidden';
+                tooltip.style.opacity = '0';
+            }
         }
         
         // Attach click handlers to all elements with tooltips
@@ -989,7 +998,8 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
             if (element) {
                 element.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    if (tooltip.classList.contains('show') && tooltipTitle.textContent === config.title) {
+                    const isSameTooltip = tooltip && tooltip.classList.contains('show') && tooltipTitle && tooltipTitle.textContent === config.title;
+                    if (isSameTooltip) {
                         hideTooltip();
                     } else {
                         showTooltip(config, element);
@@ -997,6 +1007,14 @@ const TemenosAuthenticationHTML = `<!DOCTYPE html>
                 });
             }
         });
+        
+        // Close tooltip handler
+        if (tooltipClose) {
+            tooltipClose.addEventListener('click', function(e) {
+                e.stopPropagation();
+                hideTooltip();
+            });
+        }
         
         // Hide tooltip when clicking outside
         document.addEventListener('click', function(e) {
@@ -1197,35 +1215,60 @@ const TemenosAuthorizationHTML = `<!DOCTYPE html>
         
         /* Tooltip Styles */
         .tooltip {
-            position: absolute;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
             background: white;
-            border: 2px solid #ff0000;
-            border-radius: 8px;
-            padding: 12px 16px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 10000;
+            border-top: 2px solid #ff0000;
+            border-radius: 0;
+            padding: 15px;
+            font-size: 16px;
+            line-height: 1.5;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+            z-index: 2000;
             display: none;
-            max-width: 500px;
-            width: auto;
-            min-width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            text-align: left;
         }
         
         .tooltip.show {
-            display: block;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
         
         .tooltip-title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: #000;
+            display: none;
         }
         
         .tooltip-description {
             color: #333;
             font-size: 16px;
-            line-height: 1.5;
+            line-height: 1;
             white-space: pre-line;
+            text-align: left;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .tooltip-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #283054;
+            z-index: 2001;
+        }
+        
+        .tooltip-close:hover {
+            color: #ff0000;
         }
         
         .clickable {
@@ -1411,6 +1454,7 @@ const TemenosAuthorizationHTML = `<!DOCTYPE html>
     
     <!-- Tooltip Element -->
     <div id="tooltip" class="tooltip">
+        <button class="tooltip-close" id="tooltip-close">&times;</button>
         <div class="tooltip-title" id="tooltip-title"></div>
         <div class="tooltip-description" id="tooltip-description"></div>
     </div>
@@ -1441,60 +1485,39 @@ const TemenosAuthorizationHTML = `<!DOCTYPE html>
         const tooltip = document.getElementById('tooltip');
         const tooltipTitle = document.getElementById('tooltip-title');
         const tooltipDescription = document.getElementById('tooltip-description');
+        const tooltipClose = document.getElementById('tooltip-close');
         
         function showTooltip(config, element) {
-            tooltipTitle.textContent = config.title;
-            tooltipDescription.textContent = config.description;
-            tooltip.classList.add('show');
+            if (!tooltip || !tooltipTitle || !tooltipDescription) {
+                console.error('Tooltip elements not found');
+                return;
+            }
             
-            setTimeout(function() {
-                const rect = element.getBoundingClientRect();
-                const containerRect = document.querySelector('.container').getBoundingClientRect();
-                const tooltipRect = tooltip.getBoundingClientRect();
-                
-                let left, top;
-                
-                switch(config.position) {
-                    case 'right':
-                        left = rect.right + 15;
-                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                        break;
-                    case 'left':
-                        left = rect.left - tooltipRect.width - 15;
-                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                        break;
-                    case 'top':
-                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                        top = rect.top - tooltipRect.height - 15;
-                        break;
-                    case 'bottom':
-                    default:
-                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                        top = rect.bottom + 15;
-                        break;
-                }
-                
-                // Ensure tooltip stays within container bounds
-                if (left < containerRect.left) {
-                    left = containerRect.left + 10;
-                }
-                if (left + tooltipRect.width > containerRect.right) {
-                    left = containerRect.right - tooltipRect.width - 10;
-                }
-                if (top < containerRect.top) {
-                    top = containerRect.top + 10;
-                }
-                if (top + tooltipRect.height > containerRect.bottom - 80) {
-                    top = containerRect.bottom - tooltipRect.height - 90;
-                }
-                
-                tooltip.style.left = (left - containerRect.left) + 'px';
-                tooltip.style.top = (top - containerRect.top) + 'px';
-            }, 10);
+            tooltipTitle.textContent = config.title;
+            tooltipDescription.textContent = config.description.replace(/\\\\n/g, '\\n');
+            
+            // Position tooltip at bottom with full width
+            tooltip.style.position = 'fixed';
+            tooltip.style.bottom = '0';
+            tooltip.style.left = '0';
+            tooltip.style.width = '100%';
+            tooltip.style.right = '0';
+            tooltip.style.top = 'auto';
+            
+            // Show tooltip
+            tooltip.style.display = 'block';
+            tooltip.style.visibility = 'visible';
+            tooltip.style.opacity = '1';
+            tooltip.classList.add('show');
         }
         
         function hideTooltip() {
-            tooltip.classList.remove('show');
+            if (tooltip) {
+                tooltip.classList.remove('show');
+                tooltip.style.display = 'none';
+                tooltip.style.visibility = 'hidden';
+                tooltip.style.opacity = '0';
+            }
         }
         
         // Attach click handlers to all elements with tooltips
@@ -1503,7 +1526,8 @@ const TemenosAuthorizationHTML = `<!DOCTYPE html>
             if (element) {
                 element.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    if (tooltip.classList.contains('show') && tooltipTitle.textContent === config.title) {
+                    const isSameTooltip = tooltip && tooltip.classList.contains('show') && tooltipTitle && tooltipTitle.textContent === config.title;
+                    if (isSameTooltip) {
                         hideTooltip();
                     } else {
                         showTooltip(config, element);
@@ -1512,9 +1536,23 @@ const TemenosAuthorizationHTML = `<!DOCTYPE html>
             }
         });
         
+        // Close tooltip handler
+        if (tooltipClose) {
+            tooltipClose.addEventListener('click', function(e) {
+                e.stopPropagation();
+                hideTooltip();
+            });
+        }
+        
         // Hide tooltip when clicking outside
         document.addEventListener('click', function(e) {
-            if (!tooltip.contains(e.target) && !e.target.classList.contains('clickable') && !e.target.closest('.clickable')) {
+            const target = e.target;
+            const isTooltipElement = tooltips.some(function(config) {
+                const element = document.getElementById(config.id);
+                return element && element.contains(target);
+            });
+            const isTooltipBox = tooltip && tooltip.contains(target);
+            if (!isTooltipElement && !isTooltipBox) {
                 hideTooltip();
             }
         });
@@ -2519,24 +2557,24 @@ const PrivacyEncryptionHTML = `<!DOCTYPE html>
         }
         
         .tooltip {
-            position: absolute;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
             background: white;
-            border: 2px solid #ff0000;
-            border-radius: 4px;
-            padding: 12px;
-            max-width: 500px;
-            width: fit-content;
-            height: fit-content;
+            border-top: 2px solid #ff0000;
+            border-radius: 0;
+            padding: 15px;
             font-size: 16px;
             line-height: 1.5;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
             z-index: 2000;
             display: none;
-            pointer-events: none;
+            max-height: 300px;
+            overflow-y: auto;
             word-wrap: break-word;
             white-space: pre-wrap;
             text-align: left;
-            vertical-align: top;
         }
         
         .tooltip.show {
@@ -2546,17 +2584,32 @@ const PrivacyEncryptionHTML = `<!DOCTYPE html>
         }
         
         .tooltip-title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: #283054;
-            text-align: left;
+            display: none;
         }
         
         .tooltip-description {
             color: #333;
             font-size: 16px;
             text-align: left;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .tooltip-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #283054;
+            z-index: 2001;
+        }
+        
+        .tooltip-close:hover {
+            color: #ff0000;
         }
         
         .section {
@@ -2640,6 +2693,7 @@ const PrivacyEncryptionHTML = `<!DOCTYPE html>
     <button class="exate-button" onclick="window.parent.postMessage({type: 'showExate'}, '*');">eXate (Temenos Exchange) solution</button>
     
     <div id="tooltip" class="tooltip">
+        <button class="tooltip-close" id="tooltip-close">&times;</button>
         <div class="tooltip-title" id="tooltip-title"></div>
         <div class="tooltip-description" id="tooltip-description"></div>
     </div>
@@ -2664,6 +2718,7 @@ const PrivacyEncryptionHTML = `<!DOCTYPE html>
         const tooltip = document.getElementById('tooltip');
         const tooltipTitle = document.getElementById('tooltip-title');
         const tooltipDescription = document.getElementById('tooltip-description');
+        const tooltipClose = document.getElementById('tooltip-close');
         
         function showTooltip(config, element) {
             if (!tooltip || !tooltipTitle || !tooltipDescription) {
@@ -2674,62 +2729,19 @@ const PrivacyEncryptionHTML = `<!DOCTYPE html>
             tooltipTitle.textContent = config.title;
             tooltipDescription.textContent = config.description.replace(/\\\\n/g, '\\n');
             
-            // Hide tooltip first to reset state
-            tooltip.style.display = 'none';
-            tooltip.classList.remove('show');
+            // Position tooltip at bottom with full width
+            tooltip.style.position = 'fixed';
+            tooltip.style.bottom = '0';
+            tooltip.style.left = '0';
+            tooltip.style.width = '100%';
+            tooltip.style.right = '0';
+            tooltip.style.top = 'auto';
             
-            // Show tooltip temporarily to measure
+            // Show tooltip
             tooltip.style.display = 'block';
-            tooltip.style.visibility = 'hidden';
-            tooltip.style.opacity = '0';
-            tooltip.style.position = 'absolute';
-            tooltip.style.left = '-9999px';
-            tooltip.style.top = '-9999px';
-            
-            setTimeout(function() {
-                const rect = element.getBoundingClientRect();
-                const container = document.body;
-                const containerRect = container.getBoundingClientRect();
-                const tooltipRect = tooltip.getBoundingClientRect();
-                
-                let left, top;
-                
-                // Position based on config
-                if (config.position === 'right') {
-                    left = rect.right + 15;
-                    top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                } else if (config.position === 'left') {
-                    left = rect.left - tooltipRect.width - 15;
-                    top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                } else if (config.position === 'top') {
-                    left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                    top = rect.top - tooltipRect.height - 15;
-                } else { // bottom
-                    left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                    top = rect.bottom + 15;
-                }
-                
-                // Ensure tooltip stays within container bounds
-                if (left < containerRect.left) {
-                    left = containerRect.left + 10;
-                }
-                if (left + tooltipRect.width > containerRect.right) {
-                    left = containerRect.right - tooltipRect.width - 10;
-                }
-                if (top < containerRect.top) {
-                    top = containerRect.top + 10;
-                }
-                if (top + tooltipRect.height > containerRect.bottom - 80) {
-                    top = containerRect.bottom - tooltipRect.height - 90;
-                }
-                
-                // Position and show tooltip
-                tooltip.style.left = (left - containerRect.left) + 'px';
-                tooltip.style.top = (top - containerRect.top) + 'px';
-                tooltip.style.visibility = 'visible';
-                tooltip.style.opacity = '1';
-                tooltip.classList.add('show');
-            }, 10);
+            tooltip.style.visibility = 'visible';
+            tooltip.style.opacity = '1';
+            tooltip.classList.add('show');
         }
         
         function hideTooltip() {
@@ -2757,6 +2769,14 @@ const PrivacyEncryptionHTML = `<!DOCTYPE html>
                 }
             });
             
+            // Close tooltip handler
+            if (tooltipClose) {
+                tooltipClose.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    hideTooltip();
+                });
+            }
+            
             // Hide tooltip when clicking outside
             document.addEventListener('click', function(e) {
                 const target = e.target;
@@ -2780,14 +2800,1546 @@ const PrivacyEncryptionHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
+// Platform Management HTML Content
+const PlatformManagementHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            width: 100vw;
+            height: 100vh;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .header-label {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #283054;
+            margin-bottom: 30px;
+            padding: 10px;
+            width: 100%;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 600px;
+        }
+        
+        .stacks-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 40px;
+            flex: 1;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .left-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex: 1;
+            max-width: 400px;
+            border: 3px solid red;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .layer {
+            padding: 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            color: white;
+            text-align: left;
+            position: relative;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .layer-secure-dev {
+            background-color: #9370DB;
+        }
+        
+        .layer-auth {
+            background-color: #87CEEB;
+            color: #26619C;
+        }
+        
+        .layer-access {
+            background-color: #DF73FF;
+            color: #26619C;
+        }
+        
+        .layer-privacy {
+            background-color: #4682B4;
+        }
+        
+        .layer-monitoring {
+            background-color: #9370DB;
+        }
+        
+        .layer-application {
+            background-color: #20B2AA;
+            color: black;
+            font-size: 20px;
+        }
+        
+        .layer-label-right {
+            position: absolute;
+            right: 20px;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        
+        .plus-sign {
+            font-size: 48px;
+            font-weight: bold;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            position: absolute;
+            z-index: 10;
+        }
+        
+        .plus-1 {
+            left: calc(50% - 30px);
+            top: 280px;
+        }
+        
+        .plus-3 {
+            left: calc(50% - 30px);
+            bottom: 200px;
+        }
+        
+        .right-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex: 1;
+            max-width: 500px;
+            border: 3px solid red;
+            padding: 10px;
+            border-radius: 8px;
+            position: relative;
+        }
+        
+        .right-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .right-box {
+            padding: 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            color: white;
+            text-align: center;
+            background-color: #283054;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .right-box-cloud {
+            background-color: #20B2AA;
+            color: black;
+            font-size: 20px;
+        }
+        
+        .right-section-top {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .right-section-middle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .right-section-top .right-box {
+            background-color: #DF73FF;
+            color: #26619C;
+        }
+        
+        .right-section-middle .right-box {
+            background-color: #DF73FF;
+            color: #26619C;
+        }
+        
+        .assurance-layer {
+            background-color: #20B2AA;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: -10px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .assurance-items {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        
+        .assurance-item {
+            padding: 5px 10px;
+            font-size: 16px;
+        }
+        
+        .saas-button {
+            position: absolute;
+            bottom: -80px;
+            right: 0;
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .saas-button:hover {
+            background-color: #cc0000;
+        }
+        
+        @media (max-width: 1024px) {
+            .stacks-container {
+                flex-direction: column;
+            }
+            
+            .plus-sign {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-label">Temenos SaaS Platform Management</div>
+    
+    <div class="main-container">
+        <div class="stacks-container">
+            <!-- Left Stack: Application Security Layers -->
+            <div class="left-stack">
+                <div class="layer layer-application">
+                    Application
+                </div>
+                
+                <div class="layer layer-secure-dev">
+                    Secure<br>Development<br>Lifecycle
+                    <span class="layer-label-right">SAST, SCA, DAST<br>Container security<br>OSL</span>
+                </div>
+                
+                <div class="layer layer-auth">
+                    Authentication
+                    <span class="layer-label-right">OpenID Connect, SAML 2.0</span>
+                </div>
+                
+                <div class="layer layer-access">
+                    Access Control
+                    <span class="layer-label-right">RBAC</span>
+                </div>
+                
+                <div class="layer layer-privacy">
+                    Privacy
+                    <span class="layer-label-right">TLS TDE</span>
+                </div>
+                
+                <div class="layer layer-monitoring">
+                    Monitoring
+                    <span class="layer-label-right">Logs Meters Traces</span>
+                </div>
+            </div>
+            
+            <!-- Plus Signs -->
+            <div class="plus-sign plus-1">+</div>
+            <div class="plus-sign plus-3">+</div>
+            
+            <!-- Right Stack: Cloud Infrastructure & Security -->
+            <div class="right-stack">
+                <!-- Top Section -->
+                <div class="right-section">
+                    <div class="right-box right-box-cloud">Cloud Infrastructure</div>
+                </div>
+                
+                <!-- Middle Section -->
+                <div class="right-section right-section-top">
+                    <div class="right-box">Cloud Native Security</div>
+                    <div class="right-box">Platform Security</div>
+                    <div class="right-box">Encryption data at-rest/in-transit</div>
+                    <div class="right-box">Security Patches/Updates</div>
+                </div>
+                
+                <!-- Bottom Section -->
+                <div class="right-section right-section-middle">
+                    <div class="right-box">Secure Operations & Processes</div>
+                    <div class="right-box">Infrastructure / Cloud Monitoring</div>
+                </div>
+                
+                <!-- SaaS Defence-in-Depth Button -->
+                <button class="saas-button" onclick="window.parent.postMessage({type: 'showSaaSDefenceDepth'}, '*');">SaaS Defence-in-Depth</button>
+            </div>
+        </div>
+        
+        <!-- Assurance Layer -->
+        <div class="assurance-layer">
+            Internal & External Assurance
+            <div class="assurance-items">
+                <div class="assurance-item">Penetration Testing</div>
+                <div class="assurance-item">Vulnerability Management</div>
+                <div class="assurance-item">Client Audits and Testing</div>
+                <div class="assurance-item">SOC Audits</div>
+                <div class="assurance-item">Internal Audit</div>
+                <div class="assurance-item">Process</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`
+
+// SaaS Defence-in-Depth HTML Content
+const SaaSDefenceDepthHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Defence-in-Depth</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            width: 100vw;
+            height: 100vh;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .header-label {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #283054;
+            margin-bottom: 30px;
+            padding: 10px;
+            width: 100%;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 40px;
+            padding: 20px;
+            position: relative;
+            min-height: 600px;
+        }
+        
+        .layers-section {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            min-height: 500px;
+            margin-left: 0px;
+        }
+        
+        .concentric-circles {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #722F37;
+        }
+        
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid red;
+        }
+        
+        .circle-dot {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background-color: red;
+            border-radius: 50%;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .circle-1 {
+            width: 500px;
+            height: 500px;
+            background-color: #B0E0E6;
+            z-index: 1;
+        }
+        
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            background-color: #20B2AA;
+            z-index: 2;
+            transform: translateY(50px);
+        }
+        
+        .circle-3 {
+            width: 300px;
+            height: 300px;
+            background-color: #9370DB;
+            z-index: 3;
+            transform: translateY(100px);
+        }
+        
+        .circle-4 {
+            width: 200px;
+            height: 200px;
+            background-color: #4682B4;
+            z-index: 4;
+            transform: translateY(150px);
+        }
+        
+        .circle-5 {
+            width: 120px;
+            height: 120px;
+            background-color: #C7D5E0;
+            z-index: 5;
+            transform: translateY(190px);
+        }
+        
+        .circle-label {
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            color: #722F37;
+            margin-top: 10px;
+        }
+        
+        .circle-1 .circle-label {
+            transform: translateY(-210px);
+        }
+        
+        .circle-2 .circle-label {
+            transform: translateY(-160px);
+        }
+        
+        .circle-3 .circle-label {
+            transform: translateY(-100px);
+        }
+        
+        .circle-4 .circle-label {
+            transform: translateY(-65px);
+        }
+        
+        .circle-5 .circle-label {
+            color: #722F37;
+            font-size: 12px;
+        }
+        
+        .data-label {
+            font-size: 12px;
+            color: white;
+            margin-top: 5px;
+        }
+        
+        .labels-section {
+            flex: 0 0 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            padding: 20px;
+            justify-content: center;
+        }
+        
+        .label-item {
+            font-size: 14px;
+            color: #283054;
+            padding: 8px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            text-align: left;
+        }
+        
+        .labels-section .label-item:first-child {
+            font-weight: bold;
+        }
+        
+        .risk-section {
+            flex: 0 0 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+            transform: rotate(180deg);
+        }
+        
+        .risk-cone {
+            width: 80px;
+            height: 400px;
+            position: relative;
+            margin-bottom: 10px;
+        }
+        
+        .risk-cone-gradient {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #B0E0E6 0%, #20B2AA 25%, #9370DB 50%, #4682B4 75%, #283054 100%);
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+        }
+        
+        .risk-arrow {
+            position: absolute;
+            right: -30px;
+            top: 50%;
+            transform: translateY(-50%) rotate(180deg);
+            font-size: 24px;
+            color: red;
+        }
+        
+        .risk-label {
+            font-size: 20px;
+            font-weight: bold;
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+            transform: rotate(180deg);
+        }
+        
+        .tooltip-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            border-top: 2px solid red;
+            padding: 15px;
+            z-index: 1000;
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .tooltip-container.show {
+            display: block;
+        }
+        
+        .tooltip-title {
+            display: none;
+        }
+        
+        .tooltip-description {
+            font-size: 16px;
+            color: #283054;
+            text-align: left;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .tooltip-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #283054;
+        }
+        
+        .clickable-element {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-label">SaaS Defence-in-Depth</div>
+    
+    <div class="main-container">
+        <!-- Concentric Circles Section -->
+        <div class="layers-section">
+            <div class="concentric-circles clickable-element" id="concentric-circles-element">
+                <!-- Circle 1: Administrative Controls -->
+                <div class="circle circle-1">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">Administrative Controls</div>
+                </div>
+                
+                <!-- Circle 2: Physical Controls -->
+                <div class="circle circle-2">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">Physical Controls</div>
+                </div>
+                
+                <!-- Circle 3: Operational Controls -->
+                <div class="circle circle-3">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">Operational Controls</div>
+                </div>
+                
+                <!-- Circle 4: Technical Controls -->
+                <div class="circle circle-4">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">Technical Controls</div>
+                </div>
+                
+                <!-- Circle 5: SaaS Infrastructure & Client Data -->
+                <div class="circle circle-5">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">SaaS Infrastructure & Client Data</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Labels Section -->
+        <div class="labels-section">
+            <div class="label-item">EXAMPLES</div>
+            <div class="label-item">Background checks, vetting</div>
+            <div class="label-item">'Clean' Rooms, Smart Cards, CCTV, Guards</div>
+            <div class="label-item">Deny by Default, Privileged Identity & Access Mgmt.</div>
+            <div class="label-item">Private Networks, Isolation, WAFs, anti-DDOS, DLP</div>
+            <div class="label-item">Database Encryption</div>
+        </div>
+        
+        <!-- Residual Risk Reduction Section -->
+        <div class="risk-section clickable-element" id="residual-risk-element">
+            <div class="risk-cone">
+                <div class="risk-cone-gradient"></div>
+                <div class="risk-arrow">↓</div>
+            </div>
+            <div class="risk-label">Residual risk reduction</div>
+        </div>
+    </div>
+    
+    <!-- Tooltip Container -->
+    <div class="tooltip-container" id="tooltip-container">
+        <button class="tooltip-close" id="tooltip-close">&times;</button>
+        <div class="tooltip-title" id="tooltip-title"></div>
+        <div class="tooltip-description" id="tooltip-description"></div>
+    </div>
+    
+    <script>
+        (function() {
+            const TooltipConfig = function(title, description, position) {
+                this.title = title;
+                this.description = description;
+                this.position = position;
+            };
+            
+            const tooltips = [
+                new TooltipConfig(
+                    'Concentric Circles',
+                    'We implement our security controls in a defence in depth security model. This avoids the reliance on a single control and compensates if one should fail. Each of these layers could go into more detail but this "Onion" model helps illustrate the key concepts. Zero Trust works on the principle that nothing should be trusted and should always be verified. Within this idea there are several technologies and best practices that make up a Zero Trust approach. Here are a few of the main principles: * Least-privilege access, which means only allowing access to the information each individual needs. This limits the ability of malware to jump from one system to another and reduces the chances of internal data exfiltration. * Micro-segmentation divides up a network into separate segments with different access credentials. This increases the means of protection and keeps bad actors from running rampant through the network even if one segment is breached. * Data usage controls limit what people can do with data once they are given access. Increasingly, this is done dynamically, such as revoking permission to copy already-downloaded data off.',
+                    'bottom'
+                ),
+                new TooltipConfig(
+                    'Residual Risk',
+                    'Results in material reduction in overall risk. 1. Reducing the likelihood of possible compromise 2. By reducing the available attack surface that can be exploited So, to mitigate this risk, Temenos has adopted the Zero Trust approach which takes away access from anyone and everyone until the network can be certain who you are. Then, continuously monitors the user and system activities and potentially revokes permissions to copy that data elsewhere',
+                    'bottom'
+                )
+            ];
+            
+            const tooltipContainer = document.getElementById('tooltip-container');
+            const tooltipTitle = document.getElementById('tooltip-title');
+            const tooltipDescription = document.getElementById('tooltip-description');
+            const tooltipClose = document.getElementById('tooltip-close');
+            
+            function showTooltip(config) {
+                if (tooltipTitle && tooltipDescription && tooltipContainer) {
+                    tooltipTitle.textContent = config.title;
+                    tooltipDescription.textContent = config.description;
+                    tooltipContainer.classList.add('show');
+                }
+            }
+            
+            function hideTooltip() {
+                if (tooltipContainer) {
+                    tooltipContainer.classList.remove('show');
+                }
+            }
+            
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initTooltips);
+            } else {
+                initTooltips();
+            }
+            
+            function initTooltips() {
+                // Add click handlers
+                const concentricCirclesElement = document.getElementById('concentric-circles-element');
+                if (concentricCirclesElement) {
+                    concentricCirclesElement.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        showTooltip(tooltips[0]);
+                    });
+                }
+                
+                const residualRiskElement = document.getElementById('residual-risk-element');
+                if (residualRiskElement) {
+                    residualRiskElement.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        showTooltip(tooltips[1]);
+                    });
+                }
+                
+                // Close tooltip handler
+                if (tooltipClose) {
+                    tooltipClose.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        hideTooltip();
+                    });
+                }
+                
+                // Close tooltip when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (tooltipContainer && tooltipContainer.classList.contains('show')) {
+                        const target = e.target;
+                        if (!tooltipContainer.contains(target) && 
+                            !concentricCirclesElement?.contains(target) && 
+                            !residualRiskElement?.contains(target)) {
+                            hideTooltip();
+                        }
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>`
+
+// SaaS Cloud Segregation HTML Content
+const SaaSCloudSegregationHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS Cloud Segregation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 80px 40px 40px 40px;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .columns-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            gap: 30px;
+            flex: 1;
+            padding: 20px 0;
+        }
+        
+        .column {
+            flex: 1;
+            border: 3px solid #9333ea;
+            border-radius: 12px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #ffffff;
+            min-height: 500px;
+            max-width: 400px;
+        }
+        
+        .icon-container {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .icon-cloud {
+            width: 80px;
+            height: 60px;
+            background: transparent;
+            border: 3px solid #333;
+            border-radius: 50px 50px 0 0;
+            position: relative;
+        }
+        
+        .icon-cloud::before {
+            content: '';
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: transparent;
+            border: 3px solid #333;
+            border-radius: 50px;
+            top: -25px;
+            left: 10px;
+        }
+        
+        .icon-cloud::after {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 3px solid #333;
+            border-radius: 50px;
+            top: -20px;
+            right: 10px;
+        }
+        
+        .icon-network {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+        
+        .network-node {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #333;
+            border-radius: 50%;
+        }
+        
+        .network-node-1 {
+            top: 0;
+            left: 30px;
+        }
+        
+        .network-node-2 {
+            top: 20px;
+            left: 10px;
+        }
+        
+        .network-node-3 {
+            top: 20px;
+            right: 10px;
+        }
+        
+        .network-node-4 {
+            top: 40px;
+            left: 20px;
+        }
+        
+        .network-node-5 {
+            top: 40px;
+            right: 20px;
+        }
+        
+        .network-node-6 {
+            bottom: 0;
+            left: 30px;
+        }
+        
+        .network-line {
+            position: absolute;
+            background: #333;
+            height: 2px;
+        }
+        
+        .network-line-1 {
+            width: 30px;
+            top: 10px;
+            left: 30px;
+            transform: rotate(25deg);
+        }
+        
+        .network-line-2 {
+            width: 30px;
+            top: 10px;
+            right: 30px;
+            transform: rotate(-25deg);
+        }
+        
+        .network-line-3 {
+            width: 25px;
+            top: 30px;
+            left: 20px;
+            transform: rotate(45deg);
+        }
+        
+        .network-line-4 {
+            width: 25px;
+            top: 30px;
+            right: 20px;
+            transform: rotate(-45deg);
+        }
+        
+        .network-line-5 {
+            width: 20px;
+            top: 50px;
+            left: 30px;
+        }
+        
+        .icon-database {
+            width: 60px;
+            height: 80px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .database-cylinder {
+            width: 60px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px 10px 0 0;
+            position: relative;
+        }
+        
+        .database-cylinder::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 0;
+            width: 60px;
+            height: 15px;
+            background: #333;
+            border-radius: 0 0 10px 10px;
+        }
+        
+        .title-box {
+            background: #14B8A6;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .main-statement {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            text-align: left;
+            width: 100%;
+        }
+        
+        .examples-list {
+            list-style-type: disc;
+            padding-left: 25px;
+            font-size: 14px;
+            color: #333;
+            line-height: 1.8;
+            width: 100%;
+            text-align: left;
+        }
+        
+        .examples-list li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title-label">Temenos SaaS Cloud Segregation</div>
+        
+        <div class="columns-container">
+            <!-- Column 1: Cloud Subscription -->
+            <div class="column">
+                <div class="icon-container">
+                    <div class="icon-cloud"></div>
+                </div>
+                <div class="title-box">Cloud Subscription</div>
+                <div class="main-statement">
+                    Different cloud subscriptions within the Temenos Cloud EA can be used to segregate data:
+                </div>
+                <ul class="examples-list">
+                    <li>Internal Temenos activities from Client services</li>
+                    <li>Separation of client services for different access control</li>
+                </ul>
+            </div>
+            
+            <!-- Column 2: Network -->
+            <div class="column">
+                <div class="icon-container">
+                    <div class="icon-network">
+                        <div class="network-node network-node-1"></div>
+                        <div class="network-node network-node-2"></div>
+                        <div class="network-node network-node-3"></div>
+                        <div class="network-node network-node-4"></div>
+                        <div class="network-node network-node-5"></div>
+                        <div class="network-node network-node-6"></div>
+                        <div class="network-line network-line-1"></div>
+                        <div class="network-line network-line-2"></div>
+                        <div class="network-line network-line-3"></div>
+                        <div class="network-line network-line-4"></div>
+                        <div class="network-line network-line-5"></div>
+                    </div>
+                </div>
+                <div class="title-box">Network</div>
+                <div class="main-statement">
+                    Virtual networks and subnets can be used to segregate data with NSG defining access controls between subnets:
+                </div>
+                <ul class="examples-list">
+                    <li>Production and non-production services</li>
+                    <li>Network tiers - DMZ, Application and Data tiers</li>
+                    <li>Public and private channels</li>
+                </ul>
+            </div>
+            
+            <!-- Column 3: Database -->
+            <div class="column">
+                <div class="icon-container">
+                    <div class="icon-database">
+                        <div class="database-cylinder"></div>
+                        <div class="database-cylinder"></div>
+                        <div class="database-cylinder"></div>
+                    </div>
+                </div>
+                <div class="title-box">Database</div>
+                <div class="main-statement">
+                    Database segregation can be used to segregate data.
+                </div>
+                <ul class="examples-list">
+                    <li>Different data stores for different environments</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`
+
+// SaaS Access Data HTML Content
+const SaaSAccessDataHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS Access Data</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 80px 60px 120px 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .main-point {
+            margin-bottom: 40px;
+        }
+        
+        .main-point-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 15px;
+            padding-left: 30px;
+            position: relative;
+        }
+        
+        .main-point-title::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            font-size: 24px;
+            color: #000;
+        }
+        
+        .sub-point {
+            font-size: 16px;
+            color: #333;
+            padding-left: 50px;
+            margin-top: 10px;
+        }
+        
+        .sub-point .temenos-red {
+            color: #000;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-decoration-color: #ff0000;
+            text-underline-offset: 3px;
+        }
+        
+        .separator-line {
+            width: 100%;
+            height: 2px;
+            background: #14B8A6;
+            margin: 30px 0;
+        }
+        
+        .footer-bar {
+            background: #14B8A6;
+            color: #ffffff;
+            padding: 20px 40px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+        }
+        
+        .footer-bar .temenos-red {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-decoration-color: #ff0000;
+            text-underline-offset: 3px;
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos SaaS Access Data</div>
+    
+    <div class="main-content">
+        <div class="main-point">
+            <div class="main-point-title">Application (Transact, Wealth, Digital, etc.)</div>
+            <div class="sub-point">Client Controls the access</div>
+        </div>
+        
+        <div class="separator-line"></div>
+        
+        <div class="main-point">
+            <div class="main-point-title">Infrastructure (DB, Network Connections, API Gateway etc.)</div>
+            <div class="sub-point"><span class="temenos-red">Temenos</span> Access and Identity Management (Cloud command centre, NOC and SOC)</div>
+        </div>
+    </div>
+    
+    <div class="footer-bar">
+        NO ONE IN <span class="temenos-red">TEMENOS</span> HAS ACCESS TO CLIENT DATA BY DEFAULT
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showSaaSAccessData'}, '*');">SaaS Data Access Control</button>
+</body>
+</html>`
+
+// SaaS Data Access Control HTML Content
+const SaaSDataAccessControlHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS Data Access Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .section-1 {
+            background: #ADD8E6;
+            padding: 60px 40px 30px 40px;
+            flex: 0 0 auto;
+        }
+        
+        .section-1-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .section-1-content {
+            display: flex;
+            gap: 40px;
+            justify-content: space-around;
+        }
+        
+        .section-1-left,
+        .section-1-right {
+            flex: 1;
+        }
+        
+        .section-1-left p {
+            font-size: 16px;
+            color: #000;
+            margin-bottom: 15px;
+        }
+        
+        .section-1-bullets {
+            list-style-type: disc;
+            padding-left: 25px;
+            font-size: 16px;
+            color: #000;
+            line-height: 1.8;
+        }
+        
+        .section-1-bullets li {
+            margin-bottom: 8px;
+        }
+        
+        .section-2 {
+            background: #E6D9FF;
+            padding: 30px 40px 100px 40px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .section-2-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .section-2-bullets {
+            list-style-type: disc;
+            padding-left: 25px;
+            font-size: 16px;
+            color: #000;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+        
+        .section-2-bullets li {
+            margin-bottom: 10px;
+        }
+        
+        .workflow-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .workflow-box {
+            position: absolute;
+            background: #1E3A8A;
+            color: #ffffff;
+            padding: 15px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 150px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .workflow-box-1 {
+            top: 0;
+            left: 50px;
+        }
+        
+        .workflow-box-2 {
+            top: 120px;
+            left: 50px;
+        }
+        
+        .workflow-box-3 {
+            top: 240px;
+            left: 50px;
+        }
+        
+        .workflow-box-4 {
+            top: 240px;
+            left: 350px;
+        }
+        
+        .workflow-box-5 {
+            top: 120px;
+            left: 350px;
+        }
+        
+        .workflow-box-6 {
+            top: 0;
+            left: 350px;
+        }
+        
+        .workflow-box-7 {
+            top: 0;
+            left: 650px;
+        }
+        
+        .workflow-arrow {
+            position: absolute;
+            stroke: #9333ea;
+            stroke-width: 3;
+            fill: none;
+            marker-end: url(#arrowhead-purple);
+        }
+        
+        .audit-label {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            right: 100px;
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos SaaS Data Access Control</div>
+    
+    <!-- Section 1: 24x7 Cloud Command Centre -->
+    <div class="section-1">
+        <div class="section-1-title">24x7 Cloud Command Centre</div>
+        <div class="section-1-content">
+            <div class="section-1-left">
+                <p>Real-time monitoring to provide:</p>
+                <ul class="section-1-bullets">
+                    <li>Infrastructure Support;</li>
+                    <li>Application Support;</li>
+                </ul>
+            </div>
+            <div class="section-1-right">
+                <ul class="section-1-bullets">
+                    <li>Operation and management of performance tools.</li>
+                    <li>Collection and reporting of performance & availability events and trends;</li>
+                    <li>Responding to performance incidents</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section 2: Privileged Identity Management (PIM) -->
+    <div class="section-2">
+        <div class="section-2-title">Privileged Identity Management (PIM)</div>
+        <ul class="section-2-bullets">
+            <li>Leveraged for infra support users requiring higher privilege login for support and management</li>
+            <li>Access Control is governed by the Cloud Security Team.</li>
+            <li>Default no access to client data, least privilege policy.</li>
+            <li>All access requests tracked in Temenos Service Desk.</li>
+            <li>Infrastructure access is time restricted based on a specific business justification</li>
+            <li>Daily reports from the Temenos Service Desk Ticketing System for monitoring</li>
+            <li>Access is subject to the following approval workflow* :</li>
+        </ul>
+        
+        <div class="workflow-container">
+            <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0; z-index: 1;">
+                <defs>
+                    <marker id="arrowhead-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#9333ea" />
+                    </marker>
+                </defs>
+                
+                <!-- Arrow from workflow-box-1 to workflow-box-2 (bottom center to top center) -->
+                <line x1="125" y1="50" x2="125" y2="120" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-2 to workflow-box-3 (bottom center to top center) -->
+                <line x1="125" y1="170" x2="125" y2="240" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-3 to workflow-box-4 (right center to left center) -->
+                <line x1="200" y1="265" x2="350" y2="265" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-4 to workflow-box-5 (top center to bottom center) -->
+                <line x1="425" y1="240" x2="425" y2="170" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-5 to workflow-box-6 (top center to bottom center) -->
+                <line x1="425" y1="120" x2="425" y2="50" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-6 to workflow-box-7 (right center to left center) -->
+                <line x1="500" y1="25" x2="650" y2="25" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+            </svg>
+            
+            <div class="workflow-box workflow-box-1" style="z-index: 2;">Access Requested</div>
+            <div class="workflow-box workflow-box-2" style="z-index: 2;">Cloud Review</div>
+            <div class="workflow-box workflow-box-3" style="z-index: 2;">Security Review</div>
+            <div class="workflow-box workflow-box-4" style="z-index: 2;">Entitlement Granted</div>
+            <div class="workflow-box workflow-box-5" style="z-index: 2;">Role Activated</div>
+            <div class="workflow-box workflow-box-6" style="z-index: 2;">Work Commences</div>
+            <div class="workflow-box workflow-box-7" style="z-index: 2;">Role Expires / Deactivated</div>
+        </div>
+        
+        <div class="audit-label">*As audited under SOC2, CAIQ</div>
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showPAM'}, '*');">Privileged Access Management PAM</button>
+</body>
+</html>`
+
 export function SecurityContentViewer() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
   const [showUserManagement, setShowUserManagement] = useState(false)
   const [showExate, setShowExate] = useState(false)
+  const [showSaaSDefenceDepth, setShowSaaSDefenceDepth] = useState(false)
+  const [showSaaSDataAccessControl, setShowSaaSDataAccessControl] = useState(false)
 
   const handleCardClick = (cardId: number) => {
-    if (cardId === 1 || cardId === 2 || cardId === 3) {
+    if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6) {
       setSelectedCard(cardId)
     }
   }
@@ -2797,6 +4349,8 @@ export function SecurityContentViewer() {
     setShowDetailedExplanation(false)
     setShowUserManagement(false)
     setShowExate(false)
+    setShowSaaSDefenceDepth(false)
+    setShowSaaSDataAccessControl(false)
   }
 
   const handleBackToArchitecture = () => {
@@ -2814,6 +4368,12 @@ export function SecurityContentViewer() {
       }
       if (event.data && event.data.type === 'showExate') {
         setShowExate(true)
+      }
+      if (event.data && event.data.type === 'showSaaSDefenceDepth') {
+        setShowSaaSDefenceDepth(true)
+      }
+      if (event.data && event.data.type === 'showSaaSAccessData') {
+        setShowSaaSDataAccessControl(true)
       }
     }
 
@@ -2865,6 +4425,128 @@ export function SecurityContentViewer() {
           srcDoc={PrivacyEncryptionHTML}
           className="w-full h-full border-0 rounded-lg"
           title="Privacy & Encryption"
+          sandbox="allow-same-origin allow-scripts"
+          style={{ minHeight: '600px' }}
+        />
+      </div>
+    )
+  }
+
+  // Show HTML5 diagram when card 4 is selected
+  if (selectedCard === 4) {
+    return (
+      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+          >
+            <X className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+        </div>
+        <iframe
+          srcDoc={SaaSCloudSegregationHTML}
+          className="w-full h-full border-0 rounded-lg"
+          title="SaaS Cloud Segregation"
+          sandbox="allow-same-origin allow-scripts"
+          style={{ minHeight: '600px' }}
+        />
+      </div>
+    )
+  }
+
+  // Show HTML5 diagram when card 5 is selected
+  if (selectedCard === 5) {
+    // Show SaaSDataAccessControl if button was clicked
+    if (showSaaSDataAccessControl) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowSaaSDataAccessControl(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={SaaSDataAccessControlHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="SaaS Data Access Control"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show SaaSAccessData by default
+    return (
+      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+          >
+            <X className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+        </div>
+        <iframe
+          srcDoc={SaaSAccessDataHTML}
+          className="w-full h-full border-0 rounded-lg"
+          title="SaaS Access Data"
+          sandbox="allow-same-origin allow-scripts"
+          style={{ minHeight: '600px' }}
+        />
+      </div>
+    )
+  }
+
+  // Show HTML5 diagram when card 6 is selected
+  if (selectedCard === 6) {
+    // Show SaaSDefenceDepth page if button was clicked
+    if (showSaaSDefenceDepth) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowSaaSDefenceDepth(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={SaaSDefenceDepthHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="SaaS Defence-in-Depth"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show PlatformManagement by default
+    return (
+      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+          >
+            <X className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+        </div>
+        <iframe
+          srcDoc={PlatformManagementHTML}
+          className="w-full h-full border-0 rounded-lg"
+          title="Platform Management"
           sandbox="allow-same-origin allow-scripts"
           style={{ minHeight: '600px' }}
         />
