@@ -241,30 +241,8 @@ jobs:
           echo ""
           echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
       
-      - name: Enable Managed Identity
-        run: |
-          echo "Enabling System-Assigned Managed Identity for Azure App Service..."
-          az webapp identity assign \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --output none || echo "⚠ Managed Identity may already be enabled or failed to enable"
-          echo "✓ Managed Identity configuration attempted"
-          echo ""
-          echo "⚠ IMPORTANT: After deployment, grant the Managed Identity 'Reader' role on the subscription:"
-          echo "   az role assignment create \\"
-          echo "     --assignee <principal-id> \\"
-          echo "     --role 'Reader' \\"
-          echo "     --scope /subscriptions/<subscription-id>"
-      
-      - name: Configure Python Version
-        run: |
-          echo "Setting Python version to 3.11..."
-          az webapp config set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --linux-fx-version "PYTHON|3.11" \
-            --output none
-          echo "✓ Python version configured"
+      # Note: Managed Identity and Python version moved to AFTER deployment
+      # to avoid SCM container restart conflicts
       
       - name: Check package size before deployment
         run: |
@@ -287,13 +265,31 @@ jobs:
             echo "  ⚠ Static directory not found!"
           fi
       
-      - name: Wait before deployment (avoid SCM restart conflicts)
+      - name: Wait and verify SCM is ready (avoid restart conflicts)
         run: |
-          echo "Waiting 20 seconds before deployment to avoid SCM container restart conflicts..."
+          echo "Waiting 30 seconds and verifying SCM container is ready..."
           echo ""
-          echo "⚠ Management operations can restart the SCM container."
-          echo "   This short delay prevents deployment conflicts."
-          sleep 20
+          echo "⚠ App settings configuration can restart the SCM container."
+          echo "   We need to wait for it to fully restart before deploying."
+          sleep 30
+          
+          # Try to verify SCM is accessible (optional check)
+          echo "Verifying SCM container is accessible..."
+          SCM_URL="https://${{ env.AZURE_WEBAPP_NAME }}.scm.azurewebsites.net"
+          for i in {1..5}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $SCM_URL || echo "000")
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
+              echo "✓ SCM container is responding (HTTP $HTTP_CODE)"
+              break
+            else
+              echo "SCM check attempt $i/5 returned HTTP $HTTP_CODE, waiting 5 more seconds..."
+              if [ $i -lt 5 ]; then
+                sleep 5
+              fi
+            fi
+          done
+          
+          echo ""
           echo "✓ Ready to deploy"
       
       - name: Deploy to Azure Web App
