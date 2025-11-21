@@ -62,17 +62,16 @@ export function ObservabilityContent() {
         <p className="text-xl" style={{ color: '#475569' }}>{page.body.subtitle}</p>
 
         <div className="bg-white border border-gray-200 rounded-lg p-8 mt-8 text-left shadow-sm">
-          <h2 className="text-2xl font-bold mb-4" style={{ color: '#1e293b' }}>{page.body.story.heading}</h2>
-          <p className="mb-4" style={{ color: '#475569' }}>
-            <span className="font-semibold" style={{ color: '#0d9488' }}>Imagine:</span> {page.body.story.scenario.replace('Imagine: ', '')}
+          <p className="mb-6 text-3xl font-bold" style={{ color: '#1e293b' }}>
+            <span style={{ color: '#0d9488' }}>Imagine:</span> {page.body.story.scenario.replace('Imagine: ', '')}
           </p>
-          <div className="border-l-4 border-red-500 pl-6 mb-4 bg-red-50 py-3">
-            <p style={{ color: '#b91c1c' }}><span className="font-semibold">Monitoring</span> {page.body.story.monitoring.replace('Monitoring tells you: ', 'tells you: ')}</p>
+          <div className="border-l-4 border-red-500 pl-6 mb-6 bg-red-50 py-4">
+            <p className="text-xl" style={{ color: '#b91c1c' }}><span className="font-semibold">Monitoring</span> {page.body.story.monitoring.replace('Monitoring tells you: ', 'tells you: ')}</p>
           </div>
-          <div className="border-l-4 border-teal-600 pl-6 mb-4 bg-teal-50 py-3">
-            <p style={{ color: '#0f766e' }}><span className="font-semibold">Observability</span> {page.body.story.observability.replace('Observability tells you: ', 'tells you: ')}</p>
+          <div className="border-l-4 border-teal-600 pl-6 mb-6 bg-teal-50 py-4">
+            <p className="text-xl" style={{ color: '#0f766e' }}><span className="font-semibold">Observability</span> {page.body.story.observability.replace('Observability tells you: ', 'tells you: ')}</p>
           </div>
-          <p className="italic" style={{ color: '#64748b' }}>{page.body.story.analogy}</p>
+          <p className="italic text-xl" style={{ color: '#64748b' }}>{page.body.story.analogy}</p>
         </div>
 
         <button
