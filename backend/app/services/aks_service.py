@@ -14,6 +14,17 @@ import base64
 import subprocess
 import json
 import re
+import tempfile
+import os
+
+# Kubernetes Python client
+try:
+    from kubernetes import client as k8s_client, config as k8s_config
+    from kubernetes.client.rest import ApiException
+    KUBERNETES_AVAILABLE = True
+except ImportError:
+    KUBERNETES_AVAILABLE = False
+    logger.warning("kubernetes Python client library not available. AKS namespace discovery will use kubectl fallback.")
 
 logger = get_logger(__name__)
 
@@ -549,6 +560,45 @@ class AKSService:
             logger.error(f"Error getting pods from cluster {cluster.name}: {e}", exc_info=True)
             return pods
 
+    async def _get_cluster_kubeconfig(self, resource_group: str, cluster_name: str) -> Optional[str]:
+        """
+        Get cluster admin credentials (kubeconfig) from Azure.
+        
+        Args:
+            resource_group: Resource group name
+            cluster_name: AKS cluster name
+            
+        Returns:
+            Path to temporary kubeconfig file or None if failed
+        """
+        try:
+            logger.info(f"Getting cluster admin credentials for {cluster_name}...")
+            
+            # Get cluster admin credentials from Azure
+            credential_response = self.client.managed_clusters.list_cluster_admin_credentials(
+                resource_group_name=resource_group,
+                resource_name=cluster_name
+            )
+            
+            if not credential_response.kubeconfigs or len(credential_response.kubeconfigs) == 0:
+                logger.error(f"No kubeconfig returned for cluster {cluster_name}")
+                return None
+            
+            # Decode the kubeconfig (it's base64 encoded)
+            kubeconfig_data = base64.b64decode(credential_response.kubeconfigs[0].value).decode('utf-8')
+            
+            # Write to temporary file
+            temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
+            temp_file.write(kubeconfig_data)
+            temp_file.close()
+            
+            logger.info(f"✓ Cluster credentials retrieved and saved to {temp_file.name}")
+            return temp_file.name
+            
+        except Exception as e:
+            logger.error(f"Failed to get cluster credentials: {e}", exc_info=True)
+            return None
+    
     async def list_cluster_namespaces(
         self,
         cluster: AzureResource
@@ -556,31 +606,23 @@ class AKSService:
         """
         List all namespaces in an AKS cluster (excluding system namespaces).
         
+        Uses Kubernetes Python client library if available, falls back to kubectl.
+        
         Args:
             cluster: AKS cluster resource
             
         Returns:
             List of namespace names
         """
-        # CRITICAL: Use both logger AND print for visibility
-        print("=" * 80)
-        print(f"=== FUNCTION ENTRY: list_cluster_namespaces ===")
-        print(f"Cluster name: {cluster.name}")
-        print(f"Cluster ID: {cluster.id}")
-        print(f"Cluster resource group: {cluster.resource_group}")
-        print("=" * 80)
         logger.info("=" * 80)
         logger.info(f"=== FUNCTION ENTRY: list_cluster_namespaces ===")
         logger.info(f"Cluster name: {cluster.name}")
         logger.info(f"Cluster ID: {cluster.id}")
         logger.info(f"Cluster resource group: {cluster.resource_group}")
+        logger.info(f"Kubernetes Python client available: {KUBERNETES_AVAILABLE}")
         logger.info("=" * 80)
         
         namespaces = []
-        
-        logger.info(f"=== STARTING namespace discovery for cluster: {cluster.name} ===")
-        logger.info(f"Cluster ID: {cluster.id}")
-        logger.info(f"Cluster resource group: {cluster.resource_group}")
         
         try:
             # Extract resource group and cluster name
@@ -588,25 +630,61 @@ class AKSService:
             resource_group = id_parts[id_parts.index("resourceGroups") + 1] if "resourceGroups" in id_parts else cluster.resource_group
             cluster_name = cluster.name
             
+            # Try Kubernetes Python client first (works in Azure App Service)
+            if KUBERNETES_AVAILABLE:
+                try:
+                    logger.info(f"Attempting to use Kubernetes Python client library...")
+                    kubeconfig_path = await self._get_cluster_kubeconfig(resource_group, cluster_name)
+                    
+                    if kubeconfig_path:
+                        # Load kubeconfig
+                        k8s_config.load_kube_config(config_file=kubeconfig_path)
+                        
+                        # Create Kubernetes API client
+                        v1 = k8s_client.CoreV1Api()
+                        
+                        # List namespaces
+                        logger.info(f"Querying namespaces using Kubernetes Python client...")
+                        namespace_list = v1.list_namespace()
+                        
+                        # Filter out system namespaces
+                        system_namespaces = {"kube-system", "kube-public", "kube-node-lease", "default"}
+                        for ns in namespace_list.items:
+                            ns_name = ns.metadata.name
+                            if ns_name and ns_name not in system_namespaces:
+                                namespaces.append(ns_name)
+                        
+                        logger.info(f"✓ Found {len(namespaces)} namespaces using Kubernetes Python client: {namespaces}")
+                        
+                        # Clean up temporary kubeconfig file
+                        try:
+                            os.unlink(kubeconfig_path)
+                        except Exception:
+                            pass
+                        
+                        return sorted(namespaces)
+                    else:
+                        logger.warning("Failed to get kubeconfig, falling back to kubectl...")
+                except ApiException as e:
+                    logger.error(f"Kubernetes API error: {e}", exc_info=True)
+                    logger.warning("Falling back to kubectl...")
+                except Exception as e:
+                    logger.error(f"Error using Kubernetes Python client: {e}", exc_info=True)
+                    logger.warning("Falling back to kubectl...")
+            
+            # Fallback to kubectl (for local development or if Kubernetes client failed)
+            logger.info("Using kubectl fallback method...")
+            
             # Check if kubectl is available
             import shutil
-            import os
-            # Find kubectl but use just "kubectl" in commands (works better with subprocess)
             kubectl_path = shutil.which("kubectl") or shutil.which("kubectl.exe")
-            kubectl_cmd = "kubectl"  # Use just the command name, not full path
-            
-            logger.info(f"Checking kubectl availability...")
-            logger.info(f"kubectl path found: {kubectl_path}")
-            logger.info(f"kubectl command will use: {kubectl_cmd}")
+            kubectl_cmd = "kubectl"
             
             if not kubectl_path:
                 if self.is_azure_app_service:
-                    logger.error(f"kubectl not found in PATH! Cannot list namespaces for cluster {cluster_name}")
-                    logger.error("This is expected in Azure App Service - kubectl is not installed by default")
-                    logger.error("AKS namespace discovery requires kubectl, which is not available in Azure App Service")
-                    logger.error("Workaround: The code needs to be updated to use Kubernetes Python client library")
-                    logger.error("For now, namespace discovery will not work in Azure App Service")
-                    logger.error("You can still analyze other Azure resources (App Services, Storage Accounts, etc.)")
+                    logger.error(f"kubectl not found and Kubernetes Python client failed")
+                    logger.error("Cannot list namespaces for cluster {cluster_name}")
+                    logger.error("This should not happen if Kubernetes Python client is properly configured")
                 else:
                     logger.error(f"kubectl not found in PATH! Cannot list namespaces for cluster {cluster_name}")
                     logger.error("To fix: Install kubectl or ensure it's in PATH")
