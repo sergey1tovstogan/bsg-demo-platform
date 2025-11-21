@@ -208,29 +208,23 @@ jobs:
           fi
           
           # Set startup command (with logging for better debugging)
-          # Azure App Service Linux: startup-file should be the full path to the script
-          # The script will be deployed to /home/site/wwwroot/startup.sh
+          # Azure App Service Linux: Use direct command instead of script for better reliability
+          # The startup.sh script is still included in deployment but we use direct command
           echo "Setting startup command..."
+          STARTUP_CMD="gunicorn app.main:app --bind 0.0.0.0:\$PORT --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info --preload"
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "/home/site/wwwroot/startup.sh" \
+            --startup-command "$STARTUP_CMD" \
             --output none
-          echo "✓ Startup command configured to use /home/site/wwwroot/startup.sh"
+          echo "✓ Startup command configured: $STARTUP_CMD"
           
           # Verify startup command was set correctly
           echo "Verifying startup command..."
-          STARTUP_CMD=$(az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query appCommandLine -o tsv 2>/dev/null || echo "Not set")
-          echo "Current startup command: '$STARTUP_CMD'"
-          if [ -z "$STARTUP_CMD" ] || [ "$STARTUP_CMD" = "Not set" ] || [ "$STARTUP_CMD" = "null" ]; then
+          VERIFIED_CMD=$(az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query appCommandLine -o tsv 2>/dev/null || echo "Not set")
+          echo "Verified startup command: '$VERIFIED_CMD'"
+          if [ -z "$VERIFIED_CMD" ] || [ "$VERIFIED_CMD" = "Not set" ] || [ "$VERIFIED_CMD" = "null" ]; then
             echo "⚠ WARNING: Startup command may not be set correctly!"
-            echo "Trying alternative: setting startup command directly..."
-            az webapp config set \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --startup-command "bash /home/site/wwwroot/startup.sh" \
-              --output none
-            echo "✓ Set startup command using --startup-command parameter"
           fi
           
           # Enable Always On (critical for App Service to prevent sleep)
