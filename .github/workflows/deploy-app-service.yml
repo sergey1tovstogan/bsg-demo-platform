@@ -208,16 +208,15 @@ jobs:
           fi
           
           # Set startup command (with logging for better debugging)
-          # Azure App Service Linux: Use direct command instead of script for better reliability
-          # The startup.sh script is still included in deployment but we use direct command
-          echo "Setting startup command..."
-          STARTUP_CMD="gunicorn app.main:app --bind 0.0.0.0:\$PORT --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info --preload"
+          # Azure App Service Linux: Use startup-file to point to startup.sh script
+          # The startup.sh script will be deployed to /home/site/wwwroot/startup.sh
+          echo "Setting startup file..."
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-command "$STARTUP_CMD" \
+            --startup-file "startup.sh" \
             --output none
-          echo "✓ Startup command configured: $STARTUP_CMD"
+          echo "✓ Startup file configured: startup.sh"
           
           # Verify startup command was set correctly
           echo "Verifying startup command..."
@@ -225,6 +224,7 @@ jobs:
           echo "Verified startup command: '$VERIFIED_CMD'"
           if [ -z "$VERIFIED_CMD" ] || [ "$VERIFIED_CMD" = "Not set" ] || [ "$VERIFIED_CMD" = "null" ]; then
             echo "⚠ WARNING: Startup command may not be set correctly!"
+            echo "Note: Startup file should be 'startup.sh' in the deployment root"
           fi
           
           # Enable Always On (critical for App Service to prevent sleep)
