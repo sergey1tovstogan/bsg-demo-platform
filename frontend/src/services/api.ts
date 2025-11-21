@@ -13,25 +13,78 @@ import type {
   ComponentId
 } from '../types'
 
-// Determine API base URL
-// Priority: 1. Environment variable (build-time), 2. Runtime config, 3. Relative path
-const getApiBaseUrl = () => {
-  // Check build-time environment variable (set during npm run build)
-  if (import.meta.env.VITE_API_URL) {
-    const buildTimeUrl = import.meta.env.VITE_API_URL
-    console.log('[API] Using build-time API URL:', buildTimeUrl)
-    return buildTimeUrl
+// Runtime configuration interface
+interface RuntimeConfig {
+  apiUrl: string
+  environment?: string
+}
+
+// Load runtime configuration from config.json
+let runtimeConfig: RuntimeConfig | null = null
+let configLoadPromise: Promise<RuntimeConfig> | null = null
+
+const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
+  if (runtimeConfig) {
+    return runtimeConfig
   }
   
-  // Check runtime configuration (for production deployments)
-  // If we're on Azure Static Web Apps, use the backend App Service URL
+  if (configLoadPromise) {
+    return configLoadPromise
+  }
+  
+  configLoadPromise = (async () => {
+    try {
+      const response = await fetch('/config.json', { cache: 'no-store' })
+      if (response.ok) {
+        const config = await response.json()
+        runtimeConfig = config
+        console.log('[API] Loaded runtime config:', config)
+        return config
+      } else {
+        console.warn('[API] Failed to load config.json, using defaults')
+      }
+    } catch (error) {
+      console.warn('[API] Error loading config.json:', error)
+    }
+    
+    // Default fallback configuration
+    return {
+      apiUrl: '/api/v1',
+      environment: 'development'
+    }
+  })()
+  
+  return configLoadPromise
+}
+
+// Determine API base URL at runtime
+// Priority: 1. Runtime config.json, 2. Environment detection, 3. Default relative path
+const getApiBaseUrl = async (): Promise<string> => {
+  // Load runtime configuration
+  const config = await loadRuntimeConfig()
+  
+  // If config has a full URL, use it
+  if (config.apiUrl && (config.apiUrl.startsWith('http://') || config.apiUrl.startsWith('https://'))) {
+    console.log('[API] Using runtime config API URL:', config.apiUrl)
+    return config.apiUrl
+  }
+  
+  // If config has a relative path, use it
+  if (config.apiUrl) {
+    console.log('[API] Using runtime config relative API URL:', config.apiUrl)
+    return config.apiUrl
+  }
+  
+  // Fallback: Environment detection for Azure Static Web Apps
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname
-    // If on Azure Static Web Apps domain, use the backend App Service URL
+    // If on Azure Static Web Apps domain, construct backend URL
     if (hostname.includes('azurestaticapps.net')) {
-      const runtimeUrl = 'https://bsg-demo-platform-app.azurewebsites.net/api/v1'
-      console.log('[API] Detected Azure Static Web Apps, using runtime URL:', runtimeUrl)
-      return runtimeUrl
+      // Use the same origin for API if backend is proxied, or construct from hostname
+      // For now, default to relative path which works if backend is proxied
+      const defaultUrl = '/api/v1'
+      console.log('[API] Detected Azure Static Web Apps, using relative URL:', defaultUrl)
+      return defaultUrl
     }
   }
   
@@ -41,23 +94,50 @@ const getApiBaseUrl = () => {
   return defaultUrl
 }
 
-const API_BASE_URL = getApiBaseUrl()
-
-// Always log the API base URL (helps with debugging in production)
-console.log('[API] Final API Base URL:', API_BASE_URL)
-console.log('[API] Current hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A')
-
 class ApiService {
   private client: AxiosInstance
+  private baseUrl: string
 
   constructor() {
+    // Initialize with default, will be updated when config loads
+    this.baseUrl = '/api/v1'
     this.client = axios.create({
-      baseURL: API_BASE_URL,
+      baseURL: this.baseUrl,
       headers: {
         'Content-Type': 'application/json',
       },
     })
+    
+    // Setup interceptors
+    this.setupInterceptors()
+    
+    // Load and apply runtime configuration
+    this.initializeConfig()
+  }
+  
+  private async initializeConfig() {
+    if (typeof window === 'undefined') {
+      return // Server-side rendering, skip
+    }
+    
+    try {
+      const url = await getApiBaseUrl()
+      this.baseUrl = url
+      this.client.defaults.baseURL = url
+      console.log('[API] Initialized with base URL:', url)
+      console.log('[API] Current hostname:', window.location.hostname)
+    } catch (err) {
+      console.error('[API] Failed to load runtime configuration:', err)
+      console.log('[API] Using default base URL:', this.baseUrl)
+    }
+  }
+  
+  // Get current base URL (may be updated after config loads)
+  getBaseUrl(): string {
+    return this.baseUrl
+  }
 
+  private setupInterceptors() {
     // Request interceptor for auth token
     this.client.interceptors.request.use(
       (config) => {
@@ -79,7 +159,7 @@ class ApiService {
           const refreshToken = localStorage.getItem('refresh_token')
           if (refreshToken) {
             try {
-              const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+              const response = await axios.post(`${this.baseUrl}/auth/refresh`, {
                 refresh_token: refreshToken,
               })
               const { access_token } = response.data.data
@@ -148,7 +228,7 @@ class ApiService {
   }
 
   getVideoStreamUrl(componentId: ComponentId, videoId: string) {
-    return `${API_BASE_URL}/components/${componentId}/videos/${videoId}/stream`
+    return `${this.baseUrl}/components/${componentId}/videos/${videoId}/stream`
   }
 
   // Demo APIs
@@ -318,7 +398,7 @@ class ApiService {
   async getSecurityPresentationHTML5ByName(presentationName: string) {
     const encodedName = encodeURIComponent(presentationName)
     const token = localStorage.getItem('access_token')
-    const response = await fetch(`${API_BASE_URL}/components/security/presentations/by-name/${encodedName}/html5`, {
+    const response = await fetch(`${this.baseUrl}/components/security/presentations/by-name/${encodedName}/html5`, {
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
       }
@@ -335,7 +415,7 @@ class ApiService {
     const encodedName = encodeURIComponent(documentName)
     const encodedTerm = encodeURIComponent(searchTerm)
     const token = localStorage.getItem('access_token')
-    const response = await fetch(`${API_BASE_URL}/components/security/items/by-name/${encodedName}/search/${encodedTerm}/html5`, {
+    const response = await fetch(`${this.baseUrl}/components/security/items/by-name/${encodedName}/search/${encodedTerm}/html5`, {
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
       }
@@ -350,7 +430,7 @@ class ApiService {
   // Security Component - Get Authentication HTML5 Page
   async getAuthenticationHTML5Page() {
     const token = localStorage.getItem('access_token')
-    const response = await fetch(`${API_BASE_URL}/components/security/items/authentication/html5`, {
+    const response = await fetch(`${this.baseUrl}/components/security/items/authentication/html5`, {
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
       }
@@ -390,7 +470,7 @@ class ApiService {
   async connectAzureSubscription(subscriptionId: string) {
     try {
       console.log('[API] Connecting to Azure subscription:', subscriptionId)
-      console.log('[API] Request URL:', `${API_BASE_URL}/deployment/azure/connect`)
+      console.log('[API] Request URL:', `${this.baseUrl}/deployment/azure/connect`)
       const response = await this.client.post<ApiResponse<{
         status: string
         message: string
@@ -413,7 +493,7 @@ class ApiService {
       }
       // Provide more detailed error message for network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
-        throw new Error(`Network Error - Unable to reach the backend API at ${API_BASE_URL}. Please check if the backend service is running and accessible.`)
+        throw new Error(`Network Error - Unable to reach the backend API at ${this.baseUrl}. Please check if the backend service is running and accessible.`)
       }
       throw error
     }
@@ -523,7 +603,7 @@ class ApiService {
   }) {
     try {
       console.log('[API] Querying RAG:', params.question)
-      console.log('[API] Request URL:', `${API_BASE_URL}/deployment/temenos/query`)
+      console.log('[API] Request URL:', `${this.baseUrl}/deployment/temenos/query`)
       const response = await this.client.post<ApiResponse<{
         answer: string
         sources?: Array<{ title?: string; url?: string }>
@@ -541,7 +621,7 @@ class ApiService {
       })
       // Provide more detailed error message for network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
-        throw new Error(`Network Error - Unable to reach the backend API at ${API_BASE_URL}. Please check if the backend service is running and accessible.`)
+        throw new Error(`Network Error - Unable to reach the backend API at ${this.baseUrl}. Please check if the backend service is running and accessible.`)
       }
       throw error
     }
