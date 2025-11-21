@@ -89,13 +89,28 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
         
         if "authentication" in error_msg.lower() or "credential" in error_msg.lower():
             error_type = "authentication"
-            recovery_steps = [
-                "Check if Azure CLI is installed: Run `az --version`",
-                "Login to Azure: Run `az login`",
-                "Verify your login: Run `az account show`",
-                "Set the correct subscription: Run `az account set --subscription <subscription-id>`",
-                "After logging in, restart the backend server"
-            ]
+            # Check if running in Azure App Service
+            import os
+            is_azure_app_service = os.getenv("WEBSITE_SITE_NAME") is not None
+            
+            if is_azure_app_service:
+                recovery_steps = [
+                    "Enable Managed Identity for the App Service in Azure Portal",
+                    "Grant the Managed Identity 'Reader' role on the subscription",
+                    "OR configure Service Principal credentials in App Settings:",
+                    "  - AZURE_CLIENT_ID",
+                    "  - AZURE_CLIENT_SECRET", 
+                    "  - AZURE_TENANT_ID",
+                    "Restart the App Service after configuration"
+                ]
+            else:
+                recovery_steps = [
+                    "Check if Azure CLI is installed: Run `az --version`",
+                    "Login to Azure: Run `az login`",
+                    "Verify your login: Run `az account show`",
+                    "Set the correct subscription: Run `az account set --subscription <subscription-id>`",
+                    "After logging in, restart the backend server"
+                ]
         elif "permission" in error_msg.lower() or "authorization" in error_msg.lower():
             error_type = "permission"
             recovery_steps = [

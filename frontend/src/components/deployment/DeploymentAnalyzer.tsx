@@ -76,6 +76,13 @@ export function DeploymentAnalyzer() {
         setError((connectResponse.data as any)?.error || (connectResponse as any).error || 'Failed to connect to Azure')
       }
     } catch (err: any) {
+      console.error('[DeploymentAnalyzer] Azure connection error:', {
+        error: err,
+        message: err.message,
+        response: err.response,
+        code: err.code,
+        config: err.config
+      })
       // Handle different error formats
       let errorMessage = 'Failed to connect to Azure'
       let recoverySteps: string[] = []
@@ -714,10 +721,19 @@ function ServiceAnalysis({
   onBack: () => void
   onRefresh: () => void
 }) {
-  const [expandedService, setExpandedService] = useState<string | null>(null)
+  const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
 
   const identifiedComponents = analysisResults.filter(r => r.componentInfo)
   const unidentifiedServices = analysisResults.filter(r => !r.componentInfo && !r.error)
+
+  // Auto-select first component if none selected
+  useEffect(() => {
+    if (identifiedComponents.length > 0 && !selectedComponent) {
+      setSelectedComponent(identifiedComponents[0].service.id || null)
+    }
+  }, [identifiedComponents, selectedComponent])
+
+  const selectedResult = identifiedComponents.find(r => r.service.id === selectedComponent) || identifiedComponents[0]
 
   // Always render something, even if services is empty
   if (!services || services.length === 0) {
@@ -801,24 +817,57 @@ function ServiceAnalysis({
         </div>
       </div>
 
-      {/* Temenos Components */}
-      {identifiedComponents.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-            <CheckCircle2 className="w-6 h-6 text-green-600" />
-            <span>Temenos Components</span>
-          </h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {identifiedComponents.map((result, index) => (
-              <ComponentCard
-                key={result.service.id || index}
-                result={result}
-                expanded={expandedService === result.service.id}
-                onToggle={() => setExpandedService(
-                  expandedService === result.service.id ? null : result.service.id || null
-                )}
-              />
-            ))}
+      {/* Horizontal Panel Layout: Main Content + Sidebar */}
+      {identifiedComponents.length > 0 && !loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content Area - Selected Component Details */}
+          <div className="lg:col-span-2">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
+              <CheckCircle2 className="w-6 h-6 text-green-600" />
+              <span>Temenos Components</span>
+            </h3>
+            {selectedResult && (
+              <ComponentDetailPanel result={selectedResult} />
+            )}
+          </div>
+
+          {/* Quick Overview Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="card sticky top-4">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <span>Quick Overview {identifiedComponents.length}</span>
+              </h3>
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {identifiedComponents.map((result, index) => {
+                  const isSelected = result.service.id === selectedComponent
+                  return (
+                    <div
+                      key={result.service.id || index}
+                      onClick={() => setSelectedComponent(result.service.id || null)}
+                      className={`p-3 rounded-lg cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-purple-100 border-2 border-purple-500'
+                          : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h4 className={`font-semibold text-sm ${isSelected ? 'text-purple-900' : 'text-gray-900'}`}>
+                              {result.componentInfo?.componentName || result.service.name}
+                            </h4>
+                            {isSelected && <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                          </div>
+                          <p className="text-xs text-gray-600">{result.componentInfo?.componentType || result.service.type}</p>
+                          <p className="text-xs text-gray-500 mt-1">{result.service.resourceGroup}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -842,31 +891,177 @@ function ServiceAnalysis({
   )
 }
 
-// Component Card
-function ComponentCard({
-  result,
-  expanded,
-  onToggle
+// Format RAG text with better formatting (headings, bold, paragraphs, lists)
+function formatRAGText(text: string): JSX.Element | null {
+  if (!text || !text.trim()) return null
+
+  // Split by lines and process
+  const lines = text.split('\n').filter(line => line.trim())
+  const elements: React.ReactNode[] = []
+  let currentParagraph: string[] = []
+  let listItems: string[] = []
+  let key = 0
+
+  const flushParagraph = () => {
+    if (currentParagraph.length > 0) {
+      const paragraphText = currentParagraph.join(' ').trim()
+      if (paragraphText) {
+        elements.push(
+          <p key={key++} className="text-sm text-gray-700 leading-relaxed mb-3">
+            {formatInlineText(paragraphText)}
+          </p>
+        )
+      }
+      currentParagraph = []
+    }
+  }
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={key++} className="list-disc list-inside space-y-2 mb-4 ml-4">
+          {listItems.map((item, idx) => (
+            <li key={idx} className="text-sm text-gray-700 leading-relaxed">
+              {formatInlineText(item)}
+            </li>
+          ))}
+        </ul>
+      )
+      listItems = []
+    }
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    
+    // Skip empty lines
+    if (!trimmed) {
+      flushParagraph()
+      flushList()
+      continue
+    }
+
+    // Check if it's a heading (ALL CAPS with colon, or starts with ** or ##)
+    if (trimmed.match(/^[A-Z][A-Z\s]+:$/) || trimmed.match(/^(\*\*|##)\s*.+(\*\*)?$/)) {
+      flushParagraph()
+      flushList()
+      const headingText = trimmed.replace(/^(\*\*|##)\s*/, '').replace(/\*\*$/, '').replace(/:$/, '').trim()
+      elements.push(
+        <h6 key={key++} className="font-bold text-gray-900 text-base mt-4 mb-2 first:mt-0">
+          {formatInlineText(headingText)}
+        </h6>
+      )
+      continue
+    }
+
+    // Check if it's a bullet point (starts with - or * or •)
+    if (trimmed.match(/^[\-\*•]\s+/)) {
+      flushParagraph()
+      const bulletText = trimmed.replace(/^[\-\*•]\s+/, '').trim()
+      if (bulletText) {
+        listItems.push(bulletText)
+      }
+      continue
+    }
+
+    // Check if line starts with bold text (likely a subheading)
+    if (trimmed.match(/^\*\*[^*]+\*\*:/)) {
+      flushParagraph()
+      flushList()
+      const headingText = trimmed.replace(/^\*\*/, '').replace(/\*\*:$/, '').trim()
+      elements.push(
+        <h6 key={key++} className="font-semibold text-gray-900 text-sm mt-3 mb-2">
+          {formatInlineText(headingText)}
+        </h6>
+      )
+      continue
+    }
+
+    // Regular paragraph text
+    listItems.length > 0 && flushList()
+    currentParagraph.push(trimmed)
+  }
+
+  // Flush any remaining content
+  flushParagraph()
+  flushList()
+
+  return <div className="space-y-3">{elements}</div>
+}
+
+// Format inline text (bold, italic, etc.)
+function formatInlineText(text: string): JSX.Element | string | null {
+  if (!text) return null
+
+  // Split by ** for bold text
+  const parts: React.ReactNode[] = []
+  const boldRegex = /\*\*(.+?)\*\*/g
+  let lastIndex = 0
+  let match
+  let key = 0
+
+  while ((match = boldRegex.exec(text)) !== null) {
+    // Add text before bold
+    if (match.index > lastIndex) {
+      const beforeText = text.substring(lastIndex, match.index)
+      parts.push(beforeText)
+    }
+    // Add bold text
+    parts.push(
+      <strong key={key++} className="font-semibold text-gray-900">
+        {match[1]}
+      </strong>
+    )
+    lastIndex = boldRegex.lastIndex
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex))
+  }
+
+  return parts.length > 0 ? <>{parts}</> : text
+}
+
+// Component Detail Panel - Horizontal layout with all information visible
+function ComponentDetailPanel({
+  result
 }: {
   result: AnalysisResult
-  expanded: boolean
-  onToggle: () => void
 }) {
   const { service, componentInfo } = result
 
-  if (!componentInfo) return null
+  // Debug logging
+  useEffect(() => {
+    if (componentInfo) {
+      console.log('Component Info:', componentInfo)
+      console.log('Architectural Overview:', componentInfo.architecturalOverview)
+      console.log('Functional Overview:', componentInfo.functionalOverview)
+      console.log('Capabilities:', componentInfo.capabilities)
+      console.log('Related Services:', componentInfo.relatedServices)
+    }
+  }, [componentInfo])
+
+  if (!componentInfo) {
+    return (
+      <div className="card">
+        <p className="text-gray-600">No component information available</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="card hover:shadow-xl transition-all cursor-pointer" onClick={onToggle}>
-      <div className="flex items-start justify-between mb-4">
+    <div className="card">
+      {/* Header Section */}
+      <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-200">
         <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
-            <Cloud className="w-5 h-5 text-purple-600" />
-            <h4 className="font-bold text-lg text-gray-900">{componentInfo.componentName}</h4>
+          <div className="flex items-center space-x-3 mb-2">
+            <Cloud className="w-6 h-6 text-purple-600" />
+            <h4 className="font-bold text-2xl text-gray-900">{componentInfo.componentName}</h4>
           </div>
           <p className="text-sm text-gray-600 mb-2">{componentInfo.componentType}</p>
           <p className="text-xs text-gray-500">
-            Service: {service.name} • {service.resourceGroup}
+            Service: <span className="font-medium">{service.name}</span> • Resource Group: <span className="font-medium">{service.resourceGroup}</span>
           </p>
         </div>
         <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
@@ -874,89 +1069,149 @@ function ComponentCard({
         </span>
       </div>
 
-      {expanded && (
-        <div className="mt-4 space-y-4 pt-4 border-t border-gray-200">
-          {/* Action Buttons */}
-          <div className="mb-4 flex items-center space-x-2">
-            {service.portalUrl && (
-              <a
-                href={service.portalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ExternalLink className="w-4 h-4" />
-                <span>Open in Azure Portal</span>
-              </a>
-            )}
-            <button
-              onClick={async (e) => {
-                e.stopPropagation()
-                // Refresh this component's information
-                const button = e.currentTarget
-                const originalText = button.innerHTML
-                button.disabled = true
-                button.innerHTML = '<span class="animate-spin">⟳</span> Refreshing...'
-                
-                try {
-                  const response = await apiService.analyzeAzureServices(
-                    [service],
-                    undefined,
-                    undefined,
-                    true // forceRefresh
-                  )
-                  if (response.data && response.data.length > 0 && response.data[0].componentInfo) {
-                    // Update the component info
-                    result.componentInfo = response.data[0].componentInfo
-                    // Trigger re-render by updating parent state
-                    window.location.reload() // Simple refresh for now
-                  }
-                } catch (error) {
-                  console.error('Failed to refresh component info:', error)
-                  alert('Failed to refresh component information. Please try again.')
-                } finally {
-                  button.disabled = false
-                  button.innerHTML = originalText
-                }
-              }}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh Info</span>
-            </button>
+      {/* Action Buttons */}
+      <div className="mb-6 flex items-center space-x-3">
+        {service.portalUrl && (
+          <a
+            href={service.portalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            <ExternalLink className="w-4 h-4" />
+            <span>Open in Azure Portal</span>
+          </a>
+        )}
+        <button
+          onClick={async () => {
+            try {
+              const response = await apiService.analyzeAzureServices(
+                [service],
+                undefined,
+                undefined,
+                true // forceRefresh
+              )
+              if (response.data?.data && Array.isArray(response.data.data) && response.data.data.length > 0 && response.data.data[0].componentInfo) {
+                // Update the component info
+                result.componentInfo = response.data.data[0].componentInfo
+                // Trigger re-render by updating parent state
+                window.location.reload() // Simple refresh for now
+              }
+            } catch (error) {
+              console.error('Failed to refresh component info:', error)
+              alert('Failed to refresh component information. Please try again.')
+            }
+          }}
+          className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh Info</span>
+        </button>
+      </div>
+
+      {/* Horizontal Information Panels */}
+      <div className="space-y-6">
+        {/* Architectural Overview */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none">
+            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim() 
+              ? formatRAGText(componentInfo.architecturalOverview)
+              : <p className="text-gray-500 italic">No architectural overview available</p>}
           </div>
-          
-          <div>
-            <h5 className="font-semibold text-gray-900 mb-2">Architectural Overview</h5>
-            <div className="text-sm text-gray-700 whitespace-pre-line">
-              {componentInfo.architecturalOverview}
-            </div>
+        </div>
+
+        {/* Deployment Architecture */}
+        {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') || 
+          componentInfo.architecturalOverview?.toLowerCase().includes('aks') || 
+          componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes') ||
+          componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
+          service.type?.toLowerCase().includes('containerservice') ||
+          service.type?.toLowerCase().includes('kubernetes')) ? (
+          <div className="bg-blue-50 rounded-lg p-4">
+            <h5 className="font-semibold text-gray-900 mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
+            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('containerized') || 
+                componentInfo.architecturalOverview?.toLowerCase().includes('docker') ||
+                service.type?.toLowerCase().includes('containerservice')) && (
+                <li>Containerized using Docker and deployed in Azure Kubernetes Service (AKS)</li>
+              )}
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('orchestrated') || 
+                componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes')) && (
+                <li>Orchestrated via Kubernetes for automated scaling, health management, and service discovery</li>
+              )}
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('scaling') || 
+                componentInfo.architecturalOverview?.toLowerCase().includes('scale')) && (
+                <li>Supports horizontal scaling based on load and demand</li>
+              )}
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('high-availability') || 
+                componentInfo.architecturalOverview?.toLowerCase().includes('availability') ||
+                componentInfo.architecturalOverview?.toLowerCase().includes('replica')) && (
+                <li>Implements high-availability patterns with multiple replicas and health checks</li>
+              )}
+              {service.type && (
+                <li>Azure Service Type: {service.type}</li>
+              )}
+            </ul>
           </div>
-          <div>
-            <h5 className="font-semibold text-gray-900 mb-2">Functional Overview</h5>
-            <div className="text-sm text-gray-700 whitespace-pre-line">
-              {componentInfo.functionalOverview}
-            </div>
+        ) : null}
+
+        {/* Functional Overview */}
+        <div className="bg-purple-50 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none">
+            {componentInfo.functionalOverview && componentInfo.functionalOverview.trim()
+              ? formatRAGText(componentInfo.functionalOverview)
+              : <p className="text-gray-500 italic">No functional overview available</p>}
           </div>
-          {componentInfo.capabilities.length > 0 && (
-            <div>
-              <h5 className="font-semibold text-gray-900 mb-2">Key Capabilities</h5>
-              <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                {componentInfo.capabilities.map((cap, idx) => (
-                  <li key={idx}>{cap}</li>
-                ))}
-              </ul>
-            </div>
+        </div>
+
+        {/* Key Capabilities */}
+        <div className="bg-green-50 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 mb-3 text-lg">KEY CAPABILITIES</h5>
+          {componentInfo.capabilities && Array.isArray(componentInfo.capabilities) && componentInfo.capabilities.length > 0 ? (
+            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
+              {componentInfo.capabilities.map((cap, idx) => (
+                <li key={idx}>{cap}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-gray-500 italic">No capabilities listed</p>
           )}
         </div>
-      )}
 
-      {!expanded && (
-        <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-          {componentInfo.architecturalOverview.substring(0, 150)}...
-        </p>
-      )}
+        {/* Related Services */}
+        <div className="bg-yellow-50 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 mb-3 text-lg">RELATED SERVICES</h5>
+          {componentInfo.relatedServices && Array.isArray(componentInfo.relatedServices) && componentInfo.relatedServices.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {componentInfo.relatedServices.map((svc, idx) => (
+                <span key={idx} className="px-3 py-1 bg-white rounded-full text-sm text-gray-700 border border-gray-300">
+                  {svc}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 italic">No related services listed</p>
+          )}
+        </div>
+
+        {/* Relationships */}
+        {componentInfo.relationships && Array.isArray(componentInfo.relationships) && componentInfo.relationships.length > 0 && (
+          <div className="bg-indigo-50 rounded-lg p-4">
+            <h5 className="font-semibold text-gray-900 mb-3 text-lg">COMPONENT RELATIONSHIPS</h5>
+            <div className="space-y-3">
+              {componentInfo.relationships.map((rel, idx) => (
+                <div key={idx} className="bg-white rounded p-3 border border-indigo-200">
+                  <div className="font-medium text-gray-900">{rel.targetComponent}</div>
+                  <div className="text-xs text-gray-600 mt-1">{rel.relationshipType}</div>
+                  <div className="text-sm text-gray-700 mt-2">{rel.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
