@@ -1,5 +1,57 @@
 # Troubleshooting Guide
 
+## Azure Authentication Issues (Azure App Service)
+
+If you see "Unable to connect to Azure" errors when using the web app (not localhost), the backend needs Azure credentials configured.
+
+### Option 1: Enable Managed Identity (Recommended)
+
+1. **Enable Managed Identity in Azure Portal:**
+   - Go to: https://portal.azure.com
+   - Navigate to: App Services → `bsg-demo-platform-app` → Identity
+   - Under "System assigned" tab, click "On" → Save
+   - Copy the **Object (principal) ID**
+
+2. **Grant Reader Role to Managed Identity:**
+   ```bash
+   az role assignment create \
+     --assignee <principal-id> \
+     --role "Reader" \
+     --scope /subscriptions/<subscription-id>
+   ```
+
+3. **Restart the App Service:**
+   - In Azure Portal: App Services → `bsg-demo-platform-app` → Restart
+
+### Option 2: Use Service Principal
+
+If Managed Identity doesn't work, configure Service Principal credentials:
+
+1. **Create Service Principal:**
+   ```bash
+   az ad sp create-for-rbac --name "bsg-demo-platform-sp" \
+     --role "Reader" \
+     --scopes /subscriptions/<subscription-id>
+   ```
+
+2. **Set App Settings in Azure Portal:**
+   - Go to: App Services → `bsg-demo-platform-app` → Configuration → Application settings
+   - Add:
+     - `AZURE_CLIENT_ID` = (from service principal output)
+     - `AZURE_CLIENT_SECRET` = (from service principal output)
+     - `AZURE_TENANT_ID` = (from service principal output)
+
+3. **Restart the App Service**
+
+### Verify Configuration
+
+After configuration, test the connection:
+```powershell
+.\tools\check-backend-status.ps1
+```
+
+Then try connecting to Azure from the web app again.
+
 ## Network Error - Backend API Not Reachable
 
 If you see "Network Error - Unable to reach the backend API" in the frontend, check the following:
