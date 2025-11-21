@@ -29,14 +29,14 @@ graph TB
     Adapter --> MongoDB
     Adapter --> External
     
-    style Client fill:#e1f5ff
-    style Application fill:#fff4e1
-    style Data fill:#e8f5e9
-    style Frontend fill:#bbdefb
-    style Backend fill:#ffe0b2
-    style Adapter fill:#ffe0b2
-    style MongoDB fill:#c8e6c9
-    style External fill:#c8e6c9
+    style Client fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    style Application fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    style Data fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    style Frontend fill:#42A5F5,stroke:#1976D2,stroke-width:2px,color:#fff
+    style Backend fill:#FFB74D,stroke:#F57C00,stroke-width:2px,color:#000
+    style Adapter fill:#FFB74D,stroke:#F57C00,stroke-width:2px,color:#000
+    style MongoDB fill:#66BB6A,stroke:#388E3C,stroke-width:2px,color:#000
+    style External fill:#66BB6A,stroke:#388E3C,stroke-width:2px,color:#000
 ```
 
 ## Component Architecture
@@ -248,11 +248,11 @@ graph LR
     DevFrontend -->|API Calls| DevBackend
     DevBackend -->|MongoDB Connection| CloudDB
     
-    style Local fill:#e3f2fd
-    style Cloud fill:#f3e5f5
-    style DevFrontend fill:#bbdefb
-    style DevBackend fill:#ffe0b2
-    style CloudDB fill:#c8e6c9
+    style Local fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    style Cloud fill:#9C27B0,stroke:#7B1FA2,stroke-width:2px,color:#fff
+    style DevFrontend fill:#42A5F5,stroke:#1976D2,stroke-width:2px,color:#fff
+    style DevBackend fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    style CloudDB fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
 ```
 
 **Local Setup:**
@@ -298,17 +298,17 @@ graph TB
     Workflow -.->|Deploy| StaticWebApp
     Workflow -.->|Deploy| AppService
     
-    style User fill:#fff9c4
-    style Azure fill:#e1f5fe
-    style FrontendService fill:#bbdefb
-    style BackendService fill:#ffe0b2
-    style Database fill:#c8e6c9
-    style AzureServices fill:#f8bbd0
-    style CI fill:#f3e5f5
-    style StaticWebApp fill:#90caf9
-    style AppService fill:#ffcc80
-    style CosmosDB fill:#a5d6a7
-    style ResourceManager fill:#f48fb1
+    style User fill:#FFC107,stroke:#FF8F00,stroke-width:2px,color:#000
+    style Azure fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    style FrontendService fill:#42A5F5,stroke:#1976D2,stroke-width:2px,color:#fff
+    style BackendService fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    style Database fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    style AzureServices fill:#E91E63,stroke:#C2185B,stroke-width:2px,color:#fff
+    style CI fill:#9C27B0,stroke:#7B1FA2,stroke-width:2px,color:#fff
+    style StaticWebApp fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    style AppService fill:#FF5722,stroke:#E64A19,stroke-width:2px,color:#fff
+    style CosmosDB fill:#009688,stroke:#00796B,stroke-width:2px,color:#fff
+    style ResourceManager fill:#E91E63,stroke:#C2185B,stroke-width:2px,color:#fff
 ```
 
 **Azure Deployment:**
