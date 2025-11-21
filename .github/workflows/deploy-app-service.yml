@@ -255,6 +255,9 @@ jobs:
           echo "     --assignee <principal-id> \\"
           echo "     --role 'Reader' \\"
           echo "     --scope /subscriptions/<subscription-id>"
+          echo ""
+          echo "Waiting 10 seconds after Managed Identity configuration to allow SCM container to stabilize..."
+          sleep 10
       
       - name: Configure Python Version
         run: |
@@ -265,6 +268,9 @@ jobs:
             --linux-fx-version "PYTHON|3.11" \
             --output none
           echo "✓ Python version configured"
+          echo ""
+          echo "Waiting 10 seconds after Python version configuration to allow SCM container to stabilize..."
+          sleep 10
       
       - name: Check package size before deployment
         run: |
@@ -289,8 +295,15 @@ jobs:
       
       - name: Wait before deployment (avoid SCM restart conflicts)
         run: |
-          echo "Waiting 15 seconds before deployment to avoid SCM container restart conflicts..."
-          sleep 15
+          echo "Waiting 60 seconds before deployment to avoid SCM container restart conflicts..."
+          echo ""
+          echo "⚠ IMPORTANT: Management operations (app settings, managed identity, Python version)"
+          echo "   can restart the SCM container. Deploying too quickly after these operations"
+          echo "   causes deployment failures with error: 'Deployment has been stopped due to SCM container restart'"
+          echo ""
+          echo "This delay allows the SCM container to fully restart and stabilize before deployment."
+          sleep 60
+          echo ""
           echo "✓ Ready to deploy"
       
       - name: Deploy to Azure Web App
