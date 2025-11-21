@@ -39,10 +39,12 @@ echo ""
 # Use it if available, otherwise default to 8000
 PORT=${PORT:-8000}
 echo "Using port: $PORT"
+echo ""
 
 # Start gunicorn with uvicorn workers
+# Note: Azure App Service automatically sets PORT, but we bind to 0.0.0.0:PORT
 exec gunicorn app.main:app \
-    --bind 0.0.0.0:$PORT \
+    --bind 0.0.0.0:${PORT} \
     --workers 2 \
     --worker-class uvicorn.workers.UvicornWorker \
     --timeout 120 \

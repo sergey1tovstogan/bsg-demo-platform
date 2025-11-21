@@ -97,13 +97,22 @@ jobs:
             exit 1
           fi
       
+      - name: Make startup script executable
+        run: |
+          echo "Making startup.sh executable..."
+          chmod +x backend/startup.sh
+          echo "✓ startup.sh is now executable"
+      
       - name: Clean up unnecessary files
         working-directory: ./backend
         run: |
+          echo "Cleaning up unnecessary files..."
           # Remove test files
           find . -name "*test*.py" -not -path "./app/*" -delete || true
           # Remove files that shouldn't be deployed
-          rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/ || true
+          rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/ .vscode/ .idea/ || true
+          # Remove node_modules if accidentally copied
+          rm -rf node_modules/ || true
           # Find and remove all __pycache__ directories (handle both Unix and Windows paths)
           find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
           find . -type d -name "*__pycache__*" -exec rm -rf {} + 2>/dev/null || true
@@ -114,6 +123,12 @@ jobs:
           # Remove any Windows-style paths that might have been created
           find . -type f -path "*\\*" -delete 2>/dev/null || true
           find . -type d -path "*\\*" -exec rm -rf {} + 2>/dev/null || true
+          # Remove .git directories if any
+          find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
+          # Remove large unnecessary files
+          find . -name "*.zip" -delete 2>/dev/null || true
+          find . -name "*.tar.gz" -delete 2>/dev/null || true
+          echo "✓ Cleanup complete"
       
       - name: Verify requirements.txt exists
         run: |
@@ -195,12 +210,14 @@ jobs:
           # Set startup command (with logging for better debugging)
           # Azure App Service sets PORT automatically - use it via environment variable
           # Note: Azure App Service Linux uses PORT env var, default is 8000
+          # Use startup.sh script which handles PORT env var correctly
           echo "Setting startup command..."
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info" \
+            --startup-file "bash startup.sh" \
             --output none
+          echo "✓ Startup command configured to use startup.sh"
           
           # Enable Always On (critical for App Service to prevent sleep)
           echo "Enabling Always On..."
@@ -224,13 +241,64 @@ jobs:
           echo ""
           echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
       
+      - name: Enable Managed Identity
+        run: |
+          echo "Enabling System-Assigned Managed Identity for Azure App Service..."
+          az webapp identity assign \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --output none || echo "⚠ Managed Identity may already be enabled or failed to enable"
+          echo "✓ Managed Identity configuration attempted"
+          echo ""
+          echo "⚠ IMPORTANT: After deployment, grant the Managed Identity 'Reader' role on the subscription:"
+          echo "   az role assignment create \\"
+          echo "     --assignee <principal-id> \\"
+          echo "     --role 'Reader' \\"
+          echo "     --scope /subscriptions/<subscription-id>"
+      
+      - name: Configure Python Version
+        run: |
+          echo "Setting Python version to 3.11..."
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --linux-fx-version "PYTHON|3.11" \
+            --output none
+          echo "✓ Python version configured"
+      
+      - name: Check package size before deployment
+        run: |
+          echo "Checking package size..."
+          cd backend
+          PACKAGE_SIZE=$(du -sh . | cut -f1)
+          FILE_COUNT=$(find . -type f | wc -l)
+          echo "Package size: $PACKAGE_SIZE"
+          echo "File count: $FILE_COUNT"
+          echo ""
+          echo "Largest directories:"
+          du -sh */ 2>/dev/null | sort -hr | head -10
+          echo ""
+          echo "Checking if static directory exists and size:"
+          if [ -d "app/static" ]; then
+            STATIC_SIZE=$(du -sh app/static | cut -f1)
+            STATIC_FILES=$(find app/static -type f | wc -l)
+            echo "  Static directory size: $STATIC_SIZE ($STATIC_FILES files)"
+          else
+            echo "  ⚠ Static directory not found!"
+          fi
+      
+      - name: Wait before deployment (avoid SCM restart conflicts)
+        run: |
+          echo "Waiting 15 seconds before deployment to avoid SCM container restart conflicts..."
+          sleep 15
+          echo "✓ Ready to deploy"
+      
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
-          startup-command: 'gunicorn app.main:app --bind 0.0.0.0:8000 --workers 2 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile - --log-level info'
-          python-version: '3.11'
+        timeout-minutes: 20
       
       - name: Health Check
         run: |

@@ -76,6 +76,13 @@ export function DeploymentAnalyzer() {
         setError((connectResponse.data as any)?.error || (connectResponse as any).error || 'Failed to connect to Azure')
       }
     } catch (err: any) {
+      console.error('[DeploymentAnalyzer] Azure connection error:', {
+        error: err,
+        message: err.message,
+        response: err.response,
+        code: err.code,
+        config: err.config
+      })
       // Handle different error formats
       let errorMessage = 'Failed to connect to Azure'
       let recoverySteps: string[] = []
@@ -884,6 +891,138 @@ function ServiceAnalysis({
   )
 }
 
+// Format RAG text with better formatting (headings, bold, paragraphs, lists)
+function formatRAGText(text: string): JSX.Element | null {
+  if (!text || !text.trim()) return null
+
+  // Split by lines and process
+  const lines = text.split('\n').filter(line => line.trim())
+  const elements: React.ReactNode[] = []
+  let currentParagraph: string[] = []
+  let listItems: string[] = []
+  let key = 0
+
+  const flushParagraph = () => {
+    if (currentParagraph.length > 0) {
+      const paragraphText = currentParagraph.join(' ').trim()
+      if (paragraphText) {
+        elements.push(
+          <p key={key++} className="text-sm text-gray-700 leading-relaxed mb-3">
+            {formatInlineText(paragraphText)}
+          </p>
+        )
+      }
+      currentParagraph = []
+    }
+  }
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={key++} className="list-disc list-inside space-y-2 mb-4 ml-4">
+          {listItems.map((item, idx) => (
+            <li key={idx} className="text-sm text-gray-700 leading-relaxed">
+              {formatInlineText(item)}
+            </li>
+          ))}
+        </ul>
+      )
+      listItems = []
+    }
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    
+    // Skip empty lines
+    if (!trimmed) {
+      flushParagraph()
+      flushList()
+      continue
+    }
+
+    // Check if it's a heading (ALL CAPS with colon, or starts with ** or ##)
+    if (trimmed.match(/^[A-Z][A-Z\s]+:$/) || trimmed.match(/^(\*\*|##)\s*.+(\*\*)?$/)) {
+      flushParagraph()
+      flushList()
+      const headingText = trimmed.replace(/^(\*\*|##)\s*/, '').replace(/\*\*$/, '').replace(/:$/, '').trim()
+      elements.push(
+        <h6 key={key++} className="font-bold text-gray-900 text-base mt-4 mb-2 first:mt-0">
+          {formatInlineText(headingText)}
+        </h6>
+      )
+      continue
+    }
+
+    // Check if it's a bullet point (starts with - or * or •)
+    if (trimmed.match(/^[\-\*•]\s+/)) {
+      flushParagraph()
+      const bulletText = trimmed.replace(/^[\-\*•]\s+/, '').trim()
+      if (bulletText) {
+        listItems.push(bulletText)
+      }
+      continue
+    }
+
+    // Check if line starts with bold text (likely a subheading)
+    if (trimmed.match(/^\*\*[^*]+\*\*:/)) {
+      flushParagraph()
+      flushList()
+      const headingText = trimmed.replace(/^\*\*/, '').replace(/\*\*:$/, '').trim()
+      elements.push(
+        <h6 key={key++} className="font-semibold text-gray-900 text-sm mt-3 mb-2">
+          {formatInlineText(headingText)}
+        </h6>
+      )
+      continue
+    }
+
+    // Regular paragraph text
+    listItems.length > 0 && flushList()
+    currentParagraph.push(trimmed)
+  }
+
+  // Flush any remaining content
+  flushParagraph()
+  flushList()
+
+  return <div className="space-y-3">{elements}</div>
+}
+
+// Format inline text (bold, italic, etc.)
+function formatInlineText(text: string): JSX.Element | string | null {
+  if (!text) return null
+
+  // Split by ** for bold text
+  const parts: React.ReactNode[] = []
+  const boldRegex = /\*\*(.+?)\*\*/g
+  let lastIndex = 0
+  let match
+  let key = 0
+
+  while ((match = boldRegex.exec(text)) !== null) {
+    // Add text before bold
+    if (match.index > lastIndex) {
+      const beforeText = text.substring(lastIndex, match.index)
+      parts.push(beforeText)
+    }
+    // Add bold text
+    parts.push(
+      <strong key={key++} className="font-semibold text-gray-900">
+        {match[1]}
+      </strong>
+    )
+    lastIndex = boldRegex.lastIndex
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex))
+  }
+
+  return parts.length > 0 ? <>{parts}</> : text
+}
+
 // Component Detail Panel - Horizontal layout with all information visible
 function ComponentDetailPanel({
   result
@@ -974,11 +1113,11 @@ function ComponentDetailPanel({
       <div className="space-y-6">
         {/* Architectural Overview */}
         <div className="bg-gray-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-3 text-lg">ARCHITECTURE OVERVIEW</h5>
-          <div className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+          <h5 className="font-semibold text-gray-900 mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none">
             {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim() 
-              ? componentInfo.architecturalOverview 
-              : <span className="text-gray-500 italic">No architectural overview available</span>}
+              ? formatRAGText(componentInfo.architecturalOverview)
+              : <p className="text-gray-500 italic">No architectural overview available</p>}
           </div>
         </div>
 
@@ -1019,11 +1158,11 @@ function ComponentDetailPanel({
 
         {/* Functional Overview */}
         <div className="bg-purple-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-3 text-lg">FUNCTIONAL OVERVIEW</h5>
-          <div className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+          <h5 className="font-semibold text-gray-900 mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none">
             {componentInfo.functionalOverview && componentInfo.functionalOverview.trim()
-              ? componentInfo.functionalOverview
-              : <span className="text-gray-500 italic">No functional overview available</span>}
+              ? formatRAGText(componentInfo.functionalOverview)
+              : <p className="text-gray-500 italic">No functional overview available</p>}
           </div>
         </div>
 

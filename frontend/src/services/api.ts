@@ -13,7 +13,39 @@ import type {
   ComponentId
 } from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
+// Determine API base URL
+// Priority: 1. Environment variable (build-time), 2. Runtime config, 3. Relative path
+const getApiBaseUrl = () => {
+  // Check build-time environment variable (set during npm run build)
+  if (import.meta.env.VITE_API_URL) {
+    const buildTimeUrl = import.meta.env.VITE_API_URL
+    console.log('[API] Using build-time API URL:', buildTimeUrl)
+    return buildTimeUrl
+  }
+  
+  // Check runtime configuration (for production deployments)
+  // If we're on Azure Static Web Apps, use the backend App Service URL
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    // If on Azure Static Web Apps domain, use the backend App Service URL
+    if (hostname.includes('azurestaticapps.net')) {
+      const runtimeUrl = 'https://bsg-demo-platform-app.azurewebsites.net/api/v1'
+      console.log('[API] Detected Azure Static Web Apps, using runtime URL:', runtimeUrl)
+      return runtimeUrl
+    }
+  }
+  
+  // Default to relative path (for local development or when backend is proxied)
+  const defaultUrl = '/api/v1'
+  console.log('[API] Using default relative URL:', defaultUrl)
+  return defaultUrl
+}
+
+const API_BASE_URL = getApiBaseUrl()
+
+// Always log the API base URL (helps with debugging in production)
+console.log('[API] Final API Base URL:', API_BASE_URL)
+console.log('[API] Current hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A')
 
 class ApiService {
   private client: AxiosInstance
@@ -357,16 +389,31 @@ class ApiService {
   // Deployment & Cloud APIs
   async connectAzureSubscription(subscriptionId: string) {
     try {
+      console.log('[API] Connecting to Azure subscription:', subscriptionId)
+      console.log('[API] Request URL:', `${API_BASE_URL}/deployment/azure/connect`)
       const response = await this.client.post<ApiResponse<{
         status: string
         message: string
         subscriptionId: string
       }>>('/deployment/azure/connect', { subscription_id: subscriptionId })
+      console.log('[API] Azure connection successful:', response.data)
       return response.data
     } catch (error: any) {
+      console.error('[API] Azure connection error:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      })
       // Re-throw with better error handling
       if (error.response?.data?.detail) {
         throw error.response.data.detail
+      }
+      // Provide more detailed error message for network errors
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
+        throw new Error(`Network Error - Unable to reach the backend API at ${API_BASE_URL}. Please check if the backend service is running and accessible.`)
       }
       throw error
     }
@@ -474,11 +521,30 @@ class ApiService {
     RAGmodelId: string
     context?: string
   }) {
-    const response = await this.client.post<ApiResponse<{
-      answer: string
-      sources?: Array<{ title?: string; url?: string }>
-    }>>('/deployment/temenos/query', params)
-    return response.data
+    try {
+      console.log('[API] Querying RAG:', params.question)
+      console.log('[API] Request URL:', `${API_BASE_URL}/deployment/temenos/query`)
+      const response = await this.client.post<ApiResponse<{
+        answer: string
+        sources?: Array<{ title?: string; url?: string }>
+      }>>('/deployment/temenos/query', params)
+      console.log('[API] RAG query successful')
+      return response.data
+    } catch (error: any) {
+      console.error('[API] RAG query error:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      })
+      // Provide more detailed error message for network errors
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
+        throw new Error(`Network Error - Unable to reach the backend API at ${API_BASE_URL}. Please check if the backend service is running and accessible.`)
+      }
+      throw error
+    }
   }
 
   // Cache APIs

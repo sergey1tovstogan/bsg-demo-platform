@@ -152,18 +152,31 @@ class Settings(BaseSettings):
 
     @property
     def CORS_ORIGINS(self) -> List[str]:
-        """Get CORS origins (hardcoded to avoid environment variable parsing issues)."""
-        return ["http://localhost:3000", "http://localhost:5173"]
+        """Get CORS origins (hardcoded to avoid environment variable parsing issues).
+        
+        Note: Exact origins are listed here, but CORS middleware in main.py uses
+        regex patterns to allow all Azure Static Web Apps and App Service domains.
+        """
+        origins = [
+            # Local development
+            "http://localhost:3000",
+            "http://localhost:5173",
+            # Azure Static Web Apps (specific domain - regex pattern handles all *.azurestaticapps.net)
+            "https://kind-beach-01c0a990f.3.azurestaticapps.net",
+            # Azure App Service (for testing backend directly - regex pattern handles all *.azurewebsites.net)
+            "https://bsg-demo-platform-app.azurewebsites.net",
+        ]
+        return origins
 
     @property
     def CORS_METHODS(self) -> List[str]:
         """Get CORS methods (hardcoded to avoid environment variable parsing issues)."""
-        return ["*"]
+        return ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"]
 
     @property
     def CORS_HEADERS(self) -> List[str]:
         """Get CORS headers (hardcoded to avoid environment variable parsing issues)."""
-        return ["*"]
+        return ["*", "Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"]
 
     @property
     def is_production(self) -> bool:
