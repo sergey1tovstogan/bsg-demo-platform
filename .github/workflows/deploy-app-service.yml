@@ -219,6 +219,14 @@ jobs:
             --output none
           echo "✓ Startup command configured to use startup.sh"
           
+          # Verify startup command was set correctly
+          echo "Verifying startup command..."
+          STARTUP_CMD=$(az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query appCommandLine -o tsv 2>/dev/null || echo "Not set")
+          echo "Current startup command: '$STARTUP_CMD'"
+          if [ -z "$STARTUP_CMD" ] || [ "$STARTUP_CMD" = "Not set" ]; then
+            echo "⚠ WARNING: Startup command may not be set correctly!"
+          fi
+          
           # Enable Always On (critical for App Service to prevent sleep)
           echo "Enabling Always On..."
           az webapp config set \
@@ -302,8 +310,9 @@ jobs:
       - name: Health Check
         run: |
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-          echo "Waiting for app to start (allowing 60 seconds for first-time startup)..."
-          sleep 60
+          echo "Waiting for app to start (allowing 90 seconds for first-time startup)..."
+          echo "Note: First deployment can take longer due to package installation and startup."
+          sleep 90
           
           # First check root endpoint (simplest check)
           echo "Checking root endpoint..."
@@ -344,8 +353,15 @@ jobs:
             echo "Checking app status..."
             az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "{state: state, defaultHostName: defaultHostName, httpsOnly: httpsOnly}" || true
             echo ""
-            echo "Checking recent logs (last 50 lines)..."
-            az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --timeout 5 2>&1 | tail -50 || true
+            echo "Checking recent logs..."
+            echo "Fetching last 100 log lines..."
+            az webapp log download --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --log-file /tmp/app-logs.zip 2>&1 || echo "Could not download logs"
+            if [ -f /tmp/app-logs.zip ]; then
+              unzip -p /tmp/app-logs.zip 2>/dev/null | tail -100 || echo "Could not extract logs"
+            fi
+            echo ""
+            echo "Checking startup command..."
+            az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query appCommandLine || true
             echo ""
             echo "Troubleshooting steps:"
             echo "1. Check App Service logs: az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}"
