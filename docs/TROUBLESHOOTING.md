@@ -289,9 +289,13 @@ If working, you should see namespaces like: adapterservice, deposits202507, even
 **Problem**: GitHub Actions deployment times out after 30+ minutes.
 
 **Solution**:
-- ✅ **FIXED**: Timeout increased to 45 minutes
-- Package cleanup optimized to reduce deployment size
+- ✅ **FIXED**: Timeout optimized to 30 minutes (deployments are now faster)
+- ✅ **OPTIMIZED**: SCM wait reduced from 60s to 10s + smart polling
+- ✅ **OPTIMIZED**: Health check reduced from 90s to 30s + smart polling
+- ✅ **OPTIMIZED**: Package cleanup enhanced to reduce deployment size
+- ✅ **OPTIMIZED**: Pre-built package deployment (no Oryx build)
 - Check workflow logs for specific step causing delay
+- Expected deployment time: ~5-8 minutes (subsequent), ~10-15 minutes (first time)
 
 ## Common Issues
 
@@ -363,6 +367,41 @@ curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/j
 **Or use Azure Portal:**
 - App Services → `bsg-demo-platform-app` → Log stream
 - Check for errors in the logs
+
+## Deployment Performance Issues
+
+### Slow Deployment Times
+
+**If deployments are taking too long:**
+
+1. **Check GitHub Actions workflow:**
+   - The workflow has been optimized for faster deployments
+   - SCM wait: ~10s initial + smart polling (instead of 60s fixed)
+   - Health check: ~30s initial + smart polling (instead of 90s fixed)
+   - Package size optimized with enhanced `.deploymentignore`
+
+2. **Verify package size:**
+   - Check the "Check package size before deployment" step in GitHub Actions
+   - Large packages (>100MB) may slow deployment
+   - Ensure `.deploymentignore` is excluding unnecessary files
+
+3. **Check Azure App Service status:**
+   ```bash
+   az webapp show \
+     --name bsg-demo-platform-app \
+     --resource-group bsg-demo-platform \
+     --query "{state: state, sku: sku}"
+   ```
+
+4. **Review deployment logs:**
+   - Check GitHub Actions logs for specific slow steps
+   - Look for SCM container restart issues
+   - Check for dependency installation delays
+
+**Expected deployment times:**
+- **First deployment**: ~10-15 minutes (includes dependency installation)
+- **Subsequent deployments**: ~5-8 minutes (with optimizations)
+- **With optimizations**: ~3-5 minutes faster than before
 
 ---
 

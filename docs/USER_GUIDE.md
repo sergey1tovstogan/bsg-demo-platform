@@ -609,6 +609,14 @@ The platform is automatically deployed to Azure via GitHub Actions:
 - **Frontend**: Deploys to Azure Static Web Apps on push to `develop`
 - **Backend**: Deploys to Azure App Service on push to `develop`
 
+**Deployment Performance (Optimized):**
+- **SCM wait time**: Reduced from 60s to 10s initial + smart polling (3s intervals, max ~55s)
+- **Health check**: Optimized from 90s to 30s initial + smart polling (3s intervals)
+- **Package optimization**: Enhanced `.deploymentignore` excludes unnecessary files (tests, docs, scripts)
+- **Build optimization**: Pre-built package deployment (no Oryx build during deployment)
+- **Dependency caching**: Pip and npm caches used for faster installation
+- **Expected improvement**: ~3-5 minutes faster overall deployment time
+
 **Manual deployment:**
 - See `.github/workflows/` for workflow definitions
 - Ensure GitHub Secrets are configured:
