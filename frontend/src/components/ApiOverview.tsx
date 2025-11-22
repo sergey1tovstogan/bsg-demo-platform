@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Info, Loader2, ExternalLink } from 'lucide-react'
+import { Info, Loader2, ExternalLink, Link } from 'lucide-react'
 import { apiService } from '../services/api'
+import { ApiVersioning } from './integration/ApiVersioning'
 
 interface TooltipConfig {
   id: string
@@ -15,6 +16,7 @@ interface TooltipConfig {
 }
 
 export function ApiOverview() {
+  const [showApiVersioning, setShowApiVersioning] = useState(false)
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const [kafkaTooltipContent, setKafkaTooltipContent] = useState<string>('')
   const [kafkaTooltipLoading, setKafkaTooltipLoading] = useState(true)
@@ -25,14 +27,14 @@ export function ApiOverview() {
   const [showApprovalModal, setShowApprovalModal] = useState(false)
   const [newKafkaContent, setNewKafkaContent] = useState<string>('')
   const [publicCatalogContent, setPublicCatalogContent] = useState<string>('')
-  const [publicCatalogLoading, setPublicCatalogLoading] = useState(true)
+  const [, setPublicCatalogLoading] = useState(true)
   const [showPublicCatalogApproval, setShowPublicCatalogApproval] = useState(false)
   const [newPublicCatalogContent, setNewPublicCatalogContent] = useState<string>('')
   const [isRefreshingCatalog, setIsRefreshingCatalog] = useState(false)
-  const [tooltipTimeout, setTooltipTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [tooltipTimeout, setTooltipTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
   const [pinnedTooltip, setPinnedTooltip] = useState<string | null>(null)
   const [openStandardsContent, setOpenStandardsContent] = useState<string>('')
-  const [openStandardsLoading, setOpenStandardsLoading] = useState(true)
+  const [, setOpenStandardsLoading] = useState(true)
   const [showOpenStandardsApproval, setShowOpenStandardsApproval] = useState(false)
   const [newOpenStandardsContent, setNewOpenStandardsContent] = useState<string>('')
   const [isRefreshingOpenStandards, setIsRefreshingOpenStandards] = useState(false)
@@ -57,13 +59,13 @@ export function ApiOverview() {
     {
       id: 'api-catalog',
       title: 'Public API Catalog for documentation and reuse',
-      description: publicCatalogContent || 'A centralized catalog provides comprehensive documentation for all available APIs, making it easy for developers to discover, understand, and reuse existing integrations. This catalog includes detailed specifications, examples, and best practices for each API endpoint.',
+      description: publicCatalogContent || 'The Temenos Public API Catalog serves as a centralized, searchable repository that provides comprehensive documentation for all available banking APIs, making it easy for developers, partners, and internal teams to discover, understand, and reuse existing integrations. This catalog includes detailed API specifications using OpenAPI (Swagger) format, interactive documentation with request/response examples, authentication requirements, rate limits, and versioning information for each endpoint. Developers can explore APIs by functional domain (payments, accounts, lending, etc.), test endpoints directly through the catalog\'s sandbox environment, and access code samples in multiple programming languages. The catalog also includes best practices for API consumption, common integration patterns, error handling guidelines, and security recommendations. This self-service approach accelerates development by reducing the time needed to understand API capabilities, promotes consistency across integrations, and enables faster time-to-market for new banking products and services built on the Temenos platform.',
       position: { top: '35%', left: '5%', width: '40%', height: '22%' }
     },
     {
       id: 'open-standards',
       title: 'Open standards and tooling',
-      description: openStandardsContent || 'Built on industry-standard protocols and supported by leading organizations like The Berlin Group and OpenAPI Initiative, ensuring compatibility, interoperability, and adherence to best practices in API design and implementation.',
+      description: openStandardsContent || 'Temenos APIs are built on industry-standard protocols and specifications, ensuring compatibility and interoperability across different systems and platforms. The platform adheres to open standards such as OpenAPI (formerly Swagger) for API documentation and design, enabling developers to easily understand, integrate, and work with Temenos banking services. Support from leading organizations like The Berlin Group ensures compliance with European banking standards, while adherence to PSD2 (Payment Services Directive 2) regulations enables secure third-party access to payment services. This commitment to open standards facilitates seamless integration with fintech ecosystems, regulatory compliance, and accelerated development through widely-adopted tooling and best practices in API design and implementation.',
       position: { top: '58%', left: '5%', width: '40%', height: '22%' }
     },
     {
@@ -110,12 +112,10 @@ export function ApiOverview() {
     // Clear any existing timeout
     if (tooltipTimeout) {
       clearTimeout(tooltipTimeout)
+      setTooltipTimeout(null)
     }
-    // Set a delay before clearing the tooltip
-    const timeout = setTimeout(() => {
-      setActiveTooltip(null)
-    }, 150)
-    setTooltipTimeout(timeout)
+    // Don't clear tooltip immediately - let the next hover handle it
+    // This prevents flickering when moving between boxes
   }
 
   // Helper function to handle feature card click (pin/unpin)
@@ -138,15 +138,15 @@ export function ApiOverview() {
     const fetchKafkaInfo = async () => {
       try {
         const response = await apiService.getCachedContent('kafka_tooltip')
-        const cacheData = response.data?.data || response.data
+        const cacheData = response.data
         if (cacheData?.content) {
           setKafkaTooltipContent(cacheData.content)
         } else {
-          setKafkaTooltipContent('Kafka is used in Temenos platform for event-driven messaging and asynchronous communication between microservices.')
+          setKafkaTooltipContent('Apache Kafka serves as the backbone for event-driven architecture in the Temenos platform, enabling real-time, asynchronous communication between microservices and external systems. The platform leverages Kafka\'s distributed streaming capabilities to handle high-throughput message processing, ensuring reliable delivery of banking events such as transactions, account updates, and regulatory notifications. Temenos implements CloudEvents specification for standardized event formatting, making it easier to integrate with cloud-native applications and third-party services. Kafka\'s publish-subscribe model allows multiple consumers to process the same events independently, supporting use cases like real-time analytics, audit logging, fraud detection, and downstream system synchronization. The platform\'s Kafka integration includes features for message persistence, replay capabilities, and horizontal scalability to handle growing transaction volumes while maintaining low latency and high availability for mission-critical banking operations.')
         }
       } catch (err) {
         console.error('Failed to load Kafka tooltip from cache:', err)
-        setKafkaTooltipContent('Kafka is used for event-driven messaging and asynchronous communication between microservices in the Temenos platform.')
+        setKafkaTooltipContent('Apache Kafka serves as the backbone for event-driven architecture in the Temenos platform, enabling real-time, asynchronous communication between microservices and external systems. The platform leverages Kafka\'s distributed streaming capabilities to handle high-throughput message processing, ensuring reliable delivery of banking events such as transactions, account updates, and regulatory notifications. Temenos implements CloudEvents specification for standardized event formatting, making it easier to integrate with cloud-native applications and third-party services. Kafka\'s publish-subscribe model allows multiple consumers to process the same events independently, supporting use cases like real-time analytics, audit logging, fraud detection, and downstream system synchronization. The platform\'s Kafka integration includes features for message persistence, replay capabilities, and horizontal scalability to handle growing transaction volumes while maintaining low latency and high availability for mission-critical banking operations.')
       } finally {
         setKafkaTooltipLoading(false)
       }
@@ -160,7 +160,7 @@ export function ApiOverview() {
     const fetchPublicCatalogInfo = async () => {
       try {
         const response = await apiService.getCachedContent('public_catalog_tooltip')
-        const cacheData = response.data?.data || response.data
+        const cacheData = response.data
         if (cacheData?.content) {
           setPublicCatalogContent(cacheData.content)
         }
@@ -179,7 +179,7 @@ export function ApiOverview() {
     const fetchOpenStandardsInfo = async () => {
       try {
         const response = await apiService.getCachedContent('open_standards_tooltip')
-        const cacheData = response.data?.data || response.data
+        const cacheData = response.data
         if (cacheData?.content) {
           setOpenStandardsContent(cacheData.content)
         }
@@ -198,7 +198,7 @@ export function ApiOverview() {
     const fetchJWTInfo = async () => {
       try {
         const response = await apiService.getJWTInfo()
-        const data = response.data?.data || response.data
+        const data = response.data
         setJwtInfo(data)
       } catch (err) {
         console.error('Failed to load JWT info:', err)
@@ -221,7 +221,7 @@ export function ApiOverview() {
         context: 'This is about Kafka messaging capabilities and CloudEvents integration in Temenos platform for integration and event-driven architecture.'
       })
 
-      const ragData = response.data?.data || response.data
+      const ragData = response.data
       if (ragData?.answer) {
         // Show the new content in approval modal
         setNewKafkaContent(ragData.answer)
@@ -271,7 +271,7 @@ export function ApiOverview() {
         context: 'This is about the public API catalog, developer portal, and API documentation capabilities in Temenos platform.'
       })
 
-      const ragData = response.data?.data || response.data
+      const ragData = response.data
       if (ragData?.answer) {
         setNewPublicCatalogContent(ragData.answer)
         setShowPublicCatalogApproval(true)
@@ -320,7 +320,7 @@ export function ApiOverview() {
         context: 'This is about open standards for APIs including Berlin Group, OpenAPI specifications, and PSD2 compliance in Temenos platform.'
       })
 
-      const ragData = response.data?.data || response.data
+      const ragData = response.data
       if (ragData?.answer) {
         setNewOpenStandardsContent(ragData.answer)
         setShowOpenStandardsApproval(true)
@@ -372,6 +372,11 @@ export function ApiOverview() {
     })
   }
 
+  // Show API Versioning page if navigated
+  if (showApiVersioning) {
+    return <ApiVersioning onBack={() => setShowApiVersioning(false)} />
+  }
+
   return (
     <div className="card">
       {/* Title */}
@@ -385,6 +390,11 @@ export function ApiOverview() {
         style={{
           minHeight: '450px',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
+        }}
+        onMouseLeave={() => {
+          if (!pinnedTooltip && !kafkaTooltipPinned) {
+            setActiveTooltip(null)
+          }
         }}
       >
         {/* Modern pattern overlay */}
@@ -733,8 +743,18 @@ export function ApiOverview() {
                   </svg>
                 </div>
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 flex items-center justify-between">
                 <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Upgradability and versioning</h3>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowApiVersioning(true)
+                  }}
+                  className="text-purple-600 hover:text-purple-800 transition-colors ml-2"
+                  title="View API Versioning details"
+                >
+                  <Link className="w-5 h-5" />
+                </button>
               </div>
             </div>
           </div>

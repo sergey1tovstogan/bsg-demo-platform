@@ -21,14 +21,32 @@ This repository is designed to support the **Business Solution Group (BSG)** in 
 
 ## Repository Structure
 
+```
+bsg-demo-platform/
+├── backend/              # FastAPI backend application
+├── frontend/             # React frontend application
+├── infrastructure/       # Azure deployment infrastructure
+├── docs/                 # Documentation files
+├── scripts/              # Start/Stop all scripts
+├── tools/                # Development tools and utilities
+├── .claude/              # Claude AI context (synced with .cursor/rules)
+├── design/               # Design files and component specs
+└── logs/                 # Application logs (git-ignored)
+```
+
+### Key Directories
+
 | Directory | Description |
-|------------|--------------|
-| `architecture/` | Reference diagrams and solution overviews. |
-| `deployments/` | Scripts, manifests, and templates for automated setup (Azure, Kubernetes, and Container Apps). |
-| `presentations/` | Official slide decks, customer-facing materials, and demo documentation. |
-| `videos/` | Recorded sessions, technical walk-throughs, and demo introductions. |
-| `integrations/` | API references, event flows, and product interconnection guides. |
-| `security/` | Vulnerability reports, compliance documents, and DevSecOps best practices. |
+|-----------|-------------|
+| `backend/` | FastAPI backend with API routes, services, adapters, and models |
+| `frontend/` | React frontend with components, pages, and services |
+| `infrastructure/` | Azure deployment scripts, GitHub Actions workflows |
+| `docs/` | All documentation including ARCHITECTURE.md, USAGE.md, and guides |
+| `scripts/` | Start/Stop/Restart all services scripts only |
+| `tools/` | Development tools, utilities, and other scripts |
+| `.claude/` | Claude AI development context (synced with .cursor/rules) |
+
+For detailed structure, see [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md).
 
 ---
 
@@ -71,7 +89,12 @@ This repository is designed to support the **Business Solution Group (BSG)** in 
 - `security_docs` - Security documentation
 - `presentations` - Presentation materials
 
-For detailed architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+For detailed documentation, see:
+- [Architecture Documentation](./docs/ARCHITECTURE.md)
+- [Usage Guide](./docs/USAGE.md)
+- [Azure Services Explained](./docs/AZURE_SERVICES_EXPLAINED.md) - Learn about Static Web Apps vs App Service
+- [Azure Configuration Guide](./docs/AZURE_CONFIGURATION.md)
+- [Troubleshooting Guide](./docs/TROUBLESHOOTING.md)
 
 ---
 

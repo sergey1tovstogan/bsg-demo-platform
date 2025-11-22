@@ -5,6 +5,7 @@ Handles environment-based configuration with validation.
 Supports environment variables, .env files, and secret injection.
 """
 
+import os
 from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,7 +24,10 @@ class Settings(BaseSettings):
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
     HOST: str = Field(default="0.0.0.0", description="API host")
-    PORT: int = Field(default=8000, description="API port")
+    PORT: int = Field(
+        default_factory=lambda: int(os.getenv("PORT", "8000")),
+        description="API port (Azure App Service sets PORT automatically)"
+    )
 
     # Database Settings
     DATABASE_TYPE: str = Field(default="mongodb", description="Database type: mongodb, postgresql, etc.")
@@ -139,21 +143,6 @@ class Settings(BaseSettings):
             raise ValueError(f"LOG_LEVEL must be one of {allowed}")
         return v
 
-
-    @field_validator("CORS_METHODS", mode="before")
-    def parse_cors_methods(cls, v):
-        """Parse CORS methods from string or list."""
-        if isinstance(v, str):
-            return [method.strip() for method in v.split(",")]
-        return v
-
-    @field_validator("CORS_HEADERS", mode="before")
-    def parse_cors_headers(cls, v):
-        """Parse CORS headers from string or list."""
-        if isinstance(v, str):
-            return [header.strip() for header in v.split(",")]
-        return v
-
     @field_validator("JWT_SECRET_KEY")
     def validate_jwt_secret(cls, v, info):
         """Ensure JWT secret is set in production."""
@@ -163,18 +152,31 @@ class Settings(BaseSettings):
 
     @property
     def CORS_ORIGINS(self) -> List[str]:
-        """Get CORS origins (hardcoded to avoid environment variable parsing issues)."""
-        return ["http://localhost:3000", "http://localhost:5173"]
+        """Get CORS origins (hardcoded to avoid environment variable parsing issues).
+        
+        Note: Exact origins are listed here, but CORS middleware in main.py uses
+        regex patterns to allow all Azure Static Web Apps and App Service domains.
+        """
+        origins = [
+            # Local development
+            "http://localhost:3000",
+            "http://localhost:5173",
+            # Azure Static Web Apps (specific domain - regex pattern handles all *.azurestaticapps.net)
+            "https://kind-beach-01c0a990f.3.azurestaticapps.net",
+            # Azure App Service (for testing backend directly - regex pattern handles all *.azurewebsites.net)
+            "https://bsg-demo-platform-app.azurewebsites.net",
+        ]
+        return origins
 
     @property
     def CORS_METHODS(self) -> List[str]:
         """Get CORS methods (hardcoded to avoid environment variable parsing issues)."""
-        return ["*"]
+        return ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"]
 
     @property
     def CORS_HEADERS(self) -> List[str]:
         """Get CORS headers (hardcoded to avoid environment variable parsing issues)."""
-        return ["*"]
+        return ["*", "Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"]
 
     @property
     def is_production(self) -> bool:

@@ -34,7 +34,7 @@ interface DataFlowDot {
   type: 'business' | 'data'
   pathId: string
   startTime: number
-  segment: 'events-pubsub' | 'pubsub-microservices' | 'pubsub-datahub' | 'datahub-analytics' | 'pubsub-etl'
+  segment: 'events-pubsub' | 'pubsub-microservices' | 'pubsub-datahub' | 'datahub-analytics' | 'pubsub-etl' | 'pubsub-fork-main' | 'fork-horizontal-left' | 'fork-horizontal-right' | 'fork-etl' | 'fork-datahub'
 }
 
 export function DataArchitectureContent() {
@@ -48,7 +48,7 @@ export function DataArchitectureContent() {
   const [spawningTrigger, setSpawningTrigger] = useState(0) // Increment to restart spawning
   const [greyedComponents, setGreyedComponents] = useState<Set<string>>(new Set()) // Components to grey out
   const [completedPaths, setCompletedPaths] = useState<Set<AnimationPath>>(new Set()) // Track which paths have been completed
-  const spawningIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const spawningIntervalRef = useRef<number | null>(null)
 
   // Static components that are always visible (common starting point for all paths)
   const staticComponents: ComponentItem[] = [

@@ -96,12 +96,15 @@ export function DeploymentContentViewer() {
             RAGmodelId: 'ModularBanking, TechnologyOverview',
             context: 'This is about Temenos cloud architecture models and deployment strategies for Temenos banking solutions.'
           })
-          
+
           // Handle different response structures
+          // queryRAG returns ApiResponse<{answer: string, sources?: ...}>
           // Backend returns: {status: "success", data: {answer: "...", sources: [...]}}
           // Or: {data: {answer: "...", sources: [...]}}
-          const ragData = response.data?.data || response.data
-          
+          const ragData = response.data && typeof response.data === 'object' && 'data' in response.data
+            ? (response.data as any).data
+            : response.data
+
           if (ragData?.answer) {
             ragResults.push({
               question,
@@ -116,36 +119,48 @@ export function DeploymentContentViewer() {
           // Extract detailed error message from backend response
           let errorMsg = 'Unknown error'
           
-          // Log full error for debugging
-          console.error(`Full error object for question "${question}":`, {
-            error: err,
-            response: err.response,
-            responseData: err.response?.data,
-            responseDetail: err.response?.data?.detail,
-            message: err.message
-          })
-          
-          // Try multiple ways to extract the error message
-          if (err.response?.data?.detail) {
-            const detail = err.response.data.detail
-            if (typeof detail === 'object') {
-              // Backend returns detail as object with error field
-              errorMsg = detail.error || detail.message || JSON.stringify(detail)
-            } else if (typeof detail === 'string') {
-              // Backend returns detail as string
-              errorMsg = detail
+          // Check if it's a network error (backend not reachable)
+          if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
+            errorMsg = 'Network Error - Unable to reach the backend API. Please check if the backend service is running and accessible.'
+            console.error(`Network error for question "${question}": Backend may not be reachable`, {
+              apiUrl: (window as any).API_BASE_URL || 'unknown',
+              error: err
+            })
+          } else {
+            // Log full error for debugging
+            console.error(`Full error object for question "${question}":`, {
+              error: err,
+              response: err.response,
+              responseData: err.response?.data,
+              responseDetail: err.response?.data?.detail,
+              message: err.message,
+              status: err.response?.status
+            })
+            
+            // Try multiple ways to extract the error message
+            if (err.response?.data?.detail) {
+              const detail = err.response.data.detail
+              if (typeof detail === 'object') {
+                // Backend returns detail as object with error field
+                errorMsg = detail.error || detail.message || JSON.stringify(detail)
+              } else if (typeof detail === 'string') {
+                // Backend returns detail as string
+                errorMsg = detail
+              }
+            } else if (err.response?.data?.error) {
+              errorMsg = err.response.data.error
+            } else if (err.response?.data?.message) {
+              errorMsg = err.response.data.message
+            } else if (err.message) {
+              errorMsg = err.message
             }
-          } else if (err.response?.data?.error) {
-            errorMsg = err.response.data.error
-          } else if (err.response?.data?.message) {
-            errorMsg = err.response.data.message
-          } else if (err.message) {
-            errorMsg = err.message
-          }
-          
-          // If we still have a generic message, try to get more info
-          if (errorMsg === 'Request failed with status code 500' && err.response?.data) {
-            errorMsg = `Server error: ${JSON.stringify(err.response.data).substring(0, 200)}`
+            
+            // If we still have a generic message, try to get more info
+            if (errorMsg === 'Request failed with status code 500' && err.response?.data) {
+              errorMsg = `Server error: ${JSON.stringify(err.response.data).substring(0, 200)}`
+            } else if (err.response?.status) {
+              errorMsg = `HTTP ${err.response.status}: ${errorMsg}`
+            }
           }
           
           errors.push(`Failed to query "${question}": ${errorMsg}`)

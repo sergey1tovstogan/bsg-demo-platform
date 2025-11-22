@@ -89,13 +89,28 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
         
         if "authentication" in error_msg.lower() or "credential" in error_msg.lower():
             error_type = "authentication"
-            recovery_steps = [
-                "Check if Azure CLI is installed: Run `az --version`",
-                "Login to Azure: Run `az login`",
-                "Verify your login: Run `az account show`",
-                "Set the correct subscription: Run `az account set --subscription <subscription-id>`",
-                "After logging in, restart the backend server"
-            ]
+            # Check if running in Azure App Service
+            import os
+            is_azure_app_service = os.getenv("WEBSITE_SITE_NAME") is not None
+            
+            if is_azure_app_service:
+                recovery_steps = [
+                    "Enable Managed Identity for the App Service in Azure Portal",
+                    "Grant the Managed Identity 'Reader' role on the subscription",
+                    "OR configure Service Principal credentials in App Settings:",
+                    "  - AZURE_CLIENT_ID",
+                    "  - AZURE_CLIENT_SECRET", 
+                    "  - AZURE_TENANT_ID",
+                    "Restart the App Service after configuration"
+                ]
+            else:
+                recovery_steps = [
+                    "Check if Azure CLI is installed: Run `az --version`",
+                    "Login to Azure: Run `az login`",
+                    "Verify your login: Run `az account show`",
+                    "Set the correct subscription: Run `az account set --subscription <subscription-id>`",
+                    "After logging in, restart the backend server"
+                ]
         elif "permission" in error_msg.lower() or "authorization" in error_msg.lower():
             error_type = "permission"
             recovery_steps = [
@@ -287,10 +302,13 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 if len(namespaces) == 0:
                     logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
                     logger.warning("  1. kubectl is not installed or not in PATH")
-                    logger.warning("  2. Cluster credentials are not configured (run: az aks get-credentials)")
-                    logger.warning("  3. No non-system namespaces exist in the cluster")
-                    logger.warning("  4. Backend is running in an environment without kubectl access (e.g., Azure App Service)")
-                    logger.warning("  Note: In Azure App Service, kubectl must be installed via startup script or extension")
+                    logger.warning("  2. Kubernetes Python client failed and kubectl fallback also failed")
+                    logger.warning("  3. Cluster credentials are not configured (run: az aks get-credentials)")
+                    logger.warning("  4. No non-system namespaces exist in the cluster")
+                    logger.warning("  5. Backend is running in Azure App Service and kubectl installation failed")
+                    logger.warning("  Note: In Azure App Service, kubectl should be installed by startup.sh")
+                    logger.warning("  Check App Service logs for startup.sh execution and kubectl installation")
+                    logger.warning("  Also check if Managed Identity has permissions to access AKS cluster")
             except Exception as e:
                 logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}", exc_info=True)
                 cluster_namespaces[cluster.name] = {

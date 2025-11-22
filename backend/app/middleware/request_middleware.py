@@ -105,13 +105,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Add security headers
         from app.core.config import settings
 
+        # Don't add restrictive headers if this is a CORS preflight (OPTIONS) request
+        # CORS middleware needs to handle OPTIONS requests without interference
+        if request.method == "OPTIONS":
+            return response
+        
         if settings.is_production:
-            # Strict security headers for production
+            # Strict security headers for production (but don't interfere with CORS)
+            # Note: Content-Security-Policy might interfere with CORS, so we make it permissive
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
-            response.headers["Content-Security-Policy"] = "default-src 'self'"
+            # Make CSP less restrictive to allow cross-origin requests
+            response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:"
             response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         else:
             # More relaxed headers for development
