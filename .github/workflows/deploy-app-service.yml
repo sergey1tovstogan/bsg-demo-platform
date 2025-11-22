@@ -414,9 +414,7 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
           startup-command: "bash startup.sh"
-          # Optimize deployment settings
-          deployment-method: zip
-          # Use OneDeploy for faster deployments (default, but explicit)
+          # OneDeploy is used by default for zip packages (faster than Kudu)
         timeout-minutes: 30
         continue-on-error: false
         id: deploy-backend
