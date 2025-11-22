@@ -187,28 +187,33 @@ jobs:
       - name: Clean up unnecessary files
         working-directory: ./backend
         run: |
-          echo "Cleaning up unnecessary files..."
-          # Remove test files
-          find . -name "*test*.py" -not -path "./app/*" -delete || true
+          echo "Cleaning up unnecessary files to reduce package size..."
+          echo "Package size before cleanup:"
+          du -sh . || echo "Could not calculate size"
+          
+          # Remove test files (keep tests/ directory structure but remove actual test files outside app/)
+          find . -name "*test*.py" -not -path "./app/*" -not -path "./tests/*" -delete || true
+          
           # Remove files that shouldn't be deployed
-          rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/ .vscode/ .idea/ || true
+          rm -rf scripts/ infrastructure/ uploads/ .pytest_cache/ .vscode/ .idea/ || true
+          
           # Remove node_modules if accidentally copied
           rm -rf node_modules/ || true
-          # Find and remove all __pycache__ directories (handle both Unix and Windows paths)
-          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          find . -type d -name "*__pycache__*" -exec rm -rf {} + 2>/dev/null || true
-          # Remove Python cache files
+          
+          # Remove Python cache files (but keep __pycache__ structure for faster startup)
           find . -type f -name "*.pyc" -delete 2>/dev/null || true
           find . -type f -name "*.pyo" -delete 2>/dev/null || true
           find . -type f -name "*.log" -delete 2>/dev/null || true
-          # Remove any Windows-style paths that might have been created
-          find . -type f -path "*\\*" -delete 2>/dev/null || true
-          find . -type d -path "*\\*" -exec rm -rf {} + 2>/dev/null || true
+          
           # Remove .git directories if any
           find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
+          
           # Remove large unnecessary files
           find . -name "*.zip" -delete 2>/dev/null || true
           find . -name "*.tar.gz" -delete 2>/dev/null || true
+          
+          echo "Package size after cleanup:"
+          du -sh . || echo "Could not calculate size"
           echo "✓ Cleanup complete"
       
       - name: Verify requirements.txt exists
@@ -397,7 +402,8 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
-        timeout-minutes: 30
+          startup-command: "bash startup.sh"
+        timeout-minutes: 45
         continue-on-error: false
         id: deploy-backend
       

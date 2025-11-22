@@ -34,17 +34,33 @@ const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
   
   configLoadPromise = (async () => {
     try {
-      const response = await fetch('/config.json', { cache: 'no-store' })
+      const response = await fetch('/config.json', { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
       if (response.ok) {
         const config = await response.json()
         runtimeConfig = config
         console.log('[API] Loaded runtime config:', config)
         return config
       } else {
-        console.warn('[API] Failed to load config.json, using defaults')
+        console.warn(`[API] Failed to load config.json (HTTP ${response.status}), using defaults`)
       }
     } catch (error) {
       console.warn('[API] Error loading config.json:', error)
+      // If we're on Azure Static Web Apps, try to construct backend URL
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname
+        if (hostname.includes('azurestaticapps.net')) {
+          console.log('[API] Detected Azure Static Web Apps, using default backend URL')
+          return {
+            apiUrl: 'https://bsg-demo-platform-app.azurewebsites.net/api/v1',
+            environment: 'production'
+          }
+        }
+      }
     }
     
     // Default fallback configuration

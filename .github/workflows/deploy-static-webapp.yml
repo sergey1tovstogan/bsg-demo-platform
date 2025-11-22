@@ -80,14 +80,19 @@ jobs:
         run: |
           # Create production config.json with backend API URL
           # This must be done BEFORE build so Vite copies it to dist/
-          cat > public/config.json << EOF
+          mkdir -p public
+          cat > public/config.json << 'EOF'
           {
             "apiUrl": "https://bsg-demo-platform-app.azurewebsites.net/api/v1",
             "environment": "production"
           }
           EOF
           echo "✓ Created production config.json"
+          echo "Config contents:"
           cat public/config.json
+          echo ""
+          echo "Verifying config.json exists:"
+          ls -la public/config.json
       
       - name: Build frontend
         working-directory: ./frontend
