@@ -302,10 +302,13 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 if len(namespaces) == 0:
                     logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
                     logger.warning("  1. kubectl is not installed or not in PATH")
-                    logger.warning("  2. Cluster credentials are not configured (run: az aks get-credentials)")
-                    logger.warning("  3. No non-system namespaces exist in the cluster")
-                    logger.warning("  4. Backend is running in an environment without kubectl access (e.g., Azure App Service)")
-                    logger.warning("  Note: In Azure App Service, kubectl must be installed via startup script or extension")
+                    logger.warning("  2. Kubernetes Python client failed and kubectl fallback also failed")
+                    logger.warning("  3. Cluster credentials are not configured (run: az aks get-credentials)")
+                    logger.warning("  4. No non-system namespaces exist in the cluster")
+                    logger.warning("  5. Backend is running in Azure App Service and kubectl installation failed")
+                    logger.warning("  Note: In Azure App Service, kubectl should be installed by startup.sh")
+                    logger.warning("  Check App Service logs for startup.sh execution and kubectl installation")
+                    logger.warning("  Also check if Managed Identity has permissions to access AKS cluster")
             except Exception as e:
                 logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}", exc_info=True)
                 cluster_namespaces[cluster.name] = {

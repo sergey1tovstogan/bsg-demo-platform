@@ -682,15 +682,20 @@ class AKSService:
             kubectl_cmd = "kubectl"
             
             if not kubectl_path:
+                error_msg = f"kubectl not found in PATH"
                 if self.is_azure_app_service:
-                    logger.error(f"kubectl not found and Kubernetes Python client failed")
-                    logger.error("Cannot list namespaces for cluster {cluster_name}")
+                    logger.error(f"{error_msg} and Kubernetes Python client failed")
+                    logger.error(f"Cannot list namespaces for cluster {cluster_name}")
                     logger.error("This should not happen if Kubernetes Python client is properly configured")
+                    logger.error("kubectl should be installed by startup.sh - check if startup script ran successfully")
+                    logger.error("Check App Service logs for startup.sh execution")
                 else:
-                    logger.error(f"kubectl not found in PATH! Cannot list namespaces for cluster {cluster_name}")
+                    logger.error(f"{error_msg}! Cannot list namespaces for cluster {cluster_name}")
                     logger.error("To fix: Install kubectl or ensure it's in PATH")
                     logger.error("On Windows: choco install kubernetes-cli")
                     logger.error("On Linux/Mac: See https://kubernetes.io/docs/tasks/tools/")
+                # Return empty list with detailed error info
+                logger.error(f"Returning empty namespaces list due to: {error_msg}")
                 return namespaces
             
             logger.info(f"✓ kubectl found at: {kubectl_path}, will use '{kubectl_cmd}' command")
