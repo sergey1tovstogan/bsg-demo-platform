@@ -271,6 +271,19 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 "message": "No AKS clusters found in selected resource groups"
             }
         
+        # Check cache for AKS namespaces first
+        from app.services.cache_service import get_cache_service
+        cache_service = await get_cache_service()
+        
+        cached_namespaces = await cache_service.get_aks_namespaces(subscription_id, resource_group_names)
+        if cached_namespaces:
+            logger.info(f"Using cached AKS namespaces for {len(resource_group_names)} resource groups")
+            return {
+                "status": "success",
+                "data": cached_namespaces,
+                "count": len(cached_namespaces)
+            }
+        
         # Get namespaces from each cluster
         logger.info(f"Initializing AKS service for subscription: {subscription_id}")
         aks_service = AKSService(subscription_id)
@@ -318,9 +331,19 @@ async def get_aks_namespaces(request: NamespacesRequest):
                     "error": f"Failed to retrieve namespaces: {str(e)}"
                 }
         
+        result_data = list(cluster_namespaces.values())
+        
+        # Cache the namespaces
+        await cache_service.set_aks_namespaces(
+            subscription_id,
+            resource_group_names,
+            result_data
+        )
+        logger.info(f"Cached AKS namespaces for {len(resource_group_names)} resource groups")
+        
         return {
             "status": "success",
-            "data": list(cluster_namespaces.values()),
+            "data": result_data,
             "count": len(cluster_namespaces)
         }
     except Exception as e:
@@ -362,8 +385,24 @@ async def get_resources(request: ResourcesRequest):
                 detail="At least one resource group name is required"
             )
         
-        azure_service = get_azure_service(subscription_id)
-        resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
+        # Check cache first
+        from app.services.cache_service import get_cache_service
+        cache_service = await get_cache_service()
+        
+        cached_resources = await cache_service.get_azure_resources(subscription_id, resource_group_names)
+        if cached_resources:
+            logger.info(f"Using cached Azure resources for {len(resource_group_names)} resource groups")
+            resources = [AzureResource(**r) for r in cached_resources]
+        else:
+            azure_service = get_azure_service(subscription_id)
+            resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
+            # Cache the resources
+            await cache_service.set_azure_resources(
+                subscription_id,
+                resource_group_names,
+                [r.to_dict() for r in resources]
+            )
+            logger.info(f"Cached {len(resources)} Azure resources")
         
         # Discover pods from AKS clusters
         try:
