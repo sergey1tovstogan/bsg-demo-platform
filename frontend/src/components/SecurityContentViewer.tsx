@@ -54,14 +54,14 @@ const cards: SecurityCard[] = [
   },
   {
     id: 7,
-    title: 'SaaS Security Model',
+    title: 'SaaS Security Services',
     icon: Cloud,
     color: '#6366F1', // Indigo
     bgColor: '#E0E7FF', // Light indigo background
   },
   {
     id: 8,
-    title: 'SaaS Access Control',
+    title: 'SaaS BCP, Logs, Incidents',
     icon: KeyRound,
     color: '#14B8A6', // Teal
     bgColor: '#CCFBF1', // Light teal background
@@ -4656,7 +4656,7 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
         .section-description {
             font-size: 16px;
             color: #000;
-            line-height: 1.4;
+            line-height: 1;
             flex: 1;
         }
         
@@ -4665,11 +4665,11 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
             padding-left: 45px;
             font-size: 14px;
             color: #000;
-            line-height: 1.6;
+            line-height: 1;
         }
         
         .section-measures li {
-            margin-bottom: 8px;
+            margin-bottom: 0;
         }
         
         .section-1 {
@@ -4688,8 +4688,20 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
             color: #ff8c00;
         }
         
+        .section-content-wrapper {
+            margin-top: auto;
+        }
+        
         .section-3 {
             border-left: 4px solid #ffd700;
+        }
+        
+        .section-3 .section-header {
+            margin-bottom: 0;
+        }
+        
+        .section-3 .section-measures {
+            margin-top: 0;
         }
         
         .section-3 .section-number {
@@ -4700,6 +4712,14 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
             border-left: 4px solid #1E3A8A;
         }
         
+        .section-4 .section-header {
+            margin-bottom: 0;
+        }
+        
+        .section-4 .section-measures {
+            margin-top: 0;
+        }
+        
         .section-4 .section-number {
             color: #1E3A8A;
         }
@@ -4707,16 +4727,16 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
         .concentric-circles-container {
             position: absolute;
             top: 50%;
-            right: 50px;
-            transform: translateY(-50%);
-            width: 300px;
-            height: 300px;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
         }
         
         .concentric-circles {
             position: relative;
-            width: 300px;
-            height: 300px;
+            width: 200px;
+            height: 200px;
         }
         
         .circle {
@@ -4729,32 +4749,32 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
         }
         
         .circle-1 {
-            width: 80px;
-            height: 80px;
-            top: 110px;
-            left: 110px;
+            width: 53px;
+            height: 53px;
+            top: 73px;
+            left: 73px;
             background: #ff0000;
         }
         
         .circle-2 {
-            width: 140px;
-            height: 140px;
-            top: 80px;
-            left: 80px;
+            width: 93px;
+            height: 93px;
+            top: 53px;
+            left: 53px;
             background: #ff8c00;
         }
         
         .circle-3 {
-            width: 200px;
-            height: 200px;
-            top: 50px;
-            left: 50px;
+            width: 133px;
+            height: 133px;
+            top: 33px;
+            left: 33px;
             background: #ffd700;
         }
         
         .circle-4 {
-            width: 300px;
-            height: 300px;
+            width: 200px;
+            height: 200px;
             top: 0;
             left: 0;
             background: #1E3A8A;
@@ -4764,7 +4784,7 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
             position: absolute;
             font-size: 24px;
             font-weight: bold;
-            color: #000;
+            color: #ffffff;
         }
         
         .circle-1 .circle-number {
@@ -4783,8 +4803,8 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
         }
         
         .circle-4 .circle-number {
-            bottom: 20px;
-            left: 20px;
+            bottom: 25px;
+            left: 25px;
         }
     </style>
 </head>
@@ -4820,28 +4840,32 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
         
         <!-- Section 3: Cloud Operations -->
         <div class="section section-3">
-            <div class="section-header">
-                <div class="section-number">3</div>
-                <div class="section-description">Safe operating environment, mature processes, highly available.</div>
+            <div class="section-content-wrapper">
+                <div class="section-header">
+                    <div class="section-number">3</div>
+                    <div class="section-description">Safe operating environment, mature processes, highly available.</div>
+                </div>
+                <ul class="section-measures">
+                    <li>Cloud Operations networks segregated from Corporate</li>
+                    <li>Standard operating procedures in place</li>
+                    <li>Enhancing Cloud Operations Processes</li>
+                </ul>
             </div>
-            <ul class="section-measures">
-                <li>Cloud Operations networks segregated from Corporate</li>
-                <li>Standard operating procedures in place</li>
-                <li>Enhancing Cloud Operations Processes</li>
-            </ul>
         </div>
         
         <!-- Section 4: Temenos Corporate IT -->
         <div class="section section-4">
-            <div class="section-header">
-                <div class="section-number">4</div>
-                <div class="section-description">Safe development to protect integrity of product and operations.</div>
+            <div class="section-content-wrapper">
+                <div class="section-header">
+                    <div class="section-number">4</div>
+                    <div class="section-description">Safe development to protect integrity of product and operations.</div>
+                </div>
+                <ul class="section-measures">
+                    <li>Last-generation authentication standards</li>
+                    <li>Network and servers centrally managed</li>
+                    <li>Consistent approach to security controls, change management, patching or monitoring</li>
+                </ul>
             </div>
-            <ul class="section-measures">
-                <li>Last-generation authentication standards</li>
-                <li>Network and servers centrally managed</li>
-                <li>Consistent approach to security controls, change management, patching or monitoring</li>
-            </ul>
         </div>
         
         <!-- Concentric Circles Graphic -->
@@ -4865,6 +4889,1752 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
+// Product Security Uniform HTML Content
+const ProductSecurityUniformHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Product Security Uniform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            padding: 80px 40px 100px 40px;
+            gap: 40px;
+            height: 100%;
+        }
+        
+        .left-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 20px;
+        }
+        
+        .bullet-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .bullet-list li {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 25px;
+            font-size: 16px;
+            color: #1a1a1a;
+            line-height: 1.5;
+        }
+        
+        .bullet-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #1a1a1a;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .red-underline {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-decoration-color: #ff0000;
+            text-underline-offset: 3px;
+        }
+        
+        .right-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .documents-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 600px;
+        }
+        
+        .document-cover {
+            position: absolute;
+            width: 400px;
+            height: 550px;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+        
+        .document-cover-top {
+            right: 0;
+            top: 0;
+            z-index: 2;
+        }
+        
+        .document-cover-bottom {
+            left: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+        
+        .blue-shape {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60%;
+            height: 70%;
+            background: linear-gradient(135deg, #87CEEB 0%, #B0E0E6 100%);
+            clip-path: polygon(0 100%, 0 40%, 100% 0, 100% 100%);
+        }
+        
+        .document-content {
+            position: relative;
+            z-index: 10;
+            padding: 40px 30px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .temenos-logo {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 14px;
+            color: #1a1a1a;
+            font-weight: normal;
+            text-transform: lowercase;
+        }
+        
+        .document-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+            margin-top: 40px;
+        }
+        
+        .document-subtitle {
+            font-size: 18px;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+        }
+        
+        .document-date {
+            font-size: 14px;
+            color: #1a1a1a;
+            margin-bottom: auto;
+        }
+        
+        .document-disclaimer {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            font-size: 8px;
+            color: #ffffff;
+            line-height: 1.2;
+            max-width: 200px;
+            text-align: right;
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Product Security Uniform</div>
+    
+    <div class="main-container">
+        <!-- Left Section: Text Content -->
+        <div class="left-section">
+            <ul class="bullet-list">
+                <li>Fostering transparency and clarity in <span class="red-underline">Temenos</span>' client interactions.</li>
+                <li>Serve as the foundation for understanding the services provided, obligations, and rights of both parties involved.</li>
+                <li>Provide a clear and consistent guidance and structure for all interactions would have with <span class="red-underline">Temenos</span>.</li>
+                <li>With <span class="red-underline">standardized</span> terms, the Bank can confidently navigate <span class="red-underline">Temenos</span> services, knowing exactly what to expect and easily understanding <span class="red-underline">Temenos</span> policies.</li>
+            </ul>
+        </div>
+        
+        <!-- Right Section: Document Covers -->
+        <div class="right-section">
+            <div class="documents-container">
+                <!-- Bottom Document Cover (Left) -->
+                <div class="document-cover document-cover-bottom">
+                    <div class="blue-shape"></div>
+                    <div class="document-content">
+                        <div class="temenos-logo">temenos</div>
+                        <div class="document-title">Temenos Cloud Services</div>
+                        <div class="document-subtitle">Security Uniform Terms</div>
+                        <div class="document-date">31 March 2024</div>
+                        <div class="document-disclaimer">
+                            Information in this document is subject to change without notice.<br>
+                            © 2024 Temenos Headquarters SA - all rights reserved.<br>
+                            TEMENOS Security Uniform Terms v1.0
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Top Document Cover (Right) -->
+                <div class="document-cover document-cover-top">
+                    <div class="blue-shape"></div>
+                    <div class="document-content">
+                        <div class="temenos-logo">temenos</div>
+                        <div class="document-title">Temenos Cloud Services</div>
+                        <div class="document-subtitle">Business Continuity Uniform Terms</div>
+                        <div class="document-date">31 March 2024</div>
+                        <div class="document-disclaimer">
+                            Information in this document is subject to change without notice.<br>
+                            © 2024 Temenos Headquarters SA - all rights reserved.<br>
+                            TEMENOS Business Continuity Uniform Terms v1.0
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showSecurityEventsFeed'}, '*');">Security Events Feed</button>
+</body>
+</html>`
+
+// Security Event Feed HTML Content
+const SecurityEventFeedHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Product Security Uniform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .diagram-container {
+            flex: 1;
+            padding: 80px 40px 100px 40px;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .temenos-cloud {
+            position: absolute;
+            left: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 250px;
+            height: 500px;
+            border: 4px solid #9333ea;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .temenos-cloud-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #9333ea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .cloud-layer {
+            width: 100%;
+            height: 60px;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #1a1a1a;
+        }
+        
+        .azure-services {
+            position: absolute;
+            left: 350px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .azure-service-box {
+            width: 280px;
+            height: 80px;
+            background: #b3d9ff;
+            border: 2px solid #4a90e2;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #1a1a1a;
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .azure-monitor {
+            position: absolute;
+            left: 680px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100px;
+            height: 100px;
+        }
+        
+        .monitor-gauge {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                #22c55e 0deg 120deg,
+                #eab308 120deg 240deg,
+                #f97316 240deg 360deg
+            );
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .monitor-needle {
+            position: absolute;
+            width: 3px;
+            height: 35px;
+            background: #1a1a1a;
+            transform-origin: bottom center;
+            transform: rotate(45deg);
+            bottom: 50%;
+            left: 50%;
+            margin-left: -1.5px;
+        }
+        
+        .monitor-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #1a1a1a;
+            white-space: nowrap;
+        }
+        
+        .event-hub {
+            position: absolute;
+            left: 820px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            height: 80px;
+            background: #1e3a8a;
+            border: 2px solid #1e40af;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .soc-box {
+            width: 250px;
+            height: 100px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            gap: 8px;
+        }
+        
+        .temenos-soc {
+            position: absolute;
+            left: 650px;
+            bottom: 80px;
+            background: #b3d9ff;
+            border: 2px solid #4a90e2;
+        }
+        
+        .client-soc {
+            position: absolute;
+            right: 40px;
+            bottom: 80px;
+            background: #6b21a8;
+            border: 2px solid #7c3aed;
+            color: #ffffff;
+        }
+        
+        .soc-label {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .soc-subtitle {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 5px;
+        }
+        
+        .people-icon {
+            width: 40px;
+            height: 30px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 5px;
+        }
+        
+        .person {
+            width: 12px;
+            height: 20px;
+            background: #1a1a1a;
+            border-radius: 6px 6px 0 0;
+        }
+        
+        .client-soc .person {
+            background: #ffffff;
+        }
+        
+        .arrow-purple {
+            stroke: #9333ea;
+            stroke-width: 4;
+            fill: none;
+            marker-end: url(#arrowhead-purple);
+        }
+        
+        .arrow-teal {
+            stroke: #14b8a6;
+            stroke-width: 4;
+            fill: none;
+            marker-end: url(#arrowhead-teal);
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+        
+        .tooltip {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            background: #ffffff;
+            border: 2px solid #ff0000;
+            border-radius: 0;
+            padding: 15px 20px;
+            font-size: 16px;
+            color: #000;
+            z-index: 10000;
+            max-height: 40vh;
+            overflow-y: auto;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+            display: none;
+            margin: 0 !important;
+            top: auto !important;
+            box-sizing: border-box;
+            min-height: fit-content;
+        }
+        
+        .tooltip-title {
+            display: none;
+        }
+        
+        .tooltip-description {
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+            text-align: left;
+            font-size: 16px;
+            white-space: pre-line;
+        }
+        
+        .tooltip-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        
+        .tooltip-close:hover {
+            background: #cc0000;
+        }
+        
+        .clickable {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Product Security Uniform</div>
+    
+    <div class="diagram-container">
+        <!-- SVG for arrows -->
+        <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+            <defs>
+                <marker id="arrowhead-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#9333ea" />
+                </marker>
+                <marker id="arrowhead-teal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#14b8a6" />
+                </marker>
+            </defs>
+            
+            <!-- Arrow from Temenos Cloud to Azure Log Analytics -->
+            <line x1="290" y1="180" x2="350" y2="180" class="arrow-purple" />
+            
+            <!-- Arrow from Temenos Cloud to Azure Security Center -->
+            <line x1="290" y1="300" x2="350" y2="300" class="arrow-purple" />
+            
+            <!-- Arrow from Azure Log Analytics to Azure Security Center -->
+            <line x1="420" y1="210" x2="420" y2="240" class="arrow-purple" />
+            
+            <!-- Arrow from Azure Security Center to Azure Sentinel -->
+            <line x1="420" y1="320" x2="420" y2="450" class="arrow-purple" />
+            
+            <!-- Arrow from Azure Sentinel to Temenos SOC -->
+            <line x1="730" y1="570" x2="500" y2="530" class="arrow-purple" />
+            
+            <!-- Arrow from Azure Monitor to Event Hub -->
+            <line x1="730" y1="350" x2="820" y2="350" class="arrow-teal" />
+            
+            <!-- Arrow from Event Hub to Client SOC -->
+            <line x1="920" y1="440" x2="1100" y2="570" class="arrow-teal" />
+        </svg>
+        
+        <!-- Temenos Cloud Environment -->
+        <div class="temenos-cloud">
+            <div class="temenos-cloud-label">Temenos Cloud Environment</div>
+            <div class="cloud-layer">Tooling</div>
+            <div class="cloud-layer">Applications</div>
+            <div class="cloud-layer">Middleware</div>
+            <div class="cloud-layer">Database</div>
+            <div class="cloud-layer">Operating System</div>
+            <div class="cloud-layer">Azure Fabric</div>
+        </div>
+        
+        <!-- Azure Services -->
+        <div class="azure-services">
+            <div class="azure-service-box" style="margin-top: -100px;">Azure Log Analytics</div>
+            <div class="azure-service-box">Azure Security Center</div>
+            <div class="azure-service-box clickable" style="margin-top: 100px;" data-tooltip-id="azure-sentinel">Security Incident / Events Management<br>Azure Sentinel (SIEM)</div>
+        </div>
+        
+        <!-- Azure Monitor -->
+        <div class="azure-monitor">
+            <div class="monitor-gauge">
+                <div class="monitor-needle"></div>
+            </div>
+            <div class="monitor-label">Azure Monitor</div>
+        </div>
+        
+        <!-- Event Hub -->
+        <div class="event-hub">Event Hub</div>
+        
+        <!-- Temenos SOC -->
+        <div class="soc-box temenos-soc clickable" data-tooltip-id="temenos-soc">
+            <div class="soc-label">Temenos SOC</div>
+            <div class="people-icon">
+                <div class="person"></div>
+                <div class="person"></div>
+                <div class="person"></div>
+            </div>
+        </div>
+        
+        <!-- Client SOC -->
+        <div class="soc-box client-soc">
+            <div class="soc-label">Client SOC</div>
+            <div class="soc-subtitle">(Splunk and IBM QRadar)</div>
+            <div class="people-icon">
+                <div class="person"></div>
+                <div class="person"></div>
+                <div class="person"></div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showNetworkSecurityServices'}, '*');">Network Security Services</button>
+    
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip">
+        <button class="tooltip-close" onclick="hideTooltip()">×</button>
+        <div class="tooltip-title"></div>
+        <div class="tooltip-description"></div>
+    </div>
+    
+    <script>
+        const tooltips = [
+            {
+                title: 'Temenos SOC',
+                description: '+ SOC \\n\\n24x7 Security Operation Centre where the main responsibilities include: \\n\\n1. Monitoring and detecting anomalies due to either of the following: Violation of information security policy; Threats and attacks to the information landscape from within and outside the organization; Correlation of potential threats across cyber space with vulnerabilities within Temenos environments such that mitigations and appropriate responses can be put in place;\\n\\n2. Operation and management of security tools.\\n\\n3. Collecting, correlating and utilizing cyber threat intelligence data from different sources \\n\\n4. Collection and reporting of security events\\n\\n5. Responding to security incidents\\n\\n+ NOC\\n\\n24x7 Network Operation Centre where the main responsibilities include: \\n\\n1. Real user monitoring \\n\\n2. Patching of all infrastructure, platform and application components\\n\\n3. Capacity management \\n\\n4. IT Service Continuity testing \\n\\n5. Network management, including configuration of firewall, and traffic management\\n\\n6. Real-time monitoring to provide :  1. Application Support;  2. Infrastructure Support; \\n\\n7. Operation and management of performance tools.\\n\\n8. Collection and reporting of performance & availability events and trends;',
+                position: 'bottom'
+            },
+            {
+                title: 'Azure Sentinel (SIEM)',
+                description: 'SIEM. Used Azure Sentinel\\'s built-in Insecure Protocol Workbook to discover the use of insecure services and protocols. The Security Operations Centre operate a Security Incident and Event Management platform (SIEM) that collects a subsection of logs which are used to detect patterns, look for known malicious activities and signatures, etc.​ Alerts are correlated to gain a big picture understanding of a potential attack or incident.​\\n\\nTemenos provides a SaaS Event Hub service that enables customers to access their application security logs in real time. This service works by collecting logs from the SaaS environment and pushing them into an Event Hub, which the customer can then integrate with their own monitoring or observability tools (e.g., Splunk, Azure Monitor, ELK Stack).\\n\\nThis capability ensures that customers maintain visibility and control over their operational data in production to support their monitoring needs of compliance, troubleshooting and performance.\\n\\nThis service is optional.\\n\\nForwarding logs to local central log repository is done automatically in real time.\\n\\nSecurity logs are reviewed on a daily, weekly and monthly basis as part of security operations activities. All exceptions and anomalies are analyzed and promptly escalated as per the security incident escalation process.',
+                position: 'bottom'
+            }
+        ];
+        
+        function showTooltip(tooltipId) {
+            const tooltip = document.getElementById('tooltip');
+            const tooltipDescription = tooltip ? tooltip.querySelector('.tooltip-description') : null;
+            
+            let config;
+            
+            if (tooltipId === 'temenos-soc') {
+                config = tooltips[0];
+            } else if (tooltipId === 'azure-sentinel') {
+                config = tooltips[1];
+            }
+            
+            if (config && tooltip && tooltipDescription) {
+                tooltipDescription.textContent = config.description.replace(/\\\\n/g, '\\n');
+                tooltip.style.display = 'block';
+                tooltip.style.position = 'fixed';
+                tooltip.style.bottom = '0';
+                tooltip.style.left = '0';
+                tooltip.style.right = '0';
+                tooltip.style.width = '100%';
+                tooltip.style.top = 'auto';
+                tooltip.style.margin = '0';
+            }
+        }
+        
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            if (tooltip) {
+                tooltip.style.display = 'none';
+            }
+        }
+        
+        // Add click handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            const clickableElements = document.querySelectorAll('.clickable');
+            clickableElements.forEach(function(element) {
+                element.addEventListener('click', function() {
+                    const tooltipId = this.getAttribute('data-tooltip-id');
+                    if (tooltipId) {
+                        showTooltip(tooltipId);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>`
+
+// Network Security HTML Content
+const NetworkHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS Network Security</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 80px 40px 100px 40px;
+            gap: 40px;
+        }
+        
+        .service-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 350px;
+        }
+        
+        .service-icon {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .icon-firewall {
+            width: 100px;
+            height: 100px;
+            position: relative;
+        }
+        
+        .icon-firewall-cloud {
+            width: 80px;
+            height: 60px;
+            background: #4a90e2;
+            border-radius: 50px 50px 0 0;
+            position: absolute;
+            top: 0;
+            left: 10px;
+        }
+        
+        .icon-firewall-wall {
+            width: 100px;
+            height: 30px;
+            background: #ff0000;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            border-radius: 4px;
+        }
+        
+        .icon-waf {
+            width: 100px;
+            height: 100px;
+            position: relative;
+        }
+        
+        .icon-waf-globe {
+            width: 70px;
+            height: 70px;
+            border: 4px solid #4a90e2;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            left: 15px;
+        }
+        
+        .icon-waf-wall {
+            width: 100px;
+            height: 30px;
+            background: #ff0000;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            border-radius: 4px;
+        }
+        
+        .icon-ddos {
+            width: 80px;
+            height: 80px;
+            background: #22c55e;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            position: relative;
+        }
+        
+        .service-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .azure-service-box {
+            width: 100%;
+            background: #9333ea;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .description-box {
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 20px;
+            min-height: 150px;
+        }
+        
+        .description-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .description-list li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #1a1a1a;
+            line-height: 1.5;
+        }
+        
+        .description-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #1a1a1a;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos SaaS Network Security</div>
+    
+    <div class="main-container">
+        <!-- Column 1: Network Firewall -->
+        <div class="service-column">
+            <div class="service-icon">
+                <div class="icon-firewall">
+                    <div class="icon-firewall-cloud"></div>
+                    <div class="icon-firewall-wall"></div>
+                </div>
+            </div>
+            <div class="service-name">Network Firewall</div>
+            <div class="azure-service-box">Azure Firewall</div>
+            <div class="description-box">
+                <ul class="description-list">
+                    <li>Create firewall rules that provide fine-grained control over network traffic and easily deploy firewall security across multiple VNets.</li>
+                    <li>Automatically scales to cover cloud infrastructure</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Column 2: WAF -->
+        <div class="service-column">
+            <div class="service-icon">
+                <div class="icon-waf">
+                    <div class="icon-waf-globe"></div>
+                    <div class="icon-waf-wall"></div>
+                </div>
+            </div>
+            <div class="service-name">WAF</div>
+            <div class="azure-service-box">Azure WAF</div>
+            <div class="description-box">
+                <ul class="description-list">
+                    <li>Managed WAF solution which protects against common web exploits and bots that can affect availability, compromise security, or consume excessive resources.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Column 3: Anti DDoS -->
+        <div class="service-column">
+            <div class="service-icon">
+                <div class="icon-ddos"></div>
+            </div>
+            <div class="service-name">Anti DDoS</div>
+            <div class="azure-service-box">Azure Basic Anti DDoS</div>
+            <div class="description-box">
+                <ul class="description-list">
+                    <li>Provides protection against Distributed Denial of Service (DDoS) attacks on Azure infrastructure.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showTemenosSaaSAntiDDoS'}, '*');">Temenos SaaS antiDDoS</button>
+</body>
+</html>`
+
+// DDoS HTML Content
+const DDoSHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS anti-DDoS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 100px 40px 100px 40px;
+            gap: 20px;
+            position: relative;
+        }
+        
+        .flow-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 220px;
+            position: relative;
+        }
+        
+        .header-box {
+            width: 100%;
+            background: #b3d9ff;
+            color: #1e3a8a;
+            padding: 15px 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .header-icon {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .header-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e3a8a;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .content-box {
+            width: 100%;
+            background: #9333ea;
+            color: #ffffff;
+            padding: 20px 15px;
+            border-radius: 6px;
+            min-height: 200px;
+            position: relative;
+        }
+        
+        .content-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .content-list li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            color: #ffffff;
+            line-height: 1.4;
+            text-align: left;
+        }
+        
+        .content-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .flow-arrow {
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            border-left: 20px solid #1e3a8a;
+            z-index: 10;
+        }
+        
+        .flow-arrow::after {
+            content: '';
+            position: absolute;
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 2px;
+            background: #1e3a8a;
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+        
+        /* Icon Styles */
+        .icon-shield-people {
+            width: 50px;
+            height: 50px;
+            position: relative;
+        }
+        
+        .icon-shield {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #1e3a8a;
+            border-radius: 50% 50% 50% 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .icon-person {
+            width: 12px;
+            height: 18px;
+            background: #1e3a8a;
+            border-radius: 6px 6px 0 0;
+            position: absolute;
+            bottom: 8px;
+        }
+        
+        .icon-person-1 {
+            left: 12px;
+        }
+        
+        .icon-person-2 {
+            right: 12px;
+        }
+        
+        .icon-magnifying-glass {
+            width: 50px;
+            height: 50px;
+            position: relative;
+        }
+        
+        .icon-glass-circle {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #1e3a8a;
+            border-radius: 50%;
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            z-index: 2;
+        }
+        
+        .icon-glass-handle {
+            width: 12px;
+            height: 3px;
+            background: #1e3a8a;
+            position: absolute;
+            top: 20px;
+            right: 5px;
+            transform: rotate(45deg);
+            z-index: 2;
+        }
+        
+        .icon-people-group {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .icon-person-small {
+            width: 10px;
+            height: 15px;
+            background: #1e3a8a;
+            border-radius: 5px 5px 0 0;
+        }
+        
+        .icon-document-pin {
+            width: 50px;
+            height: 50px;
+            position: relative;
+        }
+        
+        .icon-doc {
+            width: 30px;
+            height: 35px;
+            background: #1e3a8a;
+            border-radius: 2px;
+            position: absolute;
+            top: 5px;
+            left: 10px;
+        }
+        
+        .icon-pin {
+            width: 12px;
+            height: 12px;
+            background: #1e3a8a;
+            border-radius: 50% 50% 50% 0;
+            position: absolute;
+            top: 0;
+            right: 8px;
+            transform: rotate(-45deg);
+        }
+        
+        .icon-document-pencil {
+            width: 50px;
+            height: 50px;
+            position: relative;
+        }
+        
+        .icon-doc-2 {
+            width: 30px;
+            height: 35px;
+            background: #1e3a8a;
+            border-radius: 2px;
+            position: absolute;
+            top: 5px;
+            left: 10px;
+        }
+        
+        .icon-pencil {
+            width: 2px;
+            height: 15px;
+            background: #1e3a8a;
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            transform: rotate(45deg);
+        }
+        
+        .icon-pencil::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -2px;
+            width: 0;
+            height: 0;
+            border-left: 3px solid transparent;
+            border-right: 3px solid transparent;
+            border-bottom: 6px solid #1e3a8a;
+        }
+        
+        .icon-lightbulb-wrench {
+            width: 50px;
+            height: 50px;
+            position: relative;
+        }
+        
+        .icon-lightbulb {
+            width: 25px;
+            height: 30px;
+            background: #1e3a8a;
+            border-radius: 50% 50% 0 0;
+            position: absolute;
+            top: 5px;
+            left: 12px;
+        }
+        
+        .icon-lightbulb::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 3px;
+            background: #1e3a8a;
+        }
+        
+        .icon-wrench {
+            width: 20px;
+            height: 3px;
+            background: #1e3a8a;
+            position: absolute;
+            bottom: 10px;
+            right: 8px;
+            transform: rotate(45deg);
+        }
+        
+        .icon-wrench::before {
+            content: '';
+            position: absolute;
+            left: -3px;
+            top: -3px;
+            width: 8px;
+            height: 8px;
+            border: 2px solid #1e3a8a;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos SaaS anti-DDoS</div>
+    
+    <div class="main-container">
+        <!-- Column 1: Global Scale Mitigation -->
+        <div class="flow-column">
+            <div class="header-box">
+                <div class="header-icon">
+                    <div class="icon-shield-people">
+                        <div class="icon-shield"></div>
+                        <div class="icon-person icon-person-1"></div>
+                        <div class="icon-person icon-person-2"></div>
+                    </div>
+                </div>
+                <div class="header-title">Global Scale Mitigation</div>
+            </div>
+            <div class="content-box">
+                <ul class="content-list">
+                    <li>Utilizes Microsoft's global network infrastructure to mitigate DDoS attacks.</li>
+                    <li>Ensures minimal latency and optimal performance for applications.</li>
+                </ul>
+            </div>
+            <div class="flow-arrow"></div>
+        </div>
+        
+        <!-- Column 2: Adaptive Threat Intelligence -->
+        <div class="flow-column">
+            <div class="header-box">
+                <div class="header-icon">
+                    <div class="icon-magnifying-glass">
+                        <div class="icon-glass-circle"></div>
+                        <div class="icon-glass-handle"></div>
+                        <div class="icon-people-group">
+                            <div class="icon-person-small"></div>
+                            <div class="icon-person-small"></div>
+                            <div class="icon-person-small"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-title">Adaptive Threat Intelligence</div>
+            </div>
+            <div class="content-box">
+                <ul class="content-list">
+                    <li>Dynamic detection and mitigation based on real-time threat intelligence.</li>
+                    <li>Constantly updated DDoS attack patterns and techniques.</li>
+                </ul>
+            </div>
+            <div class="flow-arrow"></div>
+        </div>
+        
+        <!-- Column 3: Application Layer Protection -->
+        <div class="flow-column">
+            <div class="header-box">
+                <div class="header-icon">
+                    <div class="icon-document-pin">
+                        <div class="icon-doc"></div>
+                        <div class="icon-pin"></div>
+                    </div>
+                </div>
+                <div class="header-title">Application Layer Protection</div>
+            </div>
+            <div class="content-box">
+                <ul class="content-list">
+                    <li>Guards against application layer attacks, ensuring the availability and performance of critical services.</li>
+                    <li>Mitigates HTTP/S, DNS, and other application layer attack vectors.</li>
+                </ul>
+            </div>
+            <div class="flow-arrow"></div>
+        </div>
+        
+        <!-- Column 4: Azure Monitor Integration -->
+        <div class="flow-column">
+            <div class="header-box">
+                <div class="header-icon">
+                    <div class="icon-document-pencil">
+                        <div class="icon-doc-2"></div>
+                        <div class="icon-pencil"></div>
+                    </div>
+                </div>
+                <div class="header-title">Azure Monitor Integration</div>
+            </div>
+            <div class="content-box">
+                <ul class="content-list">
+                    <li>Seamlessly integrates with Azure Monitor for visibility into DDoS attack trends and insights.</li>
+                    <li>Enables proactive threat management.</li>
+                </ul>
+            </div>
+            <div class="flow-arrow"></div>
+        </div>
+        
+        <!-- Column 5: Fine-tuned Protection -->
+        <div class="flow-column">
+            <div class="header-box">
+                <div class="header-icon">
+                    <div class="icon-lightbulb-wrench">
+                        <div class="icon-lightbulb"></div>
+                        <div class="icon-wrench"></div>
+                    </div>
+                </div>
+                <div class="header-title">Fine Tuned Protection Measures</div>
+            </div>
+            <div class="content-box">
+                <ul class="content-list">
+                    <li>Allows customization of DDoS protection policies.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showTemenosSaaSWAF'}, '*');">Temenos SaaS WAF</button>
+</body>
+</html>`
+
+// WAF HTML Content
+const WAFHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS WAF</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            padding: 80px 40px 40px 40px;
+            gap: 40px;
+            height: 100%;
+        }
+        
+        .left-section {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            max-width: 600px;
+        }
+        
+        .text-column {
+            flex: 1;
+        }
+        
+        .column-header {
+            background: #b3d9ff;
+            color: #1e3a8a;
+            padding: 12px 15px;
+            border-radius: 6px 6px 0 0;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: left;
+        }
+        
+        .column-content {
+            background: #9333ea;
+            color: #ffffff;
+            padding: 20px 15px;
+            border-radius: 0 0 6px 6px;
+            min-height: 200px;
+        }
+        
+        .content-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .content-list li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 12px;
+            font-size: 15px;
+            color: #ffffff;
+            line-height: 1.5;
+            text-align: left;
+        }
+        
+        .content-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .right-section {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .waf-diagram {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .waf-central-box {
+            width: 300px;
+            height: 120px;
+            background: #007BA7;
+            border: 2px solid #4b5563;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            position: absolute;
+            top: 50%;
+            left: calc(50% - 100px);
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+        
+        .functionality-box {
+            position: absolute;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #1a1a1a;
+            text-align: center;
+            min-width: 140px;
+        }
+        
+        .box-orange {
+            background: #fb923c;
+        }
+        
+        .box-red {
+            background: #ef4444;
+            color: #ffffff;
+        }
+        
+        .box-teal {
+            background: #14b8a6;
+        }
+        
+        .box-light-green {
+            background: #86efac;
+        }
+        
+        .box-blue {
+            background: #60a5fa;
+        }
+        
+        .box-network-protocol {
+            top: 15%;
+            left: 10%;
+        }
+        
+        .box-http-protocol {
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .box-stateful-connection {
+            top: 15%;
+            right: 10%;
+        }
+        
+        .box-high-availability {
+            top: 35%;
+            right: 10%;
+        }
+        
+        .box-session-management {
+            top: 50%;
+            right: 10%;
+        }
+        
+        .box-honeypot {
+            bottom: 15%;
+            left: 10%;
+        }
+        
+        .box-hidden-field {
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .box-cookie-monitoring {
+            bottom: 15%;
+            right: 10%;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos SaaS WAF</div>
+    
+    <div class="main-container">
+        <div class="left-section">
+            <div class="text-column">
+                <div class="column-header">Layer 7 attack protection</div>
+                <div class="column-content">
+                    <ul class="content-list">
+                        <li>SQL injection and cross site scripting (XSS) are protected by WAF.</li>
+                        <li>Prior to SaaS clients going live they are tested with WAF enabled in preventive mode and this is mandated control for security sign off</li>
+                        <li>IP Reputation, Automatically blocks traffic from known malicious IP addresses</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="text-column">
+                <div class="column-header">Temenos SaaS WAF control</div>
+                <div class="column-content">
+                    <ul class="content-list">
+                        <li>Azure front door</li>
+                        <li>Azure WAF, NGNIX Application Gateway.</li>
+                        <li>Temenos SaaS Go-Live environments are tested with WAF enabled in preventive mode</li>
+                        <li>Use OWASP Core Rule Set 3.1</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="right-section">
+            <div class="waf-diagram">
+                <div class="waf-central-box">Web Application Firewall</div>
+                
+                <div class="functionality-box box-network-protocol box-orange">Network<br>protocol<br>Filtering</div>
+                <div class="functionality-box box-http-protocol box-red">HTTP<br>Protocol<br>Filtering</div>
+                <div class="functionality-box box-stateful-connection box-teal">Stateful<br>Connection<br>Monitoring</div>
+                
+                <div class="functionality-box box-high-availability box-light-green">High<br>Availability<br>Support</div>
+                <div class="functionality-box box-session-management box-blue">Session<br>Management<br>Controls</div>
+                
+                <div class="functionality-box box-honeypot box-light-green">Honeypot/<br>Honeynet<br>Integration</div>
+                <div class="functionality-box box-hidden-field box-teal">Hidden<br>Field<br>Enforcement</div>
+                <div class="functionality-box box-cookie-monitoring box-red">Cookie<br>Monitoring<br>/Protection</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`
+
 export function SecurityContentViewer() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
@@ -4874,9 +6644,13 @@ export function SecurityContentViewer() {
   const [showSaaSDataAccessControl, setShowSaaSDataAccessControl] = useState(false)
   const [showSaaSPAM, setShowSaaSPAM] = useState(false)
   const [showProtectAssets, setShowProtectAssets] = useState(false)
+  const [showSecurityEventFeed, setShowSecurityEventFeed] = useState(false)
+  const [showNetworkSecurityServices, setShowNetworkSecurityServices] = useState(false)
+  const [showTemenosSaaSAntiDDoS, setShowTemenosSaaSAntiDDoS] = useState(false)
+  const [showTemenosSaaSWAF, setShowTemenosSaaSWAF] = useState(false)
 
   const handleCardClick = (cardId: number) => {
-    if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6) {
+    if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6 || cardId === 7) {
       setSelectedCard(cardId)
     }
   }
@@ -4890,6 +6664,10 @@ export function SecurityContentViewer() {
     setShowSaaSDataAccessControl(false)
     setShowSaaSPAM(false)
     setShowProtectAssets(false)
+    setShowSecurityEventFeed(false)
+    setShowNetworkSecurityServices(false)
+    setShowTemenosSaaSAntiDDoS(false)
+    setShowTemenosSaaSWAF(false)
   }
 
   const handleBackToArchitecture = () => {
@@ -4919,6 +6697,18 @@ export function SecurityContentViewer() {
       }
       if (event.data && event.data.type === 'showProtectCriticalAssets') {
         setShowProtectAssets(true)
+      }
+      if (event.data && event.data.type === 'showSecurityEventsFeed') {
+        setShowSecurityEventFeed(true)
+      }
+      if (event.data && event.data.type === 'showNetworkSecurityServices') {
+        setShowNetworkSecurityServices(true)
+      }
+      if (event.data && event.data.type === 'showTemenosSaaSAntiDDoS') {
+        setShowTemenosSaaSAntiDDoS(true)
+      }
+      if (event.data && event.data.type === 'showTemenosSaaSWAF') {
+        setShowTemenosSaaSWAF(true)
       }
     }
 
@@ -5140,6 +6930,127 @@ export function SecurityContentViewer() {
           srcDoc={PlatformManagementHTML}
           className="w-full h-full border-0 rounded-lg"
           title="Platform Management"
+          sandbox="allow-same-origin allow-scripts"
+          style={{ minHeight: '600px' }}
+        />
+      </div>
+    )
+  }
+
+  // Show HTML5 diagram when card 7 is selected
+  if (selectedCard === 7) {
+    // Show TemenosSaaSWAF if button was clicked
+    if (showTemenosSaaSWAF) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowTemenosSaaSWAF(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={WAFHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="WAF"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show TemenosSaaSAntiDDoS if button was clicked
+    if (showTemenosSaaSAntiDDoS) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowTemenosSaaSAntiDDoS(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={DDoSHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="DDoS Protection"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show NetworkSecurityServices if button was clicked
+    if (showNetworkSecurityServices) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowNetworkSecurityServices(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={NetworkHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Network Security"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show SecurityEventFeed if button was clicked
+    if (showSecurityEventFeed) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowSecurityEventFeed(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={SecurityEventFeedHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Security Event Feed"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show ProductSecurityUniform by default
+    return (
+      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+          >
+            <X className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+        </div>
+        <iframe
+          srcDoc={ProductSecurityUniformHTML}
+          className="w-full h-full border-0 rounded-lg"
+          title="Product Security Uniform"
           sandbox="allow-same-origin allow-scripts"
           style={{ minHeight: '600px' }}
         />

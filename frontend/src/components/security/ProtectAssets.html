@@ -68,7 +68,7 @@
         .section-description {
             font-size: 16px;
             color: #000;
-            line-height: 1.4;
+            line-height: 1;
             flex: 1;
         }
         
@@ -77,11 +77,11 @@
             padding-left: 45px;
             font-size: 14px;
             color: #000;
-            line-height: 1.6;
+            line-height: 1;
         }
         
         .section-measures li {
-            margin-bottom: 8px;
+            margin-bottom: 0;
         }
         
         .section-1 {
@@ -100,8 +100,20 @@
             color: #ff8c00;
         }
         
+        .section-content-wrapper {
+            margin-top: auto;
+        }
+        
         .section-3 {
             border-left: 4px solid #ffd700;
+        }
+        
+        .section-3 .section-header {
+            margin-bottom: 0;
+        }
+        
+        .section-3 .section-measures {
+            margin-top: 0;
         }
         
         .section-3 .section-number {
@@ -112,6 +124,14 @@
             border-left: 4px solid #1E3A8A;
         }
         
+        .section-4 .section-header {
+            margin-bottom: 0;
+        }
+        
+        .section-4 .section-measures {
+            margin-top: 0;
+        }
+        
         .section-4 .section-number {
             color: #1E3A8A;
         }
@@ -119,16 +139,16 @@
         .concentric-circles-container {
             position: absolute;
             top: 50%;
-            right: 50px;
-            transform: translateY(-50%);
-            width: 300px;
-            height: 300px;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
         }
         
         .concentric-circles {
             position: relative;
-            width: 300px;
-            height: 300px;
+            width: 200px;
+            height: 200px;
         }
         
         .circle {
@@ -141,32 +161,32 @@
         }
         
         .circle-1 {
-            width: 80px;
-            height: 80px;
-            top: 110px;
-            left: 110px;
+            width: 53px;
+            height: 53px;
+            top: 73px;
+            left: 73px;
             background: #ff0000;
         }
         
         .circle-2 {
-            width: 140px;
-            height: 140px;
-            top: 80px;
-            left: 80px;
+            width: 93px;
+            height: 93px;
+            top: 53px;
+            left: 53px;
             background: #ff8c00;
         }
         
         .circle-3 {
-            width: 200px;
-            height: 200px;
-            top: 50px;
-            left: 50px;
+            width: 133px;
+            height: 133px;
+            top: 33px;
+            left: 33px;
             background: #ffd700;
         }
         
         .circle-4 {
-            width: 300px;
-            height: 300px;
+            width: 200px;
+            height: 200px;
             top: 0;
             left: 0;
             background: #1E3A8A;
@@ -176,7 +196,7 @@
             position: absolute;
             font-size: 24px;
             font-weight: bold;
-            color: #000;
+            color: #ffffff;
         }
         
         .circle-1 .circle-number {
@@ -195,8 +215,8 @@
         }
         
         .circle-4 .circle-number {
-            bottom: 20px;
-            left: 20px;
+            bottom: 25px;
+            left: 25px;
         }
     </style>
 </head>
@@ -232,28 +252,32 @@
         
         <!-- Section 3: Cloud Operations -->
         <div class="section section-3">
-            <div class="section-header">
-                <div class="section-number">3</div>
-                <div class="section-description">Safe operating environment, mature processes, highly available.</div>
+            <div class="section-content-wrapper">
+                <div class="section-header">
+                    <div class="section-number">3</div>
+                    <div class="section-description">Safe operating environment, mature processes, highly available.</div>
+                </div>
+                <ul class="section-measures">
+                    <li>Cloud Operations networks segregated from Corporate</li>
+                    <li>Standard operating procedures in place</li>
+                    <li>Enhancing Cloud Operations Processes</li>
+                </ul>
             </div>
-            <ul class="section-measures">
-                <li>Cloud Operations networks segregated from Corporate</li>
-                <li>Standard operating procedures in place</li>
-                <li>Enhancing Cloud Operations Processes</li>
-            </ul>
         </div>
         
         <!-- Section 4: Temenos Corporate IT -->
         <div class="section section-4">
-            <div class="section-header">
-                <div class="section-number">4</div>
-                <div class="section-description">Safe development to protect integrity of product and operations.</div>
+            <div class="section-content-wrapper">
+                <div class="section-header">
+                    <div class="section-number">4</div>
+                    <div class="section-description">Safe development to protect integrity of product and operations.</div>
+                </div>
+                <ul class="section-measures">
+                    <li>Last-generation authentication standards</li>
+                    <li>Network and servers centrally managed</li>
+                    <li>Consistent approach to security controls, change management, patching or monitoring</li>
+                </ul>
             </div>
-            <ul class="section-measures">
-                <li>Last-generation authentication standards</li>
-                <li>Network and servers centrally managed</li>
-                <li>Consistent approach to security controls, change management, patching or monitoring</li>
-            </ul>
         </div>
         
         <!-- Concentric Circles Graphic -->

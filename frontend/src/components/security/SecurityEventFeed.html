@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Product Security Uniform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .diagram-container {
+            flex: 1;
+            padding: 80px 40px 100px 40px;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .temenos-cloud {
+            position: absolute;
+            left: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 250px;
+            height: 500px;
+            border: 4px solid #9333ea;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .temenos-cloud-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #9333ea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .cloud-layer {
+            width: 100%;
+            height: 60px;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #1a1a1a;
+        }
+        
+        .azure-services {
+            position: absolute;
+            left: 350px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .azure-service-box {
+            width: 280px;
+            height: 80px;
+            background: #b3d9ff;
+            border: 2px solid #4a90e2;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #1a1a1a;
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .azure-monitor {
+            position: absolute;
+            left: 680px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100px;
+            height: 100px;
+        }
+        
+        .monitor-gauge {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                #22c55e 0deg 120deg,
+                #eab308 120deg 240deg,
+                #f97316 240deg 360deg
+            );
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .monitor-needle {
+            position: absolute;
+            width: 3px;
+            height: 35px;
+            background: #1a1a1a;
+            transform-origin: bottom center;
+            transform: rotate(45deg);
+            bottom: 50%;
+            left: 50%;
+            margin-left: -1.5px;
+        }
+        
+        .monitor-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #1a1a1a;
+            white-space: nowrap;
+        }
+        
+        .event-hub {
+            position: absolute;
+            left: 820px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            height: 80px;
+            background: #1e3a8a;
+            border: 2px solid #1e40af;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .soc-box {
+            width: 250px;
+            height: 100px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            gap: 8px;
+        }
+        
+        .temenos-soc {
+            position: absolute;
+            left: 650px;
+            bottom: 80px;
+            background: #b3d9ff;
+            border: 2px solid #4a90e2;
+        }
+        
+        .client-soc {
+            position: absolute;
+            right: 40px;
+            bottom: 80px;
+            background: #6b21a8;
+            border: 2px solid #7c3aed;
+            color: #ffffff;
+        }
+        
+        .soc-label {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .soc-subtitle {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 5px;
+        }
+        
+        .people-icon {
+            width: 40px;
+            height: 30px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 5px;
+        }
+        
+        .person {
+            width: 12px;
+            height: 20px;
+            background: #1a1a1a;
+            border-radius: 6px 6px 0 0;
+        }
+        
+        .client-soc .person {
+            background: #ffffff;
+        }
+        
+        .arrow-purple {
+            stroke: #9333ea;
+            stroke-width: 4;
+            fill: none;
+            marker-end: url(#arrowhead-purple);
+        }
+        
+        .arrow-teal {
+            stroke: #14b8a6;
+            stroke-width: 4;
+            fill: none;
+            marker-end: url(#arrowhead-teal);
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+        
+        .tooltip {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            background: #ffffff;
+            border: 2px solid #ff0000;
+            border-radius: 0;
+            padding: 15px 20px;
+            font-size: 16px;
+            color: #000;
+            z-index: 10000;
+            max-height: 40vh;
+            overflow-y: auto;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+            display: none;
+            margin: 0 !important;
+            top: auto !important;
+            box-sizing: border-box;
+            min-height: fit-content;
+        }
+        
+        .tooltip-title {
+            display: none;
+        }
+        
+        .tooltip-description {
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+            text-align: left;
+            font-size: 16px;
+            white-space: pre-line;
+        }
+        
+        .tooltip-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        
+        .tooltip-close:hover {
+            background: #cc0000;
+        }
+        
+        .clickable {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Product Security Uniform</div>
+    
+    <div class="diagram-container">
+        <!-- SVG for arrows -->
+        <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+            <defs>
+                <marker id="arrowhead-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#9333ea" />
+                </marker>
+                <marker id="arrowhead-teal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#14b8a6" />
+                </marker>
+            </defs>
+            
+            <!-- Arrow from Temenos Cloud to Azure Log Analytics -->
+            <line x1="290" y1="180" x2="350" y2="180" class="arrow-purple" />
+            
+            <!-- Arrow from Temenos Cloud to Azure Security Center -->
+            <line x1="290" y1="300" x2="350" y2="300" class="arrow-purple" />
+            
+            <!-- Arrow from Azure Log Analytics to Azure Security Center -->
+            <line x1="420" y1="210" x2="420" y2="240" class="arrow-purple" />
+            
+            <!-- Arrow from Azure Security Center to Azure Sentinel -->
+            <line x1="420" y1="320" x2="420" y2="450" class="arrow-purple" />
+            
+            <!-- Arrow from Azure Sentinel to Temenos SOC -->
+            <line x1="730" y1="570" x2="500" y2="530" class="arrow-purple" />
+            
+            <!-- Arrow from Azure Monitor to Event Hub -->
+            <line x1="730" y1="350" x2="820" y2="350" class="arrow-teal" />
+            
+            <!-- Arrow from Event Hub to Client SOC -->
+            <line x1="920" y1="440" x2="1100" y2="570" class="arrow-teal" />
+        </svg>
+        
+        <!-- Temenos Cloud Environment -->
+        <div class="temenos-cloud">
+            <div class="temenos-cloud-label">Temenos Cloud Environment</div>
+            <div class="cloud-layer">Tooling</div>
+            <div class="cloud-layer">Applications</div>
+            <div class="cloud-layer">Middleware</div>
+            <div class="cloud-layer">Database</div>
+            <div class="cloud-layer">Operating System</div>
+            <div class="cloud-layer">Azure Fabric</div>
+        </div>
+        
+        <!-- Azure Services -->
+        <div class="azure-services">
+            <div class="azure-service-box" style="margin-top: -100px;">Azure Log Analytics</div>
+            <div class="azure-service-box">Azure Security Center</div>
+            <div class="azure-service-box clickable" style="margin-top: 100px;" data-tooltip-id="azure-sentinel">Security Incident / Events Management<br>Azure Sentinel (SIEM)</div>
+        </div>
+        
+        <!-- Azure Monitor -->
+        <div class="azure-monitor">
+            <div class="monitor-gauge">
+                <div class="monitor-needle"></div>
+            </div>
+            <div class="monitor-label">Azure Monitor</div>
+        </div>
+        
+        <!-- Event Hub -->
+        <div class="event-hub">Event Hub</div>
+        
+        <!-- Temenos SOC -->
+        <div class="soc-box temenos-soc clickable" data-tooltip-id="temenos-soc">
+            <div class="soc-label">Temenos SOC</div>
+            <div class="people-icon">
+                <div class="person"></div>
+                <div class="person"></div>
+                <div class="person"></div>
+            </div>
+        </div>
+        
+        <!-- Client SOC -->
+        <div class="soc-box client-soc">
+            <div class="soc-label">Client SOC</div>
+            <div class="soc-subtitle">(Splunk and IBM QRadar)</div>
+            <div class="people-icon">
+                <div class="person"></div>
+                <div class="person"></div>
+                <div class="person"></div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showNetworkSecurityServices'}, '*');">Network Security Services</button>
+    
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip">
+        <button class="tooltip-close" onclick="hideTooltip()">×</button>
+        <div class="tooltip-title"></div>
+        <div class="tooltip-description"></div>
+    </div>
+    
+    <script>
+        const tooltips = [
+            {
+                title: 'Temenos SOC',
+                description: '+ SOC \n\n24x7 Security Operation Centre where the main responsibilities include: \n\n1. Monitoring and detecting anomalies due to either of the following: Violation of information security policy; Threats and attacks to the information landscape from within and outside the organization; Correlation of potential threats across cyber space with vulnerabilities within Temenos environments such that mitigations and appropriate responses can be put in place;\n\n2. Operation and management of security tools.\n\n3. Collecting, correlating and utilizing cyber threat intelligence data from different sources \n\n4. Collection and reporting of security events\n\n5. Responding to security incidents\n\n+ NOC\n\n24x7 Network Operation Centre where the main responsibilities include: \n\n1. Real user monitoring \n\n2. Patching of all infrastructure, platform and application components\n\n3. Capacity management \n\n4. IT Service Continuity testing \n\n5. Network management, including configuration of firewall, and traffic management\n\n6. Real-time monitoring to provide :  1. Application Support;  2. Infrastructure Support; \n\n7. Operation and management of performance tools.\n\n8. Collection and reporting of performance & availability events and trends;',
+                position: 'bottom'
+            },
+            {
+                title: 'Azure Sentinel (SIEM)',
+                description: 'SIEM. Used Azure Sentinel\'s built-in Insecure Protocol Workbook to discover the use of insecure services and protocols. The Security Operations Centre operate a Security Incident and Event Management platform (SIEM) that collects a subsection of logs which are used to detect patterns, look for known malicious activities and signatures, etc.​ Alerts are correlated to gain a big picture understanding of a potential attack or incident.​\n\nTemenos provides a SaaS Event Hub service that enables customers to access their application security logs in real time. This service works by collecting logs from the SaaS environment and pushing them into an Event Hub, which the customer can then integrate with their own monitoring or observability tools (e.g., Splunk, Azure Monitor, ELK Stack).\n\nThis capability ensures that customers maintain visibility and control over their operational data in production to support their monitoring needs of compliance, troubleshooting and performance.\n\nThis service is optional.\n\nForwarding logs to local central log repository is done automatically in real time.\n\nSecurity logs are reviewed on a daily, weekly and monthly basis as part of security operations activities. All exceptions and anomalies are analyzed and promptly escalated as per the security incident escalation process.',
+                position: 'bottom'
+            }
+        ];
+        
+        function showTooltip(tooltipId) {
+            const tooltip = document.getElementById('tooltip');
+            const tooltipDescription = tooltip ? tooltip.querySelector('.tooltip-description') : null;
+            
+            let config;
+            
+            if (tooltipId === 'temenos-soc') {
+                config = tooltips[0];
+            } else if (tooltipId === 'azure-sentinel') {
+                config = tooltips[1];
+            }
+            
+            if (config && tooltip && tooltipDescription) {
+                tooltipDescription.textContent = config.description;
+                tooltip.style.display = 'block';
+                tooltip.style.position = 'fixed';
+                tooltip.style.bottom = '0';
+                tooltip.style.left = '0';
+                tooltip.style.right = '0';
+                tooltip.style.width = '100%';
+                tooltip.style.top = 'auto';
+                tooltip.style.margin = '0';
+            }
+        }
+        
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            if (tooltip) {
+                tooltip.style.display = 'none';
+            }
+        }
+        
+        // Add click handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            const clickableElements = document.querySelectorAll('.clickable');
+            clickableElements.forEach(function(element) {
+                element.addEventListener('click', function() {
+                    const tooltipId = this.getAttribute('data-tooltip-id');
+                    if (tooltipId) {
+                        showTooltip(tooltipId);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
