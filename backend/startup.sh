@@ -31,6 +31,18 @@ if ! command -v gunicorn &> /dev/null; then
     pip install gunicorn
 fi
 
+# Install kubectl if not available (needed for AKS namespace discovery)
+if ! command -v kubectl &> /dev/null; then
+    echo "Installing kubectl for AKS namespace discovery..."
+    KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    mv kubectl /usr/local/bin/
+    echo "✓ kubectl installed: $(kubectl version --client --short 2>/dev/null || echo 'installed')"
+else
+    echo "✓ kubectl already available: $(kubectl version --client --short 2>/dev/null || echo 'found')"
+fi
+
 echo ""
 echo "Starting application with gunicorn..."
 echo ""
