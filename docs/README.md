@@ -15,11 +15,9 @@ This directory contains all documentation for the BSG Demo Platform.
 
 ### Configuration & Deployment
 - **[AZURE_CONFIGURATION.md](AZURE_CONFIGURATION.md)** (9.8 KB) - Azure setup and configuration guide
-- **[AZURE_DEPLOYMENT_FIX.md](AZURE_DEPLOYMENT_FIX.md)** (5.3 KB) - Common Azure deployment issues and fixes
-- **[CHECK_TOKEN_SETUP.md](CHECK_TOKEN_SETUP.md)** (3.1 KB) - JWT token configuration guide
 
 ### Troubleshooting
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** (10.9 KB) - Common issues and solutions
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions (includes deployment issues, namespace discovery, token setup, frontend/backend connectivity)
 
 ## 📋 Documentation Organization
 
