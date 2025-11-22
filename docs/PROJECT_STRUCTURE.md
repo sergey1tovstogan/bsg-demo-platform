@@ -86,8 +86,9 @@ Contains deployment and infrastructure scripts:
 Contains all project documentation:
 - **`ARCHITECTURE.md`**: Detailed system architecture documentation
 - **`USAGE.md`**: Comprehensive usage guide
-- **`CHECK_TOKEN_SETUP.md`**: JWT token configuration guide
-- **`.claude/claude.md`**: Development context (synced with .cursor/rules)
+- **`USER_GUIDE.md`**: Complete user guide
+- **`TROUBLESHOOTING.md`**: Troubleshooting guide
+- **`AZURE_CONFIGURATION.md`**: Azure setup and configuration
 - Other documentation files for specific features
 
 ### `/scripts`
@@ -122,7 +123,7 @@ Contains application logs (excluded from git):
 - **Getting Started**: See [README.md](../README.md)
 - **Architecture**: See [docs/ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Usage**: See [docs/USAGE.md](./USAGE.md)
-- **Development**: See `.claude/claude.md` or `.cursor/rules`
+- **Development**: See `.cursor/rules`
 
 ---
 
