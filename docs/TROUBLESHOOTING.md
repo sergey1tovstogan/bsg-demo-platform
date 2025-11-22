@@ -86,9 +86,12 @@ If Managed Identity doesn't work, configure Service Principal credentials:
 ### Verify Configuration
 
 After configuration, test the connection:
-```powershell
-.\tools\check-backend-status.ps1
+```bash
+curl http://localhost:8000/api/v1/health
 ```
+
+Or check the backend logs in Azure Portal:
+- App Services → `bsg-demo-platform-app` → Log stream
 
 Then try connecting to Azure from the web app again.
 
@@ -343,34 +346,23 @@ curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/j
 2. Check CORS configuration in backend
 3. Verify CORS middleware is enabled
 
-## Quick Diagnostic Script
+## Quick Diagnostic Commands
 
-Run this PowerShell script to check everything:
+Run these commands to check everything:
 
-```powershell
-# Check backend accessibility
-try {
-    $health = Invoke-RestMethod -Uri "https://bsg-demo-platform-app.azurewebsites.net/api/v1/health" -TimeoutSec 10
-    Write-Host "✓ Backend is accessible" -ForegroundColor Green
-} catch {
-    Write-Host "✗ Backend is NOT accessible: $($_.Exception.Message)" -ForegroundColor Red
-}
-
-# Check JWT token status (if backend is accessible)
-try {
-    $jwtInfo = Invoke-RestMethod -Uri "https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/jwt-info" -TimeoutSec 10
-    if ($jwtInfo.data.configured) {
-        Write-Host "✓ RAG_JWT_TOKEN is configured" -ForegroundColor Green
-        if ($jwtInfo.data.has_expiration -and $jwtInfo.data.is_expired) {
-            Write-Host "⚠ JWT token is EXPIRED" -ForegroundColor Yellow
-        }
-    } else {
-        Write-Host "✗ RAG_JWT_TOKEN is NOT configured" -ForegroundColor Red
-    }
-} catch {
-    Write-Host "⚠ Could not check JWT status: $($_.Exception.Message)" -ForegroundColor Yellow
-}
+**Check backend accessibility:**
+```bash
+curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/health
 ```
+
+**Check JWT token status:**
+```bash
+curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/jwt-info
+```
+
+**Or use Azure Portal:**
+- App Services → `bsg-demo-platform-app` → Log stream
+- Check for errors in the logs
 
 ---
 

@@ -40,7 +40,7 @@ This repository is designed to support the **Business Solution Group (BSG)** in 
 - **Node.js 20+** and npm installed
 - **Git** for version control
 - **Azure CLI** (optional, for Azure deployments)
-- **PowerShell** (Windows) or **Bash** (Linux/Mac)
+- **Command Prompt** (Windows) or **Bash** (Linux/Mac)
 
 ### Initial Setup
 
@@ -104,16 +104,16 @@ cd frontend
 npm run dev
 ```
 
-### Option 3: Using PowerShell Scripts
+### Option 3: Using Individual Batch Scripts
 
 **Start Backend:**
-```powershell
+```cmd
 cd backend
-.\start-backend.ps1
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Start Frontend:**
-```powershell
+```cmd
 cd frontend
 npm run dev
 ```
