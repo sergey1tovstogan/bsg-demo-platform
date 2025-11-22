@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.pyc
+*.pyo
+*.pyd
 
 # Development files
 scripts/
@@ -13,6 +16,8 @@ uploads/
 .coverage
 htmlcov/
 *.log
+*.tmp
+*.temp
 
 # IDE files
 .vscode/
@@ -20,25 +25,72 @@ htmlcov/
 *.swp
 *.swo
 *~
+.project
+.classpath
+.settings/
 
 # OS files
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # Environment files
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
 
 # Test files
 tests/
 test_*.py
 *_test.py
+pytest.ini
+.pytest_cache/
 
 # Documentation
 *.md
 README.md
+MONGODB_CONNECTION.md
+docs/
 
 # Git
 .git/
 .gitignore
+.gitattributes
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Development scripts
+create_collections.py
+export_observability_html.py
+insert_observability_content_mongodb.py
+seed_observability.py
+test_namespace_endpoint.py
+verify_observability_content.py
+verify_temenos_detection.py
+observability_preview.html
+start-backend.sh
+
+# Large files
+*.zip
+*.tar.gz
+*.tar
+*.rar
+*.7z
+
+# Node modules (if accidentally included)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml

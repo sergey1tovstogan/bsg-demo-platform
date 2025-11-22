@@ -16,13 +16,13 @@ if [ ! -f "app/main.py" ]; then
     exit 1
 fi
 
-# Check if requirements are installed
+# Check if requirements are installed (optimized check)
 echo "Checking Python packages..."
 python -c "import fastapi, gunicorn, uvicorn" 2>&1
 if [ $? -ne 0 ]; then
     echo "WARNING: Some required packages may be missing"
-    echo "Installing requirements..."
-    pip install -r requirements.txt --quiet
+    echo "Installing requirements (using pip cache for faster installs)..."
+    pip install --cache-dir /tmp/pip-cache -r requirements.txt --quiet --no-warn-script-location
 fi
 
 # Verify gunicorn is available

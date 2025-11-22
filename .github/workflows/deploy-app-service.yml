@@ -184,36 +184,48 @@ jobs:
           chmod +x backend/startup.sh
           echo "✓ startup.sh is now executable"
       
-      - name: Clean up unnecessary files
+      - name: Clean up unnecessary files (optimized)
         working-directory: ./backend
         run: |
           echo "Cleaning up unnecessary files to reduce package size..."
           echo "Package size before cleanup:"
-          du -sh . || echo "Could not calculate size"
+          du -sh . 2>/dev/null | cut -f1 || echo "N/A"
           
-          # Remove test files (keep tests/ directory structure but remove actual test files outside app/)
-          find . -name "*test*.py" -not -path "./app/*" -not -path "./tests/*" -delete || true
+          # Aggressive cleanup - remove everything not needed for runtime
+          # Note: .deploymentignore handles most exclusions, but we do additional cleanup here
           
-          # Remove files that shouldn't be deployed
-          rm -rf scripts/ infrastructure/ uploads/ .pytest_cache/ .vscode/ .idea/ || true
+          # Remove development/test files
+          rm -rf scripts/ infrastructure/ uploads/ tests/ .pytest_cache/ .vscode/ .idea/ || true
           
-          # Remove node_modules if accidentally copied
-          rm -rf node_modules/ || true
+          # Remove documentation and markdown files
+          find . -maxdepth 1 -name "*.md" -delete 2>/dev/null || true
+          find . -maxdepth 1 -name "*.html" -not -path "./app/static/*" -delete 2>/dev/null || true
           
-          # Remove Python cache files (but keep __pycache__ structure for faster startup)
+          # Remove development Python scripts
+          rm -f create_*.py export_*.py insert_*.py seed_*.py test_*.py verify_*.py 2>/dev/null || true
+          rm -f observability_preview.html start-backend.sh 2>/dev/null || true
+          
+          # Remove Python cache files (__pycache__ will be excluded by .deploymentignore)
+          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
           find . -type f -name "*.pyc" -delete 2>/dev/null || true
           find . -type f -name "*.pyo" -delete 2>/dev/null || true
+          
+          # Remove logs and temporary files
           find . -type f -name "*.log" -delete 2>/dev/null || true
+          find . -type f -name "*.tmp" -delete 2>/dev/null || true
+          find . -type f -name "*.temp" -delete 2>/dev/null || true
+          
+          # Remove node_modules if accidentally copied
+          rm -rf node_modules/ package*.json 2>/dev/null || true
           
           # Remove .git directories if any
           find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
           
-          # Remove large unnecessary files
-          find . -name "*.zip" -delete 2>/dev/null || true
-          find . -name "*.tar.gz" -delete 2>/dev/null || true
+          # Remove large archive files
+          find . -name "*.zip" -o -name "*.tar.gz" -o -name "*.tar" -delete 2>/dev/null || true
           
           echo "Package size after cleanup:"
-          du -sh . || echo "Could not calculate size"
+          du -sh . 2>/dev/null | cut -f1 || echo "N/A"
           echo "✓ Cleanup complete"
       
       - name: Verify requirements.txt exists
@@ -359,31 +371,30 @@ jobs:
             echo "  ⚠ Static directory not found!"
           fi
       
-      - name: Wait and verify SCM is ready (avoid restart conflicts)
+      - name: Wait and verify SCM is ready (optimized)
         run: |
-          echo "Waiting 60 seconds and verifying SCM container is ready..."
-          echo ""
-          echo "⚠ App settings configuration can restart the SCM container."
-          echo "   We need to wait for it to fully restart before deploying."
-          echo "   Increasing wait time to 60 seconds to avoid deployment conflicts."
-          sleep 60
-          
-          # Try to verify SCM is accessible with more retries
-          echo "Verifying SCM container is accessible..."
+          echo "Verifying SCM container is ready (optimized polling)..."
           SCM_URL="https://${{ env.AZURE_WEBAPP_NAME }}.scm.azurewebsites.net"
-          MAX_RETRIES=10
-          RETRY_DELAY=10
+          MAX_RETRIES=15
+          RETRY_DELAY=3
+          INITIAL_WAIT=10
           SCM_READY=false
           
+          # Shorter initial wait (10s instead of 60s)
+          echo "Initial wait: ${INITIAL_WAIT} seconds..."
+          sleep $INITIAL_WAIT
+          
+          # Faster polling with shorter delays
+          echo "Polling SCM container (max ${MAX_RETRIES} attempts, ${RETRY_DELAY}s intervals)..."
           for i in $(seq 1 $MAX_RETRIES); do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 $SCM_URL || echo "000")
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $SCM_URL || echo "000")
             if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
-              echo "✓ SCM container is responding (HTTP $HTTP_CODE)"
+              echo "✓ SCM container is responding (HTTP $HTTP_CODE) - ready in ~$((INITIAL_WAIT + (i-1)*RETRY_DELAY))s"
               SCM_READY=true
               break
             else
-              echo "SCM check attempt $i/$MAX_RETRIES returned HTTP $HTTP_CODE, waiting ${RETRY_DELAY} more seconds..."
               if [ $i -lt $MAX_RETRIES ]; then
+                echo "Attempt $i/$MAX_RETRIES: HTTP $HTTP_CODE, retrying in ${RETRY_DELAY}s..."
                 sleep $RETRY_DELAY
               fi
             fi
@@ -391,7 +402,7 @@ jobs:
           
           if [ "$SCM_READY" = false ]; then
             echo "⚠ WARNING: SCM container may not be fully ready, but proceeding with deployment"
-            echo "   If deployment fails, wait longer and retry"
+            echo "   Total wait time: ~$((INITIAL_WAIT + MAX_RETRIES*RETRY_DELAY))s"
           fi
           
           echo ""
@@ -403,16 +414,20 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
           startup-command: "bash startup.sh"
-        timeout-minutes: 45
+          # Optimize deployment settings
+          deployment-method: zip
+          # Use OneDeploy for faster deployments (default, but explicit)
+        timeout-minutes: 30
         continue-on-error: false
         id: deploy-backend
       
       - name: Health Check
         run: |
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-          echo "Waiting for app to start (allowing 90 seconds for first-time startup)..."
+          echo "Waiting for app to start (optimized: 30s initial wait, then smart polling)..."
           echo "Note: First deployment can take longer due to package installation and startup."
-          sleep 90
+          # Reduced initial wait - use smart polling instead
+          sleep 30
           
           # First check root endpoint (simplest check)
           echo "Checking root endpoint..."
@@ -424,24 +439,23 @@ jobs:
             echo "⚠ Root endpoint returned HTTP $ROOT_CODE (this is OK if static files aren't deployed)"
           fi
           
-          # Check liveness endpoint (doesn't require DB)
+          # Check liveness endpoint (doesn't require DB) - optimized with faster polling
           echo ""
-          echo "Checking liveness endpoint..."
-          MAX_RETRIES=12
-          RETRY_DELAY=5
+          echo "Checking liveness endpoint (optimized polling)..."
+          MAX_RETRIES=20
+          RETRY_DELAY=3
           LIVENESS_PASSED=false
           
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Liveness check attempt $i/$MAX_RETRIES..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 $WEBAPP_URL/api/v1/live || echo "000")
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 $WEBAPP_URL/api/v1/live || echo "000")
             if [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ Liveness check passed! (HTTP $HTTP_CODE)"
+              echo "✓ Liveness check passed! (HTTP $HTTP_CODE) - ready in ~$((30 + (i-1)*RETRY_DELAY))s"
               LIVENESS_PASSED=true
               break
             else
-              echo "Liveness check returned HTTP $HTTP_CODE"
               if [ $i -lt $MAX_RETRIES ]; then
-                echo "Retrying in $RETRY_DELAY seconds..."
+                echo "HTTP $HTTP_CODE, retrying in ${RETRY_DELAY}s..."
                 sleep $RETRY_DELAY
               fi
             fi
