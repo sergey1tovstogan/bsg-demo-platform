@@ -338,7 +338,7 @@
     
     <div class="diagram-container">
         <!-- SVG for arrows -->
-        <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+        <svg id="diagram-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
             <defs>
                 <marker id="arrowhead-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
                     <polygon points="0 0, 10 3, 0 6" fill="#9333ea" />
@@ -349,29 +349,29 @@
             </defs>
             
             <!-- Arrow from Temenos Cloud to Azure Log Analytics -->
-            <line x1="290" y1="180" x2="350" y2="180" class="arrow-purple" />
+            <line id="line-cloud-to-loganalytics" x1="290" y1="180" x2="350" y2="180" class="arrow-purple" />
             
             <!-- Arrow from Temenos Cloud to Azure Security Center -->
-            <line x1="290" y1="300" x2="350" y2="300" class="arrow-purple" />
+            <line id="line-cloud-to-securitycenter" x1="290" y1="300" x2="350" y2="300" class="arrow-purple" />
             
             <!-- Arrow from Azure Log Analytics to Azure Security Center -->
-            <line x1="420" y1="210" x2="420" y2="240" class="arrow-purple" />
+            <line id="line-loganalytics-to-securitycenter" x1="420" y1="210" x2="420" y2="240" class="arrow-purple" />
             
             <!-- Arrow from Azure Security Center to Azure Sentinel -->
-            <line x1="420" y1="320" x2="420" y2="450" class="arrow-purple" />
+            <line id="line-securitycenter-to-sentinel" x1="420" y1="320" x2="420" y2="450" class="arrow-purple" />
             
             <!-- Arrow from Azure Sentinel to Temenos SOC -->
-            <line x1="730" y1="570" x2="500" y2="530" class="arrow-purple" />
+            <line id="line-sentinel-to-temenos-soc" x1="730" y1="570" x2="500" y2="530" class="arrow-purple" />
             
             <!-- Arrow from Azure Monitor to Event Hub -->
-            <line x1="730" y1="350" x2="820" y2="350" class="arrow-teal" />
+            <line id="line-monitor-to-eventhub" x1="730" y1="350" x2="820" y2="350" class="arrow-teal" />
             
             <!-- Arrow from Event Hub to Client SOC -->
-            <line x1="920" y1="440" x2="1100" y2="570" class="arrow-teal" />
+            <line id="line-eventhub-to-client-soc" x1="920" y1="440" x2="1100" y2="570" class="arrow-teal" />
         </svg>
         
         <!-- Temenos Cloud Environment -->
-        <div class="temenos-cloud">
+        <div id="temenos-cloud" class="temenos-cloud">
             <div class="temenos-cloud-label">Temenos Cloud Environment</div>
             <div class="cloud-layer">Tooling</div>
             <div class="cloud-layer">Applications</div>
@@ -383,13 +383,13 @@
         
         <!-- Azure Services -->
         <div class="azure-services">
-            <div class="azure-service-box" style="margin-top: -100px;">Azure Log Analytics</div>
-            <div class="azure-service-box">Azure Security Center</div>
-            <div class="azure-service-box clickable" style="margin-top: 100px;" data-tooltip-id="azure-sentinel">Security Incident / Events Management<br>Azure Sentinel (SIEM)</div>
+            <div id="azure-log-analytics" class="azure-service-box" style="margin-top: -100px;">Azure Log Analytics</div>
+            <div id="azure-security-center" class="azure-service-box">Azure Security Center</div>
+            <div id="azure-sentinel" class="azure-service-box clickable" style="margin-top: 100px;" data-tooltip-id="azure-sentinel">Security Incident / Events Management<br>Azure Sentinel (SIEM)</div>
         </div>
         
         <!-- Azure Monitor -->
-        <div class="azure-monitor">
+        <div id="azure-monitor" class="azure-monitor">
             <div class="monitor-gauge">
                 <div class="monitor-needle"></div>
             </div>
@@ -397,10 +397,10 @@
         </div>
         
         <!-- Event Hub -->
-        <div class="event-hub">Event Hub</div>
+        <div id="event-hub" class="event-hub">Event Hub</div>
         
         <!-- Temenos SOC -->
-        <div class="soc-box temenos-soc clickable" data-tooltip-id="temenos-soc">
+        <div id="temenos-soc-box" class="soc-box temenos-soc clickable" data-tooltip-id="temenos-soc">
             <div class="soc-label">Temenos SOC</div>
             <div class="people-icon">
                 <div class="person"></div>
@@ -410,7 +410,7 @@
         </div>
         
         <!-- Client SOC -->
-        <div class="soc-box client-soc">
+        <div id="client-soc-box" class="soc-box client-soc">
             <div class="soc-label">Client SOC</div>
             <div class="soc-subtitle">(Splunk and IBM QRadar)</div>
             <div class="people-icon">
@@ -476,7 +476,281 @@
             }
         }
         
-        // Add click handlers
+        // Function to get element center position relative to SVG
+        function getElementCenter(element) {
+            if (!element) return { x: 0, y: 0 };
+            const rect = element.getBoundingClientRect();
+            const svg = document.getElementById('diagram-svg');
+            if (!svg) return { x: 0, y: 0 };
+            const svgRect = svg.getBoundingClientRect();
+            return {
+                x: rect.left - svgRect.left + rect.width / 2,
+                y: rect.top - svgRect.top + rect.height / 2
+            };
+        }
+        
+        // Function to get element edge position relative to SVG
+        function getElementEdge(element, edge) {
+            if (!element) return { x: 0, y: 0 };
+            const rect = element.getBoundingClientRect();
+            const svg = document.getElementById('diagram-svg');
+            if (!svg) return { x: 0, y: 0 };
+            const svgRect = svg.getBoundingClientRect();
+            let x, y;
+            
+            switch(edge) {
+                case 'right':
+                    x = rect.right - svgRect.left;
+                    y = rect.top - svgRect.top + rect.height / 2;
+                    break;
+                case 'left':
+                    x = rect.left - svgRect.left;
+                    y = rect.top - svgRect.top + rect.height / 2;
+                    break;
+                case 'top':
+                    x = rect.left - svgRect.left + rect.width / 2;
+                    y = rect.top - svgRect.top;
+                    break;
+                case 'bottom':
+                    x = rect.left - svgRect.left + rect.width / 2;
+                    y = rect.bottom - svgRect.top;
+                    break;
+                default:
+                    const center = getElementCenter(element);
+                    x = center.x;
+                    y = center.y;
+            }
+            
+            return { x, y };
+        }
+        
+        // Function to update SVG dimensions
+        function updateSVGDimensions() {
+            const svg = document.getElementById('diagram-svg');
+            const container = document.querySelector('.diagram-container');
+            if (svg && container) {
+                const containerRect = container.getBoundingClientRect();
+                const width = Math.max(containerRect.width, 1);
+                const height = Math.max(containerRect.height, 1);
+                svg.setAttribute('width', width);
+                svg.setAttribute('height', height);
+                svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            }
+        }
+        
+        // Function to update all line positions
+        function updateLinePosition() {
+            const container = document.querySelector('.diagram-container');
+            const svg = document.getElementById('diagram-svg');
+            if (!container || !svg) return;
+            
+            // Update SVG dimensions first
+            updateSVGDimensions();
+            
+            // Use requestAnimationFrame for smooth updates
+            requestAnimationFrame(function() {
+                try {
+                    // Double-check elements exist
+                    if (!container || !svg) return;
+                    
+                    // Get elements
+                    const temenosCloud = document.getElementById('temenos-cloud');
+                    const azureLogAnalytics = document.getElementById('azure-log-analytics');
+                    const azureSecurityCenter = document.getElementById('azure-security-center');
+                    const azureSentinel = document.getElementById('azure-sentinel');
+                    const azureMonitor = document.getElementById('azure-monitor');
+                    const eventHub = document.getElementById('event-hub');
+                    const temenosSocBox = document.getElementById('temenos-soc-box');
+                    const clientSocBox = document.getElementById('client-soc-box');
+                    
+                    // Helper function to safely update a line
+                    function updateLine(lineId, startElement, startEdge, endElement, endEdge) {
+                        const line = document.getElementById(lineId);
+                        if (line && startElement && endElement) {
+                            try {
+                                const start = getElementEdge(startElement, startEdge);
+                                const end = getElementEdge(endElement, endEdge);
+                                if (start && end && !isNaN(start.x) && !isNaN(start.y) && !isNaN(end.x) && !isNaN(end.y)) {
+                                    line.setAttribute('x1', start.x);
+                                    line.setAttribute('y1', start.y);
+                                    line.setAttribute('x2', end.x);
+                                    line.setAttribute('y2', end.y);
+                                }
+                            } catch (e) {
+                                // Silently handle errors for individual lines
+                            }
+                        }
+                    }
+                    
+                    // Helper function to update line with center point
+                    function updateLineWithCenter(lineId, startElement, endElement, endEdge) {
+                        const line = document.getElementById(lineId);
+                        if (line && startElement && endElement) {
+                            try {
+                                const start = getElementCenter(startElement);
+                                const end = getElementEdge(endElement, endEdge);
+                                if (start && end && !isNaN(start.x) && !isNaN(start.y) && !isNaN(end.x) && !isNaN(end.y)) {
+                                    line.setAttribute('x1', start.x);
+                                    line.setAttribute('y1', start.y);
+                                    line.setAttribute('x2', end.x);
+                                    line.setAttribute('y2', end.y);
+                                }
+                            } catch (e) {
+                                // Silently handle errors for individual lines
+                            }
+                        }
+                    }
+                    
+                    // Update all lines
+                    updateLine('line-cloud-to-loganalytics', temenosCloud, 'right', azureLogAnalytics, 'left');
+                    updateLine('line-cloud-to-securitycenter', temenosCloud, 'right', azureSecurityCenter, 'left');
+                    updateLineWithCenter('line-loganalytics-to-securitycenter', azureLogAnalytics, azureSecurityCenter, 'top');
+                    updateLineWithCenter('line-securitycenter-to-sentinel', azureSecurityCenter, azureSentinel, 'top');
+                    updateLine('line-sentinel-to-temenos-soc', azureSentinel, 'bottom', temenosSocBox, 'top');
+                    updateLine('line-monitor-to-eventhub', azureMonitor, 'right', eventHub, 'left');
+                    updateLine('line-eventhub-to-client-soc', eventHub, 'bottom', clientSocBox, 'top');
+                } catch (error) {
+                    // Silently handle errors to prevent console spam
+                }
+            });
+        }
+        
+        // Throttle function for resize events (better than debounce for continuous updates)
+        function throttle(func, limit) {
+            let inThrottle;
+            return function(...args) {
+                if (!inThrottle) {
+                    func.apply(this, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            };
+        }
+        
+        // ResizeObserver for container and element size changes
+        let resizeObserver = null;
+        let containerObserver = null;
+        
+        // Function to setup ResizeObserver for automatic updates
+        function setupResizeObserver() {
+            const container = document.querySelector('.diagram-container');
+            if (!container) return;
+            
+            // Observe container size changes
+            if (window.ResizeObserver) {
+                containerObserver = new ResizeObserver(function(entries) {
+                    for (let entry of entries) {
+                        updateLinePosition();
+                    }
+                });
+                containerObserver.observe(container);
+                
+                // Also observe all connected elements for position changes
+                resizeObserver = new ResizeObserver(function(entries) {
+                    updateLinePosition();
+                });
+                
+                // Observe all elements that lines connect to
+                const elementsToObserve = [
+                    'temenos-cloud',
+                    'azure-log-analytics',
+                    'azure-security-center',
+                    'azure-sentinel',
+                    'azure-monitor',
+                    'event-hub',
+                    'temenos-soc-box',
+                    'client-soc-box'
+                ];
+                
+                elementsToObserve.forEach(function(id) {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        resizeObserver.observe(element);
+                    }
+                });
+            }
+        }
+        
+        // Throttled update function (updates every 16ms ~ 60fps)
+        const throttledUpdateLinePosition = throttle(updateLinePosition, 16);
+        
+        // Comprehensive resize handler
+        function handleResize() {
+            throttledUpdateLinePosition();
+        }
+        
+        // Setup all resize listeners
+        function setupResizeListeners() {
+            // Window resize events
+            window.addEventListener('resize', handleResize, { passive: true });
+            window.addEventListener('orientationchange', function() {
+                setTimeout(handleResize, 100);
+            }, { passive: true });
+            
+            // Iframe resize handling
+            if (window.parent !== window) {
+                try {
+                    window.parent.addEventListener('resize', handleResize, { passive: true });
+                } catch (e) {
+                    // Cross-origin iframe, use postMessage instead
+                    window.addEventListener('message', function(event) {
+                        if (event.data && event.data.type === 'resize') {
+                            handleResize();
+                        }
+                    });
+                }
+            }
+            
+            // Listen for visual viewport changes (mobile browsers)
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', handleResize, { passive: true });
+                window.visualViewport.addEventListener('scroll', handleResize, { passive: true });
+            }
+            
+            // Listen for fullscreen changes
+            document.addEventListener('fullscreenchange', handleResize, { passive: true });
+            document.addEventListener('webkitfullscreenchange', handleResize, { passive: true });
+            document.addEventListener('mozfullscreenchange', handleResize, { passive: true });
+            document.addEventListener('MSFullscreenChange', handleResize, { passive: true });
+        }
+        
+        // Continuous monitoring function (fallback for older browsers)
+        let monitoringInterval = null;
+        function startContinuousMonitoring() {
+            if (monitoringInterval) return;
+            
+            let lastWidth = window.innerWidth;
+            let lastHeight = window.innerHeight;
+            
+            monitoringInterval = setInterval(function() {
+                const currentWidth = window.innerWidth;
+                const currentHeight = window.innerHeight;
+                
+                if (currentWidth !== lastWidth || currentHeight !== lastHeight) {
+                    lastWidth = currentWidth;
+                    lastHeight = currentHeight;
+                    updateLinePosition();
+                }
+            }, 100);
+        }
+        
+        // Cleanup function
+        function cleanup() {
+            if (resizeObserver) {
+                resizeObserver.disconnect();
+                resizeObserver = null;
+            }
+            if (containerObserver) {
+                containerObserver.disconnect();
+                containerObserver = null;
+            }
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+            }
+        }
+        
+        // Add click handlers and initialize
         document.addEventListener('DOMContentLoaded', function() {
             const clickableElements = document.querySelectorAll('.clickable');
             clickableElements.forEach(function(element) {
@@ -487,6 +761,32 @@
                     }
                 });
             });
+            
+            // Initial updates with multiple attempts to ensure elements are rendered
+            setTimeout(updateLinePosition, 50);
+            setTimeout(updateLinePosition, 150);
+            setTimeout(updateLinePosition, 300);
+            setTimeout(updateLinePosition, 500);
+            setTimeout(updateLinePosition, 1000);
+            
+            // Setup ResizeObserver for automatic updates
+            setTimeout(setupResizeObserver, 100);
+            
+            // Setup all resize listeners
+            setupResizeListeners();
+            
+            // Start continuous monitoring as fallback
+            startContinuousMonitoring();
+            
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', cleanup);
+        });
+        
+        // Also update on page visibility change (when tab becomes visible)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                setTimeout(updateLinePosition, 100);
+            }
         });
     </script>
 </body>
