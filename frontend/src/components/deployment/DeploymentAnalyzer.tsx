@@ -595,11 +595,11 @@ function ResourceGroupSelector({
                               <>
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-gray-600">Projected Month:</span>
-                                  <span className="font-semibold text-green-600">${costs[rg.name].projections.full_month.toFixed(2)}</span>
+                                  <span className="font-semibold text-green-600">${costs[rg.name].projections?.full_month.toFixed(2) ?? '0.00'}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-gray-600">Projected Annual:</span>
-                                  <span className="font-semibold text-blue-600">${costs[rg.name].projections.annual.toFixed(2)}</span>
+                                  <span className="font-semibold text-blue-600">${costs[rg.name].projections?.annual.toFixed(2) ?? '0.00'}</span>
                                 </div>
                               </>
                             )}
