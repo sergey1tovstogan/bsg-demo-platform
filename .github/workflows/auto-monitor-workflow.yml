@@ -39,9 +39,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
       
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v1
-      
       - name: Determine workflow run ID
         id: get-run-id
         shell: pwsh
