@@ -274,6 +274,13 @@ jobs:
           
           echo "✓ App settings configured (optimized - single API call)"
       
+      - name: Wait for SCM container to stabilize
+        run: |
+          echo "Waiting for SCM container to stabilize after configuration changes..."
+          echo "This prevents 'SCM container restart' errors during deployment"
+          sleep 15
+          echo "✓ Wait complete - ready for deployment"
+      
       # Note: Managed Identity and Python version moved to AFTER deployment
       # to avoid SCM container restart conflicts
       
@@ -318,7 +325,7 @@ jobs:
           startup-command: "bash startup.sh"
           # OneDeploy is used by default for zip packages (faster than Kudu)
           # Skip app settings update during deployment (already set above) for speed
-        timeout-minutes: 10
+        timeout-minutes: 15
         continue-on-error: false
         id: deploy-backend
       

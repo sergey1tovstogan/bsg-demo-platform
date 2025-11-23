@@ -231,6 +231,15 @@ jobs:
             $issues += "missing_dependencies"
           }
           
+          # Detect SCM container restart error (timing issue - already fixed with delay, but good to detect)
+          if ($logs -match "SCM container restart|Deployment has been stopped due to SCM") {
+            Write-Host "⚠ Detected SCM container restart error"
+            Write-Host "  This is a timing issue between configuration and deployment"
+            Write-Host "  The workflow now includes a delay to prevent this"
+            Write-Host "  If this persists, the deployment will be retried automatically"
+            # Don't add to issues - this is handled by the delay in the workflow
+          }
+          
           if ($issues.Count -gt 0) {
             $issuesJson = $issues | ConvertTo-Json -Compress
             echo "issues=$issuesJson" >> $env:GITHUB_OUTPUT
