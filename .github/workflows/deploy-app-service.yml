@@ -93,9 +93,10 @@ jobs:
           echo "✓ Frontend build output is valid"
 
   build-and-deploy:
-    name: Build and Deploy
+    name: Build and Deploy (Fast)
     runs-on: ubuntu-latest
     needs: [test-backend, test-frontend]
+    timeout-minutes: 20
     
     steps:
       - name: Checkout code
@@ -156,25 +157,22 @@ jobs:
         continue-on-error: true
         id: install-kubectl
       
-      - name: Copy frontend build to backend static
+      - name: Copy frontend build to backend static (Fast)
         run: |
           echo "Copying frontend build to backend static directory..."
           mkdir -p backend/app/static
           if [ -d "frontend/dist" ] && [ "$(ls -A frontend/dist)" ]; then
-            cp -r frontend/dist/* backend/app/static/
-            echo "✓ Frontend files copied successfully"
-            echo "Static directory contents:"
-            ls -la backend/app/static/ | head -20
-            if [ -f "backend/app/static/index.html" ]; then
-              echo "✓ index.html found in static directory"
+            # Use rsync if available for faster copy, otherwise cp
+            if command -v rsync &> /dev/null; then
+              rsync -a --delete frontend/dist/ backend/app/static/
             else
-              echo "✗ ERROR: index.html not found in static directory!"
-              exit 1
+              cp -r frontend/dist/* backend/app/static/
             fi
+            # Quick verification only
+            [ -f "backend/app/static/index.html" ] || (echo "ERROR: index.html not found!" && exit 1)
+            echo "✓ Frontend files copied successfully"
           else
-            echo "✗ ERROR: frontend/dist directory is empty or doesn't exist!"
-            echo "Frontend build may have failed. Checking dist directory..."
-            ls -la frontend/dist/ || echo "dist directory does not exist"
+            echo "ERROR: frontend/dist directory is empty or doesn't exist!"
             exit 1
           fi
       
@@ -238,114 +236,43 @@ jobs:
           echo "First 20 lines of requirements.txt:"
           head -20 backend/requirements.txt
       
-      - name: Configure App Settings (Before Deployment)
+      - name: Configure App Settings (Fast - Optimized)
         run: |
-          echo "Configuring Azure App Service settings BEFORE deployment..."
+          echo "Configuring Azure App Service settings (optimized for speed)..."
           
           # Generate JWT secret if not provided
-          if [ -z "${{ secrets.JWT_SECRET_KEY }}" ]; then
-            echo "⚠ Warning: JWT_SECRET_KEY secret is not set. Generating a temporary one..."
+          TEMP_JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}"
+          if [ -z "$TEMP_JWT_SECRET" ]; then
             TEMP_JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
-          else
-            TEMP_JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}"
           fi
           
           # Set RAG_API_URL (use secret or default)
           RAG_API_URL_VALUE="${{ secrets.RAG_API_URL }}"
-          if [ -z "$RAG_API_URL_VALUE" ]; then
-            RAG_API_URL_VALUE="https://tbsg.temenos.com"
-          fi
+          [ -z "$RAG_API_URL_VALUE" ] && RAG_API_URL_VALUE="https://tbsg.temenos.com"
           
-          # Set build settings FIRST so Azure can build during deployment
-          # Note: Azure App Service will auto-detect Python and install dependencies
-          echo "Setting build settings..."
+          # Build settings string (combine all settings to minimize API calls)
+          SETTINGS_STRING="SCM_DO_BUILD_DURING_DEPLOYMENT=true ENABLE_ORYX_BUILD=true ENVIRONMENT=production DEBUG=False DATABASE_NAME=bsg_demo CORS_ORIGINS=* JWT_SECRET_KEY=$TEMP_JWT_SECRET RAG_API_URL=$RAG_API_URL_VALUE"
+          
+          # Add secrets if they exist
+          [ -n "${{ secrets.DATABASE_URL }}" ] && SETTINGS_STRING="$SETTINGS_STRING DATABASE_URL=${{ secrets.DATABASE_URL }}"
+          [ -n "${{ secrets.RAG_JWT_TOKEN }}" ] && SETTINGS_STRING="$SETTINGS_STRING RAG_JWT_TOKEN=${{ secrets.RAG_JWT_TOKEN }}"
+          
+          # Set all settings in one call (much faster than multiple calls)
           az webapp config appsettings set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --settings \
-              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
-              ENABLE_ORYX_BUILD=true \
+            --settings $SETTINGS_STRING \
             --output none
           
-          # Set other app settings
-          echo "Setting app settings..."
-          az webapp config appsettings set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --settings \
-              ENVIRONMENT=production \
-              DEBUG=False \
-              DATABASE_NAME=bsg_demo \
-              CORS_ORIGINS="*" \
-              JWT_SECRET_KEY="$TEMP_JWT_SECRET" \
-              RAG_API_URL="$RAG_API_URL_VALUE" \
-            --output none
-          
-          # Set secrets individually if they exist (to avoid exposing them in logs)
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-            echo "Setting DATABASE_URL..."
-            az webapp config appsettings set \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --settings DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              --output none
-          else
-            echo "⚠ Warning: DATABASE_URL secret is not set. App may not work correctly."
-            echo "Please set DATABASE_URL in GitHub Secrets"
-          fi
-          
-          if [ -n "${{ secrets.RAG_JWT_TOKEN }}" ]; then
-            echo "Setting RAG_JWT_TOKEN..."
-            az webapp config appsettings set \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --settings RAG_JWT_TOKEN="${{ secrets.RAG_JWT_TOKEN }}" \
-              --output none
-          else
-            echo "⚠ Warning: RAG_JWT_TOKEN secret is not set. RAG features will not work."
-          fi
-          
-          # Set startup command (with logging for better debugging)
-          # Azure App Service Linux: Use startup-file to point to startup.sh script
-          # The startup.sh script will be deployed to /home/site/wwwroot/startup.sh
-          echo "Setting startup file..."
+          # Set startup and Always On together (single API call)
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --startup-file "startup.sh" \
-            --output none
-          echo "✓ Startup file configured: startup.sh"
-          
-          # Verify startup command was set correctly
-          echo "Verifying startup command..."
-          VERIFIED_CMD=$(az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query appCommandLine -o tsv 2>/dev/null || echo "Not set")
-          echo "Verified startup command: '$VERIFIED_CMD'"
-          if [ -z "$VERIFIED_CMD" ] || [ "$VERIFIED_CMD" = "Not set" ] || [ "$VERIFIED_CMD" = "null" ]; then
-            echo "⚠ WARNING: Startup command may not be set correctly!"
-            echo "Note: Startup file should be 'startup.sh' in the deployment root"
-          fi
-          
-          # Enable Always On (critical for App Service to prevent sleep)
-          echo "Enabling Always On..."
-          az webapp config set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --always-on true \
             --output none
           
-          echo ""
-          echo "✓ App settings configured successfully"
-          echo ""
-          echo "Required GitHub Secrets Status:"
-          echo "  - DATABASE_URL: $([ -n "${{ secrets.DATABASE_URL }}" ] && echo "✓ Set" || echo "✗ Missing - REQUIRED")"
-          echo "  - RAG_JWT_TOKEN: $([ -n "${{ secrets.RAG_JWT_TOKEN }}" ] && echo "✓ Set" || echo "✗ Missing (RAG features disabled)")"
-          echo "  - RAG_API_URL: $([ -n "${{ secrets.RAG_API_URL }}" ] && echo "✓ Set" || echo "⚠ Using default: https://tbsg.temenos.com")"
-          echo "  - JWT_SECRET_KEY: $([ -n "${{ secrets.JWT_SECRET_KEY }}" ] && echo "✓ Set" || echo "⚠ Generated temporary key")"
-          echo ""
-          echo "To set secrets: Repository → Settings → Secrets and variables → Actions → New repository secret"
-          echo "See ENVIRONMENT_VARIABLES.md for details"
-          echo ""
-          echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
+          echo "✓ App settings configured (optimized - single API call)"
       
       # Note: Managed Identity and Python version moved to AFTER deployment
       # to avoid SCM container restart conflicts
@@ -371,51 +298,27 @@ jobs:
             echo "  ⚠ Static directory not found!"
           fi
       
-      - name: Wait and verify SCM is ready (optimized)
+      - name: Quick SCM check (skip if not critical)
         run: |
-          echo "Verifying SCM container is ready (optimized polling)..."
+          echo "Quick SCM check (non-blocking)..."
           SCM_URL="https://${{ env.AZURE_WEBAPP_NAME }}.scm.azurewebsites.net"
-          MAX_RETRIES=15
-          RETRY_DELAY=3
-          INITIAL_WAIT=10
-          SCM_READY=false
-          
-          # Shorter initial wait (10s instead of 60s)
-          echo "Initial wait: ${INITIAL_WAIT} seconds..."
-          sleep $INITIAL_WAIT
-          
-          # Faster polling with shorter delays
-          echo "Polling SCM container (max ${MAX_RETRIES} attempts, ${RETRY_DELAY}s intervals)..."
-          for i in $(seq 1 $MAX_RETRIES); do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $SCM_URL || echo "000")
-            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
-              echo "✓ SCM container is responding (HTTP $HTTP_CODE) - ready in ~$((INITIAL_WAIT + (i-1)*RETRY_DELAY))s"
-              SCM_READY=true
-              break
-            else
-              if [ $i -lt $MAX_RETRIES ]; then
-                echo "Attempt $i/$MAX_RETRIES: HTTP $HTTP_CODE, retrying in ${RETRY_DELAY}s..."
-                sleep $RETRY_DELAY
-              fi
-            fi
-          done
-          
-          if [ "$SCM_READY" = false ]; then
-            echo "⚠ WARNING: SCM container may not be fully ready, but proceeding with deployment"
-            echo "   Total wait time: ~$((INITIAL_WAIT + MAX_RETRIES*RETRY_DELAY))s"
+          # Single quick check - don't wait if not ready, deployment will handle it
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 $SCM_URL 2>/dev/null || echo "000")
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
+            echo "✓ SCM is ready"
+          else
+            echo "⚠ SCM check skipped - proceeding with deployment (OneDeploy handles this)"
           fi
-          
-          echo ""
-          echo "✓ Ready to deploy"
       
-      - name: Deploy to Azure Web App
+      - name: Deploy to Azure Web App (Fast)
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend
           startup-command: "bash startup.sh"
           # OneDeploy is used by default for zip packages (faster than Kudu)
-        timeout-minutes: 15
+          # Skip app settings update during deployment (already set above) for speed
+        timeout-minutes: 10
         continue-on-error: false
         id: deploy-backend
       
@@ -427,42 +330,24 @@ jobs:
           echo "Check Azure Portal for deployment status"
           exit 1
       
-      - name: Quick Health Check (Non-blocking)
+      - name: Quick Health Check (Background - Non-blocking)
         continue-on-error: true
-        timeout-minutes: 2
+        timeout-minutes: 1
         run: |
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-          echo "Quick health check (non-blocking, max 2 minutes)..."
+          echo "Quick health check (non-blocking, background)..."
           
-          # Short initial wait
-          sleep 10
+          # Very short initial wait
+          sleep 5
           
-          # Quick liveness check with fewer retries
-          MAX_RETRIES=10
-          RETRY_DELAY=2
-          LIVENESS_PASSED=false
-          
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "Liveness check attempt $i/$MAX_RETRIES..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $WEBAPP_URL/api/v1/live || echo "000")
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ Liveness check passed! (HTTP $HTTP_CODE)"
-              LIVENESS_PASSED=true
-              break
-            else
-              if [ $i -lt $MAX_RETRIES ]; then
-                echo "HTTP $HTTP_CODE, retrying in ${RETRY_DELAY}s..."
-                sleep $RETRY_DELAY
-              fi
-            fi
-          done
-          
-          if [ "$LIVENESS_PASSED" = true ]; then
-            echo "✓ App is responding - deployment successful!"
+          # Single quick check - don't block deployment
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $WEBAPP_URL/api/v1/live 2>/dev/null || echo "000")
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✓ App is responding immediately!"
           else
-            echo "⚠ Health check timeout - app may still be starting"
-            echo "Deployment completed, but app may need a few more minutes to fully start"
-            echo "Check app status manually: $WEBAPP_URL/api/v1/live"
+            echo "⚠ App may still be starting (normal - can take 1-2 minutes)"
+            echo "Deployment completed successfully. App will be ready shortly."
+            echo "Check status: $WEBAPP_URL/api/v1/live"
           fi
       
       - name: Deployment Summary

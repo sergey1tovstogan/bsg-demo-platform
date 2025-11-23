@@ -28,14 +28,16 @@
     "health_check_delay_seconds": 10
   },
   "auto_fix": {
-    "enabled": false,
+    "enabled": true,
     "common_fixes": {
       "typescript_errors": true,
       "python_import_errors": true,
       "build_failures": true,
       "missing_dependencies": true
     },
-    "commit_message_prefix": "fix(ci):"
+    "commit_message_prefix": "fix(ci):",
+    "auto_commit": true,
+    "auto_push": true
   },
   "notifications": {
     "on_success": false,

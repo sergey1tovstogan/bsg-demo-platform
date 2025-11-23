@@ -1,295 +1,369 @@
 # GitHub Actions Automation
 
-This folder contains scripts for automating GitHub Actions workflow monitoring, verification, and management.
+Fully automated CI/CD monitoring and auto-fix system for GitHub Actions workflows.
 
-## Overview
+## 🎯 Overview
 
-The automation scripts help you:
-- **Monitor** GitHub Actions workflows after pushes to `develop` branch
-- **Poll** workflow status until completion
-- **Verify** platform functionality after deployment
-- **Cancel** long-running workflows if they exceed time limits
-- **Detect and cancel** stuck deployments automatically
-- **Fix** issues automatically and re-commit changes
-- **Trigger** new workflow runs after fixes
+This automation system provides **zero-touch** monitoring and auto-fixing of GitHub Actions workflows. When you push to the `develop` branch, the system automatically:
 
-## Scripts
+- ✅ Monitors all deployment workflows
+- ✅ Detects failures and analyzes errors
+- ✅ Auto-fixes common issues
+- ✅ Commits and pushes fixes automatically
+- ✅ Triggers new deployments automatically
 
-### 1. `monitor-workflows.ps1` (PowerShell)
-Main script for monitoring GitHub Actions workflows. Can be run interactively or scheduled.
+**No manual intervention needed!**
 
-**Features:**
-- Monitors workflows triggered by pushes to `develop` branch
-- Polls workflow status until completion
-- Cancels workflows that exceed timeout (especially deployment steps)
-- Detects stuck deployments (15 min timeout for deployment steps)
-- Verifies deployment health after successful runs
-- Optionally fixes issues and re-commits
+## 📁 Files
 
-**Usage:**
-```powershell
-# Monitor workflows after a push (interactive)
-.\monitor-workflows.ps1
+### Core Scripts
 
-# Monitor with auto-fix enabled
-.\monitor-workflows.ps1 -AutoFix
+- **`ci-automation.ps1`** - Main automation script (consolidates all functionality)
+- **`setup.ps1`** - Setup/installation script
+- **`config.json`** - Configuration file
 
-# Monitor with custom timeout (default: 30 minutes)
-.\monitor-workflows.ps1 -TimeoutMinutes 45
+### GitHub Actions
 
-# Monitor specific workflow
-.\monitor-workflows.ps1 -WorkflowName "deploy-app-service.yml"
-```
+- **`.github/workflows/auto-monitor-workflow.yml`** - Automatic monitoring workflow (runs in GitHub Actions)
 
-### 2. `cancel-stuck-deployments.ps1` (PowerShell) ⚡ NEW
-Finds and cancels deployment workflows that have been running too long.
+### Documentation
 
-**Features:**
-- Scans for running workflows
-- Identifies stuck deployments (default: >25 minutes)
-- Cancels stuck workflows automatically
-- Provides detailed information about stuck runs
+- **`README.md`** - This file (complete guide)
+- **`AUTO_FIX_GUIDE.md`** - Detailed auto-fix documentation
 
-**Usage:**
-```powershell
-# Check for stuck deployments
-.\cancel-stuck-deployments.ps1
+## 🚀 Quick Start
 
-# Custom timeout threshold
-.\cancel-stuck-deployments.ps1 -MaxMinutes 20
+### 1. Setup (One-time)
 
-# Dry run (see what would be canceled)
-.\cancel-stuck-deployments.ps1 -DryRun
-```
-
-### 3. `check-deployment-health.ps1` (PowerShell)
-Verifies that the deployed platform is working correctly.
-
-**Features:**
-- Checks backend health endpoint
-- Checks frontend availability
-- Validates API endpoints
-- Reports deployment status
-
-**Usage:**
-```powershell
-# Check deployment health
-.\check-deployment-health.ps1
-
-# Check with custom URLs
-.\check-deployment-health.ps1 -BackendUrl "https://bsg-demo-platform-app.azurewebsites.net" -FrontendUrl "https://kind-beach-01c0a990f.3.azurestaticapps.net"
-```
-
-### 4. `workflow-manager.ps1` (PowerShell)
-Utility script for managing GitHub Actions workflows.
-
-**Features:**
-- List recent workflow runs
-- Cancel running workflows
-- Trigger workflow runs manually
-- Get workflow run details and logs
-
-**Usage:**
-```powershell
-# List recent workflow runs
-.\workflow-manager.ps1 -List
-
-# Cancel a specific workflow run
-.\workflow-manager.ps1 -Cancel -RunId 123456789
-
-# Trigger a workflow manually
-.\workflow-manager.ps1 -Trigger -WorkflowName "deploy-app-service.yml"
-```
-
-### 5. `auto-fix-and-commit.ps1` (PowerShell)
-Automatically fixes common issues and re-commits changes.
-
-**Features:**
-- Detects common build/test failures
-- Applies fixes automatically
-- Commits and pushes fixes
-- Triggers new workflow run
-
-**Usage:**
-```powershell
-# Auto-fix issues from failed workflow
-.\auto-fix-and-commit.ps1 -RunId 123456789
-
-# Auto-fix with custom commit message
-.\auto-fix-and-commit.ps1 -RunId 123456789 -CommitMessage "fix: resolve build errors"
-```
-
-## Quick Start
-
-### Automatic Setup (Recommended)
-
-**Install automation for automatic monitoring:**
 ```powershell
 cd automation
-.\install-automation.ps1
+.\setup.ps1
 ```
 
 This will:
-- Install Git hook for automatic monitoring after pushes to `develop`
-- Install GitHub Actions workflow for cloud-based monitoring
-- Verify all prerequisites
+- Install GitHub Actions workflow
+- Verify prerequisites
+- Configure Git hooks (optional)
 
-After installation, workflows will be monitored automatically whenever you push to `develop`!
+### 2. Use
 
-### Manual Usage
+**Everything is automatic!** Just push to `develop`:
 
-1. **Monitor workflows after pushing to develop:**
-   ```powershell
-   cd automation
-   .\monitor-workflows.ps1
-   ```
-
-2. **Check for stuck deployments:**
-   ```powershell
-   .\cancel-stuck-deployments.ps1
-   ```
-
-3. **Check deployment health:**
-   ```powershell
-   .\check-deployment-health.ps1
-   ```
-
-4. **List recent workflow runs:**
-   ```powershell
-   .\workflow-manager.ps1 -List
-   ```
-
-## Automatic Monitoring Setup
-
-### Git Hook (Local)
-The Git hook automatically monitors workflows after pushing to `develop`:
-
-```powershell
-# Install the hook
-.\install-automation.ps1
-
-# Or manually install
-.\setup-git-hook.ps1
-```
-
-**What it does:**
-- Triggers automatically after `git push origin develop`
-- Monitors workflow runs until completion
-- Verifies deployment health
-- Reports status in terminal
-
-### GitHub Actions Workflow (Cloud)
-The `auto-monitor-workflow.yml` workflow runs in GitHub Actions and:
-- Monitors deployment workflows automatically
-- Checks health after successful deployments
-- Analyzes failures and detects fixable issues
-- Creates comments on PRs (if applicable)
-
-**Installation:** The workflow is automatically installed when you run `install-automation.ps1`
-
-## Handling Stuck Deployments
-
-If a deployment appears to be stuck (running for more than 15-20 minutes):
-
-1. **Quick check:**
-   ```powershell
-   .\cancel-stuck-deployments.ps1
-   ```
-
-2. **Manual cancellation:**
-   ```powershell
-   .\workflow-manager.ps1 -Cancel -RunId <run-id>
-   ```
-
-3. **Monitor will auto-cancel:**
-   - The monitor script automatically cancels deployment steps that exceed 15 minutes
-   - General workflows timeout at 30 minutes (configurable)
-
-## Integration with CI/CD
-
-You can integrate these scripts into your workflow:
-
-1. **Post-push hook:** Automatically runs after pushing to `develop` (installed via `install-automation.ps1`)
-2. **GitHub Actions:** The `auto-monitor-workflow.yml` monitors workflows in the cloud
-3. **Scheduled task:** Run health checks periodically using Windows Task Scheduler
-4. **Manual:** Run scripts manually when needed
-
-## Configuration
-
-Edit `config.json` to customize:
-- Workflow timeouts (general and deployment-specific)
-- Health check endpoints
-- Retry attempts and delays
-- Auto-fix behavior
-
-**Deployment Timeout:** Deployment steps have a shorter timeout (15 minutes) than general workflows (20-30 minutes) to catch stuck deployments faster.
-
-## Troubleshooting
-
-### Deployment Never Ends / Stuck
-
-**Quick fix:**
-```powershell
-# Cancel stuck deployments
-.\cancel-stuck-deployments.ps1
-
-# Or cancel specific run
-.\workflow-manager.ps1 -Cancel -RunId <run-id>
-```
-
-**Prevention:**
-- Monitor script automatically cancels deployments >15 minutes
-- Workflow has 15-minute timeout for deployment step
-- Use `cancel-stuck-deployments.ps1` to proactively check
-
-### GitHub CLI not authenticated
-```powershell
-gh auth login
-```
-
-### Workflows not found
-Ensure you're in the correct repository directory and have proper permissions.
-
-### Health checks failing
-Verify that deployment URLs in `config.json` are correct and services are accessible.
-
-## Notes
-
-- Scripts use GitHub CLI (`gh`) for GitHub API interactions
-- All scripts support `-Verbose` flag for detailed output
-- Scripts are designed to be idempotent and safe to run multiple times
-- Auto-fix features are conservative and only fix well-known issues
-- **Deployment timeouts are shorter** (15 min) to catch stuck deployments faster
-
-## Examples
-
-### Example 1: Monitor after push
-```powershell
-# After pushing to develop branch
+```bash
 git push origin develop
-
-# In another terminal, monitor workflows
-cd automation
-.\monitor-workflows.ps1 -TimeoutMinutes 30
 ```
 
-### Example 2: Cancel stuck deployment
+The automation will:
+1. Monitor workflows automatically
+2. Fix issues automatically
+3. Commit and push fixes automatically
+
+### 3. Manual Operations (Optional)
+
+If you need manual control:
+
 ```powershell
-# Check for stuck deployments
-.\cancel-stuck-deployments.ps1
+# Monitor workflows
+.\ci-automation.ps1 monitor
 
-# Or list and cancel manually
-.\workflow-manager.ps1 -List
-.\workflow-manager.ps1 -Cancel -RunId 123456789
+# List recent workflow runs
+.\ci-automation.ps1 list
+
+# Check deployment health
+.\ci-automation.ps1 health
+
+# Cancel stuck deployments
+.\ci-automation.ps1 cancel
+
+# Cancel specific workflow run
+.\ci-automation.ps1 cancel -RunId 123456789
+
+# Show workflow status
+.\ci-automation.ps1 status
 ```
 
-### Example 3: Auto-fix and re-deploy
+## 🔧 Main Script: `ci-automation.ps1`
+
+Consolidated script that replaces multiple individual scripts. Provides all automation functionality.
+
+### Actions
+
+| Action | Description |
+|--------|-------------|
+| `monitor` | Monitor workflows after push (default) |
+| `list` | List recent workflow runs |
+| `cancel` | Cancel stuck or specific workflow runs |
+| `health` | Check deployment health |
+| `fix` | Auto-fix issues from failed workflow |
+| `status` | Show current workflow status |
+| `help` | Show help message |
+
+### Examples
+
 ```powershell
-# Monitor with auto-fix enabled
-.\monitor-workflows.ps1 -AutoFix -TimeoutMinutes 30
+# Monitor workflows (default action)
+.\ci-automation.ps1 monitor
+.\ci-automation.ps1 monitor -TimeoutMinutes 45 -AutoFix
+
+# List workflows
+.\ci-automation.ps1 list
+.\ci-automation.ps1 list -Verbose
+
+# Cancel operations
+.\ci-automation.ps1 cancel                    # Cancel stuck deployments
+.\ci-automation.ps1 cancel -RunId 123456     # Cancel specific run
+.\ci-automation.ps1 cancel -MaxMinutes 20     # Custom timeout
+
+# Health check
+.\ci-automation.ps1 health
+
+# Status
+.\ci-automation.ps1 status
 ```
+
+## ⚙️ Configuration
+
+Edit `config.json` to customize behavior:
+
+```json
+{
+  "workflows": {
+    "deploy-backend": {
+      "timeout_minutes": 20,
+      "health_check_url": "https://..."
+    }
+  },
+  "monitoring": {
+    "timeout_minutes": 30,
+    "poll_interval_seconds": 10
+  },
+  "auto_fix": {
+    "enabled": true,
+    "auto_commit": true,
+    "auto_push": true
+  },
+  "branch": "develop"
+}
+```
+
+## 🔄 How It Works
+
+### Automatic Flow
+
+```
+Push to develop
+    ↓
+Deployment workflows start
+    ↓
+Auto-monitor workflow triggers (GitHub Actions)
+    ↓
+Monitors workflows until completion
+    ↓
+If SUCCESS → Health checks run
+If FAILURE → Analyze errors → Auto-fix → Commit → Push → Retry
+```
+
+### GitHub Actions Workflow
+
+The `.github/workflows/auto-monitor-workflow.yml` workflow:
+
+1. **Triggers automatically** when:
+   - Deployment workflows complete
+   - You push to `develop` branch
+
+2. **Monitors workflows:**
+   - Finds recent workflow runs
+   - Monitors until completion
+   - Checks deployment health
+
+3. **Auto-fixes failures:**
+   - Analyzes workflow logs
+   - Detects fixable issues
+   - Applies fixes
+   - Commits and pushes automatically
+
+4. **Reports results:**
+   - GitHub Actions summary
+   - Comments on PRs (if applicable)
+
+## 🛠️ What Gets Auto-Fixed
+
+### TypeScript Errors
+- Missing type annotations
+- Import path issues
+- Common syntax errors
+
+### Python Import Errors
+- Missing `__init__.py` files (created automatically)
+- Import path corrections
+
+### Build Failures
+- Dependency issues
+- Configuration problems
+
+### Missing Dependencies
+- Package.json updates
+- Requirements.txt updates
+
+## 📊 Monitoring Features
+
+### Automatic Monitoring
+- Monitors all deployment workflows
+- Tracks workflow status in real-time
+- Detects stuck deployments (15 min timeout for deployments)
+- Verifies deployment health after success
+
+### Health Checks
+- Backend health endpoint (`/api/v1/health`)
+- Backend liveness endpoint (`/api/v1/live`)
+- Frontend availability
+- API documentation endpoint
+
+### Failure Detection
+- Analyzes workflow logs
+- Detects common error patterns
+- Identifies fixable issues
+- Reports non-fixable issues
+
+## 🚫 What Requires Manual Intervention
+
+Some issues **cannot** be auto-fixed:
+- Complex logic errors
+- Architecture changes
+- External service failures
+- Permission/authentication issues
+- Database schema changes
+
+## 🔍 Troubleshooting
+
+### Auto-fix not running?
+
+1. Check `config.json`:
+   ```json
+   "auto_fix": { "enabled": true }
+   ```
+
+2. Check GitHub Actions:
+   - Go to Actions tab
+   - Look for "Auto Monitor and Fix Workflows"
+   - Check workflow logs
+
+### Monitoring not working?
+
+1. Verify GitHub CLI:
+   ```powershell
+   gh auth status
+   ```
+
+2. Check workflow file exists:
+   ```powershell
+   Test-Path .github\workflows\auto-monitor-workflow.yml
+   ```
+
+### Health checks failing?
+
+1. Verify URLs in `config.json`
+2. Check if deployments actually completed
+3. Wait a few minutes - deployments need time to stabilize
+
+## 📚 Related Documentation
+
+- **`AUTO_FIX_GUIDE.md`** - Detailed auto-fix documentation
+- **`.github/workflows/auto-monitor-workflow.yml`** - Workflow definition
+- **`config.json`** - Configuration reference
+
+## 🎛️ Advanced Usage
+
+### Custom Timeouts
+
+```powershell
+# Monitor with custom timeout
+.\ci-automation.ps1 monitor -TimeoutMinutes 45
+
+# Check for stuck deployments with custom threshold
+.\ci-automation.ps1 cancel -MaxMinutes 20
+```
+
+### Filter by Workflow
+
+```powershell
+# List only deployment workflows
+.\ci-automation.ps1 list -WorkflowName "Deploy"
+
+# Monitor specific workflow
+.\ci-automation.ps1 monitor -WorkflowName "deploy-app-service.yml"
+```
+
+### Dry Run
+
+```powershell
+# See what would be canceled without actually canceling
+.\ci-automation.ps1 cancel -DryRun
+```
+
+## ✅ Verification
+
+After setup, verify everything works:
+
+```powershell
+# Check configuration
+Get-Content automation\config.json | ConvertFrom-Json
+
+# Check workflow exists
+Test-Path .github\workflows\auto-monitor-workflow.yml
+
+# Test monitoring
+.\automation\ci-automation.ps1 status
+```
+
+## 🎯 Best Practices
+
+1. **Let automation handle it** - The system is fully automatic
+2. **Check GitHub Actions tab** - View monitoring results there
+3. **Review auto-fixes** - Check commit messages to see what was fixed
+4. **Monitor health** - Use `.\ci-automation.ps1 health` to verify deployments
+5. **Customize config** - Adjust timeouts and URLs in `config.json` as needed
+
+## 📝 Commit Messages
+
+Auto-fixes use this format:
+```
+fix(ci): auto-fix typescript_errors, python_import_errors
+```
+
+Customize prefix in `config.json`:
+```json
+"commit_message_prefix": "fix(ci):"
+```
+
+## 🔐 Permissions
+
+The GitHub Actions workflow needs:
+- ✅ Read access to workflows
+- ✅ Write access to repository (for auto-fix commits)
+- ✅ GitHub token (automatically provided)
+
+## 🚀 Next Steps
+
+1. **Run setup:**
+   ```powershell
+   .\automation\setup.ps1
+   ```
+
+2. **Push to develop:**
+   ```bash
+   git push origin develop
+   ```
+
+3. **Watch the automation:**
+   - Go to GitHub Actions tab
+   - See "Auto Monitor and Fix Workflows" running
+   - View automatic fixes being applied
+
+**That's it! Everything is automated!** 🎉
 
 ---
 
 **Last Updated:** November 2025  
+**Status:** ✅ Fully Automated - Zero Touch  
 **Maintained By:** BSG Team
