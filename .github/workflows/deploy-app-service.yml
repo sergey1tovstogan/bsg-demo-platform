@@ -236,53 +236,8 @@ jobs:
           echo "First 20 lines of requirements.txt:"
           head -20 backend/requirements.txt
       
-      - name: Configure App Settings (Fast - Optimized)
-        run: |
-          echo "Configuring Azure App Service settings (optimized for speed)..."
-          
-          # Generate JWT secret if not provided
-          TEMP_JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}"
-          if [ -z "$TEMP_JWT_SECRET" ]; then
-            TEMP_JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
-          fi
-          
-          # Set RAG_API_URL (use secret or default)
-          RAG_API_URL_VALUE="${{ secrets.RAG_API_URL }}"
-          [ -z "$RAG_API_URL_VALUE" ] && RAG_API_URL_VALUE="https://tbsg.temenos.com"
-          
-          # Build settings string (combine all settings to minimize API calls)
-          SETTINGS_STRING="SCM_DO_BUILD_DURING_DEPLOYMENT=true ENABLE_ORYX_BUILD=true ENVIRONMENT=production DEBUG=False DATABASE_NAME=bsg_demo CORS_ORIGINS=* JWT_SECRET_KEY=$TEMP_JWT_SECRET RAG_API_URL=$RAG_API_URL_VALUE"
-          
-          # Add secrets if they exist
-          [ -n "${{ secrets.DATABASE_URL }}" ] && SETTINGS_STRING="$SETTINGS_STRING DATABASE_URL=${{ secrets.DATABASE_URL }}"
-          [ -n "${{ secrets.RAG_JWT_TOKEN }}" ] && SETTINGS_STRING="$SETTINGS_STRING RAG_JWT_TOKEN=${{ secrets.RAG_JWT_TOKEN }}"
-          
-          # Set all settings in one call (much faster than multiple calls)
-          az webapp config appsettings set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --settings $SETTINGS_STRING \
-            --output none
-          
-          # Set startup and Always On together (single API call)
-          az webapp config set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "startup.sh" \
-            --always-on true \
-            --output none
-          
-          echo "✓ App settings configured (optimized - single API call)"
-      
-      - name: Wait for SCM container to stabilize
-        run: |
-          echo "Waiting for SCM container to stabilize after configuration changes..."
-          echo "This prevents 'SCM container restart' errors during deployment"
-          sleep 15
-          echo "✓ Wait complete - ready for deployment"
-      
-      # Note: Managed Identity and Python version moved to AFTER deployment
-      # to avoid SCM container restart conflicts
+      # Note: App settings moved to AFTER deployment to avoid SCM container restart conflicts
+      # The deployment action will use default settings, then we configure after deployment completes
       
       - name: Check package size before deployment
         run: |
@@ -324,7 +279,7 @@ jobs:
           package: ./backend
           startup-command: "bash startup.sh"
           # OneDeploy is used by default for zip packages (faster than Kudu)
-          # Skip app settings update during deployment (already set above) for speed
+          # App settings will be configured AFTER deployment to avoid SCM restart conflicts
         timeout-minutes: 15
         continue-on-error: false
         id: deploy-backend
@@ -336,6 +291,51 @@ jobs:
           echo "This may indicate a timeout or deployment failure"
           echo "Check Azure Portal for deployment status"
           exit 1
+      
+      - name: Wait for deployment to stabilize
+        run: |
+          echo "Waiting for deployment to complete and stabilize..."
+          echo "This ensures the SCM container is ready before configuring settings"
+          sleep 30
+          echo "✓ Deployment stabilized - ready to configure settings"
+      
+      - name: Configure App Settings (After Deployment)
+        run: |
+          echo "Configuring Azure App Service settings (after deployment to avoid conflicts)..."
+          
+          # Generate JWT secret if not provided
+          TEMP_JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}"
+          if [ -z "$TEMP_JWT_SECRET" ]; then
+            TEMP_JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+          fi
+          
+          # Set RAG_API_URL (use secret or default)
+          RAG_API_URL_VALUE="${{ secrets.RAG_API_URL }}"
+          [ -z "$RAG_API_URL_VALUE" ] && RAG_API_URL_VALUE="https://tbsg.temenos.com"
+          
+          # Build settings string (combine all settings to minimize API calls)
+          SETTINGS_STRING="SCM_DO_BUILD_DURING_DEPLOYMENT=true ENABLE_ORYX_BUILD=true ENVIRONMENT=production DEBUG=False DATABASE_NAME=bsg_demo CORS_ORIGINS=* JWT_SECRET_KEY=$TEMP_JWT_SECRET RAG_API_URL=$RAG_API_URL_VALUE"
+          
+          # Add secrets if they exist
+          [ -n "${{ secrets.DATABASE_URL }}" ] && SETTINGS_STRING="$SETTINGS_STRING DATABASE_URL=${{ secrets.DATABASE_URL }}"
+          [ -n "${{ secrets.RAG_JWT_TOKEN }}" ] && SETTINGS_STRING="$SETTINGS_STRING RAG_JWT_TOKEN=${{ secrets.RAG_JWT_TOKEN }}"
+          
+          # Set all settings in one call (much faster than multiple calls)
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --settings $SETTINGS_STRING \
+            --output none
+          
+          # Set startup and Always On together (single API call)
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --startup-file "startup.sh" \
+            --always-on true \
+            --output none
+          
+          echo "✓ App settings configured successfully (after deployment)"
       
       - name: Quick Health Check (Background - Non-blocking)
         continue-on-error: true
