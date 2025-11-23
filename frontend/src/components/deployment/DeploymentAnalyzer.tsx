@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search, ExternalLink } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search, ExternalLink, DollarSign } from 'lucide-react'
 import { apiService } from '../../services/api'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
@@ -423,7 +423,7 @@ function SubscriptionInput({
 
 // Resource Group Selector Component
 function ResourceGroupSelector({
-  subscriptionId: _subscriptionId,
+  subscriptionId,
   resourceGroups,
   onSelected,
   onBack,
@@ -439,6 +439,16 @@ function ResourceGroupSelector({
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [costs, setCosts] = useState<Record<string, {
+    total_cost: number
+    projections?: {
+      full_month: number
+      annual: number
+    }
+    error?: string
+  }>>({})
+  const [loadingCosts, setLoadingCosts] = useState(false)
+  const [showCosts, setShowCosts] = useState(false)
 
   const toggleSelection = (rgName: string) => {
     setSelected(prev =>
@@ -458,6 +468,35 @@ function ResourceGroupSelector({
     rg.location.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const fetchCosts = async () => {
+    if (resourceGroups.length === 0) return
+    
+    setLoadingCosts(true)
+    try {
+      const resourceGroupNames = resourceGroups.map(rg => rg.name)
+      const response = await apiService.getResourceGroupCosts(subscriptionId, resourceGroupNames)
+      
+      const costMap: Record<string, any> = {}
+      if (response.data?.data) {
+        response.data.data.forEach((costData: any) => {
+          costMap[costData.resource_group] = costData
+        })
+      }
+      setCosts(costMap)
+    } catch (err: any) {
+      console.error('Error fetching costs:', err)
+      // Don't show error to user, just log it
+    } finally {
+      setLoadingCosts(false)
+    }
+  }
+
+  useEffect(() => {
+    if (resourceGroups.length > 0 && showCosts) {
+      fetchCosts()
+    }
+  }, [resourceGroups, showCosts, subscriptionId])
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -465,10 +504,20 @@ function ResourceGroupSelector({
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Resource Groups</h2>
           <p className="text-gray-600">Choose which resource groups to analyze for Temenos components</p>
         </div>
-        <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowCosts(!showCosts)}
+            className="btn-secondary flex items-center space-x-2"
+            disabled={loadingCosts}
+          >
+            <DollarSign className="w-4 h-4" />
+            <span>{showCosts ? 'Hide' : 'Show'} Costs</span>
+          </button>
+          <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -532,6 +581,37 @@ function ResourceGroupSelector({
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900">{rg.name}</h3>
                     <p className="text-sm text-gray-500 mt-1">{rg.location}</p>
+                    {showCosts && costs[rg.name] && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        {costs[rg.name].error ? (
+                          <p className="text-xs text-red-600">{costs[rg.name].error}</p>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600">Current Month:</span>
+                              <span className="font-semibold text-gray-900">${costs[rg.name].total_cost.toFixed(2)}</span>
+                            </div>
+                            {costs[rg.name].projections && (
+                              <>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-600">Projected Month:</span>
+                                  <span className="font-semibold text-green-600">${costs[rg.name].projections.full_month.toFixed(2)}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-600">Projected Annual:</span>
+                                  <span className="font-semibold text-blue-600">${costs[rg.name].projections.annual.toFixed(2)}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {showCosts && loadingCosts && !costs[rg.name] && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                      </div>
+                    )}
                   </div>
                 </div>
                 {isSelected && (

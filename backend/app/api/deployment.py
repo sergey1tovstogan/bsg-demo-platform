@@ -12,8 +12,10 @@ from app.core.logging import get_logger
 from app.services.azure_service import AzureService, AzureResourceGroup, AzureResource
 from app.services.temenos_service import TemenosService, TemenosAnalysisResult
 from app.services.aks_service import AKSService
+from app.services.cost_service import CostService
 import asyncio
 import time
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/deployment", tags=["deployment"])
 logger = get_logger(__name__)
@@ -45,6 +47,22 @@ class NamespacesRequest(BaseModel):
     """Request model for getting AKS namespaces."""
     subscription_id: str = Field(..., description="Azure subscription ID")
     resource_group_names: List[str] = Field(..., description="List of resource group names")
+
+
+class CostRequest(BaseModel):
+    """Request model for getting costs."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group_names: List[str] = Field(..., description="List of resource group names")
+    start_date: Optional[str] = Field(None, description="Start date in ISO format (YYYY-MM-DD). Defaults to first day of current month")
+    end_date: Optional[str] = Field(None, description="End date in ISO format (YYYY-MM-DD). Defaults to current date")
+
+
+class CostRequest(BaseModel):
+    """Request model for getting costs."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group_names: List[str] = Field(..., description="List of resource group names")
+    start_date: Optional[str] = Field(None, description="Start date in ISO format (YYYY-MM-DD). Defaults to first day of current month")
+    end_date: Optional[str] = Field(None, description="End date in ISO format (YYYY-MM-DD). Defaults to current date")
 
 
 def get_azure_service(subscription_id: str) -> AzureService:
