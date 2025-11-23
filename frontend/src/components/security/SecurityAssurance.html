@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Product Security Assurance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #283054;
+            z-index: 10;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            height: 100vh;
+            width: 100vw;
+            padding: 80px 60px 100px 60px;
+            overflow-y: auto;
+        }
+        
+        .content {
+            width: 100%;
+            max-width: 1200px;
+            color: #1E3A8A;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+        
+        .numbered-list {
+            list-style: decimal;
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .numbered-list li {
+            margin-bottom: 15px;
+            color: #1E3A8A;
+        }
+        
+        .numbered-list li strong {
+            font-weight: bold;
+            color: #1E3A8A;
+        }
+        
+        .sub-list {
+            list-style: lower-alpha;
+            margin-left: 40px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .sub-list li {
+            margin-bottom: 8px;
+            color: #1E3A8A;
+        }
+        
+        .paragraph {
+            margin-top: 20px;
+            color: #1E3A8A;
+            line-height: 1.8;
+        }
+        
+        .nav-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #EF4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background 0.3s;
+            z-index: 100;
+        }
+        
+        .nav-button:hover {
+            background: #DC2626;
+        }
+        
+        .nav-button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Product Security Assurance</div>
+    
+    <div class="container">
+        <div class="content">
+            <ol class="numbered-list">
+                <li>Any vulnerabilities identified are raised as a defect in Defect Management System of Temenos.</li>
+                <li>The severity of the defects raised are Critical, High, Medium, Low and Informational.</li>
+                <li><strong>The timelines for remediating PT vulnerabilities are as follows:</strong>
+                    <ol class="sub-list">
+                        <li>Critical – 15 days</li>
+                        <li>High – 30 days</li>
+                        <li>Medium – 60 days</li>
+                        <li>Low – 120 days</li>
+                    </ol>
+                </li>
+            </ol>
+            
+            <p class="paragraph">
+                In the event of a Critical or High vulnerability being discovered in an existing release, clients must be contacted proactively via email/Account Manager to ensure that the related fix, as issued on the client support portal, is applied ASAP.
+            </p>
+        </div>
+    </div>
+    
+    <button class="nav-button" onclick="navigateToTemenosLogHistory()">Temenos Log & History</button>
+    
+    <script>
+        function navigateToTemenosLogHistory() {
+            window.parent.postMessage({ type: 'showTemenosLogHistory' }, '*');
+        }
+    </script>
+</body>
+</html>
+

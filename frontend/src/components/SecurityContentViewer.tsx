@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Key, UserCheck, Lock, Shield, Eye, Server, Cloud, KeyRound, FileCheck, X, type LucideIcon } from 'lucide-react'
+import LogHistoryHTML from './security/LogHistory.html?raw'
+import LogHistoryPicHTML from './security/LogHistoryPic.html?raw'
+import SaaSLogsHTML from './security/SaaSLogs.html?raw'
+import IncidentsHTML from './security/Incidents.html?raw'
+import BackupHTML from './security/Backup.html?raw'
 
 interface SecurityCard {
   id: number
@@ -6635,6 +6640,393 @@ const WAFHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
+// Business Continuity Policy BCP HTML Content
+const BCPHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Continuity Policy BCP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #283054;
+            z-index: 10;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            padding: 80px 40px 100px 40px;
+            gap: 20px;
+        }
+        
+        .policy-box {
+            width: 90%;
+            max-width: 1200px;
+            background: #E0F7FA;
+            border-radius: 8px;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .icon-container {
+            flex-shrink: 0;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icon {
+            width: 50px;
+            height: 50px;
+            fill: #1E3A8A;
+        }
+        
+        .icon-box-1 {
+            fill: #8B00FF; /* viola */
+        }
+        
+        .icon-box-1 * {
+            fill: #8B00FF;
+        }
+        
+        .icon-box-2 {
+            fill: #3FFF00; /* harlequin */
+        }
+        
+        .icon-box-2 * {
+            fill: #3FFF00;
+        }
+        
+        .icon-box-3 {
+            fill: #F4C430; /* saffron */
+        }
+        
+        .icon-box-3 * {
+            fill: #F4C430;
+        }
+        
+        .icon-box-4 {
+            fill: #E52B50; /* amaranth */
+        }
+        
+        .icon-box-4 * {
+            fill: #E52B50;
+        }
+        
+        .icon-box-4 line {
+            stroke: #E52B50;
+        }
+        
+        .container .text-content {
+            flex: 1;
+            color: #1a1a1a;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .text-content strong {
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        
+        .text-content .dotted-underline {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-decoration-color: #EF4444;
+            text-underline-offset: 3px;
+        }
+        
+        .nav-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #EF4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background 0.3s;
+            z-index: 100;
+        }
+        
+        .nav-button:hover {
+            background: #DC2626;
+        }
+        
+        .nav-button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Business Continuity Policy BCP</div>
+    
+    <div class="container">
+        <!-- Box 1: Business Impact Analysis -->
+        <div class="policy-box">
+            <div class="icon-container">
+                <svg class="icon icon-box-1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Person with headset -->
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M8 14c0-2.21 1.79-4 4-4s4 1.79 4 4v2H8v-2z"/>
+                    <!-- Headset -->
+                    <path d="M9 10c0-1.1.9-2 2-2h2c1.1 0 2 .9 2 2v1h-6v-1z"/>
+                    <path d="M7 11h10v1H7z"/>
+                </svg>
+            </div>
+            <div class="text-content">
+                Business Impact Analysis along with business continuity and disaster recovery (DR) plans are <strong>Updated & Tested Annually</strong>
+            </div>
+        </div>
+        
+        <!-- Box 2: Oversight by ORB -->
+        <div class="policy-box">
+            <div class="icon-container">
+                <svg class="icon icon-box-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Three people -->
+                    <circle cx="8" cy="7" r="3"/>
+                    <path d="M5 12c0-1.1.9-2 2-2s2 .9 2 2v2H5v-2z"/>
+                    <circle cx="12" cy="7" r="3"/>
+                    <path d="M9 12c0-1.1.9-2 2-2s2 .9 2 2v2H9v-2z"/>
+                    <circle cx="16" cy="7" r="3"/>
+                    <path d="M13 12c0-1.1.9-2 2-2s2 .9 2 2v2h-4v-2z"/>
+                    <!-- Document/screen behind -->
+                    <rect x="4" y="16" width="16" height="4" rx="1" opacity="0.3"/>
+                </svg>
+            </div>
+            <div class="text-content">
+                Oversight by the <span class="dotted-underline">Temenos</span> Operational Review Board (ORB)
+            </div>
+        </div>
+        
+        <!-- Box 3: ISO 22301 Alignment -->
+        <div class="policy-box">
+            <div class="icon-container">
+                <svg class="icon icon-box-3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Single person -->
+                    <circle cx="12" cy="7" r="3"/>
+                    <path d="M8 12c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2H8v-2z"/>
+                </svg>
+            </div>
+            <div class="text-content">
+                Business Continuity Policies are aligned with <strong>ISO 22301</strong>, as well as actions being audited and reflected in the SOC 2 report
+            </div>
+        </div>
+        
+        <!-- Box 4: Group Business Continuity Management Policy -->
+        <div class="policy-box">
+            <div class="icon-container">
+                <svg class="icon icon-box-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Organizational structure: central box with three boxes below -->
+                    <rect x="9" y="2" width="6" height="6"/>
+                    <rect x="3" y="12" width="5" height="5"/>
+                    <rect x="10" y="12" width="5" height="5"/>
+                    <rect x="17" y="12" width="5" height="5"/>
+                    <!-- Connecting lines -->
+                    <line x1="12" y1="8" x2="5.5" y2="12" stroke-width="2"/>
+                    <line x1="12" y1="8" x2="12.5" y2="12" stroke-width="2"/>
+                    <line x1="12" y1="8" x2="19.5" y2="12" stroke-width="2"/>
+                </svg>
+            </div>
+            <div class="text-content">
+                Group Business Continuity Management Policy (<span class="dotted-underline">Temenos</span> corporate Business Continuity provision, <span class="dotted-underline">Temenos</span> Cloud Services Business Continuity, Client Obligations, Limitations).
+            </div>
+        </div>
+    </div>
+    
+    <button class="nav-button" onclick="navigateToProductSecurityAssurance()">Product Security Assurance</button>
+    
+    <script>
+        function navigateToProductSecurityAssurance() {
+            window.parent.postMessage({ type: 'showProductSecurityAssurance' }, '*');
+        }
+    </script>
+</body>
+</html>`
+
+// Product Security Assurance HTML Content
+const SecurityAssuranceHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Product Security Assurance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #283054;
+            z-index: 10;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            height: 100vh;
+            width: 100vw;
+            padding: 80px 60px 100px 60px;
+            overflow-y: auto;
+        }
+        
+        .content {
+            width: 100%;
+            max-width: 1200px;
+            color: #1E3A8A;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+        
+        .numbered-list {
+            list-style: decimal;
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .numbered-list li {
+            margin-bottom: 15px;
+            color: #1E3A8A;
+        }
+        
+        .numbered-list li strong {
+            font-weight: bold;
+            color: #1E3A8A;
+        }
+        
+        .sub-list {
+            list-style: lower-alpha;
+            margin-left: 40px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .sub-list li {
+            margin-bottom: 8px;
+            color: #1E3A8A;
+        }
+        
+        .paragraph {
+            margin-top: 20px;
+            color: #1E3A8A;
+            line-height: 1.8;
+        }
+        
+        .nav-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #EF4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background 0.3s;
+            z-index: 100;
+        }
+        
+        .nav-button:hover {
+            background: #DC2626;
+        }
+        
+        .nav-button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Product Security Assurance</div>
+    
+    <div class="container">
+        <div class="content">
+            <ol class="numbered-list">
+                <li>Any vulnerabilities identified are raised as a defect in Defect Management System of Temenos.</li>
+                <li>The severity of the defects raised are Critical, High, Medium, Low and Informational.</li>
+                <li><strong>The timelines for remediating PT vulnerabilities are as follows:</strong>
+                    <ol class="sub-list">
+                        <li>Critical – 15 days</li>
+                        <li>High – 30 days</li>
+                        <li>Medium – 60 days</li>
+                        <li>Low – 120 days</li>
+                    </ol>
+                </li>
+            </ol>
+            
+            <p class="paragraph">
+                In the event of a Critical or High vulnerability being discovered in an existing release, clients must be contacted proactively via email/Account Manager to ensure that the related fix, as issued on the client support portal, is applied ASAP.
+            </p>
+        </div>
+    </div>
+    
+    <button class="nav-button" onclick="navigateToTemenosLogHistory()">Temenos Log & History</button>
+    
+    <script>
+        function navigateToTemenosLogHistory() {
+            window.parent.postMessage({ type: 'showTemenosLogHistory' }, '*');
+        }
+    </script>
+</body>
+</html>`
+
+// Log History HTML Content
 export function SecurityContentViewer() {
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
@@ -6648,9 +7040,16 @@ export function SecurityContentViewer() {
   const [showNetworkSecurityServices, setShowNetworkSecurityServices] = useState(false)
   const [showTemenosSaaSAntiDDoS, setShowTemenosSaaSAntiDDoS] = useState(false)
   const [showTemenosSaaSWAF, setShowTemenosSaaSWAF] = useState(false)
+  const [showBCP, setShowBCP] = useState(false)
+  const [showSecurityAssurance, setShowSecurityAssurance] = useState(false)
+  const [showTemenosLogHistory, setShowTemenosLogHistory] = useState(false)
+  const [showTemenosHistory, setShowTemenosHistory] = useState(false)
+  const [showTemenosSaaSLogs, setShowTemenosSaaSLogs] = useState(false)
+  const [showIncidents, setShowIncidents] = useState(false)
+  const [showBackup, setShowBackup] = useState(false)
 
   const handleCardClick = (cardId: number) => {
-    if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6 || cardId === 7) {
+    if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6 || cardId === 7 || cardId === 8) {
       setSelectedCard(cardId)
     }
   }
@@ -6668,6 +7067,13 @@ export function SecurityContentViewer() {
     setShowNetworkSecurityServices(false)
     setShowTemenosSaaSAntiDDoS(false)
     setShowTemenosSaaSWAF(false)
+    setShowBCP(false)
+    setShowSecurityAssurance(false)
+    setShowTemenosLogHistory(false)
+    setShowTemenosHistory(false)
+    setShowTemenosSaaSLogs(false)
+    setShowIncidents(false)
+    setShowBackup(false)
   }
 
   const handleBackToArchitecture = () => {
@@ -6709,6 +7115,35 @@ export function SecurityContentViewer() {
       }
       if (event.data && event.data.type === 'showTemenosSaaSWAF') {
         setShowTemenosSaaSWAF(true)
+      }
+      if (event.data && event.data.type === 'showProductSecurityAssurance') {
+        setShowSecurityAssurance(true)
+      }
+      if (event.data && event.data.type === 'showTemenosLogHistory') {
+        setShowTemenosLogHistory(true)
+      }
+      if (event.data && event.data.type === 'showTemenosHistory') {
+        setShowTemenosHistory(true)
+      }
+      if (event.data && event.data.type === 'showTemenosSaaSLogs') {
+        setShowTemenosLogHistory(false)
+        setShowTemenosSaaSLogs(true)
+      }
+      if (event.data && event.data.type === 'showIncidents') {
+        setShowTemenosSaaSLogs(false)
+        setShowIncidents(true)
+      }
+      if (event.data && event.data.type === 'hideIncidents') {
+        setShowIncidents(false)
+        setShowTemenosSaaSLogs(true)
+      }
+      if (event.data && event.data.type === 'showBackup') {
+        setShowIncidents(false)
+        setShowBackup(true)
+      }
+      if (event.data && event.data.type === 'hideBackup') {
+        setShowBackup(false)
+        setShowIncidents(true)
       }
     }
 
@@ -7051,6 +7486,181 @@ export function SecurityContentViewer() {
           srcDoc={ProductSecurityUniformHTML}
           className="w-full h-full border-0 rounded-lg"
           title="Product Security Uniform"
+          sandbox="allow-same-origin allow-scripts"
+          style={{ minHeight: '600px' }}
+        />
+      </div>
+    )
+  }
+
+  // Show HTML5 diagram when card 8 is selected
+  if (selectedCard === 8) {
+    // Show Backup if button was clicked (check first to take precedence)
+    if (showBackup) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => {
+                setShowBackup(false)
+                setShowIncidents(true)
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={BackupHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos SaaS Backup and Restore"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show Incidents if button was clicked (check first to take precedence)
+    if (showIncidents) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => {
+                setShowIncidents(false)
+                setShowTemenosSaaSLogs(true)
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={IncidentsHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Incident Fix Time"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show LogHistoryPic if Temenos History button was clicked
+    if (showTemenosHistory) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowTemenosHistory(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={LogHistoryPicHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos History"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show SaaSLogs if button was clicked
+    if (showTemenosSaaSLogs) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowTemenosSaaSLogs(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={SaaSLogsHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos SaaS Logging"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show LogHistory if button was clicked
+    if (showTemenosLogHistory) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowTemenosLogHistory(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={LogHistoryHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos Log & History"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show SecurityAssurance if button was clicked
+    if (showSecurityAssurance) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowSecurityAssurance(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={SecurityAssuranceHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos Product Security Assurance"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show BCP by default
+    return (
+      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+          >
+            <X className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+        </div>
+        <iframe
+          srcDoc={BCPHTML}
+          className="w-full h-full border-0 rounded-lg"
+          title="Business Continuity Policy BCP"
           sandbox="allow-same-origin allow-scripts"
           style={{ minHeight: '600px' }}
         />

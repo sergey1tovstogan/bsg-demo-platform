@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos History</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f8f8f8;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #283054;
+            z-index: 1000;
+        }
+        
+        .table-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 60px 40px 20px 40px;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .table-wrapper {
+            width: 100%;
+            max-width: 100%;
+            background: #ffffff;
+            border-left: 3px solid #FF6B35;
+            border-right: 3px solid #FF6B35;
+            border-radius: 0;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            background: #ffffff;
+        }
+        
+        thead {
+            background: #e0e7ff;
+        }
+        
+        th {
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: bold;
+            color: #1a1a1a;
+            border-bottom: 2px solid #cbd5e1;
+            white-space: nowrap;
+        }
+        
+        th:nth-child(1) { min-width: 80px; }
+        th:nth-child(2) { min-width: 100px; }
+        th:nth-child(3) { min-width: 80px; }
+        th:nth-child(4) { min-width: 80px; }
+        th:nth-child(5) { min-width: 120px; }
+        th:nth-child(6) { min-width: 100px; }
+        th:nth-child(7) { min-width: 120px; }
+        th:nth-child(8) { min-width: 150px; }
+        th:nth-child(9) { min-width: 120px; }
+        th:nth-child(10) { min-width: 120px; }
+        
+        tbody tr {
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #f8f8f8;
+        }
+        
+        tbody tr:nth-child(odd) {
+            background: #ffffff;
+        }
+        
+        tbody tr.separator {
+            border-top: 2px solid #d1d5db;
+            border-bottom: 2px solid #d1d5db;
+        }
+        
+        td {
+            padding: 8px;
+            color: #1a1a1a;
+            vertical-align: top;
+        }
+        
+        td:nth-child(9),
+        td:nth-child(10) {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .history-change {
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        
+        .record-id {
+            color: #1a1a1a;
+        }
+        
+        .field-name {
+            color: #1a1a1a;
+        }
+        
+        .old-value {
+            color: #666;
+        }
+        
+        .new-value {
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+        
+        .new-record {
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos History</div>
+    
+    <div class="table-container">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>History Changes</th>
+                        <th>Record ID</th>
+                        <th>Inputter</th>
+                        <th>Authorizer</th>
+                        <th>Date & Time</th>
+                        <th>Branch Code</th>
+                        <th>Department Code</th>
+                        <th>Field Name</th>
+                        <th>Old Value</th>
+                        <th>New Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- History Changes 3 -->
+                    <tr class="separator">
+                        <td class="history-change">3</td>
+                        <td class="record-id">100336</td>
+                        <td>OFFICER</td>
+                        <td>OFFICER</td>
+                        <td>23 MAY 23 09:35</td>
+                        <td>Model Bank</td>
+                        <td>Implementation</td>
+                        <td class="field-name">RELATION.CODE</td>
+                        <td class="old-value"></td>
+                        <td class="new-value">14</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">REL.CUSTOMER</td>
+                        <td class="old-value"></td>
+                        <td class="new-value">100802</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">REVERS.REL.CODE</td>
+                        <td class="old-value"></td>
+                        <td class="new-value">4</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">ISSUE.CHEQUES</td>
+                        <td class="old-value"></td>
+                        <td class="new-value">YES</td>
+                    </tr>
+                    
+                    <!-- History Changes 2 -->
+                    <tr class="separator">
+                        <td class="history-change">2</td>
+                        <td class="record-id">100336:2</td>
+                        <td>OFFICER</td>
+                        <td>OFFICER</td>
+                        <td>23 MAY 23 08:57</td>
+                        <td>Model Bank</td>
+                        <td>Implementation</td>
+                        <td class="field-name">CR.PROFILE.TYPE</td>
+                        <td class="old-value">NA.CUST.VALUE</td>
+                        <td class="new-value">VALUED.CUSTOMER</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">CR.PROFILE</td>
+                        <td class="old-value">104</td>
+                        <td class="new-value">12</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">DATE.OF.BIRTH</td>
+                        <td class="old-value">19700527</td>
+                        <td class="new-value">19700723</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">NET.MONTHLY.IN</td>
+                        <td class="old-value">10000.00</td>
+                        <td class="new-value">5000.00</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">NET.MONTHLY.OUT</td>
+                        <td class="old-value">8000.00</td>
+                        <td class="new-value">4500.00</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">CR.USER.PROFILE.TYPE</td>
+                        <td class="old-value">NA.CUST.VALUE</td>
+                        <td class="new-value">VALUED.CUSTOMER</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">CR.CALC.PROFILE</td>
+                        <td class="old-value">104</td>
+                        <td class="new-value">12</td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="field-name">CR.USER.PROFILE</td>
+                        <td class="old-value">104</td>
+                        <td class="new-value">12</td>
+                    </tr>
+                    
+                    <!-- New Record -->
+                    <tr class="separator">
+                        <td class="new-record">New Record</td>
+                        <td class="record-id">100336:1</td>
+                        <td>OFFICER</td>
+                        <td>OFFICER</td>
+                        <td>23 MAY 23 08:55</td>
+                        <td>Model Bank</td>
+                        <td>Implementation</td>
+                        <td class="field-name"></td>
+                        <td class="old-value"></td>
+                        <td class="new-value"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+
