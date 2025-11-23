@@ -57,14 +57,6 @@ class CostRequest(BaseModel):
     end_date: Optional[str] = Field(None, description="End date in ISO format (YYYY-MM-DD). Defaults to current date")
 
 
-class CostRequest(BaseModel):
-    """Request model for getting costs."""
-    subscription_id: str = Field(..., description="Azure subscription ID")
-    resource_group_names: List[str] = Field(..., description="List of resource group names")
-    start_date: Optional[str] = Field(None, description="Start date in ISO format (YYYY-MM-DD). Defaults to first day of current month")
-    end_date: Optional[str] = Field(None, description="End date in ISO format (YYYY-MM-DD). Defaults to current date")
-
-
 def get_azure_service(subscription_id: str) -> AzureService:
     """Get or create Azure service instance."""
     if subscription_id not in azure_service_cache:
@@ -758,6 +750,79 @@ async def query_rag(request: Dict[str, Any]):
         raise HTTPException(
             status_code=500,
             detail=f"[{error_type}] {error_msg}"
+        )
+
+
+@router.post("/azure/costs")
+async def get_resource_group_costs(request: CostRequest):
+    """
+    Get cost data for one or more resource groups.
+    
+    Args:
+        request: Cost request with subscription ID and resource group names
+        
+    Returns:
+        List of cost information for each resource group
+    """
+    try:
+        subscription_id = request.subscription_id
+        resource_group_names = request.resource_group_names
+        
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="Subscription ID is required")
+        
+        if not resource_group_names or len(resource_group_names) == 0:
+            raise HTTPException(status_code=400, detail="At least one resource group name is required")
+        
+        # Parse dates if provided
+        start_date = None
+        end_date = None
+        
+        if request.start_date:
+            try:
+                start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid start_date format: {request.start_date}. Use ISO format (YYYY-MM-DD)")
+        
+        if request.end_date:
+            try:
+                end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid end_date format: {request.end_date}. Use ISO format (YYYY-MM-DD)")
+        
+        # Create cost service
+        cost_service = CostService(subscription_id)
+        
+        # Get costs for all resource groups
+        cost_results = cost_service.get_multiple_resource_group_costs(
+            resource_group_names,
+            start_date,
+            end_date
+        )
+        
+        return {
+            "status": "success",
+            "data": cost_results,
+            "count": len(cost_results)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting costs: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": type(e).__name__,
+                "recoverySteps": [
+                    "Verify you have 'Cost Management Reader' role on the subscription",
+                    "Check that the subscription has billing enabled",
+                    "Ensure resource groups exist and are accessible",
+                    "Cost data may take 24-48 hours to appear after resource creation"
+                ]
+            }
         )
 
 
