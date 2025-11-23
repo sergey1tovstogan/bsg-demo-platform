@@ -415,9 +415,17 @@ jobs:
           package: ./backend
           startup-command: "bash startup.sh"
           # OneDeploy is used by default for zip packages (faster than Kudu)
-        timeout-minutes: 20
+        timeout-minutes: 15
         continue-on-error: false
         id: deploy-backend
+      
+      - name: Verify deployment completed
+        if: steps.deploy-backend.outcome != 'success'
+        run: |
+          echo "⚠ Deployment step did not complete successfully"
+          echo "This may indicate a timeout or deployment failure"
+          echo "Check Azure Portal for deployment status"
+          exit 1
       
       - name: Quick Health Check (Non-blocking)
         continue-on-error: true
