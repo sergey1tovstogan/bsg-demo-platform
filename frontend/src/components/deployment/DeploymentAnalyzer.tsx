@@ -489,7 +489,7 @@ function ResourceGroupSelector({
     console.log(`[Costs] Starting to fetch costs for ${resourceGroupNames.length} resource groups`)
     
     setLoadingCosts(true)
-    let timeoutId: NodeJS.Timeout | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
     
     try {
       // Create a timeout promise that rejects after 90 seconds (increased for large batches)
