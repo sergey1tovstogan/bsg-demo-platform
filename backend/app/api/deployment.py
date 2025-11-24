@@ -941,7 +941,20 @@ async def get_resource_group_costs(request: CostRequest):
         # Create cost service
         cost_service = CostService(subscription_id)
         
-        # Wrap the cost fetching in a timeout (60 seconds)
+        # Calculate timeout based on number of resource groups
+        # Each resource group takes ~2-3 seconds, plus delays
+        # For large batches, increase timeout significantly
+        num_rgs = len(resource_group_names)
+        if num_rgs > 50:
+            timeout_seconds = 300.0  # 5 minutes for 50+ resource groups
+        elif num_rgs > 20:
+            timeout_seconds = 180.0  # 3 minutes for 20-50 resource groups
+        else:
+            timeout_seconds = 90.0   # 90 seconds for smaller batches
+        
+        logger.info(f"Fetching costs for {num_rgs} resource groups with {timeout_seconds}s timeout")
+        
+        # Wrap the cost fetching in a timeout
         # Run the synchronous cost service in a thread pool to avoid blocking
         async def fetch_costs_with_timeout():
             loop = asyncio.get_event_loop()
@@ -955,18 +968,18 @@ async def get_resource_group_costs(request: CostRequest):
                         start_date,
                         end_date
                     ),
-                    timeout=60.0  # 60 second timeout
+                    timeout=timeout_seconds
                 )
                 return cost_results
             except asyncio.TimeoutError:
-                logger.error(f"Cost fetching timed out after 60 seconds for {len(resource_group_names)} resource groups")
+                logger.error(f"Cost fetching timed out after {timeout_seconds} seconds for {num_rgs} resource groups")
                 # Return error results for all resource groups
                 return [
                     {
                         'resource_group': rg_name,
                         'total_cost': 0.0,
                         'services': {},
-                        'error': 'Request timed out. Cost Management API is taking too long to respond. Please try again later or check Azure service status.',
+                        'error': f'Request timed out after {int(timeout_seconds)}s. Cost Management API is taking too long to respond. Try selecting fewer resource groups or try again later.',
                         'start_date': start_date.isoformat() if start_date else None,
                         'end_date': end_date.isoformat() if end_date else None
                     }

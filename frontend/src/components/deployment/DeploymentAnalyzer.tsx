@@ -492,13 +492,20 @@ function ResourceGroupSelector({
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     
     try {
-      // Create a timeout promise that rejects after 90 seconds (increased for large batches)
+      // Calculate timeout based on number of resource groups
+      // Large batches need more time
+      const numRGs = resourceGroupNames.length
+      const timeoutMs = numRGs > 50 ? 300000 : numRGs > 20 ? 180000 : 90000 // 5min, 3min, or 90s
+      
+      console.log(`[Costs] Setting timeout to ${timeoutMs / 1000}s for ${numRGs} resource groups`)
+      
+      // Create a timeout promise that rejects after calculated timeout
       const timeoutPromise = new Promise((_, reject) => {
         timeoutId = setTimeout(() => {
-          console.warn('[Costs] Request timed out after 90 seconds')
+          console.warn(`[Costs] Request timed out after ${timeoutMs / 1000} seconds`)
           abortController.abort()
-          reject(new Error('Costs request timed out after 90 seconds'))
-        }, 90000) // Increased to 90 seconds for large batches
+          reject(new Error(`Costs request timed out after ${timeoutMs / 1000} seconds. Try selecting fewer resource groups.`))
+        }, timeoutMs)
         
         // Clear timeout if request completes
         abortController.signal.addEventListener('abort', () => {
@@ -603,7 +610,16 @@ function ResourceGroupSelector({
         </div>
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => setShowCosts(!showCosts)}
+            onClick={() => {
+              if (!showCosts && resourceGroups.length > 30) {
+                const proceed = confirm(
+                  `You are about to load costs for ${resourceGroups.length} resource groups. ` +
+                  `This may take several minutes. Do you want to continue?`
+                )
+                if (!proceed) return
+              }
+              setShowCosts(!showCosts)
+            }}
             className="btn-secondary flex items-center space-x-2"
             disabled={loadingCosts}
             title={loadingCosts ? 'Loading costs...' : showCosts ? 'Hide cost information' : 'Show cost information'}
@@ -617,6 +633,9 @@ function ResourceGroupSelector({
               <>
                 <DollarSign className="w-4 h-4" />
                 <span>{showCosts ? 'Hide' : 'Show'} Costs</span>
+                {!showCosts && resourceGroups.length > 30 && (
+                  <span className="text-xs text-yellow-600 ml-1">({resourceGroups.length} groups - may be slow)</span>
+                )}
               </>
             )}
           </button>
