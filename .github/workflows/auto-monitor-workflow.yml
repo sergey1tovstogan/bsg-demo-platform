@@ -23,6 +23,11 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
 jobs:
   monitor-and-verify:
     name: Monitor and Verify Deployment
@@ -43,35 +48,60 @@ jobs:
         id: get-run-id
         shell: pwsh
         run: |
-          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ github.event.inputs.workflow_run_id }}") {
-            $runId = "${{ github.event.inputs.workflow_run_id }}"
-          } elseif ("${{ github.event_name }}" -eq "push") {
+          $eventName = "${{ github.event_name }}"
+          $workflowRunId = "${{ github.event.inputs.workflow_run_id }}"
+          $workflowRunIdFromEvent = "${{ github.event.workflow_run.id }}"
+          
+          Write-Host "[INFO] Event name: $eventName"
+          Write-Host "[INFO] Workflow run ID from inputs: $workflowRunId"
+          Write-Host "[INFO] Workflow run ID from event: $workflowRunIdFromEvent"
+          
+          $runId = ""
+          
+          if ($eventName -eq "workflow_dispatch" -and $workflowRunId) {
+            $runId = $workflowRunId
+            Write-Host "[OK] Using workflow run ID from manual dispatch: $runId"
+          } elseif ($eventName -eq "push") {
             # For push events, wait a bit then get the most recent workflow run
             Write-Host "[INFO] Push event detected, waiting for workflows to start..."
             Start-Sleep -Seconds 15
-            $runs = gh run list --branch develop --limit 5 --json databaseId,status,conclusion,workflowName,createdAt | ConvertFrom-Json
-            if ($runs -and $runs.Count -gt 0) {
-              $targetRun = $runs | Where-Object { $_.workflowName -match "Deploy|Test" } | Select-Object -First 1
-              if ($targetRun) {
-                $runId = $targetRun.databaseId
-                Write-Host "[OK] Found workflow run: $runId ($($targetRun.workflowName))"
+            
+            try {
+              $runs = gh run list --branch develop --limit 5 --json databaseId,status,conclusion,workflowName,createdAt 2>&1 | ConvertFrom-Json
+              if ($LASTEXITCODE -ne 0) {
+                Write-Host "[ERROR] Failed to get workflow runs: $runs"
+                $runId = ""
+              } elseif ($runs -and $runs.Count -gt 0) {
+                $targetRun = $runs | Where-Object { $_.workflowName -match "Deploy|Test" } | Select-Object -First 1
+                if ($targetRun) {
+                  $runId = $targetRun.databaseId
+                  Write-Host "[OK] Found workflow run: $runId ($($targetRun.workflowName))"
+                } else {
+                  Write-Host "[SKIP] No matching workflow runs found"
+                  $runId = ""
+                }
               } else {
-                Write-Host "[SKIP] No matching workflow runs found"
+                Write-Host "[SKIP] No workflow runs found"
                 $runId = ""
               }
-            } else {
-              Write-Host "[SKIP] No workflow runs found"
+            } catch {
+              Write-Host "[ERROR] Exception getting workflow runs: $($_.Exception.Message)"
               $runId = ""
             }
+          } elseif ($eventName -eq "workflow_run" -and $workflowRunIdFromEvent) {
+            $runId = $workflowRunIdFromEvent
+            Write-Host "[OK] Using workflow run ID from workflow_run event: $runId"
           } else {
-            $runId = "${{ github.event.workflow_run.id }}"
+            Write-Host "[SKIP] No workflow run ID available for event: $eventName"
+            $runId = ""
           }
+          
           if ($runId) {
             echo "run_id=$runId" >> $env:GITHUB_OUTPUT
-            echo "[OK] Monitoring workflow run: $runId"
+            Write-Host "[OK] Monitoring workflow run: $runId"
           } else {
             echo "run_id=" >> $env:GITHUB_OUTPUT
-            echo "[SKIP] No workflow run ID found"
+            Write-Host "[SKIP] No workflow run ID found - workflow will skip monitoring steps"
           }
       
       - name: Get workflow run details
