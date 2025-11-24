@@ -5,6 +5,13 @@ import LogHistoryPicHTML from './security/LogHistoryPic.html?raw'
 import SaaSLogsHTML from './security/SaaSLogs.html?raw'
 import IncidentsHTML from './security/Incidents.html?raw'
 import BackupHTML from './security/Backup.html?raw'
+import SaaSComplianceDesignHTML from './security/SaaSComplianceDesign.html?raw'
+import SaaSComplianceOverviewHTML from './security/SaaSComplianceOverview.html?raw'
+import CompliancePositionHTML from './security/CompliancePosition.html?raw'
+import TrustCenterHTML from './security/TrustCenter.html?raw'
+import RiskManagementHTML from './security/RiskManagement.html?raw'
+import SecurityPolicyHTML from './security/SecurityPolicy.html?raw'
+import ProtectionEmbeddedHTML from './security/ProtectionEmbedded.html?raw'
 
 interface SecurityCard {
   id: number
@@ -7047,9 +7054,16 @@ export function SecurityContentViewer() {
   const [showTemenosSaaSLogs, setShowTemenosSaaSLogs] = useState(false)
   const [showIncidents, setShowIncidents] = useState(false)
   const [showBackup, setShowBackup] = useState(false)
+  const [showSaaSComplianceDesign, setShowSaaSComplianceDesign] = useState(false)
+  const [showSaaSComplianceOverview, setShowSaaSComplianceOverview] = useState(false)
+  const [showCompliancePosition, setShowCompliancePosition] = useState(false)
+  const [showTrustCenter, setShowTrustCenter] = useState(false)
+  const [showRiskManagement, setShowRiskManagement] = useState(false)
+  const [showSecurityPolicy, setShowSecurityPolicy] = useState(false)
+  const [showProtectionEmbedded, setShowProtectionEmbedded] = useState(false)
 
   const handleCardClick = (cardId: number) => {
-    if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6 || cardId === 7 || cardId === 8) {
+    if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6 || cardId === 7 || cardId === 8 || cardId === 9) {
       setSelectedCard(cardId)
     }
   }
@@ -7074,6 +7088,13 @@ export function SecurityContentViewer() {
     setShowTemenosSaaSLogs(false)
     setShowIncidents(false)
     setShowBackup(false)
+    setShowSaaSComplianceDesign(false)
+    setShowSaaSComplianceOverview(false)
+    setShowCompliancePosition(false)
+    setShowTrustCenter(false)
+    setShowRiskManagement(false)
+    setShowSecurityPolicy(false)
+    setShowProtectionEmbedded(false)
   }
 
   const handleBackToArchitecture = () => {
@@ -7144,6 +7165,34 @@ export function SecurityContentViewer() {
       if (event.data && event.data.type === 'hideBackup') {
         setShowBackup(false)
         setShowIncidents(true)
+      }
+      if (event.data && event.data.type === 'showComplianceOverview') {
+        setShowSaaSComplianceOverview(true)
+      }
+      if (event.data && event.data.type === 'showCompliancePosition') {
+        setShowCompliancePosition(true)
+      }
+      if (event.data && event.data.type === 'showTrustCenter') {
+        setShowCompliancePosition(false)
+        setShowTrustCenter(true)
+      }
+      if (event.data && event.data.type === 'showRiskManagement') {
+        setShowTrustCenter(false)
+        setShowCompliancePosition(false)
+        setShowRiskManagement(true)
+      }
+      if (event.data && event.data.type === 'showSecurityPolicy') {
+        setShowRiskManagement(false)
+        setShowTrustCenter(false)
+        setShowCompliancePosition(false)
+        setShowSecurityPolicy(true)
+      }
+      if (event.data && event.data.type === 'showProtectionEmbedded') {
+        setShowSecurityPolicy(false)
+        setShowRiskManagement(false)
+        setShowTrustCenter(false)
+        setShowCompliancePosition(false)
+        setShowProtectionEmbedded(true)
       }
     }
 
@@ -7661,6 +7710,187 @@ export function SecurityContentViewer() {
           srcDoc={BCPHTML}
           className="w-full h-full border-0 rounded-lg"
           title="Business Continuity Policy BCP"
+          sandbox="allow-same-origin allow-scripts"
+          style={{ minHeight: '600px' }}
+        />
+      </div>
+    )
+  }
+
+  // Show HTML5 diagram when card 9 is selected
+  if (selectedCard === 9) {
+    // Show Trust Center page if button was clicked
+    if (showTrustCenter) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => {
+                setShowTrustCenter(false)
+                setShowCompliancePosition(true)
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={TrustCenterHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos Trust Center"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show compliance position page if button was clicked
+    if (showCompliancePosition) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowCompliancePosition(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={CompliancePositionHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos Compliance Position"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show Security Policy page if button was clicked
+    if (showSecurityPolicy) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => {
+                setShowSecurityPolicy(false)
+                setShowRiskManagement(true)
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={SecurityPolicyHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos Security Policy"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show Protection Embedded page if button was clicked
+    if (showProtectionEmbedded) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => {
+                setShowProtectionEmbedded(false)
+                setShowSecurityPolicy(true)
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={ProtectionEmbeddedHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos Protection Embedded"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show Risk Management page if button was clicked
+    if (showRiskManagement) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => {
+                setShowRiskManagement(false)
+                setShowTrustCenter(true)
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={RiskManagementHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Risk Management"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show overview page if button was clicked
+    if (showSaaSComplianceOverview) {
+      return (
+        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowSaaSComplianceOverview(false)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+            >
+              <X className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+          </div>
+          <iframe
+            srcDoc={SaaSComplianceOverviewHTML}
+            className="w-full h-full border-0 rounded-lg"
+            title="Temenos SaaS Compliance Overview"
+            sandbox="allow-same-origin allow-scripts"
+            style={{ minHeight: '600px' }}
+          />
+        </div>
+      )
+    }
+    
+    // Show design page by default
+    return (
+      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+        <div className="absolute top-4 right-4 z-10">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+          >
+            <X className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+        </div>
+        <iframe
+          srcDoc={SaaSComplianceDesignHTML}
+          className="w-full h-full border-0 rounded-lg"
+          title="Temenos SaaS Compliance by Design"
           sandbox="allow-same-origin allow-scripts"
           style={{ minHeight: '600px' }}
         />
