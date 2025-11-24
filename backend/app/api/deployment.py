@@ -941,12 +941,40 @@ async def get_resource_group_costs(request: CostRequest):
         # Create cost service
         cost_service = CostService(subscription_id)
         
-        # Get costs for all resource groups
-        cost_results = cost_service.get_multiple_resource_group_costs(
-            resource_group_names,
-            start_date,
-            end_date
-        )
+        # Wrap the cost fetching in a timeout (60 seconds)
+        # Run the synchronous cost service in a thread pool to avoid blocking
+        async def fetch_costs_with_timeout():
+            loop = asyncio.get_event_loop()
+            try:
+                # Run the synchronous cost service call in a thread pool
+                cost_results = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        cost_service.get_multiple_resource_group_costs,
+                        resource_group_names,
+                        start_date,
+                        end_date
+                    ),
+                    timeout=60.0  # 60 second timeout
+                )
+                return cost_results
+            except asyncio.TimeoutError:
+                logger.error(f"Cost fetching timed out after 60 seconds for {len(resource_group_names)} resource groups")
+                # Return error results for all resource groups
+                return [
+                    {
+                        'resource_group': rg_name,
+                        'total_cost': 0.0,
+                        'services': {},
+                        'error': 'Request timed out. Cost Management API is taking too long to respond. Please try again later or check Azure service status.',
+                        'start_date': start_date.isoformat() if start_date else None,
+                        'end_date': end_date.isoformat() if end_date else None
+                    }
+                    for rg_name in resource_group_names
+                ]
+        
+        # Get costs for all resource groups with timeout
+        cost_results = await fetch_costs_with_timeout()
         
         return {
             "status": "success",
@@ -956,6 +984,22 @@ async def get_resource_group_costs(request: CostRequest):
         
     except HTTPException:
         raise
+    except asyncio.TimeoutError:
+        logger.error("Cost fetching timed out at endpoint level")
+        raise HTTPException(
+            status_code=504,
+            detail={
+                "status": "error",
+                "error": "Request timed out. Cost Management API is taking too long to respond.",
+                "errorType": "TimeoutError",
+                "recoverySteps": [
+                    "Try again later - Azure Cost Management API may be experiencing delays",
+                    "Verify you have 'Cost Management Reader' role on the subscription",
+                    "Check that the subscription has billing enabled",
+                    "Cost data may take 24-48 hours to appear after resource creation"
+                ]
+            }
+        )
     except Exception as e:
         logger.error(f"Error getting costs: {e}", exc_info=True)
         raise HTTPException(

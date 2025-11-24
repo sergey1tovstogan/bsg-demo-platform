@@ -449,6 +449,7 @@ function ResourceGroupSelector({
   }>>({})
   const [loadingCosts, setLoadingCosts] = useState(false)
   const [showCosts, setShowCosts] = useState(false)
+  const [costsAbortController, setCostsAbortController] = useState<AbortController | null>(null)
 
   const toggleSelection = (rgName: string) => {
     setSelected(prev =>
@@ -471,10 +472,42 @@ function ResourceGroupSelector({
   const fetchCosts = async () => {
     if (resourceGroups.length === 0) return
     
+    // Cancel any existing request
+    if (costsAbortController) {
+      costsAbortController.abort()
+    }
+    
+    // Create new abort controller for this request
+    const abortController = new AbortController()
+    setCostsAbortController(abortController)
+    
     setLoadingCosts(true)
     try {
       const resourceGroupNames = resourceGroups.map(rg => rg.name)
-      const response = await apiService.getResourceGroupCosts(subscriptionId, resourceGroupNames)
+      
+      // Create a timeout promise that rejects after 60 seconds
+      const timeoutPromise = new Promise((_, reject) => {
+        const timeoutId = setTimeout(() => {
+          abortController.abort()
+          reject(new Error('Costs request timed out after 60 seconds'))
+        }, 60000)
+        
+        // Clear timeout if request completes
+        abortController.signal.addEventListener('abort', () => {
+          clearTimeout(timeoutId)
+        })
+      })
+      
+      // Race between the API call and timeout
+      const response = await Promise.race([
+        apiService.getResourceGroupCosts(subscriptionId, resourceGroupNames),
+        timeoutPromise
+      ]) as any
+      
+      // Check if request was aborted
+      if (abortController.signal.aborted) {
+        return
+      }
       
       const costMap: Record<string, any> = {}
       if (response.data?.data) {
@@ -484,17 +517,45 @@ function ResourceGroupSelector({
       }
       setCosts(costMap)
     } catch (err: any) {
+      // Don't show error if request was aborted (user cancelled)
+      if (abortController.signal.aborted) {
+        return
+      }
+      
       console.error('Error fetching costs:', err)
-      // Don't show error to user, just log it
+      // Set error state for each resource group
+      const errorMessage = err.message?.includes('timeout') || err.message?.includes('aborted')
+        ? 'Request timed out. Cost data may take longer to load.'
+        : err.response?.data?.detail?.error || err.message || 'Failed to load costs'
+      
+      const costMap: Record<string, any> = {}
+      resourceGroups.forEach(rg => {
+        costMap[rg.name] = {
+          resource_group: rg.name,
+          total_cost: 0,
+          services: {},
+          error: errorMessage
+        }
+      })
+      setCosts(costMap)
     } finally {
-      setLoadingCosts(false)
+      if (!abortController.signal.aborted) {
+        setLoadingCosts(false)
+        setCostsAbortController(null)
+      }
     }
   }
 
   useEffect(() => {
     if (resourceGroups.length > 0 && showCosts) {
       fetchCosts()
+    } else if (!showCosts && costsAbortController) {
+      // Cancel request if user hides costs
+      costsAbortController.abort()
+      setLoadingCosts(false)
+      setCostsAbortController(null)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resourceGroups, showCosts, subscriptionId])
 
   return (
@@ -509,9 +570,19 @@ function ResourceGroupSelector({
             onClick={() => setShowCosts(!showCosts)}
             className="btn-secondary flex items-center space-x-2"
             disabled={loadingCosts}
+            title={loadingCosts ? 'Loading costs...' : showCosts ? 'Hide cost information' : 'Show cost information'}
           >
-            <DollarSign className="w-4 h-4" />
-            <span>{showCosts ? 'Hide' : 'Show'} Costs</span>
+            {loadingCosts ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Loading Costs...</span>
+              </>
+            ) : (
+              <>
+                <DollarSign className="w-4 h-4" />
+                <span>{showCosts ? 'Hide' : 'Show'} Costs</span>
+              </>
+            )}
           </button>
           <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
             <ArrowLeft className="w-4 h-4" />
@@ -584,7 +655,42 @@ function ResourceGroupSelector({
                     {showCosts && costs[rg.name] && (
                       <div className="mt-2 pt-2 border-t border-gray-200">
                         {costs[rg.name].error ? (
-                          <p className="text-xs text-red-600">{costs[rg.name].error}</p>
+                          <div className="space-y-1">
+                            <p className="text-xs text-red-600 font-medium">Error loading costs</p>
+                            <p className="text-xs text-red-500">{costs[rg.name].error}</p>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                // Retry fetching costs for this specific resource group
+                                const retryFetch = async () => {
+                                  setLoadingCosts(true)
+                                  try {
+                                    const timeoutPromise = new Promise((_, reject) => {
+                                      setTimeout(() => reject(new Error('Request timed out')), 60000)
+                                    })
+                                    const response = await Promise.race([
+                                      apiService.getResourceGroupCosts(subscriptionId, [rg.name]),
+                                      timeoutPromise
+                                    ]) as any
+                                    if (response.data?.data && response.data.data.length > 0) {
+                                      setCosts(prev => ({
+                                        ...prev,
+                                        [rg.name]: response.data.data[0]
+                                      }))
+                                    }
+                                  } catch (err: any) {
+                                    console.error('Retry failed:', err)
+                                  } finally {
+                                    setLoadingCosts(false)
+                                  }
+                                }
+                                retryFetch()
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 underline mt-1"
+                            >
+                              Retry
+                            </button>
+                          </div>
                         ) : (
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-xs">
@@ -608,8 +714,9 @@ function ResourceGroupSelector({
                       </div>
                     )}
                     {showCosts && loadingCosts && !costs[rg.name] && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="mt-2 pt-2 border-t border-gray-200 flex items-center space-x-2">
                         <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                        <span className="text-xs text-gray-500">Loading costs...</span>
                       </div>
                     )}
                   </div>
