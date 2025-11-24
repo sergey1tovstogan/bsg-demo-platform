@@ -49,6 +49,13 @@ class NamespacesRequest(BaseModel):
     resource_group_names: List[str] = Field(..., description="List of resource group names")
 
 
+class ClusterDiagnosticsRequest(BaseModel):
+    """Request model for AKS cluster diagnostics."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group: str = Field(..., description="Resource group name")
+    cluster_name: str = Field(..., description="AKS cluster name")
+
+
 class CostRequest(BaseModel):
     """Request model for getting costs."""
     subscription_id: str = Field(..., description="Azure subscription ID")
@@ -369,6 +376,147 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 status_code=500,
                 detail=error_detail
             )
+
+
+@router.post("/aks/diagnostics")
+async def diagnose_aks_cluster(request: ClusterDiagnosticsRequest):
+    """
+    Diagnose AKS cluster connection and namespace discovery issues.
+    
+    This endpoint helps troubleshoot why namespace discovery might be failing.
+    
+    Args:
+        request: Cluster diagnostics request with subscription ID, resource group, and cluster name
+        
+    Returns:
+        Diagnostic information about the cluster connection
+    """
+    logger.info("=" * 80)
+    logger.info("=== AKS CLUSTER DIAGNOSTICS ===")
+    logger.info(f"Cluster: {request.cluster_name}")
+    logger.info(f"Resource Group: {request.resource_group}")
+    logger.info(f"Subscription: {request.subscription_id}")
+    logger.info("=" * 80)
+    
+    try:
+        # Initialize AKS service
+        aks_service = AKSService(request.subscription_id)
+        
+        # Test cluster connection
+        logger.info("Running connection test...")
+        connection_test = await aks_service.test_cluster_connection(
+            request.resource_group,
+            request.cluster_name
+        )
+        
+        # Try to get namespaces
+        logger.info("Attempting to list namespaces...")
+        from app.services.azure_service import AzureResource
+        cluster_resource = AzureResource(
+            id=f"/subscriptions/{request.subscription_id}/resourceGroups/{request.resource_group}/providers/Microsoft.ContainerService/managedClusters/{request.cluster_name}",
+            name=request.cluster_name,
+            resource_type="Microsoft.ContainerService/managedClusters",
+            location="",
+            resource_group=request.resource_group,
+            tags={},
+            properties={}
+        )
+        
+        namespaces = []
+        namespace_error = None
+        try:
+            namespaces = await aks_service.list_cluster_namespaces(cluster_resource)
+        except Exception as e:
+            namespace_error = str(e)
+            logger.error(f"Failed to list namespaces: {e}", exc_info=True)
+        
+        # Compile diagnostics
+        diagnostics = {
+            "cluster_name": request.cluster_name,
+            "resource_group": request.resource_group,
+            "subscription_id": request.subscription_id,
+            "connection_test": connection_test,
+            "namespaces_found": len(namespaces),
+            "namespaces": namespaces,
+            "namespace_error": namespace_error,
+            "is_azure_app_service": aks_service.is_azure_app_service,
+            "recommendations": []
+        }
+        
+        # Add recommendations based on diagnostics
+        if not connection_test.get("can_get_kubeconfig"):
+            diagnostics["recommendations"].append({
+                "issue": "Cannot get kubeconfig from Azure API",
+                "solution": "Assign 'Azure Kubernetes Service Cluster User Role' to the App Service Managed Identity on the AKS cluster",
+                "steps": [
+                    "1. Go to Azure Portal → AKS cluster → Access control (IAM)",
+                    "2. Click 'Add role assignment'",
+                    "3. Select role: 'Azure Kubernetes Service Cluster User Role'",
+                    "4. Assign to: Managed Identity → Select your App Service",
+                    "5. Save and wait 1-2 minutes for propagation"
+                ]
+            })
+        
+        if not connection_test.get("kubectl_available"):
+            diagnostics["recommendations"].append({
+                "issue": "kubectl not available",
+                "solution": "kubectl should be installed by startup.sh - check App Service logs",
+                "steps": [
+                    "1. Check App Service logs for startup.sh execution",
+                    "2. Verify kubectl installation in startup.sh",
+                    "3. Check if startup.sh has execute permissions"
+                ]
+            })
+        
+        if not connection_test.get("kubernetes_client_available"):
+            diagnostics["recommendations"].append({
+                "issue": "Kubernetes Python client not available",
+                "solution": "Install kubernetes package: pip install kubernetes",
+                "steps": [
+                    "1. Check requirements.txt includes 'kubernetes==28.1.0'",
+                    "2. Verify pip install completed successfully",
+                    "3. Check App Service build logs"
+                ]
+            })
+        
+        if len(namespaces) == 0 and not namespace_error:
+            diagnostics["recommendations"].append({
+                "issue": "No namespaces found (but connection succeeded)",
+                "solution": "Cluster may only have system namespaces, or all namespaces are filtered out",
+                "steps": [
+                    "1. Verify cluster has non-system namespaces",
+                    "2. Check if namespaces exist: kubectl get namespaces",
+                    "3. System namespaces (kube-system, kube-public, default) are excluded"
+                ]
+            })
+        
+        if namespace_error:
+            diagnostics["recommendations"].append({
+                "issue": f"Namespace discovery failed: {namespace_error}",
+                "solution": "Check the error message and follow recommendations above",
+                "steps": [
+                    "1. Verify Managed Identity permissions",
+                    "2. Check kubectl installation",
+                    "3. Review App Service logs for detailed error messages"
+                ]
+            })
+        
+        return {
+            "status": "success",
+            "diagnostics": diagnostics
+        }
+        
+    except Exception as e:
+        logger.error(f"Error running diagnostics: {e}", exc_info=True)
+        import traceback
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            }
+        )
 
 
 @router.post("/azure/resources")
