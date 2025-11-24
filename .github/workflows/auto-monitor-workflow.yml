@@ -450,20 +450,7 @@ jobs:
               # Ensure kubectl installation is in startup.sh
               if ($startupContent -notmatch "kubectl.*install|Install kubectl") {
                 Write-Host "  [FIX] Adding kubectl installation to startup.sh"
-                $kubectlInstall = @"
-
-# Install kubectl if not available (needed for AKS namespace discovery)
-if ! command -v kubectl &> /dev/null; then
-    echo "Installing kubectl for AKS namespace discovery..."
-    KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
-    curl -LO "https://dl.k8s.io/release/`${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-    chmod +x kubectl
-    mv kubectl /usr/local/bin/
-    echo "✓ kubectl installed: `$(kubectl version --client --short 2>/dev/null || echo 'installed')"
-else
-    echo "✓ kubectl already available: `$(kubectl version --client --short 2>/dev/null || echo 'found')"
-fi
-"@
+                $kubectlInstall = "`n`n# Install kubectl if not available (needed for AKS namespace discovery)`nif ! command -v kubectl &> /dev/null; then`n    echo `"Installing kubectl for AKS namespace discovery...`"`n    KUBECTL_VERSION=`$(curl -L -s https://dl.k8s.io/release/stable.txt)`n    curl -LO `"https://dl.k8s.io/release/`${KUBECTL_VERSION}/bin/linux/amd64/kubectl`"`n    chmod +x kubectl`n    mv kubectl /usr/local/bin/`n    echo `"✓ kubectl installed: `$(kubectl version --client --short 2>/dev/null || echo 'installed')`"`nelse`n    echo `"✓ kubectl already available: `$(kubectl version --client --short 2>/dev/null || echo 'found')`"`nfi"
                 # Add before the uvicorn command
                 if ($startupContent -match "uvicorn") {
                   $startupContent = $startupContent -replace "(uvicorn)", "$kubectlInstall`n`n$1"
@@ -505,43 +492,7 @@ fi
             $aksDocFile = "docs/AKS_PERMISSIONS_SETUP.md"
             if (-not (Test-Path $aksDocFile)) {
               Write-Host "  [FIX] Creating AKS permissions documentation"
-              $aksDocContent = @"
-# AKS Permissions Setup
-
-## Required Permissions for AKS Namespace Discovery
-
-The Azure App Service Managed Identity needs one of these roles on each AKS cluster:
-
-1. **Azure Kubernetes Service Cluster User Role** (recommended)
-2. **Azure Kubernetes Service Cluster Admin Role** (alternative)
-
-## Setup Steps
-
-1. Go to Azure Portal → AKS cluster → Access control (IAM)
-2. Click "Add role assignment"
-3. Select role: `Azure Kubernetes Service Cluster User Role`
-4. Assign to: Managed Identity → Select your App Service (`bsg-demo-platform-app`)
-5. Save and wait 1-2 minutes for propagation
-
-## Verify Setup
-
-Use the diagnostic endpoint:
-\`\`\`
-POST /api/v1/deployment/aks/diagnostics
-{
-  "subscription_id": "your-subscription-id",
-  "resource_group": "your-resource-group",
-  "cluster_name": "your-cluster-name"
-}
-\`\`\`
-
-## Troubleshooting
-
-- If namespaces are not found, check App Service logs for detailed error messages
-- Verify kubectl is installed (check startup.sh logs)
-- Verify Managed Identity has correct permissions
-- Check if cluster has non-system namespaces
-"@
+              $aksDocContent = "# AKS Permissions Setup`n`n## Required Permissions for AKS Namespace Discovery`n`nThe Azure App Service Managed Identity needs one of these roles on each AKS cluster:`n`n1. **Azure Kubernetes Service Cluster User Role** (recommended)`n2. **Azure Kubernetes Service Cluster Admin Role** (alternative)`n`n## Setup Steps`n`n1. Go to Azure Portal → AKS cluster → Access control (IAM)`n2. Click `"Add role assignment`"`n3. Select role: ``Azure Kubernetes Service Cluster User Role```n4. Assign to: Managed Identity → Select your App Service (``bsg-demo-platform-app``)`n5. Save and wait 1-2 minutes for propagation`n`n## Verify Setup`n`nUse the diagnostic endpoint:`n\`\`\``nPOST /api/v1/deployment/aks/diagnostics`n{`n  `"subscription_id`": `"your-subscription-id`",`n  `"resource_group`": `"your-resource-group`",`n  `"cluster_name`": `"your-cluster-name`"`n}`n\`\`\``n`n## Troubleshooting`n`n- If namespaces are not found, check App Service logs for detailed error messages`n- Verify kubectl is installed (check startup.sh logs)`n- Verify Managed Identity has correct permissions`n- Check if cluster has non-system namespaces"
               New-Item -Path $aksDocFile -ItemType File -Value $aksDocContent -Force | Out-Null
               $hasChanges = $true
               Write-Host "  [SUCCESS] Created AKS permissions documentation"
