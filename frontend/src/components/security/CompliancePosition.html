@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Compliance Position</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: auto;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 60px 20px 100px 20px;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18pt;
+            font-weight: bold;
+            color: #283054;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 0;
+            padding-top: 20px;
+        }
+        
+        /* Section */
+        .section {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 30px;
+        }
+        
+        /* Section Banner */
+        .section-banner {
+            background: #006b7d;
+            color: #ffffff;
+            padding: 15px 25px;
+            font-size: 18pt;
+            font-weight: bold;
+            text-align: left;
+            border-radius: 0;
+        }
+        
+        /* Section Container */
+        .section-container {
+            background: #e8f4f8;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 200px;
+        }
+        
+        /* Section 1: Leading and Proven */
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+        
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            width: 100%;
+        }
+        
+        .stat-box {
+            background: #5B21B6;
+            color: #ffffff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .stat-number {
+            font-size: 36pt;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            font-size: 14pt;
+            margin-top: 5px;
+        }
+        
+        .stat-description {
+            font-size: 16pt;
+            color: #333;
+            text-align: center;
+            margin-top: 5px;
+        }
+        
+        /* Section 2: Certifications */
+        .certifications-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 25px;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        
+        .cert-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 2px solid #006b7d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10pt;
+            font-weight: bold;
+            color: #006b7d;
+            text-align: center;
+            padding: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cert-logo.eu-cloud {
+            background: #10B981;
+            color: #ffffff;
+            border-color: #10B981;
+        }
+        
+        .cert-logo.iso {
+            background: #ffffff;
+            color: #006b7d;
+        }
+        
+        .cert-logo.star {
+            background: #ffffff;
+            color: #006b7d;
+        }
+        
+        .cert-logo.csa {
+            background: #ffffff;
+            color: #006b7d;
+        }
+        
+        .cert-logo.aicpa {
+            background: #8B5CF6;
+            color: #ffffff;
+            border-color: #8B5CF6;
+        }
+        
+        /* Section 3: Customer Help */
+        .help-items {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-evenly;
+            width: 100%;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .help-item {
+            font-size: 16pt;
+            color: #333;
+            padding: 10px 0;
+            flex: 1;
+            text-align: center;
+        }
+        
+        /* Action Button */
+        .action-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s;
+            white-space: nowrap;
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+        
+        .action-button:active {
+            transform: scale(0.98);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .stats-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .certifications-container {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 50px 10px 100px 10px;
+            }
+            
+            .stat-box {
+                min-width: 150px;
+            }
+            
+            .cert-logo {
+                width: 60px;
+                height: 60px;
+                font-size: 8pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Compliance on Top of Competition</div>
+    
+    <div class="main-container">
+        <!-- Section 1: Temenos is leading and proven -->
+        <div class="section">
+            <div class="section-banner">Temenos is leading and proven</div>
+            <div class="section-container">
+                <div class="stat-description" style="margin-bottom: 10px;">Proven across clients.</div>
+                <div class="stats-container">
+                    <div class="stat-item">
+                        <div class="stat-box">
+                            <div class="stat-number">950+</div>
+                        </div>
+                        <div class="stat-description">cores</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-box">
+                            <div class="stat-number">650+</div>
+                        </div>
+                        <div class="stat-description">digital SaaS operating across</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-box">
+                            <div class="stat-number">30+</div>
+                        </div>
+                        <div class="stat-description">principal regulators</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section 2: We have the certifications -->
+        <div class="section">
+            <div class="section-banner">We have the certifications</div>
+            <div class="section-container">
+                <div class="certifications-container">
+                    <div class="cert-logo eu-cloud">
+                        <div style="text-align: center;">
+                            <div style="font-size: 8pt;">EU CLOUD CoC</div>
+                        </div>
+                    </div>
+                    <div class="cert-logo iso">
+                        <div style="text-align: center;">
+                            <div style="font-size: 10pt; font-weight: bold;">ISO</div>
+                            <div style="font-size: 9pt;">27001</div>
+                        </div>
+                    </div>
+                    <div class="cert-logo iso">
+                        <div style="text-align: center;">
+                            <div style="font-size: 10pt; font-weight: bold;">ISO</div>
+                            <div style="font-size: 9pt;">27017</div>
+                        </div>
+                    </div>
+                    <div class="cert-logo iso">
+                        <div style="text-align: center;">
+                            <div style="font-size: 10pt; font-weight: bold;">ISO</div>
+                            <div style="font-size: 9pt;">27018</div>
+                        </div>
+                    </div>
+                    <div class="cert-logo iso">
+                        <div style="text-align: center;">
+                            <div style="font-size: 10pt; font-weight: bold;">ISO</div>
+                            <div style="font-size: 9pt;">22301</div>
+                        </div>
+                    </div>
+                    <div class="cert-logo star">
+                        <div style="text-align: center;">
+                            <div style="font-size: 12pt;">★</div>
+                            <div style="font-size: 8pt;">STAR LEVEL</div>
+                            <div style="font-size: 8pt;">TWO</div>
+                        </div>
+                    </div>
+                    <div class="cert-logo csa">
+                        <div style="text-align: center; font-size: 7pt;">
+                            <div>cloud</div>
+                            <div>CSA</div>
+                            <div>security</div>
+                            <div>alliance®</div>
+                        </div>
+                    </div>
+                    <div class="cert-logo aicpa">
+                        <div style="text-align: center; font-size: 14pt; font-weight: bold;">AICPA</div>
+                    </div>
+                    <div class="cert-logo iso">
+                        <div style="text-align: center;">
+                            <div style="font-size: 10pt; font-weight: bold;">AICPA</div>
+                            <div style="font-size: 9pt;">SOC</div>
+                        </div>
+                    </div>
+                    <div class="cert-logo iso">
+                        <div style="text-align: center;">
+                            <div style="font-size: 10pt; font-weight: bold;">AICPA</div>
+                            <div style="font-size: 9pt;">SOC 2</div>
+                        </div>
+                    </div>
+                    <div class="cert-logo iso">
+                        <div style="text-align: center;">
+                            <div style="font-size: 10pt; font-weight: bold;">AICPA</div>
+                            <div style="font-size: 9pt;">SOC 3</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section 3: We help customers -->
+        <div class="section">
+            <div class="section-banner">We help customers</div>
+            <div class="section-container">
+                <div class="help-items">
+                    <div class="help-item">Trust Centre</div>
+                    <div class="help-item">Training Videos</div>
+                    <div class="help-item">Operations support</div>
+                    <div class="help-item">Training Materials</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="action-button" onclick="navigateToTrustCenter()">Temenos Trust Center</button>
+    
+    <script>
+        function navigateToTrustCenter() {
+            // Send message to parent to show TrustCenter
+            if (window.parent) {
+                window.parent.postMessage({ type: 'showTrustCenter' }, '*');
+            }
+        }
+    </script>
+</body>
+</html>
+

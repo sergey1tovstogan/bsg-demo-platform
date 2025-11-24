@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Protection Embedded</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: auto;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 60px 20px 20px 20px;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18pt;
+            font-weight: bold;
+            color: #283054;
+            z-index: 1000;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .points-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+            height: auto;
+            min-height: 400px;
+        }
+        
+        .point-card {
+            background: #E8F4F8;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        
+        .point-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .point-number {
+            font-size: 32pt;
+            font-weight: bold;
+            color: #ffffff;
+            background: #20B2AA;
+            border-radius: 8px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        
+        .point-text {
+            font-size: 11pt;
+            color: #283054;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .points-grid {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(4, 1fr);
+                gap: 20px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 50px 10px 20px 10px;
+            }
+            
+            .points-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(8, auto);
+                gap: 15px;
+            }
+            
+            .point-card {
+                padding: 15px;
+            }
+            
+            .point-number {
+                font-size: 24pt;
+            }
+            
+            .point-text {
+                font-size: 10pt;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .title-label {
+                font-size: 14pt;
+            }
+            
+            .point-number {
+                font-size: 20pt;
+            }
+            
+            .point-text {
+                font-size: 9pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Protection Embedded</div>
+    
+    <div class="main-container">
+        <div class="points-grid">
+            <!-- Point 1 -->
+            <div class="point-card">
+                <div class="point-number">1</div>
+                <div class="point-text">Temenos maintain the international standards (or their equivalents) for the term of the agreement</div>
+            </div>
+            
+            <!-- Point 2 -->
+            <div class="point-card">
+                <div class="point-number">2</div>
+                <div class="point-text">Temenos not materially reduce the service or security (except to comply with law or to fix a material security risk)</div>
+            </div>
+            
+            <!-- Point 3 -->
+            <div class="point-card">
+                <div class="point-number">3</div>
+                <div class="point-text">Cloud Services Warranty – what we implement, you approve for go-live, will be covered for the term of the agreement</div>
+            </div>
+            
+            <!-- Point 4 -->
+            <div class="point-card">
+                <div class="point-number">4</div>
+                <div class="point-text">Data always at rest in DC location agreed</div>
+            </div>
+            
+            <!-- Point 5 -->
+            <div class="point-card">
+                <div class="point-number">5</div>
+                <div class="point-text">At all times client has the right to raise a regulatory change – if we cannot agree then leads to termination</div>
+            </div>
+            
+            <!-- Point 6 -->
+            <div class="point-card">
+                <div class="point-number">6</div>
+                <div class="point-text">Unrestricted right of audit for outsourced services – for EBA regulated clients</div>
+            </div>
+            
+            <!-- Point 7 -->
+            <div class="point-card">
+                <div class="point-number">7</div>
+                <div class="point-text">Notice of and right to reasonably object to material changes to the service</div>
+            </div>
+            
+            <!-- Point 8 -->
+            <div class="point-card">
+                <div class="point-number">8</div>
+                <div class="point-text">Any data transfer will be aligned with adequacy assessment / decision following EDPB guidelines</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
