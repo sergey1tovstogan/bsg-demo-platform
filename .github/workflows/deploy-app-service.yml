@@ -348,15 +348,32 @@ jobs:
               echo "⚠ Deployment attempt $ATTEMPT failed"
               echo "Error output: $DEPLOY_OUTPUT"
               
-              # Check if it's a 409 conflict (retryable)
+              # Check if it's a retryable error
+              IS_RETRYABLE=false
+              RETRY_REASON=""
+              
               if echo "$DEPLOY_OUTPUT" | grep -qi "409\|Conflict\|concurrent\|operation.*in.*progress"; then
-                echo "⚠ 409 Conflict detected - this is retryable"
+                IS_RETRYABLE=true
+                RETRY_REASON="409 Conflict"
+              elif echo "$DEPLOY_OUTPUT" | grep -qi "504\|GatewayTimeout\|gateway.*timeout\|timeout"; then
+                IS_RETRYABLE=true
+                RETRY_REASON="504 Gateway Timeout"
+              elif echo "$DEPLOY_OUTPUT" | grep -qi "503\|ServiceUnavailable\|service.*unavailable"; then
+                IS_RETRYABLE=true
+                RETRY_REASON="503 Service Unavailable"
+              elif echo "$DEPLOY_OUTPUT" | grep -qi "502\|BadGateway\|bad.*gateway"; then
+                IS_RETRYABLE=true
+                RETRY_REASON="502 Bad Gateway"
+              fi
+              
+              if [ "$IS_RETRYABLE" = "true" ]; then
+                echo "⚠ $RETRY_REASON detected - this is retryable"
                 if [ $ATTEMPT -lt $MAX_RETRIES ]; then
                   echo "Will retry in $RETRY_DELAY seconds..."
                   ATTEMPT=$((ATTEMPT + 1))
                   DEPLOY_EXIT_CODE=""
                 else
-                  echo "❌ Max retries reached for 409 conflicts"
+                  echo "❌ Max retries reached for $RETRY_REASON"
                   exit 1
                 fi
               else

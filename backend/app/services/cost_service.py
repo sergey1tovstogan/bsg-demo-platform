@@ -229,15 +229,35 @@ class CostService:
             List of cost information dictionaries
         """
         results = []
+        total = len(resource_group_names)
         
-        for rg_name in resource_group_names:
-            cost_data = self.get_resource_group_costs(rg_name, start_date, end_date)
-            results.append(cost_data)
-            
-            # Small delay to avoid rate limiting
-            if len(resource_group_names) > 1:
-                time.sleep(0.5)
+        logger.info(f"Fetching costs for {total} resource groups...")
         
+        # For large batches, reduce delay and process more efficiently
+        delay = 0.2 if total > 20 else 0.5
+        
+        for idx, rg_name in enumerate(resource_group_names, 1):
+            try:
+                logger.info(f"Processing resource group {idx}/{total}: {rg_name}")
+                cost_data = self.get_resource_group_costs(rg_name, start_date, end_date)
+                results.append(cost_data)
+                
+                # Reduced delay for large batches to speed up processing
+                if idx < total:  # Don't delay after last item
+                    time.sleep(delay)
+            except Exception as e:
+                logger.error(f"Error fetching costs for {rg_name}: {e}")
+                # Add error result instead of failing completely
+                results.append({
+                    'resource_group': rg_name,
+                    'total_cost': 0.0,
+                    'services': {},
+                    'error': f'Error fetching costs: {str(e)}',
+                    'start_date': start_date.isoformat() if start_date else None,
+                    'end_date': end_date.isoformat() if end_date else None
+                })
+        
+        logger.info(f"Completed fetching costs for {len(results)} resource groups")
         return results
     
     def _parse_cost_result(

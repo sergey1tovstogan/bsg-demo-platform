@@ -150,10 +150,11 @@ class TemenosService:
             r"transact", r"payments", r"wealth", r"digital", r"analytics",
             r"datahub", r"modular", r"tap", r"adapter", r"genericconfig",
             r"eventstore", r"stmtgen", r"notification", r"audit", r"file",
-            r"workflow", r"integration", r"temenos"
+            r"workflow", r"integration", r"temenos", r"deposits", r"lending",
+            r"party", r"holdings", r"stmt", r"statement", r"core", r"banking"
         ]
         
-        # Must match Temenos pattern AND be a relevant resource type
+        # Must match Temenos pattern
         has_temenos_name = any(re.search(pattern, name) for pattern in temenos_patterns)
         
         # Focus on these resource types that can be Temenos components
@@ -174,7 +175,7 @@ class TemenosService:
         if "managedclusters/pods" in resource_type.lower():
             # Pods are already filtered by namespace, so include them
             # Also check if namespace in properties indicates Temenos component
-            namespace = service.properties.get("namespace", "")
+            namespace = service.properties.get("namespace", "") or service.properties.get("namespace_name", "") or service.tags.get("namespace", "")
             if namespace:
                 # Check if namespace matches Temenos patterns
                 temenos_namespace_patterns = [
@@ -183,11 +184,25 @@ class TemenosService:
                     r"audit", r"file", r"workflow", r"deposits", r"lending", r"webingress", r"ingress"
                 ]
                 if any(re.search(pattern, namespace, re.IGNORECASE) for pattern in temenos_namespace_patterns):
+                    logger.debug(f"Including pod {service.name} - namespace '{namespace}' matches Temenos pattern")
                     return True
-            return True  # Include all pods since they're already filtered by namespace discovery
+            # Include all pods since they're already filtered by namespace discovery
+            logger.debug(f"Including pod {service.name} - pods are pre-filtered by namespace discovery")
+            return True
         
-        # Include if: has Temenos name OR is a relevant type with Temenos name
-        return has_temenos_name or (is_relevant_type and has_temenos_name)
+        # Include if: has Temenos name OR is a relevant resource type
+        # This is less restrictive - relevant types (AKS, SQL, etc.) are included even without Temenos name
+        # because they might be Temenos components based on context
+        if is_relevant_type:
+            logger.debug(f"Including {service.name} - relevant resource type: {resource_type}")
+            return True
+        
+        if has_temenos_name:
+            logger.debug(f"Including {service.name} - name matches Temenos pattern")
+            return True
+        
+        logger.debug(f"Excluding {service.name} - not a relevant type and name doesn't match Temenos patterns")
+        return False
 
     def _extract_component_name(self, service: AzureResource) -> Optional[Dict[str, str]]:
         """Extract component name from Azure service."""
