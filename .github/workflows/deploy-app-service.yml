@@ -323,6 +323,14 @@ jobs:
             zip -r ../deploy-package.zip . -q
             cd ..
             
+            # Set startup file first (before deployment)
+            echo "Setting startup file..."
+            az webapp config set \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --startup-file "startup.sh" \
+              --output none 2>&1 || true
+            
             # Attempt deployment using Azure CLI
             echo "Deploying to Azure Web App..."
             DEPLOY_OUTPUT=$(az webapp deploy \
@@ -330,7 +338,6 @@ jobs:
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --type zip \
               --src-path deploy-package.zip \
-              --startup-file "startup.sh" \
               --async false \
               --timeout 900 2>&1) || DEPLOY_EXIT_CODE=$?
             
