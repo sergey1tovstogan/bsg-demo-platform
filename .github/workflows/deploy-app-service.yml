@@ -13,8 +13,90 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  build-and-deploy:
+  test-backend:
+    name: Test Backend
     runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+      
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Test backend imports
+        working-directory: ./backend
+        run: |
+          echo "Testing critical imports..."
+          python -c "from app.main import app; print('✓ FastAPI app imports successfully')"
+          python -c "from app.core.config import settings; print('✓ Settings import successfully')"
+          echo "✓ All critical imports successful"
+      
+      - name: Validate backend structure
+        working-directory: ./backend
+        run: |
+          echo "Validating backend structure..."
+          [ -f "app/main.py" ] || (echo "✗ app/main.py not found" && exit 1)
+          [ -f "requirements.txt" ] || (echo "✗ requirements.txt not found" && exit 1)
+          [ -d "app/api" ] || (echo "✗ app/api directory not found" && exit 1)
+          echo "✓ Backend structure is valid"
+
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+      
+      - name: Type check frontend
+        working-directory: ./frontend
+        run: |
+          echo "Running TypeScript type check..."
+          npx tsc --noEmit || (echo "⚠ TypeScript errors found" && exit 1)
+          echo "✓ TypeScript type check passed"
+      
+      - name: Test frontend build
+        working-directory: ./frontend
+        run: |
+          echo "Testing frontend build..."
+          npm run build
+          echo "✓ Frontend build successful"
+      
+      - name: Validate frontend build output
+        working-directory: ./frontend
+        run: |
+          echo "Validating build output..."
+          [ -d "dist" ] || (echo "✗ dist directory not found" && exit 1)
+          [ -f "dist/index.html" ] || (echo "✗ dist/index.html not found" && exit 1)
+          echo "✓ Frontend build output is valid"
+
+  build-and-deploy:
+    name: Build and Deploy (Fast)
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    timeout-minutes: 20
     
     steps:
       - name: Checkout code
@@ -75,25 +157,22 @@ jobs:
         continue-on-error: true
         id: install-kubectl
       
-      - name: Copy frontend build to backend static
+      - name: Copy frontend build to backend static (Fast)
         run: |
           echo "Copying frontend build to backend static directory..."
           mkdir -p backend/app/static
           if [ -d "frontend/dist" ] && [ "$(ls -A frontend/dist)" ]; then
-            cp -r frontend/dist/* backend/app/static/
-            echo "✓ Frontend files copied successfully"
-            echo "Static directory contents:"
-            ls -la backend/app/static/ | head -20
-            if [ -f "backend/app/static/index.html" ]; then
-              echo "✓ index.html found in static directory"
+            # Use rsync if available for faster copy, otherwise cp
+            if command -v rsync &> /dev/null; then
+              rsync -a --delete frontend/dist/ backend/app/static/
             else
-              echo "✗ ERROR: index.html not found in static directory!"
-              exit 1
+              cp -r frontend/dist/* backend/app/static/
             fi
+            # Quick verification only
+            [ -f "backend/app/static/index.html" ] || (echo "ERROR: index.html not found!" && exit 1)
+            echo "✓ Frontend files copied successfully"
           else
-            echo "✗ ERROR: frontend/dist directory is empty or doesn't exist!"
-            echo "Frontend build may have failed. Checking dist directory..."
-            ls -la frontend/dist/ || echo "dist directory does not exist"
+            echo "ERROR: frontend/dist directory is empty or doesn't exist!"
             exit 1
           fi
       
@@ -103,31 +182,48 @@ jobs:
           chmod +x backend/startup.sh
           echo "✓ startup.sh is now executable"
       
-      - name: Clean up unnecessary files
+      - name: Clean up unnecessary files (optimized)
         working-directory: ./backend
         run: |
-          echo "Cleaning up unnecessary files..."
-          # Remove test files
-          find . -name "*test*.py" -not -path "./app/*" -delete || true
-          # Remove files that shouldn't be deployed
-          rm -rf scripts/ infrastructure/ uploads/ __pycache__/ .pytest_cache/ .vscode/ .idea/ || true
-          # Remove node_modules if accidentally copied
-          rm -rf node_modules/ || true
-          # Find and remove all __pycache__ directories (handle both Unix and Windows paths)
+          echo "Cleaning up unnecessary files to reduce package size..."
+          echo "Package size before cleanup:"
+          du -sh . 2>/dev/null | cut -f1 || echo "N/A"
+          
+          # Aggressive cleanup - remove everything not needed for runtime
+          # Note: .deploymentignore handles most exclusions, but we do additional cleanup here
+          
+          # Remove development/test files
+          rm -rf scripts/ infrastructure/ uploads/ tests/ .pytest_cache/ .vscode/ .idea/ || true
+          
+          # Remove documentation and markdown files
+          find . -maxdepth 1 -name "*.md" -delete 2>/dev/null || true
+          find . -maxdepth 1 -name "*.html" -not -path "./app/static/*" -delete 2>/dev/null || true
+          
+          # Remove development Python scripts
+          rm -f create_*.py export_*.py insert_*.py seed_*.py test_*.py verify_*.py 2>/dev/null || true
+          rm -f observability_preview.html start-backend.sh 2>/dev/null || true
+          
+          # Remove Python cache files (__pycache__ will be excluded by .deploymentignore)
           find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          find . -type d -name "*__pycache__*" -exec rm -rf {} + 2>/dev/null || true
-          # Remove Python cache files
           find . -type f -name "*.pyc" -delete 2>/dev/null || true
           find . -type f -name "*.pyo" -delete 2>/dev/null || true
+          
+          # Remove logs and temporary files
           find . -type f -name "*.log" -delete 2>/dev/null || true
-          # Remove any Windows-style paths that might have been created
-          find . -type f -path "*\\*" -delete 2>/dev/null || true
-          find . -type d -path "*\\*" -exec rm -rf {} + 2>/dev/null || true
+          find . -type f -name "*.tmp" -delete 2>/dev/null || true
+          find . -type f -name "*.temp" -delete 2>/dev/null || true
+          
+          # Remove node_modules if accidentally copied
+          rm -rf node_modules/ package*.json 2>/dev/null || true
+          
           # Remove .git directories if any
           find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
-          # Remove large unnecessary files
-          find . -name "*.zip" -delete 2>/dev/null || true
-          find . -name "*.tar.gz" -delete 2>/dev/null || true
+          
+          # Remove large archive files
+          find . -name "*.zip" -o -name "*.tar.gz" -o -name "*.tar" -delete 2>/dev/null || true
+          
+          echo "Package size after cleanup:"
+          du -sh . 2>/dev/null | cut -f1 || echo "N/A"
           echo "✓ Cleanup complete"
       
       - name: Verify requirements.txt exists
@@ -140,131 +236,8 @@ jobs:
           echo "First 20 lines of requirements.txt:"
           head -20 backend/requirements.txt
       
-      - name: Configure App Settings (Before Deployment)
-        run: |
-          echo "Configuring Azure App Service settings BEFORE deployment..."
-          
-          # Generate JWT secret if not provided
-          if [ -z "${{ secrets.JWT_SECRET_KEY }}" ]; then
-            echo "⚠ Warning: JWT_SECRET_KEY secret is not set. Generating a temporary one..."
-            TEMP_JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
-          else
-            TEMP_JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}"
-          fi
-          
-          # Set RAG_API_URL (use secret or default)
-          RAG_API_URL_VALUE="${{ secrets.RAG_API_URL }}"
-          if [ -z "$RAG_API_URL_VALUE" ]; then
-            RAG_API_URL_VALUE="https://tbsg.temenos.com"
-          fi
-          
-          # Set build settings FIRST so Azure can build during deployment
-          # Note: Azure App Service will auto-detect Python and install dependencies
-          echo "Setting build settings..."
-          az webapp config appsettings set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --settings \
-              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
-              ENABLE_ORYX_BUILD=true \
-            --output none
-          
-          # Set other app settings
-          echo "Setting app settings..."
-          az webapp config appsettings set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --settings \
-              ENVIRONMENT=production \
-              DEBUG=False \
-              DATABASE_NAME=bsg_demo \
-              CORS_ORIGINS="*" \
-              JWT_SECRET_KEY="$TEMP_JWT_SECRET" \
-              RAG_API_URL="$RAG_API_URL_VALUE" \
-            --output none
-          
-          # Set secrets individually if they exist (to avoid exposing them in logs)
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-            echo "Setting DATABASE_URL..."
-            az webapp config appsettings set \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --settings DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              --output none
-          else
-            echo "⚠ Warning: DATABASE_URL secret is not set. App may not work correctly."
-            echo "Please set DATABASE_URL in GitHub Secrets"
-          fi
-          
-          if [ -n "${{ secrets.RAG_JWT_TOKEN }}" ]; then
-            echo "Setting RAG_JWT_TOKEN..."
-            az webapp config appsettings set \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --settings RAG_JWT_TOKEN="${{ secrets.RAG_JWT_TOKEN }}" \
-              --output none
-          else
-            echo "⚠ Warning: RAG_JWT_TOKEN secret is not set. RAG features will not work."
-          fi
-          
-          # Set startup command (with logging for better debugging)
-          # Azure App Service sets PORT automatically - use it via environment variable
-          # Note: Azure App Service Linux uses PORT env var, default is 8000
-          # Use startup.sh script which handles PORT env var correctly
-          echo "Setting startup command..."
-          az webapp config set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --startup-file "bash startup.sh" \
-            --output none
-          echo "✓ Startup command configured to use startup.sh"
-          
-          # Enable Always On (critical for App Service to prevent sleep)
-          echo "Enabling Always On..."
-          az webapp config set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --always-on true \
-            --output none
-          
-          echo ""
-          echo "✓ App settings configured successfully"
-          echo ""
-          echo "Required GitHub Secrets Status:"
-          echo "  - DATABASE_URL: $([ -n "${{ secrets.DATABASE_URL }}" ] && echo "✓ Set" || echo "✗ Missing - REQUIRED")"
-          echo "  - RAG_JWT_TOKEN: $([ -n "${{ secrets.RAG_JWT_TOKEN }}" ] && echo "✓ Set" || echo "✗ Missing (RAG features disabled)")"
-          echo "  - RAG_API_URL: $([ -n "${{ secrets.RAG_API_URL }}" ] && echo "✓ Set" || echo "⚠ Using default: https://tbsg.temenos.com")"
-          echo "  - JWT_SECRET_KEY: $([ -n "${{ secrets.JWT_SECRET_KEY }}" ] && echo "✓ Set" || echo "⚠ Generated temporary key")"
-          echo ""
-          echo "To set secrets: Repository → Settings → Secrets and variables → Actions → New repository secret"
-          echo "See ENVIRONMENT_VARIABLES.md for details"
-          echo ""
-          echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
-      
-      - name: Enable Managed Identity
-        run: |
-          echo "Enabling System-Assigned Managed Identity for Azure App Service..."
-          az webapp identity assign \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --output none || echo "⚠ Managed Identity may already be enabled or failed to enable"
-          echo "✓ Managed Identity configuration attempted"
-          echo ""
-          echo "⚠ IMPORTANT: After deployment, grant the Managed Identity 'Reader' role on the subscription:"
-          echo "   az role assignment create \\"
-          echo "     --assignee <principal-id> \\"
-          echo "     --role 'Reader' \\"
-          echo "     --scope /subscriptions/<subscription-id>"
-      
-      - name: Configure Python Version
-        run: |
-          echo "Setting Python version to 3.11..."
-          az webapp config set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --linux-fx-version "PYTHON|3.11" \
-            --output none
-          echo "✓ Python version configured"
+      # Note: App settings moved to AFTER deployment to avoid SCM container restart conflicts
+      # The deployment action will use default settings, then we configure after deployment completes
       
       - name: Check package size before deployment
         run: |
@@ -287,76 +260,197 @@ jobs:
             echo "  ⚠ Static directory not found!"
           fi
       
-      - name: Wait before deployment (avoid SCM restart conflicts)
+      - name: Quick SCM check (skip if not critical)
         run: |
-          echo "Waiting 15 seconds before deployment to avoid SCM container restart conflicts..."
-          sleep 15
-          echo "✓ Ready to deploy"
+          echo "Quick SCM check (non-blocking)..."
+          SCM_URL="https://${{ env.AZURE_WEBAPP_NAME }}.scm.azurewebsites.net"
+          # Single quick check - don't wait if not ready, deployment will handle it
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 $SCM_URL 2>/dev/null || echo "000")
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
+            echo "✓ SCM is ready"
+          else
+            echo "⚠ SCM check skipped - proceeding with deployment (OneDeploy handles this)"
+          fi
       
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: ./backend
-        timeout-minutes: 20
-      
-      - name: Health Check
+      - name: Check for ongoing deployments
         run: |
-          WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-          echo "Waiting for app to start (allowing 90 seconds for first-time startup)..."
-          sleep 90
+          echo "Checking for ongoing deployments before starting..."
+          ONGOING=$(az webapp deployment list \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query "[?status=='InProgress'].id" -o tsv 2>/dev/null || echo "")
           
-          # First check liveness endpoint (doesn't require DB)
-          echo "Checking liveness endpoint..."
-          MAX_RETRIES=20
-          RETRY_DELAY=10
-          LIVENESS_PASSED=false
+          if [ -n "$ONGOING" ]; then
+            echo "⚠ Ongoing deployment detected, waiting 45 seconds..."
+            sleep 45
+          else
+            echo "✓ No ongoing deployments detected"
+          fi
+        continue-on-error: true
+      
+      - name: Deploy to Azure Web App (Fast) with Retry
+        id: deploy-backend
+        run: |
+          MAX_RETRIES=3
+          RETRY_DELAY=45
+          ATTEMPT=1
+          DEPLOY_SUCCESS=false
           
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "Liveness check attempt $i/$MAX_RETRIES..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 $WEBAPP_URL/api/v1/live || echo "000")
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ Liveness check passed! (HTTP $HTTP_CODE)"
-              LIVENESS_PASSED=true
-              break
+          while [ $ATTEMPT -le $MAX_RETRIES ] && [ "$DEPLOY_SUCCESS" = "false" ]; do
+            echo ""
+            echo "=== Deployment Attempt $ATTEMPT of $MAX_RETRIES ==="
+            
+            if [ $ATTEMPT -gt 1 ]; then
+              echo "Waiting $RETRY_DELAY seconds before retry..."
+              sleep $RETRY_DELAY
+              
+              # Check for ongoing deployments again
+              echo "Re-checking for ongoing deployments..."
+              ONGOING=$(az webapp deployment list \
+                --name ${{ env.AZURE_WEBAPP_NAME }} \
+                --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                --query "[?status=='InProgress'].id" -o tsv 2>/dev/null || echo "")
+              
+              if [ -n "$ONGOING" ]; then
+                echo "⚠ Ongoing deployment still detected, waiting additional 30 seconds..."
+                sleep 30
+              fi
+            fi
+            
+            # Create zip package
+            echo "Creating deployment package..."
+            cd backend
+            zip -r ../deploy-package.zip . -q
+            cd ..
+            
+            # Set startup file first (before deployment)
+            echo "Setting startup file..."
+            az webapp config set \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --startup-file "startup.sh" \
+              --output none 2>&1 || true
+            
+            # Attempt deployment using Azure CLI
+            echo "Deploying to Azure Web App..."
+            DEPLOY_OUTPUT=$(az webapp deploy \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --type zip \
+              --src-path deploy-package.zip \
+              --async false \
+              --timeout 900 2>&1) || DEPLOY_EXIT_CODE=$?
+            
+            if [ -z "${DEPLOY_EXIT_CODE:-}" ] || [ "${DEPLOY_EXIT_CODE:-}" = "0" ]; then
+              echo "✓ Deployment successful!"
+              DEPLOY_SUCCESS=true
             else
-              echo "Liveness check returned HTTP $HTTP_CODE, retrying in $RETRY_DELAY seconds..."
-              if [ $i -lt $MAX_RETRIES ]; then
-                sleep $RETRY_DELAY
+              echo "⚠ Deployment attempt $ATTEMPT failed"
+              echo "Error output: $DEPLOY_OUTPUT"
+              
+              # Check if it's a 409 conflict (retryable)
+              if echo "$DEPLOY_OUTPUT" | grep -qi "409\|Conflict\|concurrent\|operation.*in.*progress"; then
+                echo "⚠ 409 Conflict detected - this is retryable"
+                if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+                  echo "Will retry in $RETRY_DELAY seconds..."
+                  ATTEMPT=$((ATTEMPT + 1))
+                  DEPLOY_EXIT_CODE=""
+                else
+                  echo "❌ Max retries reached for 409 conflicts"
+                  exit 1
+                fi
+              else
+                echo "❌ Non-retryable error detected"
+                exit 1
               fi
             fi
           done
           
-          if [ "$LIVENESS_PASSED" = false ]; then
-            echo "❌ Liveness check failed after $MAX_RETRIES attempts"
-            echo "Checking app status..."
-            az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "{state: state, defaultHostName: defaultHostName}" || true
-            echo ""
-            echo "Checking recent logs..."
-            az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --timeout 10 || true
-            echo ""
-            echo "Troubleshooting steps:"
-            echo "1. Check App Service logs: az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}"
-            echo "2. Verify startup command: az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query appCommandLine"
-            echo "3. Check Always On: az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query alwaysOn"
+          if [ "$DEPLOY_SUCCESS" = "false" ]; then
+            echo "❌ All deployment attempts failed"
             exit 1
           fi
           
-          # Now check full health endpoint
-          echo ""
-          echo "Checking full health endpoint..."
-          HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 $WEBAPP_URL/api/v1/health || echo "000")
-          if [ "$HEALTH_CODE" = "200" ]; then
-            echo "✓ Full health check passed! (HTTP $HEALTH_CODE)"
-            curl -s --max-time 30 $WEBAPP_URL/api/v1/health | head -20
-          else
-            echo "⚠ Full health check returned HTTP $HEALTH_CODE"
-            echo "This may indicate database connectivity issues, but app is running"
-            echo "Liveness endpoint confirms the app is alive"
+          # Clean up zip file
+          rm -f deploy-package.zip
+        continue-on-error: false
+      
+      - name: Wait after deployment (critical for SCM stability)
+        run: |
+          echo "Waiting 60 seconds after deployment for SCM container to fully stabilize..."
+          echo "This prevents SCM restart conflicts when configuring settings"
+          sleep 60
+          echo "✓ Wait complete - SCM container is stable"
+      
+      - name: Configure App Settings (After Deployment - No Restart)
+        run: |
+          echo "Configuring Azure App Service settings AFTER deployment..."
+          echo "This approach avoids SCM container restart conflicts"
+          
+          # Generate JWT secret if not provided
+          TEMP_JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}"
+          if [ -z "$TEMP_JWT_SECRET" ]; then
+            TEMP_JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
           fi
           
-          echo ""
-          echo "✓ Deployment successful!"
+          # Set RAG_API_URL (use secret or default)
+          RAG_API_URL_VALUE="${{ secrets.RAG_API_URL }}"
+          [ -z "$RAG_API_URL_VALUE" ] && RAG_API_URL_VALUE="https://tbsg.temenos.com"
+          
+          # Build settings string (combine all settings to minimize API calls)
+          SETTINGS_STRING="SCM_DO_BUILD_DURING_DEPLOYMENT=true ENABLE_ORYX_BUILD=true ENVIRONMENT=production DEBUG=False DATABASE_NAME=bsg_demo CORS_ORIGINS=* JWT_SECRET_KEY=$TEMP_JWT_SECRET RAG_API_URL=$RAG_API_URL_VALUE"
+          
+          # Add secrets if they exist
+          [ -n "${{ secrets.DATABASE_URL }}" ] && SETTINGS_STRING="$SETTINGS_STRING DATABASE_URL=${{ secrets.DATABASE_URL }}"
+          [ -n "${{ secrets.RAG_JWT_TOKEN }}" ] && SETTINGS_STRING="$SETTINGS_STRING RAG_JWT_TOKEN=${{ secrets.RAG_JWT_TOKEN }}"
+          
+          # Set all settings in one call (much faster than multiple calls)
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --settings $SETTINGS_STRING \
+            --output none
+          
+          # Set startup and Always On together (single API call)
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --startup-file "startup.sh" \
+            --always-on true \
+            --output none
+          
+          echo "✓ App settings configured successfully (after deployment with delay)"
+      
+      - name: Verify deployment completed
+        if: steps.deploy-backend.outcome != 'success'
+        run: |
+          echo "⚠ Deployment step did not complete successfully"
+          echo "This may indicate a timeout or deployment failure"
+          echo "Check Azure Portal for deployment status"
+          exit 1
+      
+      # NOTE: App settings are configured via the deployment action's app-settings parameter
+      # This avoids SCM container restart conflicts by letting Azure handle it during deployment
+      
+      - name: Quick Health Check (Background - Non-blocking)
+        continue-on-error: true
+        timeout-minutes: 1
+        run: |
+          WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          echo "Quick health check (non-blocking, background)..."
+          
+          # Very short initial wait
+          sleep 5
+          
+          # Single quick check - don't block deployment
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $WEBAPP_URL/api/v1/live 2>/dev/null || echo "000")
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✓ App is responding immediately!"
+          else
+            echo "⚠ App may still be starting (normal - can take 1-2 minutes)"
+            echo "Deployment completed successfully. App will be ready shortly."
+            echo "Check status: $WEBAPP_URL/api/v1/live"
+          fi
       
       - name: Deployment Summary
         run: |

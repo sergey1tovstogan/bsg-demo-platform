@@ -86,9 +86,12 @@ If Managed Identity doesn't work, configure Service Principal credentials:
 ### Verify Configuration
 
 After configuration, test the connection:
-```powershell
-.\tools\check-backend-status.ps1
+```bash
+curl http://localhost:8000/api/v1/health
 ```
+
+Or check the backend logs in Azure Portal:
+- App Services → `bsg-demo-platform-app` → Log stream
 
 Then try connecting to Azure from the web app again.
 
@@ -218,41 +221,81 @@ Check the latest GitHub Actions run:
 
 ### Issue: "No namespaces found" in Azure App Service
 
-**Problem**: AKS namespace discovery works locally but shows "No namespaces found" when deployed to Azure App Service.
+**Problem**: AKS namespace discovery shows "No namespaces found" when deployed to Azure App Service.
 
-**Root Cause**: 
-- The AKS service uses `kubectl` and Azure CLI (`az aks get-credentials`) to retrieve namespaces
-- `kubectl` and Azure CLI are not installed in Azure App Service by default
-- The code needs to be updated to use the Kubernetes Python client library instead
+**How It Works**:
+The code tries multiple methods in order:
+1. **Kubernetes Python Client** (Preferred) - Gets kubeconfig via Azure credentials, lists namespaces via Kubernetes API
+2. **kubectl Fallback** - Uses `kubectl get namespaces` command (now auto-installed via `startup.sh`)
 
 **Current Status**:
 - ✅ **Local Development**: Works because `kubectl` and Azure CLI are installed
-- ❌ **Azure App Service**: Fails because `kubectl` is not available
+- ✅ **Azure App Service**: kubectl is now installed automatically by `startup.sh`
+- ⚠️ **May still fail** if Managed Identity lacks permissions
 
-**Solutions**:
+**Immediate Diagnostic Steps**:
 
-#### Option 1: Install kubectl in Azure App Service (Temporary Workaround)
+1. **Check Backend Logs**:
+   ```bash
+   az webapp log tail --name bsg-demo-platform-app --resource-group bsg-demo-platform
+   ```
+   Look for:
+   - `"=== FUNCTION ENTRY: list_cluster_namespaces ==="`
+   - `"Kubernetes Python client available: True/False"`
+   - `"kubectl not found"` errors
+   - `"Failed to get kubeconfig"` messages
+   - `"startup.sh"` execution logs
 
-1. **Add a startup script** to install `kubectl`:
-   - Create a script that downloads and installs `kubectl`
-   - Add it to the App Service startup command
-   - This is a temporary workaround and not recommended for production
+2. **Verify kubectl Installation**:
+   ```bash
+   az webapp ssh --name bsg-demo-platform-app --resource-group bsg-demo-platform
+   which kubectl
+   kubectl version --client
+   ```
 
-#### Option 2: Use Kubernetes Python Client (Recommended - Future Fix)
+3. **Check Managed Identity Permissions**:
+   ```bash
+   # Get principal ID
+   PRINCIPAL_ID=$(az webapp identity show --name bsg-demo-platform-app --resource-group bsg-demo-platform --query principalId -o tsv)
+   
+   # Grant "Azure Kubernetes Service Cluster User Role" if missing
+   az role assignment create \
+     --assignee $PRINCIPAL_ID \
+     --role "Azure Kubernetes Service Cluster User Role" \
+     --scope /subscriptions/58a91cf0-0f39-45fd-a63e-5a9a28c7072b/resourceGroups/modulartest3/providers/Microsoft.ContainerService/managedClusters/transact
+   ```
 
-The code should be updated to:
-1. Use `azure.mgmt.containerservice` to get cluster admin credentials
-2. Use `kubernetes` Python client library to query the cluster API directly
-3. This eliminates the need for `kubectl` and Azure CLI
+**Common Issues**:
+- **kubectl not found**: Check if `startup.sh` ran successfully (should install kubectl automatically)
+- **Kubernetes Python client fails**: Managed Identity likely lacks "Azure Kubernetes Service Cluster User Role"
+- **No kubeconfig**: Azure credentials don't have permission to get cluster credentials
 
-**Required Permissions**:
-- Managed Identity needs "Azure Kubernetes Service Cluster User Role" on each AKS cluster
-- Or "Azure Kubernetes Service Cluster Admin Role" for admin access
+**Expected Success Output**:
+If working, you should see namespaces like: adapterservice, deposits202507, eventstore, genericconfig, holdings, modular-banking, partyv2, transact, webingress
 
-**Current Workaround**:
-- Namespace discovery will not work in Azure App Service until the code is updated
-- You can still analyze Azure resources (App Services, Storage Accounts, etc.)
-- AKS pods will not be discovered automatically
+## Deployment Issues
+
+### Issue: Frontend Not Loading (Blank Page)
+
+**Problem**: Accessing `https://bsg-demo-platform-app.azurewebsites.net` shows a blank page.
+
+**Solution**:
+1. Verify static files are copied during deployment (check workflow step "Copy frontend build to backend static")
+2. Check backend logs for "Static files mounted at /static" or "index.html not found" warnings
+3. Verify `backend/app/static/index.html` exists after deployment
+
+### Issue: Deployment Timeout
+
+**Problem**: GitHub Actions deployment times out after 30+ minutes.
+
+**Solution**:
+- ✅ **FIXED**: Timeout optimized to 30 minutes (deployments are now faster)
+- ✅ **OPTIMIZED**: SCM wait reduced from 60s to 10s + smart polling
+- ✅ **OPTIMIZED**: Health check reduced from 90s to 30s + smart polling
+- ✅ **OPTIMIZED**: Package cleanup enhanced to reduce deployment size
+- ✅ **OPTIMIZED**: Pre-built package deployment (no Oryx build)
+- Check workflow logs for specific step causing delay
+- Expected deployment time: ~5-8 minutes (subsequent), ~10-15 minutes (first time)
 
 ## Common Issues
 
@@ -284,6 +327,18 @@ The code should be updated to:
 2. Trigger new deployment OR manually set in Azure App Service
 3. Restart backend service
 
+**Check Token Setup**:
+```bash
+# Check if token is configured in Azure
+az webapp config appsettings list \
+  --name bsg-demo-platform-app \
+  --resource-group bsg-demo-platform \
+  --query "[?name=='RAG_JWT_TOKEN']"
+
+# Check token status via API
+curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/jwt-info
+```
+
 ### Issue: CORS Errors
 
 **Possible Causes:**
@@ -295,34 +350,58 @@ The code should be updated to:
 2. Check CORS configuration in backend
 3. Verify CORS middleware is enabled
 
-## Quick Diagnostic Script
+## Quick Diagnostic Commands
 
-Run this PowerShell script to check everything:
+Run these commands to check everything:
 
-```powershell
-# Check backend accessibility
-try {
-    $health = Invoke-RestMethod -Uri "https://bsg-demo-platform-app.azurewebsites.net/api/v1/health" -TimeoutSec 10
-    Write-Host "✓ Backend is accessible" -ForegroundColor Green
-} catch {
-    Write-Host "✗ Backend is NOT accessible: $($_.Exception.Message)" -ForegroundColor Red
-}
-
-# Check JWT token status (if backend is accessible)
-try {
-    $jwtInfo = Invoke-RestMethod -Uri "https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/jwt-info" -TimeoutSec 10
-    if ($jwtInfo.data.configured) {
-        Write-Host "✓ RAG_JWT_TOKEN is configured" -ForegroundColor Green
-        if ($jwtInfo.data.has_expiration -and $jwtInfo.data.is_expired) {
-            Write-Host "⚠ JWT token is EXPIRED" -ForegroundColor Yellow
-        }
-    } else {
-        Write-Host "✗ RAG_JWT_TOKEN is NOT configured" -ForegroundColor Red
-    }
-} catch {
-    Write-Host "⚠ Could not check JWT status: $($_.Exception.Message)" -ForegroundColor Yellow
-}
+**Check backend accessibility:**
+```bash
+curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/health
 ```
+
+**Check JWT token status:**
+```bash
+curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/jwt-info
+```
+
+**Or use Azure Portal:**
+- App Services → `bsg-demo-platform-app` → Log stream
+- Check for errors in the logs
+
+## Deployment Performance Issues
+
+### Slow Deployment Times
+
+**If deployments are taking too long:**
+
+1. **Check GitHub Actions workflow:**
+   - The workflow has been optimized for faster deployments
+   - SCM wait: ~10s initial + smart polling (instead of 60s fixed)
+   - Health check: ~30s initial + smart polling (instead of 90s fixed)
+   - Package size optimized with enhanced `.deploymentignore`
+
+2. **Verify package size:**
+   - Check the "Check package size before deployment" step in GitHub Actions
+   - Large packages (>100MB) may slow deployment
+   - Ensure `.deploymentignore` is excluding unnecessary files
+
+3. **Check Azure App Service status:**
+   ```bash
+   az webapp show \
+     --name bsg-demo-platform-app \
+     --resource-group bsg-demo-platform \
+     --query "{state: state, sku: sku}"
+   ```
+
+4. **Review deployment logs:**
+   - Check GitHub Actions logs for specific slow steps
+   - Look for SCM container restart issues
+   - Check for dependency installation delays
+
+**Expected deployment times:**
+- **First deployment**: ~10-15 minutes (includes dependency installation)
+- **Subsequent deployments**: ~5-8 minutes (with optimizations)
+- **With optimizations**: ~3-5 minutes faster than before
 
 ---
 

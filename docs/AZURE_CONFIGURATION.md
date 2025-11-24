@@ -93,19 +93,19 @@ az role assignment list \
 
 ## AKS Access Configuration
 
-### Azure Kubernetes Service Cluster User Role (Optional)
+### Azure Kubernetes Service Cluster Admin Role (Required for Namespace Discovery)
 
-If you need to discover AKS namespaces and pods, the Managed Identity needs additional permissions on each AKS cluster.
+If you need to discover AKS namespaces and pods, the Managed Identity needs the **Azure Kubernetes Service Cluster Admin Role** on each AKS cluster to get cluster admin credentials.
 
-**Note**: Currently, AKS namespace discovery requires `kubectl` which is not available in Azure App Service. This is a known limitation. See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for details.
+**Note**: The application now uses the Kubernetes Python client library (no kubectl required), but it still needs permissions to retrieve cluster credentials from Azure.
 
-**Steps (for future implementation):**
+**Steps:**
 
-1. **Grant Cluster User Role:**
+1. **Grant Cluster Admin Role (Required for getting cluster credentials):**
    ```bash
    az role assignment create \
      --assignee <principal-id> \
-     --role "Azure Kubernetes Service Cluster User Role" \
+     --role "Azure Kubernetes Service Cluster Admin Role" \
      --scope /subscriptions/<subscription-id>/resourceGroups/<aks-resource-group>/providers/Microsoft.ContainerService/managedClusters/<cluster-name>
    ```
 
@@ -113,17 +113,14 @@ If you need to discover AKS namespaces and pods, the Managed Identity needs addi
    ```bash
    az role assignment create \
      --assignee 12e9c273-f0f7-4e0b-bdf8-bf950544d4db \
-     --role "Azure Kubernetes Service Cluster User Role" \
+     --role "Azure Kubernetes Service Cluster Admin Role" \
      --scope /subscriptions/58a91cf0-0f39-45fd-a63e-5a9a28c7072b/resourceGroups/modulartest3/providers/Microsoft.ContainerService/managedClusters/transact
    ```
 
-**Alternative: Cluster Admin Role (if admin access is needed):**
-```bash
-az role assignment create \
-  --assignee <principal-id> \
-  --role "Azure Kubernetes Service Cluster Admin Role" \
-  --scope /subscriptions/<subscription-id>/resourceGroups/<aks-resource-group>/providers/Microsoft.ContainerService/managedClusters/<cluster-name>
-```
+**Why Cluster Admin Role?**
+- The application needs to call `list_cluster_admin_credentials()` to get the kubeconfig
+- This requires the "Azure Kubernetes Service Cluster Admin Role" permission
+- The kubeconfig is used to authenticate with the Kubernetes API (not for actual cluster admin operations)
 
 ## Environment Variables
 

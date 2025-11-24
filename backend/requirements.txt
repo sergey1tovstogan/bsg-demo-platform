@@ -75,3 +75,6 @@ azure-mgmt-resource==23.0.1
 azure-mgmt-containerinstance==10.1.0
 azure-mgmt-containerservice==29.0.0
 kubernetes==28.1.0
+
+# HTTP requests for Azure Cost Management API
+requests==2.31.0

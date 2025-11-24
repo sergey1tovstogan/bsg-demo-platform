@@ -12,8 +12,10 @@ from app.core.logging import get_logger
 from app.services.azure_service import AzureService, AzureResourceGroup, AzureResource
 from app.services.temenos_service import TemenosService, TemenosAnalysisResult
 from app.services.aks_service import AKSService
+from app.services.cost_service import CostService
 import asyncio
 import time
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/deployment", tags=["deployment"])
 logger = get_logger(__name__)
@@ -45,6 +47,21 @@ class NamespacesRequest(BaseModel):
     """Request model for getting AKS namespaces."""
     subscription_id: str = Field(..., description="Azure subscription ID")
     resource_group_names: List[str] = Field(..., description="List of resource group names")
+
+
+class ClusterDiagnosticsRequest(BaseModel):
+    """Request model for AKS cluster diagnostics."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group: str = Field(..., description="Resource group name")
+    cluster_name: str = Field(..., description="AKS cluster name")
+
+
+class CostRequest(BaseModel):
+    """Request model for getting costs."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group_names: List[str] = Field(..., description="List of resource group names")
+    start_date: Optional[str] = Field(None, description="Start date in ISO format (YYYY-MM-DD). Defaults to first day of current month")
+    end_date: Optional[str] = Field(None, description="End date in ISO format (YYYY-MM-DD). Defaults to current date")
 
 
 def get_azure_service(subscription_id: str) -> AzureService:
@@ -271,6 +288,19 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 "message": "No AKS clusters found in selected resource groups"
             }
         
+        # Check cache for AKS namespaces first
+        from app.services.cache_service import get_cache_service
+        cache_service = await get_cache_service()
+        
+        cached_namespaces = await cache_service.get_aks_namespaces(subscription_id, resource_group_names)
+        if cached_namespaces:
+            logger.info(f"Using cached AKS namespaces for {len(resource_group_names)} resource groups")
+            return {
+                "status": "success",
+                "data": cached_namespaces,
+                "count": len(cached_namespaces)
+            }
+        
         # Get namespaces from each cluster
         logger.info(f"Initializing AKS service for subscription: {subscription_id}")
         aks_service = AKSService(subscription_id)
@@ -302,10 +332,13 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 if len(namespaces) == 0:
                     logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
                     logger.warning("  1. kubectl is not installed or not in PATH")
-                    logger.warning("  2. Cluster credentials are not configured (run: az aks get-credentials)")
-                    logger.warning("  3. No non-system namespaces exist in the cluster")
-                    logger.warning("  4. Backend is running in an environment without kubectl access (e.g., Azure App Service)")
-                    logger.warning("  Note: In Azure App Service, kubectl must be installed via startup script or extension")
+                    logger.warning("  2. Kubernetes Python client failed and kubectl fallback also failed")
+                    logger.warning("  3. Cluster credentials are not configured (run: az aks get-credentials)")
+                    logger.warning("  4. No non-system namespaces exist in the cluster")
+                    logger.warning("  5. Backend is running in Azure App Service and kubectl installation failed")
+                    logger.warning("  Note: In Azure App Service, kubectl should be installed by startup.sh")
+                    logger.warning("  Check App Service logs for startup.sh execution and kubectl installation")
+                    logger.warning("  Also check if Managed Identity has permissions to access AKS cluster")
             except Exception as e:
                 logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}", exc_info=True)
                 cluster_namespaces[cluster.name] = {
@@ -315,9 +348,19 @@ async def get_aks_namespaces(request: NamespacesRequest):
                     "error": f"Failed to retrieve namespaces: {str(e)}"
                 }
         
+        result_data = list(cluster_namespaces.values())
+        
+        # Cache the namespaces
+        await cache_service.set_aks_namespaces(
+            subscription_id,
+            resource_group_names,
+            result_data
+        )
+        logger.info(f"Cached AKS namespaces for {len(resource_group_names)} resource groups")
+        
         return {
             "status": "success",
-            "data": list(cluster_namespaces.values()),
+            "data": result_data,
             "count": len(cluster_namespaces)
         }
     except Exception as e:
@@ -333,6 +376,147 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 status_code=500,
                 detail=error_detail
             )
+
+
+@router.post("/aks/diagnostics")
+async def diagnose_aks_cluster(request: ClusterDiagnosticsRequest):
+    """
+    Diagnose AKS cluster connection and namespace discovery issues.
+    
+    This endpoint helps troubleshoot why namespace discovery might be failing.
+    
+    Args:
+        request: Cluster diagnostics request with subscription ID, resource group, and cluster name
+        
+    Returns:
+        Diagnostic information about the cluster connection
+    """
+    logger.info("=" * 80)
+    logger.info("=== AKS CLUSTER DIAGNOSTICS ===")
+    logger.info(f"Cluster: {request.cluster_name}")
+    logger.info(f"Resource Group: {request.resource_group}")
+    logger.info(f"Subscription: {request.subscription_id}")
+    logger.info("=" * 80)
+    
+    try:
+        # Initialize AKS service
+        aks_service = AKSService(request.subscription_id)
+        
+        # Test cluster connection
+        logger.info("Running connection test...")
+        connection_test = await aks_service.test_cluster_connection(
+            request.resource_group,
+            request.cluster_name
+        )
+        
+        # Try to get namespaces
+        logger.info("Attempting to list namespaces...")
+        from app.services.azure_service import AzureResource
+        cluster_resource = AzureResource(
+            id=f"/subscriptions/{request.subscription_id}/resourceGroups/{request.resource_group}/providers/Microsoft.ContainerService/managedClusters/{request.cluster_name}",
+            name=request.cluster_name,
+            resource_type="Microsoft.ContainerService/managedClusters",
+            location="",
+            resource_group=request.resource_group,
+            tags={},
+            properties={}
+        )
+        
+        namespaces = []
+        namespace_error = None
+        try:
+            namespaces = await aks_service.list_cluster_namespaces(cluster_resource)
+        except Exception as e:
+            namespace_error = str(e)
+            logger.error(f"Failed to list namespaces: {e}", exc_info=True)
+        
+        # Compile diagnostics
+        diagnostics = {
+            "cluster_name": request.cluster_name,
+            "resource_group": request.resource_group,
+            "subscription_id": request.subscription_id,
+            "connection_test": connection_test,
+            "namespaces_found": len(namespaces),
+            "namespaces": namespaces,
+            "namespace_error": namespace_error,
+            "is_azure_app_service": aks_service.is_azure_app_service,
+            "recommendations": []
+        }
+        
+        # Add recommendations based on diagnostics
+        if not connection_test.get("can_get_kubeconfig"):
+            diagnostics["recommendations"].append({
+                "issue": "Cannot get kubeconfig from Azure API",
+                "solution": "Assign 'Azure Kubernetes Service Cluster User Role' to the App Service Managed Identity on the AKS cluster",
+                "steps": [
+                    "1. Go to Azure Portal → AKS cluster → Access control (IAM)",
+                    "2. Click 'Add role assignment'",
+                    "3. Select role: 'Azure Kubernetes Service Cluster User Role'",
+                    "4. Assign to: Managed Identity → Select your App Service",
+                    "5. Save and wait 1-2 minutes for propagation"
+                ]
+            })
+        
+        if not connection_test.get("kubectl_available"):
+            diagnostics["recommendations"].append({
+                "issue": "kubectl not available",
+                "solution": "kubectl should be installed by startup.sh - check App Service logs",
+                "steps": [
+                    "1. Check App Service logs for startup.sh execution",
+                    "2. Verify kubectl installation in startup.sh",
+                    "3. Check if startup.sh has execute permissions"
+                ]
+            })
+        
+        if not connection_test.get("kubernetes_client_available"):
+            diagnostics["recommendations"].append({
+                "issue": "Kubernetes Python client not available",
+                "solution": "Install kubernetes package: pip install kubernetes",
+                "steps": [
+                    "1. Check requirements.txt includes 'kubernetes==28.1.0'",
+                    "2. Verify pip install completed successfully",
+                    "3. Check App Service build logs"
+                ]
+            })
+        
+        if len(namespaces) == 0 and not namespace_error:
+            diagnostics["recommendations"].append({
+                "issue": "No namespaces found (but connection succeeded)",
+                "solution": "Cluster may only have system namespaces, or all namespaces are filtered out",
+                "steps": [
+                    "1. Verify cluster has non-system namespaces",
+                    "2. Check if namespaces exist: kubectl get namespaces",
+                    "3. System namespaces (kube-system, kube-public, default) are excluded"
+                ]
+            })
+        
+        if namespace_error:
+            diagnostics["recommendations"].append({
+                "issue": f"Namespace discovery failed: {namespace_error}",
+                "solution": "Check the error message and follow recommendations above",
+                "steps": [
+                    "1. Verify Managed Identity permissions",
+                    "2. Check kubectl installation",
+                    "3. Review App Service logs for detailed error messages"
+                ]
+            })
+        
+        return {
+            "status": "success",
+            "diagnostics": diagnostics
+        }
+        
+    except Exception as e:
+        logger.error(f"Error running diagnostics: {e}", exc_info=True)
+        import traceback
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            }
+        )
 
 
 @router.post("/azure/resources")
@@ -359,8 +543,24 @@ async def get_resources(request: ResourcesRequest):
                 detail="At least one resource group name is required"
             )
         
-        azure_service = get_azure_service(subscription_id)
-        resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
+        # Check cache first
+        from app.services.cache_service import get_cache_service
+        cache_service = await get_cache_service()
+        
+        cached_resources = await cache_service.get_azure_resources(subscription_id, resource_group_names)
+        if cached_resources:
+            logger.info(f"Using cached Azure resources for {len(resource_group_names)} resource groups")
+            resources = [AzureResource(**r) for r in cached_resources]
+        else:
+            azure_service = get_azure_service(subscription_id)
+            resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
+            # Cache the resources
+            await cache_service.set_azure_resources(
+                subscription_id,
+                resource_group_names,
+                [r.to_dict() for r in resources]
+            )
+            logger.info(f"Cached {len(resources)} Azure resources")
         
         # Discover pods from AKS clusters
         try:
@@ -698,6 +898,123 @@ async def query_rag(request: Dict[str, Any]):
         raise HTTPException(
             status_code=500,
             detail=f"[{error_type}] {error_msg}"
+        )
+
+
+@router.post("/azure/costs")
+async def get_resource_group_costs(request: CostRequest):
+    """
+    Get cost data for one or more resource groups.
+    
+    Args:
+        request: Cost request with subscription ID and resource group names
+        
+    Returns:
+        List of cost information for each resource group
+    """
+    try:
+        subscription_id = request.subscription_id
+        resource_group_names = request.resource_group_names
+        
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="Subscription ID is required")
+        
+        if not resource_group_names or len(resource_group_names) == 0:
+            raise HTTPException(status_code=400, detail="At least one resource group name is required")
+        
+        # Parse dates if provided
+        start_date = None
+        end_date = None
+        
+        if request.start_date:
+            try:
+                start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid start_date format: {request.start_date}. Use ISO format (YYYY-MM-DD)")
+        
+        if request.end_date:
+            try:
+                end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid end_date format: {request.end_date}. Use ISO format (YYYY-MM-DD)")
+        
+        # Create cost service
+        cost_service = CostService(subscription_id)
+        
+        # Wrap the cost fetching in a timeout (60 seconds)
+        # Run the synchronous cost service in a thread pool to avoid blocking
+        async def fetch_costs_with_timeout():
+            loop = asyncio.get_event_loop()
+            try:
+                # Run the synchronous cost service call in a thread pool
+                cost_results = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        cost_service.get_multiple_resource_group_costs,
+                        resource_group_names,
+                        start_date,
+                        end_date
+                    ),
+                    timeout=60.0  # 60 second timeout
+                )
+                return cost_results
+            except asyncio.TimeoutError:
+                logger.error(f"Cost fetching timed out after 60 seconds for {len(resource_group_names)} resource groups")
+                # Return error results for all resource groups
+                return [
+                    {
+                        'resource_group': rg_name,
+                        'total_cost': 0.0,
+                        'services': {},
+                        'error': 'Request timed out. Cost Management API is taking too long to respond. Please try again later or check Azure service status.',
+                        'start_date': start_date.isoformat() if start_date else None,
+                        'end_date': end_date.isoformat() if end_date else None
+                    }
+                    for rg_name in resource_group_names
+                ]
+        
+        # Get costs for all resource groups with timeout
+        cost_results = await fetch_costs_with_timeout()
+        
+        return {
+            "status": "success",
+            "data": cost_results,
+            "count": len(cost_results)
+        }
+        
+    except HTTPException:
+        raise
+    except asyncio.TimeoutError:
+        logger.error("Cost fetching timed out at endpoint level")
+        raise HTTPException(
+            status_code=504,
+            detail={
+                "status": "error",
+                "error": "Request timed out. Cost Management API is taking too long to respond.",
+                "errorType": "TimeoutError",
+                "recoverySteps": [
+                    "Try again later - Azure Cost Management API may be experiencing delays",
+                    "Verify you have 'Cost Management Reader' role on the subscription",
+                    "Check that the subscription has billing enabled",
+                    "Cost data may take 24-48 hours to appear after resource creation"
+                ]
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error getting costs: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": type(e).__name__,
+                "recoverySteps": [
+                    "Verify you have 'Cost Management Reader' role on the subscription",
+                    "Check that the subscription has billing enabled",
+                    "Ensure resource groups exist and are accessible",
+                    "Cost data may take 24-48 hours to appear after resource creation"
+                ]
+            }
         )
 
 
