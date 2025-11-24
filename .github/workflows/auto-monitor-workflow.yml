@@ -24,9 +24,9 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 permissions:
-  contents: read
-  actions: read
-  pull-requests: write
+  contents: write  # Needed for auto-fix commits
+  actions: read    # Needed to read workflow runs
+  pull-requests: write  # Needed to comment on PRs
 
 jobs:
   monitor-and-verify:
