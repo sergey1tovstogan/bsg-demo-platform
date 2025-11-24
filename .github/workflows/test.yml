@@ -70,6 +70,64 @@ jobs:
           [ -d "app/api" ] || (echo "✗ app/api directory not found" && exit 1)
           [ -d "app/core" ] || (echo "✗ app/core directory not found" && exit 1)
           echo "✓ Backend structure is valid"
+      
+      - name: Test AKS service imports
+        working-directory: ./backend
+        run: |
+          echo "Testing AKS service imports..."
+          python -c "from app.services.aks_service import AKSService; print('✓ AKSService imports successfully')"
+          python -c "from app.services.aks_service import AKSPod; print('✓ AKSPod imports successfully')"
+          python -c "from app.api.deployment import get_aks_namespaces; print('✓ AKS namespaces endpoint imports successfully')"
+          echo "✓ All AKS service imports successful"
+      
+      - name: Test AKS API endpoint structure
+        working-directory: ./backend
+        run: |
+          echo "Validating AKS API endpoint structure..."
+          python -c "
+          from app.api.deployment import router, NamespacesRequest, ClusterDiagnosticsRequest
+          # Check that endpoints exist
+          routes = [r.path for r in router.routes]
+          assert '/deployment/aks/namespaces' in routes or any('/aks/namespaces' in r.path for r in router.routes), 'AKS namespaces endpoint not found'
+          assert '/deployment/aks/diagnostics' in routes or any('/aks/diagnostics' in r.path for r in router.routes), 'AKS diagnostics endpoint not found'
+          print('✓ AKS API endpoints structure is valid')
+          "
+      
+      - name: Test AKS service initialization
+        working-directory: ./backend
+        run: |
+          echo "Testing AKS service initialization..."
+          python -c "
+          import os
+          # Set a dummy subscription ID for testing
+          os.environ['AZURE_SUBSCRIPTION_ID'] = 'test-subscription-id'
+          from app.services.aks_service import AKSService
+          try:
+              # This will fail but should not crash - just test initialization
+              service = AKSService('test-subscription-id')
+              print('✓ AKSService can be instantiated')
+              print(f'  - Is Azure App Service: {service.is_azure_app_service}')
+              print(f'  - Subscription ID: {service.subscription_id}')
+          except Exception as e:
+              print(f'⚠ AKS service initialization test: {e}')
+              # Don't fail - this is expected in CI without Azure credentials
+          "
+        continue-on-error: true
+      
+      - name: Validate AKS service methods exist
+        working-directory: ./backend
+        run: |
+          echo "Validating AKS service methods..."
+          python -c "
+          from app.services.aks_service import AKSService
+          import inspect
+          methods = [m for m in dir(AKSService) if not m.startswith('_')]
+          required_methods = ['list_cluster_namespaces', 'get_pods_from_cluster', 'discover_pods_from_resources', 'test_cluster_connection']
+          for method in required_methods:
+              assert method in methods or hasattr(AKSService, method), f'Method {method} not found'
+          print('✓ All required AKS service methods exist')
+          print(f'  Found methods: {[m for m in required_methods if m in methods]}')
+          "
 
   test-frontend:
     name: Test Frontend

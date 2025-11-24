@@ -247,6 +247,24 @@ jobs:
             $issues += "oryx_build_error"
           }
           
+          # Detect AKS namespace discovery failures
+          if ($logs -match "No namespaces found|Failed to retrieve namespaces|Cannot get kubeconfig|kubectl.*not found|Managed Identity.*permissions") {
+            Write-Host "⚠ Detected AKS namespace discovery failure"
+            $issues += "aks_namespace_discovery_failure"
+          }
+          
+          # Detect AKS permission issues
+          if ($logs -match "Azure Kubernetes Service Cluster User Role|Cluster Admin Role|permissions.*AKS|Managed Identity.*AKS") {
+            Write-Host "⚠ Detected AKS permission issue"
+            $issues += "aks_permission_issue"
+          }
+          
+          # Detect kubectl installation issues
+          if ($logs -match "kubectl.*not found|kubectl.*not installed|kubectl.*PATH") {
+            Write-Host "⚠ Detected kubectl installation issue"
+            $issues += "kubectl_installation_issue"
+          }
+          
           if ($issues.Count -gt 0) {
             $issuesJson = $issues | ConvertTo-Json -Compress
             echo "issues=$issuesJson" >> $env:GITHUB_OUTPUT
@@ -431,6 +449,126 @@ jobs:
                 Write-Host "  Ensuring Python 3.11 is specified"
                 # This should already be in the workflow
               }
+            }
+          }
+          
+          # Fix AKS namespace discovery failures
+          if ($issues -contains "aks_namespace_discovery_failure" -or $issues -contains "aks_permission_issue" -or $issues -contains "kubectl_installation_issue") {
+            Write-Host "[FIX] Fixing AKS namespace discovery issues..."
+            
+            # Check startup.sh for kubectl installation
+            $startupFile = "backend/startup.sh"
+            if (Test-Path $startupFile) {
+              $startupContent = Get-Content $startupFile -Raw
+              $startupModified = $false
+              
+              # Ensure kubectl installation is in startup.sh
+              if ($startupContent -notmatch "kubectl.*install|Install kubectl") {
+                Write-Host "  [FIX] Adding kubectl installation to startup.sh"
+                $kubectlInstall = @"
+
+# Install kubectl if not available (needed for AKS namespace discovery)
+if ! command -v kubectl &> /dev/null; then
+    echo "Installing kubectl for AKS namespace discovery..."
+    KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+    curl -LO "https://dl.k8s.io/release/`${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    mv kubectl /usr/local/bin/
+    echo "✓ kubectl installed: `$(kubectl version --client --short 2>/dev/null || echo 'installed')"
+else
+    echo "✓ kubectl already available: `$(kubectl version --client --short 2>/dev/null || echo 'found')"
+fi
+"@
+                # Add before the uvicorn command
+                if ($startupContent -match "uvicorn") {
+                  $startupContent = $startupContent -replace "(uvicorn)", "$kubectlInstall`n`n$1"
+                  $startupModified = $true
+                } else {
+                  # Add at the end
+                  $startupContent += "`n`n$kubectlInstall"
+                  $startupModified = $true
+                }
+              }
+              
+              if ($startupModified) {
+                Set-Content -Path $startupFile -Value $startupContent -NoNewline
+                $hasChanges = $true
+                Write-Host "  [SUCCESS] Updated startup.sh with kubectl installation"
+                $fixesApplied += "kubectl_installation_issue"
+              } else {
+                Write-Host "  [OK] startup.sh already has kubectl installation"
+                $fixesApplied += "kubectl_installation_issue"
+              }
+            }
+            
+            # Check requirements.txt for kubernetes package
+            $requirementsFile = "backend/requirements.txt"
+            if (Test-Path $requirementsFile) {
+              $requirementsContent = Get-Content $requirementsFile -Raw
+              if ($requirementsContent -notmatch "kubernetes") {
+                Write-Host "  [FIX] Adding kubernetes package to requirements.txt"
+                Add-Content -Path $requirementsFile -Value "`nkubernetes==28.1.0"
+                $hasChanges = $true
+                Write-Host "  [SUCCESS] Added kubernetes package to requirements.txt"
+                $fixesApplied += "aks_namespace_discovery_failure"
+              } else {
+                Write-Host "  [OK] kubernetes package already in requirements.txt"
+              }
+            }
+            
+            # Create documentation file for AKS permission setup
+            $aksDocFile = "docs/AKS_PERMISSIONS_SETUP.md"
+            if (-not (Test-Path $aksDocFile)) {
+              Write-Host "  [FIX] Creating AKS permissions documentation"
+              $aksDocContent = @"
+# AKS Permissions Setup
+
+## Required Permissions for AKS Namespace Discovery
+
+The Azure App Service Managed Identity needs one of these roles on each AKS cluster:
+
+1. **Azure Kubernetes Service Cluster User Role** (recommended)
+2. **Azure Kubernetes Service Cluster Admin Role** (alternative)
+
+## Setup Steps
+
+1. Go to Azure Portal → AKS cluster → Access control (IAM)
+2. Click "Add role assignment"
+3. Select role: `Azure Kubernetes Service Cluster User Role`
+4. Assign to: Managed Identity → Select your App Service (`bsg-demo-platform-app`)
+5. Save and wait 1-2 minutes for propagation
+
+## Verify Setup
+
+Use the diagnostic endpoint:
+\`\`\`
+POST /api/v1/deployment/aks/diagnostics
+{
+  "subscription_id": "your-subscription-id",
+  "resource_group": "your-resource-group",
+  "cluster_name": "your-cluster-name"
+}
+\`\`\`
+
+## Troubleshooting
+
+- If namespaces are not found, check App Service logs for detailed error messages
+- Verify kubectl is installed (check startup.sh logs)
+- Verify Managed Identity has correct permissions
+- Check if cluster has non-system namespaces
+"@
+              New-Item -Path $aksDocFile -ItemType File -Value $aksDocContent -Force | Out-Null
+              $hasChanges = $true
+              Write-Host "  [SUCCESS] Created AKS permissions documentation"
+              $fixesApplied += "aks_permission_issue"
+            }
+            
+            # Note: Permission issues cannot be auto-fixed via code changes
+            # But we can document them and ensure the code handles them gracefully
+            if ($issues -contains "aks_permission_issue") {
+              Write-Host "  [INFO] AKS permission issues require manual Azure Portal configuration"
+              Write-Host "  [INFO] Created documentation to guide setup"
+              $fixesApplied += "aks_permission_issue"
             }
           }
           
