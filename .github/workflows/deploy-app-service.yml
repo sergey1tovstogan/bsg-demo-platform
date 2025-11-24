@@ -272,17 +272,101 @@ jobs:
             echo "⚠ SCM check skipped - proceeding with deployment (OneDeploy handles this)"
           fi
       
-      - name: Deploy to Azure Web App (Fast)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: ./backend
-          startup-command: "bash startup.sh"
-          # App settings configured via separate step AFTER deployment to avoid SCM restart
-          # Using deployment action's app-settings causes SCM restart, so we configure separately
-        timeout-minutes: 15
-        continue-on-error: false
+      - name: Check for ongoing deployments
+        run: |
+          echo "Checking for ongoing deployments before starting..."
+          ONGOING=$(az webapp deployment list \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query "[?status=='InProgress'].id" -o tsv 2>/dev/null || echo "")
+          
+          if [ -n "$ONGOING" ]; then
+            echo "⚠ Ongoing deployment detected, waiting 45 seconds..."
+            sleep 45
+          else
+            echo "✓ No ongoing deployments detected"
+          fi
+        continue-on-error: true
+      
+      - name: Deploy to Azure Web App (Fast) with Retry
         id: deploy-backend
+        run: |
+          MAX_RETRIES=3
+          RETRY_DELAY=45
+          ATTEMPT=1
+          DEPLOY_SUCCESS=false
+          
+          while [ $ATTEMPT -le $MAX_RETRIES ] && [ "$DEPLOY_SUCCESS" = "false" ]; do
+            echo ""
+            echo "=== Deployment Attempt $ATTEMPT of $MAX_RETRIES ==="
+            
+            if [ $ATTEMPT -gt 1 ]; then
+              echo "Waiting $RETRY_DELAY seconds before retry..."
+              sleep $RETRY_DELAY
+              
+              # Check for ongoing deployments again
+              echo "Re-checking for ongoing deployments..."
+              ONGOING=$(az webapp deployment list \
+                --name ${{ env.AZURE_WEBAPP_NAME }} \
+                --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                --query "[?status=='InProgress'].id" -o tsv 2>/dev/null || echo "")
+              
+              if [ -n "$ONGOING" ]; then
+                echo "⚠ Ongoing deployment still detected, waiting additional 30 seconds..."
+                sleep 30
+              fi
+            fi
+            
+            # Create zip package
+            echo "Creating deployment package..."
+            cd backend
+            zip -r ../deploy-package.zip . -q
+            cd ..
+            
+            # Attempt deployment using Azure CLI
+            echo "Deploying to Azure Web App..."
+            DEPLOY_OUTPUT=$(az webapp deploy \
+              --name ${{ env.AZURE_WEBAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --type zip \
+              --src-path deploy-package.zip \
+              --startup-file "startup.sh" \
+              --async false \
+              --timeout 900 2>&1) || DEPLOY_EXIT_CODE=$?
+            
+            if [ -z "${DEPLOY_EXIT_CODE:-}" ] || [ "${DEPLOY_EXIT_CODE:-}" = "0" ]; then
+              echo "✓ Deployment successful!"
+              DEPLOY_SUCCESS=true
+            else
+              echo "⚠ Deployment attempt $ATTEMPT failed"
+              echo "Error output: $DEPLOY_OUTPUT"
+              
+              # Check if it's a 409 conflict (retryable)
+              if echo "$DEPLOY_OUTPUT" | grep -qi "409\|Conflict\|concurrent\|operation.*in.*progress"; then
+                echo "⚠ 409 Conflict detected - this is retryable"
+                if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+                  echo "Will retry in $RETRY_DELAY seconds..."
+                  ATTEMPT=$((ATTEMPT + 1))
+                  DEPLOY_EXIT_CODE=""
+                else
+                  echo "❌ Max retries reached for 409 conflicts"
+                  exit 1
+                fi
+              else
+                echo "❌ Non-retryable error detected"
+                exit 1
+              fi
+            fi
+          done
+          
+          if [ "$DEPLOY_SUCCESS" = "false" ]; then
+            echo "❌ All deployment attempts failed"
+            exit 1
+          fi
+          
+          # Clean up zip file
+          rm -f deploy-package.zip
+        continue-on-error: false
       
       - name: Wait after deployment (critical for SCM stability)
         run: |
