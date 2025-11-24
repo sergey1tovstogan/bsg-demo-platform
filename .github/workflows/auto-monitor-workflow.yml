@@ -368,15 +368,7 @@ jobs:
                 } elseif ($content -match "- name: Deploy to Azure Web App" -and $content -notmatch "Wait for deployment to stabilize") {
                   Write-Host "  [FIX] Adding 45-second delay after deployment"
                   # Add delay step after deployment
-                  $delayStep = @"
-
-      - name: Wait for deployment to stabilize
-        run: |
-          echo "Waiting for deployment to complete and stabilize..."
-          echo "This ensures the SCM container is ready before configuring settings"
-          sleep 45
-          echo "✓ Deployment stabilized - ready to configure settings"
-"@
+                  $delayStep = "`n`n      - name: Wait for deployment to stabilize`n        run: |`n          echo `"Waiting for deployment to complete and stabilize...`"`n          echo `"This ensures the SCM container is ready before configuring settings`"`n          sleep 45`n          echo `"✓ Deployment stabilized - ready to configure settings`""
                   $content = $content -replace "(- name: Deploy to Azure Web App[\s\S]{0,2000}id: deploy-backend)", "`$1$delayStep"
                   $modified = $true
                 }
@@ -397,14 +389,7 @@ jobs:
                   }
                 } else {
                   Write-Host "  [FIX] Adding delay after deployment"
-                  $delayStep = @"
-
-      - name: Wait for deployment to stabilize
-        run: |
-          echo "Waiting for deployment to complete and stabilize..."
-          sleep 45
-          echo "✓ Deployment stabilized"
-"@
+                  $delayStep = "`n`n      - name: Wait for deployment to stabilize`n        run: |`n          echo `"Waiting for deployment to complete and stabilize...`"`n          sleep 45`n          echo `"✓ Deployment stabilized`""
                   $content = $content -replace "(- name: Deploy to Azure Web App[\s\S]{0,2000}id: deploy-backend)", "`$1$delayStep"
                   $modified = $true
                 }

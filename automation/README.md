@@ -17,19 +17,12 @@ This automation system provides **zero-touch** monitoring and auto-fixing of Git
 ## 📁 Files
 
 ### Core Scripts
-
 - **`ci-automation.ps1`** - Main automation script (consolidates all functionality)
 - **`setup.ps1`** - Setup/installation script
 - **`config.json`** - Configuration file
 
 ### GitHub Actions
-
 - **`.github/workflows/auto-monitor-workflow.yml`** - Automatic monitoring workflow (runs in GitHub Actions)
-
-### Documentation
-
-- **`README.md`** - This file (complete guide)
-- **`AUTO_FIX_GUIDE.md`** - Detailed auto-fix documentation
 
 ## 🚀 Quick Start
 
@@ -75,11 +68,222 @@ If you need manual control:
 # Cancel stuck deployments
 .\ci-automation.ps1 cancel
 
-# Cancel specific workflow run
-.\ci-automation.ps1 cancel -RunId 123456789
-
 # Show workflow status
 .\ci-automation.ps1 status
+```
+
+## 🏗️ Architecture Overview
+
+The automation system consists of two main components:
+
+1. **GitHub Actions Workflow** (Cloud-based, automatic)
+2. **Local PowerShell Scripts** (Optional, for manual operations)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Your Push to Develop                     │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│         GitHub Actions: Deployment Workflows                │
+│  • Deploy to Azure App Service                              │
+│  • Deploy to Azure Static Web Apps                          │
+│  • Run Tests                                                │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│    GitHub Actions: Auto Monitor and Fix Workflows            │
+│    (.github/workflows/auto-monitor-workflow.yml)             │
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐      │
+│  │ 1. Detect Workflow Completion                      │      │
+│  │    - Monitors deployment workflows                 │      │
+│  │    - Waits for completion                          │      │
+│  └──────────────────┬─────────────────────────────────┘      │
+│                     │                                        │
+│                     ▼                                        │
+│  ┌────────────────────────────────────────────────────┐      │
+│  │ 2. Health Verification (if success)                │      │
+│  │    - Checks backend health endpoint                │      │
+│  │    - Checks frontend availability                  │      │
+│  │    - Reports status                                │      │
+│  └──────────────────┬─────────────────────────────────┘      │
+│                     │                                        │
+│                     ▼                                        │
+│  ┌────────────────────────────────────────────────────┐      │
+│  │ 3. Failure Analysis (if failure)                   │      │
+│  │    - Analyzes workflow logs                        │      │
+│  │    - Detects common error patterns                 │      │
+│  │    - Identifies fixable issues                     │      │
+│  └──────────────────┬─────────────────────────────────┘      │
+│                     │                                        │
+│                     ▼                                        │
+│  ┌────────────────────────────────────────────────────┐      │
+│  │ 4. Auto-Fix (if fixable issues found)              │      │
+│  │    - Fixes TypeScript errors                       │      │
+│  │    - Creates missing Python __init__.py files      │      │
+│  │    - Fixes import paths                            │      │
+│  └──────────────────┬─────────────────────────────────┘      │
+│                     │                                        │
+│                     ▼                                        │
+│  ┌────────────────────────────────────────────────────┐      │
+│  │ 5. Commit and Push                                 │      │
+│  │    - Commits fixes automatically                   │      │
+│  │    - Pushes to develop branch                      │      │
+│  │    - Triggers new workflow run                     │      │
+│  └────────────────────────────────────────────────────┘      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## 🔄 How It Works
+
+### Complete Workflow
+
+#### Step 1: Push to Develop
+```bash
+git push origin develop
+```
+
+#### Step 2: Deployment Workflows Start
+GitHub Actions automatically triggers:
+- **Deploy to Azure App Service** (`deploy-app-service.yml`)
+- **Deploy to Azure Static Web Apps** (`deploy-static-webapp.yml`)
+- **Run Tests** (`test.yml`)
+
+#### Step 3: Auto-Monitor Workflow Triggers
+The `auto-monitor-workflow.yml` workflow:
+
+1. **Detects the push** or workflow completion
+2. **Waits 15 seconds** for workflows to start
+3. **Finds recent workflow runs** for the `develop` branch
+4. **Monitors workflows** until completion
+
+#### Step 4: Success Path
+If workflows succeed:
+
+1. **Wait for deployment** to stabilize (60 seconds)
+2. **Run health checks:**
+   - Backend health: `https://bsg-demo-platform-app.azurewebsites.net/api/v1/health`
+   - Backend liveness: `https://bsg-demo-platform-app.azurewebsites.net/api/v1/live`
+   - Frontend: `https://kind-beach-01c0a990f.3.azurestaticapps.net`
+3. **Report results** in GitHub Actions summary
+4. **Create success summary** with deployment URLs
+
+#### Step 5: Failure Path
+If workflows fail:
+
+1. **Analyze workflow logs:**
+   - Fetch logs using `gh run view <id> --log`
+   - Parse logs for error patterns
+   - Detect fixable issues
+
+2. **Detect common issues:**
+   - TypeScript errors: `TypeScript.*error|tsc.*error`
+   - Python import errors: `ModuleNotFoundError|ImportError`
+   - Build failures: `Build failed|npm.*error|pip.*error`
+   - Missing dependencies: `package.*not found|module.*not found`
+
+3. **Auto-fix issues:**
+   - **TypeScript errors:** Fix common syntax/type issues
+   - **Python import errors:** Create missing `__init__.py` files
+   - **Build failures:** Fix dependency/config issues
+   - **Missing dependencies:** Update package files
+
+4. **Commit fixes:**
+   - Configure git user: `github-actions[bot]`
+   - Stage all changes: `git add .`
+   - Commit with message: `fix(ci): auto-fix <issue-types>`
+   - Push to develop: `git push origin develop`
+
+5. **Trigger new deployment:**
+   - Push triggers new workflow runs
+   - Process repeats until success or no fixable issues
+
+## 🤔 Understanding the Auto-Monitor Workflow
+
+### Why You Might Not See It
+
+The **Auto Monitor and Fix Workflows** is a **separate GitHub Actions workflow**, but it works differently than your normal workflows:
+
+#### 1. It's Triggered by OTHER Workflows
+
+The auto-monitor workflow doesn't run when you push code directly. Instead, it runs **AFTER** your deployment workflows complete:
+
+```
+Your Push → Deploy Workflows Start → Deploy Workflows Complete → Auto-Monitor Triggers
+```
+
+#### 2. Three Ways It Can Trigger
+
+Looking at `.github/workflows/auto-monitor-workflow.yml`, it triggers on:
+
+**A. `workflow_run` Event (Most Common)**
+```yaml
+on:
+  workflow_run:
+    workflows: 
+      - "Deploy to Azure App Service"
+      - "Deploy to Azure Static Web Apps"
+      - "Run Tests"
+    types:
+      - completed
+```
+
+**This means:** When "Deploy to Azure App Service" finishes (success or failure), the auto-monitor workflow automatically starts.
+
+**B. `push` Event (Also Works)**
+```yaml
+  push:
+    branches:
+      - develop
+```
+
+**This means:** When you push to `develop`, it can also trigger, but it waits 15 seconds for other workflows to start first.
+
+**C. `workflow_dispatch` (Manual)**
+You can manually trigger it from the GitHub Actions UI.
+
+### How to Find It in GitHub Actions
+
+#### Option 1: Look for It After Deployments Complete
+1. Go to **Actions** tab
+2. Look for workflow runs with name: **"Auto Monitor and Fix Workflows"**
+3. It will appear **after** your deployment workflows finish
+
+#### Option 2: Filter by Workflow Name
+1. Go to **Actions** tab
+2. Click on **"Auto Monitor and Fix Workflows"** in the left sidebar (under workflows list)
+3. You'll see all runs of this workflow
+
+#### Option 3: Check Recent Activity
+When you push to `develop`, you should see:
+- ✅ **Deploy to Azure App Service** (runs immediately)
+- ✅ **Deploy to Azure Static Web Apps** (runs immediately)
+- ✅ **Run Tests** (runs immediately)
+- ⏳ **Auto Monitor and Fix Workflows** (runs AFTER the above complete)
+
+### Example Flow
+
+Here's what happens when you push:
+
+```
+1. You push: git push origin develop
+   ↓
+2. GitHub Actions triggers:
+   - Deploy to Azure App Service (#132) ← You see this
+   - Deploy to Azure Static Web Apps (#130) ← You see this
+   - Run Tests (#34) ← You see this
+   ↓
+3. After ~2 minutes, deployments complete
+   ↓
+4. Auto Monitor workflow automatically triggers ← This is what you're looking for!
+   ↓
+5. It monitors the completed workflows
+   ↓
+6. If success: Runs health checks
+   If failure: Analyzes and auto-fixes
 ```
 
 ## 🔧 Main Script: `ci-automation.ps1`
@@ -130,61 +334,36 @@ Edit `config.json` to customize behavior:
   "workflows": {
     "deploy-backend": {
       "timeout_minutes": 20,
+      "deployment_timeout_minutes": 15,
       "health_check_url": "https://..."
     }
   },
   "monitoring": {
     "timeout_minutes": 30,
-    "poll_interval_seconds": 10
+    "poll_interval_seconds": 10,
+    "health_check_retries": 5
   },
   "auto_fix": {
     "enabled": true,
     "auto_commit": true,
-    "auto_push": true
+    "auto_push": true,
+    "common_fixes": {
+      "typescript_errors": true,
+      "python_import_errors": true,
+      "build_failures": true,
+      "missing_dependencies": true
+    }
   },
   "branch": "develop"
 }
 ```
 
-## 🔄 How It Works
+### How Configuration is Used
 
-### Automatic Flow
-
-```
-Push to develop
-    ↓
-Deployment workflows start
-    ↓
-Auto-monitor workflow triggers (GitHub Actions)
-    ↓
-Monitors workflows until completion
-    ↓
-If SUCCESS → Health checks run
-If FAILURE → Analyze errors → Auto-fix → Commit → Push → Retry
-```
-
-### GitHub Actions Workflow
-
-The `.github/workflows/auto-monitor-workflow.yml` workflow:
-
-1. **Triggers automatically** when:
-   - Deployment workflows complete
-   - You push to `develop` branch
-
-2. **Monitors workflows:**
-   - Finds recent workflow runs
-   - Monitors until completion
-   - Checks deployment health
-
-3. **Auto-fixes failures:**
-   - Analyzes workflow logs
-   - Detects fixable issues
-   - Applies fixes
-   - Commits and pushes automatically
-
-4. **Reports results:**
-   - GitHub Actions summary
-   - Comments on PRs (if applicable)
+1. **Workflow timeouts:** Controls when to cancel stuck workflows
+2. **Health check settings:** Configures retry behavior
+3. **Auto-fix settings:** Enables/disables specific fix types
+4. **Branch:** Which branch to monitor
 
 ## 🛠️ What Gets Auto-Fixed
 
@@ -204,6 +383,15 @@ The `.github/workflows/auto-monitor-workflow.yml` workflow:
 ### Missing Dependencies
 - Package.json updates
 - Requirements.txt updates
+
+### SCM Container Restart Errors
+- Timing issues with app settings configuration
+- Automatically adjusts workflow timing
+
+### AKS Namespace Discovery Failures
+- kubectl installation issues
+- Missing kubernetes package
+- Permission documentation
 
 ## 📊 Monitoring Features
 
@@ -231,7 +419,7 @@ Some issues **cannot** be auto-fixed:
 - Complex logic errors
 - Architecture changes
 - External service failures
-- Permission/authentication issues
+- Permission/authentication issues (some can be documented)
 - Database schema changes
 
 ## 🔍 Troubleshooting
@@ -266,11 +454,19 @@ Some issues **cannot** be auto-fixed:
 2. Check if deployments actually completed
 3. Wait a few minutes - deployments need time to stabilize
 
-## 📚 Related Documentation
+### "I don't see the auto-monitor workflow running"
 
-- **`AUTO_FIX_GUIDE.md`** - Detailed auto-fix documentation
-- **`.github/workflows/auto-monitor-workflow.yml`** - Workflow definition
-- **`config.json`** - Configuration reference
+1. **Check if deployments completed:** The auto-monitor only runs AFTER deployments finish
+2. **Check branch:** It only runs for `develop` branch
+3. **Check workflow file:** Make sure `.github/workflows/auto-monitor-workflow.yml` exists
+4. **Check recent runs:** Go to Actions → Filter by "Auto Monitor and Fix Workflows"
+
+### "It's not triggering"
+
+1. **Verify workflow file is committed:** The workflow file must be in the repository
+2. **Check workflow syntax:** GitHub Actions validates YAML syntax
+3. **Check permissions:** The workflow needs `GITHUB_TOKEN` (automatically provided)
+4. **Check if parent workflows exist:** The `workflow_run` trigger requires the parent workflows to exist
 
 ## 🎛️ Advanced Usage
 
@@ -301,7 +497,42 @@ Some issues **cannot** be auto-fixed:
 .\ci-automation.ps1 cancel -DryRun
 ```
 
-## ✅ Verification
+### Adjust Timeouts in Config
+
+Edit `config.json`:
+```json
+{
+  "monitoring": {
+    "timeout_minutes": 45  // Increase timeout
+  }
+}
+```
+
+### Disable Auto-Fix
+
+Edit `config.json`:
+```json
+{
+  "auto_fix": {
+    "enabled": false
+  }
+}
+```
+
+### Change Health Check URLs
+
+Edit `config.json`:
+```json
+{
+  "workflows": {
+    "deploy-backend": {
+      "health_check_url": "https://your-backend-url.com/api/v1/health"
+    }
+  }
+}
+```
+
+## ✅ Verification Checklist
 
 After setup, verify everything works:
 
@@ -315,6 +546,13 @@ Test-Path .github\workflows\auto-monitor-workflow.yml
 # Test monitoring
 .\automation\ci-automation.ps1 status
 ```
+
+Checklist:
+- [ ] GitHub Actions workflow exists: `.github/workflows/auto-monitor-workflow.yml`
+- [ ] Config file exists: `automation/config.json`
+- [ ] Auto-fix enabled: `config.json` → `auto_fix.enabled = true`
+- [ ] GitHub CLI authenticated: `gh auth status`
+- [ ] Test push works: Push to develop and check Actions tab
 
 ## 🎯 Best Practices
 
@@ -336,34 +574,112 @@ Customize prefix in `config.json`:
 "commit_message_prefix": "fix(ci):"
 ```
 
-## 🔐 Permissions
+## 🔐 Permissions & Security
 
-The GitHub Actions workflow needs:
+### GitHub Token
+
+The workflow uses `GITHUB_TOKEN` which provides:
 - ✅ Read access to workflows
-- ✅ Write access to repository (for auto-fix commits)
-- ✅ GitHub token (automatically provided)
+- ✅ Write access to repository (for commits)
+- ✅ Access to workflow runs
 
-## 🚀 Next Steps
+### Git Configuration
 
-1. **Run setup:**
-   ```powershell
-   .\automation\setup.ps1
-   ```
+Auto-commits use:
+- **User:** `github-actions[bot]`
+- **Email:** `github-actions[bot]@users.noreply.github.com`
 
-2. **Push to develop:**
-   ```bash
-   git push origin develop
-   ```
+This ensures commits are clearly identified as automated.
 
-3. **Watch the automation:**
-   - Go to GitHub Actions tab
-   - See "Auto Monitor and Fix Workflows" running
-   - View automatic fixes being applied
+## 📊 Monitoring & Reporting
 
-**That's it! Everything is automated!** 🎉
+### GitHub Actions Summary
+
+The workflow creates a summary showing:
+- Workflow status
+- Health check results
+- Deployment URLs
+- Fixes applied (if any)
+
+### Issue Comments
+
+If a PR exists, the workflow creates comments:
+- Failure notifications
+- Detected issues
+- Fixes applied
+
+## 📈 Performance Optimizations
+
+### Deployment Speed
+- Reduced SCM wait: 55s → 3s
+- Optimized health checks: 2min → 1min
+- Single API call for app settings
+- Faster frontend copy (rsync)
+
+### Monitoring Efficiency
+- Smart timeout detection (15min for deployments)
+- Parallel health checks
+- Efficient log parsing
+- Quick issue detection
+
+## 🚨 Error Handling
+
+### Workflow Failures
+- Analyzes logs automatically
+- Categorizes errors
+- Attempts fixes for known issues
+- Reports non-fixable issues
+
+### Health Check Failures
+- Retries with exponential backoff
+- Reports failures but doesn't block
+- Provides diagnostic information
+
+### Auto-Fix Failures
+- Only fixes well-known patterns
+- Reports what couldn't be fixed
+- Creates clear commit messages
+- Doesn't break working code
+
+## 🔧 Manual Trigger (For Testing)
+
+You can manually trigger the auto-monitor workflow:
+
+1. Go to **Actions** tab
+2. Click **"Auto Monitor and Fix Workflows"** in left sidebar
+3. Click **"Run workflow"** button (top right)
+4. Select branch: `develop`
+5. Optionally provide a workflow run ID to monitor
+6. Click **"Run workflow"**
+
+## 📍 File Locations
+
+- **Actual workflow file:** `.github/workflows/auto-monitor-workflow.yml` ← This is what GitHub uses
+- **Template/example:** `automation/auto-monitor-workflow.yml` ← This is just documentation
+
+**Important:** Only the file in `.github/workflows/` is actually used by GitHub Actions!
+
+## 🎓 Summary
+
+The automation system provides:
+
+1. **Automatic monitoring** - No manual checks needed
+2. **Intelligent fixing** - Detects and fixes common issues
+3. **Automatic retry** - Pushes fixes and retries deployments
+4. **Health verification** - Ensures deployments actually work
+5. **Clear reporting** - Shows what happened and why
+
+**Key Points:**
+- ✅ It **IS** a separate workflow
+- ✅ It **DOES** appear in GitHub Actions
+- ⏰ It runs **AFTER** your deployment workflows complete
+- 🔍 Look for it in the **Actions** tab after deployments finish
+- 📋 It's called **"Auto Monitor and Fix Workflows"**
+
+**Result:** Fully automated CI/CD with zero manual intervention! 🚀
 
 ---
 
 **Last Updated:** November 2025  
-**Status:** ✅ Fully Automated - Zero Touch  
+**Status:** ✅ Production Ready  
 **Maintained By:** BSG Team
