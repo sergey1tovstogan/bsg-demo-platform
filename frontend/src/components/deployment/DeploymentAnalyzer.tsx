@@ -5,7 +5,7 @@
  * Provides functionality to connect to Azure, select resource groups, and analyze Temenos components.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search, ExternalLink, DollarSign } from 'lucide-react'
 import { apiService } from '../../services/api'
 
@@ -469,11 +469,15 @@ function ResourceGroupSelector({
     rg.location.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const fetchCosts = async () => {
-    if (resourceGroups.length === 0) return
+  const fetchCosts = useCallback(async () => {
+    if (resourceGroups.length === 0) {
+      console.log('[Costs] No resource groups to fetch costs for')
+      return
+    }
     
     // Cancel any existing request
     if (costsAbortController) {
+      console.log('[Costs] Cancelling previous request')
       costsAbortController.abort()
     }
     
@@ -481,23 +485,30 @@ function ResourceGroupSelector({
     const abortController = new AbortController()
     setCostsAbortController(abortController)
     
+    const resourceGroupNames = resourceGroups.map(rg => rg.name)
+    console.log(`[Costs] Starting to fetch costs for ${resourceGroupNames.length} resource groups`)
+    
     setLoadingCosts(true)
+    let timeoutId: NodeJS.Timeout | null = null
+    
     try {
-      const resourceGroupNames = resourceGroups.map(rg => rg.name)
-      
-      // Create a timeout promise that rejects after 60 seconds
+      // Create a timeout promise that rejects after 90 seconds (increased for large batches)
       const timeoutPromise = new Promise((_, reject) => {
-        const timeoutId = setTimeout(() => {
+        timeoutId = setTimeout(() => {
+          console.warn('[Costs] Request timed out after 90 seconds')
           abortController.abort()
-          reject(new Error('Costs request timed out after 60 seconds'))
-        }, 60000)
+          reject(new Error('Costs request timed out after 90 seconds'))
+        }, 90000) // Increased to 90 seconds for large batches
         
         // Clear timeout if request completes
         abortController.signal.addEventListener('abort', () => {
-          clearTimeout(timeoutId)
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+          }
         })
       })
       
+      console.log('[Costs] Making API call...')
       // Race between the API call and timeout
       const response = await Promise.race([
         apiService.getResourceGroupCosts(subscriptionId, resourceGroupNames),
@@ -506,28 +517,46 @@ function ResourceGroupSelector({
       
       // Check if request was aborted
       if (abortController.signal.aborted) {
+        console.log('[Costs] Request was aborted')
         return
       }
       
+      console.log('[Costs] Received response:', response)
+      
       const costMap: Record<string, any> = {}
-      if (response.data?.data) {
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        console.log(`[Costs] Processing ${response.data.data.length} cost results`)
         response.data.data.forEach((costData: any) => {
-          costMap[costData.resource_group] = costData
+          if (costData?.resource_group) {
+            costMap[costData.resource_group] = costData
+          }
         })
+      } else {
+        console.warn('[Costs] Unexpected response format:', response)
       }
+      
+      console.log(`[Costs] Setting costs for ${Object.keys(costMap).length} resource groups`)
       setCosts(costMap)
     } catch (err: any) {
       // Don't show error if request was aborted (user cancelled)
       if (abortController.signal.aborted) {
+        console.log('[Costs] Request was aborted, not showing error')
         return
       }
       
-      console.error('Error fetching costs:', err)
+      console.error('[Costs] Error fetching costs:', err)
+      console.error('[Costs] Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      })
+      
       // Set error state for each resource group
       const errorMessage = err.message?.includes('timeout') || err.message?.includes('aborted')
-        ? 'Request timed out. Cost data may take longer to load.'
-        : err.response?.data?.detail?.error || err.message || 'Failed to load costs'
+        ? 'Request timed out. Cost data may take longer to load for many resource groups.'
+        : err.response?.data?.detail?.error || err.response?.data?.error || err.message || 'Failed to load costs'
       
+      console.log(`[Costs] Setting error state: ${errorMessage}`)
       const costMap: Record<string, any> = {}
       resourceGroups.forEach(rg => {
         costMap[rg.name] = {
@@ -539,24 +568,31 @@ function ResourceGroupSelector({
       })
       setCosts(costMap)
     } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
       if (!abortController.signal.aborted) {
+        console.log('[Costs] Request completed, clearing loading state')
         setLoadingCosts(false)
         setCostsAbortController(null)
+      } else {
+        console.log('[Costs] Request was aborted, keeping loading state')
       }
     }
-  }
+  }, [resourceGroups, subscriptionId, costsAbortController])
 
   useEffect(() => {
     if (resourceGroups.length > 0 && showCosts) {
+      console.log('[Costs] useEffect triggered: fetching costs')
       fetchCosts()
     } else if (!showCosts && costsAbortController) {
       // Cancel request if user hides costs
+      console.log('[Costs] Hiding costs, cancelling request')
       costsAbortController.abort()
       setLoadingCosts(false)
       setCostsAbortController(null)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resourceGroups, showCosts, subscriptionId])
+  }, [resourceGroups, showCosts, subscriptionId, fetchCosts, costsAbortController])
 
   return (
     <div className="space-y-6">
