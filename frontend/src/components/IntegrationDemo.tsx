@@ -430,7 +430,7 @@ export function IntegrationDemo() {
             Request Body:
           </label>
           <div className="relative">
-            <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white">
+            <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
               <JsonView
                 data={(() => { try { return JSON.parse(postBody) } catch { return null } })()}
                 rawText={postBody}
@@ -443,12 +443,6 @@ export function IntegrationDemo() {
               placeholder="Enter JSON request body..."
               spellCheck={false}
             />
-            <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
-              <JsonView
-                data={(() => { try { return JSON.parse(postBody) } catch { return null } })()}
-                rawText={postBody}
-              />
-            </div>
           </div>
         </div>
 
@@ -700,7 +694,7 @@ export function IntegrationDemo() {
               Request Body:
             </label>
             <div className="relative">
-              <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white">
+              <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
                 <JsonView
                   data={(() => { try { return JSON.parse(portfolioBody) } catch { return null } })()}
                   rawText={portfolioBody}
@@ -713,12 +707,6 @@ export function IntegrationDemo() {
                 placeholder="Enter JSON request body..."
                 spellCheck={false}
               />
-              <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
-                <JsonView
-                  data={(() => { try { return JSON.parse(portfolioBody) } catch { return null } })()}
-                  rawText={portfolioBody}
-                />
-              </div>
             </div>
           </div>
         )}

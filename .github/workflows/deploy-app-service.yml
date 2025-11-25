@@ -241,15 +241,8 @@ jobs:
           echo ""
           echo "Note: kubectl may not be available in Azure App Service. Namespace discovery will work if kubectl is installed, otherwise it will be skipped gracefully."
       
-      - name: Configure Python Version
-        run: |
-          echo "Setting Python version to 3.11..."
-          az webapp config set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --linux-fx-version "PYTHON|3.11" \
-            --output none
-          echo "✓ Python version configured"
+      # Note: Managed Identity and Python version moved to AFTER deployment
+      # to avoid SCM container restart conflicts
       
       - name: Check package size before deployment
         run: |
@@ -272,10 +265,31 @@ jobs:
             echo "  ⚠ Static directory not found!"
           fi
       
-      - name: Wait before deployment (avoid SCM restart conflicts)
+      - name: Wait and verify SCM is ready (avoid restart conflicts)
         run: |
-          echo "Waiting 15 seconds before deployment to avoid SCM container restart conflicts..."
-          sleep 15
+          echo "Waiting 30 seconds and verifying SCM container is ready..."
+          echo ""
+          echo "⚠ App settings configuration can restart the SCM container."
+          echo "   We need to wait for it to fully restart before deploying."
+          sleep 30
+          
+          # Try to verify SCM is accessible (optional check)
+          echo "Verifying SCM container is accessible..."
+          SCM_URL="https://${{ env.AZURE_WEBAPP_NAME }}.scm.azurewebsites.net"
+          for i in {1..5}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $SCM_URL || echo "000")
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
+              echo "✓ SCM container is responding (HTTP $HTTP_CODE)"
+              break
+            else
+              echo "SCM check attempt $i/5 returned HTTP $HTTP_CODE, waiting 5 more seconds..."
+              if [ $i -lt 5 ]; then
+                sleep 5
+              fi
+            fi
+          done
+          
+          echo ""
           echo "✓ Ready to deploy"
       
       - name: Deploy to Azure Web App
@@ -288,52 +302,66 @@ jobs:
       - name: Health Check
         run: |
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-          echo "Waiting for app to start (allowing 90 seconds for first-time startup)..."
-          sleep 90
+          echo "Waiting for app to start (allowing 60 seconds for first-time startup)..."
+          sleep 60
           
-          # First check liveness endpoint (doesn't require DB)
+          # First check root endpoint (simplest check)
+          echo "Checking root endpoint..."
+          ROOT_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 $WEBAPP_URL/ || echo "000")
+          if [ "$ROOT_CODE" = "200" ]; then
+            echo "✓ Root endpoint is responding (HTTP $ROOT_CODE)"
+            curl -s --max-time 15 $WEBAPP_URL/ | head -5
+          else
+            echo "⚠ Root endpoint returned HTTP $ROOT_CODE (this is OK if static files aren't deployed)"
+          fi
+          
+          # Check liveness endpoint (doesn't require DB)
+          echo ""
           echo "Checking liveness endpoint..."
-          MAX_RETRIES=20
-          RETRY_DELAY=10
+          MAX_RETRIES=12
+          RETRY_DELAY=5
           LIVENESS_PASSED=false
           
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Liveness check attempt $i/$MAX_RETRIES..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 $WEBAPP_URL/api/v1/live || echo "000")
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 $WEBAPP_URL/api/v1/live || echo "000")
             if [ "$HTTP_CODE" = "200" ]; then
               echo "✓ Liveness check passed! (HTTP $HTTP_CODE)"
               LIVENESS_PASSED=true
               break
             else
-              echo "Liveness check returned HTTP $HTTP_CODE, retrying in $RETRY_DELAY seconds..."
+              echo "Liveness check returned HTTP $HTTP_CODE"
               if [ $i -lt $MAX_RETRIES ]; then
+                echo "Retrying in $RETRY_DELAY seconds..."
                 sleep $RETRY_DELAY
               fi
             fi
           done
           
           if [ "$LIVENESS_PASSED" = false ]; then
+            echo ""
             echo "❌ Liveness check failed after $MAX_RETRIES attempts"
             echo "Checking app status..."
-            az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "{state: state, defaultHostName: defaultHostName}" || true
+            az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "{state: state, defaultHostName: defaultHostName, httpsOnly: httpsOnly}" || true
             echo ""
-            echo "Checking recent logs..."
-            az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --timeout 10 || true
+            echo "Checking recent logs (last 50 lines)..."
+            az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --timeout 5 2>&1 | tail -50 || true
             echo ""
             echo "Troubleshooting steps:"
             echo "1. Check App Service logs: az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}"
             echo "2. Verify startup command: az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query appCommandLine"
             echo "3. Check Always On: az webapp config show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query alwaysOn"
+            echo "4. Test manually: curl $WEBAPP_URL/api/v1/live"
             exit 1
           fi
           
-          # Now check full health endpoint
+          # Now check full health endpoint (optional - doesn't fail deployment)
           echo ""
           echo "Checking full health endpoint..."
-          HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 $WEBAPP_URL/api/v1/health || echo "000")
+          HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 $WEBAPP_URL/api/v1/health || echo "000")
           if [ "$HEALTH_CODE" = "200" ]; then
             echo "✓ Full health check passed! (HTTP $HEALTH_CODE)"
-            curl -s --max-time 30 $WEBAPP_URL/api/v1/health | head -20
+            curl -s --max-time 15 $WEBAPP_URL/api/v1/health | head -10
           else
             echo "⚠ Full health check returned HTTP $HEALTH_CODE"
             echo "This may indicate database connectivity issues, but app is running"

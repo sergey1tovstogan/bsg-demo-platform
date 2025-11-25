@@ -5,6 +5,7 @@ Handles Azure Resource Manager API interactions for deployment analysis.
 """
 
 from typing import List, Optional, Dict, Any
+import os
 from azure.identity import DefaultAzureCredential, AzureCliCredential, ChainedTokenCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.core.exceptions import AzureError, HttpResponseError
@@ -79,16 +80,24 @@ class AzureService:
             subscription_id: Azure subscription ID
         """
         self.subscription_id = subscription_id
+        self.is_azure_app_service = os.getenv("WEBSITE_SITE_NAME") is not None
+        
         try:
-            # Try Azure CLI credential first (most common for local development)
-            # Then fall back to DefaultAzureCredential which tries multiple sources
-            try:
-                credential = AzureCliCredential()
-                logger.info("Using Azure CLI credential")
-            except Exception:
-                # Fall back to DefaultAzureCredential if Azure CLI credential fails
+            # For Azure App Service, use DefaultAzureCredential (Managed Identity)
+            # For local development, try Azure CLI first, then DefaultAzureCredential
+            if self.is_azure_app_service:
+                # In Azure App Service, use Managed Identity via DefaultAzureCredential
                 credential = DefaultAzureCredential()
-                logger.info("Using DefaultAzureCredential (tries multiple credential sources)")
+                logger.info("Using DefaultAzureCredential (Azure App Service - Managed Identity)")
+            else:
+                # Local development: try Azure CLI first, then DefaultAzureCredential
+                try:
+                    credential = AzureCliCredential()
+                    logger.info("Using Azure CLI credential (local development)")
+                except Exception:
+                    # Fall back to DefaultAzureCredential if Azure CLI credential fails
+                    credential = DefaultAzureCredential()
+                    logger.info("Using DefaultAzureCredential (tries multiple credential sources)")
             
             self.client = ResourceManagementClient(credential, subscription_id)
             logger.info(f"Azure service initialized for subscription: {subscription_id}")
@@ -97,28 +106,52 @@ class AzureService:
             error_msg = str(e)
             error_type = type(e).__name__
             
-            # Provide more specific error messages
-            if "CredentialUnavailableError" in error_type or "credential" in error_msg.lower():
-                raise RuntimeError(
-                    "Azure authentication failed. Please ensure:\n"
-                    "1. Azure CLI is installed: https://aka.ms/installazurecliwindows\n"
-                    "2. For interactive login: Run 'az login'\n"
-                    "3. For non-interactive environments: Run 'az login --use-device-code'\n"
-                    "4. OR configure service principal credentials via environment variables:\n"
-                    "   - AZURE_CLIENT_ID\n"
-                    "   - AZURE_CLIENT_SECRET\n"
-                    "   - AZURE_TENANT_ID\n"
-                    f"5. Verify subscription ID '{subscription_id}' is correct"
-                )
+            # Provide environment-specific error messages
+            if self.is_azure_app_service:
+                # Azure App Service specific error messages
+                if "CredentialUnavailableError" in error_type or "credential" in error_msg.lower():
+                    raise RuntimeError(
+                        "Azure authentication failed in Azure App Service. Please ensure:\n"
+                        "1. Managed Identity is enabled for the App Service\n"
+                        "2. OR configure Service Principal credentials via App Settings:\n"
+                        "   - AZURE_CLIENT_ID\n"
+                        "   - AZURE_CLIENT_SECRET\n"
+                        "   - AZURE_TENANT_ID\n"
+                        f"3. Verify subscription ID '{subscription_id}' is correct\n"
+                        "4. Ensure the identity has 'Reader' role on the subscription"
+                    )
+                else:
+                    raise RuntimeError(
+                        f"Failed to initialize Azure client in Azure App Service: {error_msg}\n"
+                        f"Error type: {error_type}\n\n"
+                        "Please check:\n"
+                        "1. Managed Identity is enabled and has proper permissions\n"
+                        "2. Service Principal credentials are configured (if using)\n"
+                        f"3. Subscription ID '{subscription_id}' is correct"
+                    )
             else:
-                raise RuntimeError(
-                    f"Failed to initialize Azure client: {error_msg}\n"
-                    f"Error type: {error_type}\n\n"
-                    "Please ensure:\n"
-                    "1. Azure CLI is installed: https://aka.ms/installazurecliwindows\n"
-                    "2. For interactive login: Run 'az login'\n"
-                    "3. For non-interactive environments: Run 'az login --use-device-code'"
-                )
+                # Local development error messages
+                if "CredentialUnavailableError" in error_type or "credential" in error_msg.lower():
+                    raise RuntimeError(
+                        "Azure authentication failed. Please ensure:\n"
+                        "1. Azure CLI is installed: https://aka.ms/installazurecliwindows\n"
+                        "2. For interactive login: Run 'az login'\n"
+                        "3. For non-interactive environments: Run 'az login --use-device-code'\n"
+                        "4. OR configure service principal credentials via environment variables:\n"
+                        "   - AZURE_CLIENT_ID\n"
+                        "   - AZURE_CLIENT_SECRET\n"
+                        "   - AZURE_TENANT_ID\n"
+                        f"5. Verify subscription ID '{subscription_id}' is correct"
+                    )
+                else:
+                    raise RuntimeError(
+                        f"Failed to initialize Azure client: {error_msg}\n"
+                        f"Error type: {error_type}\n\n"
+                        "Please ensure:\n"
+                        "1. Azure CLI is installed: https://aka.ms/installazurecliwindows\n"
+                        "2. For interactive login: Run 'az login'\n"
+                        "3. For non-interactive environments: Run 'az login --use-device-code'"
+                    )
 
     async def test_connection(self) -> bool:
         """
@@ -190,14 +223,26 @@ class AzureService:
             
             # Check error message for common issues
             if "credential" in error_msg.lower() or "authentication" in error_msg.lower() or "unauthorized" in error_msg.lower():
-                raise RuntimeError(
-                    "Azure authentication failed. Please ensure:\n"
-                    "1. Azure CLI is installed: https://aka.ms/installazurecliwindows\n"
-                    "2. For interactive login: Run 'az login'\n"
-                    "3. For non-interactive environments: Run 'az login --use-device-code'\n"
-                    "4. Verify subscription ID is correct\n"
-                    "5. Run: az account set --subscription <subscription-id>"
-                )
+                if self.is_azure_app_service:
+                    raise RuntimeError(
+                        "Azure authentication failed in Azure App Service. Please ensure:\n"
+                        "1. Managed Identity is enabled for the App Service\n"
+                        "2. The Managed Identity has 'Reader' role on the subscription\n"
+                        "3. OR configure Service Principal credentials via App Settings:\n"
+                        "   - AZURE_CLIENT_ID\n"
+                        "   - AZURE_CLIENT_SECRET\n"
+                        "   - AZURE_TENANT_ID\n"
+                        "4. Verify subscription ID is correct"
+                    )
+                else:
+                    raise RuntimeError(
+                        "Azure authentication failed. Please ensure:\n"
+                        "1. Azure CLI is installed: https://aka.ms/installazurecliwindows\n"
+                        "2. For interactive login: Run 'az login'\n"
+                        "3. For non-interactive environments: Run 'az login --use-device-code'\n"
+                        "4. Verify subscription ID is correct\n"
+                        "5. Run: az account set --subscription <subscription-id>"
+                    )
             elif "permission" in error_msg.lower() or "authorization" in error_msg.lower() or "forbidden" in error_msg.lower():
                 raise RuntimeError(
                     "Insufficient permissions. Please ensure your Azure account has "
