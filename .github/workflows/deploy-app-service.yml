@@ -331,15 +331,51 @@ jobs:
               --startup-file "startup.sh" \
               --output none 2>&1 || true
             
-            # Attempt deployment using Azure CLI
-            echo "Deploying to Azure Web App..."
+            # Attempt deployment using Azure CLI with async mode
+            # Async mode prevents gateway timeouts by not waiting for completion
+            echo "Deploying to Azure Web App (async mode)..."
             DEPLOY_OUTPUT=$(az webapp deploy \
               --name ${{ env.AZURE_WEBAPP_NAME }} \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --type zip \
               --src-path deploy-package.zip \
-              --async false \
+              --async true \
               --timeout 900 2>&1) || DEPLOY_EXIT_CODE=$?
+            
+            # If async deployment started successfully, wait and check status
+            if [ -z "${DEPLOY_EXIT_CODE:-}" ] || [ "${DEPLOY_EXIT_CODE:-}" = "0" ]; then
+              echo "Deployment initiated successfully, waiting for completion..."
+              sleep 30
+              
+              # Poll deployment status
+              MAX_POLLS=30
+              POLL_COUNT=0
+              while [ $POLL_COUNT -lt $MAX_POLLS ]; do
+                DEPLOYMENT_STATUS=$(az webapp deployment list \
+                  --name ${{ env.AZURE_WEBAPP_NAME }} \
+                  --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                  --query "[0].status" -o tsv 2>/dev/null || echo "Unknown")
+                
+                if [ "$DEPLOYMENT_STATUS" = "Succeeded" ]; then
+                  echo "✓ Deployment completed successfully!"
+                  DEPLOY_SUCCESS=true
+                  break
+                elif [ "$DEPLOYMENT_STATUS" = "Failed" ]; then
+                  echo "⚠ Deployment failed with status: $DEPLOYMENT_STATUS"
+                  DEPLOY_EXIT_CODE=1
+                  break
+                else
+                  echo "Deployment status: $DEPLOYMENT_STATUS (polling $((POLL_COUNT + 1))/$MAX_POLLS)..."
+                  sleep 10
+                  POLL_COUNT=$((POLL_COUNT + 1))
+                fi
+              done
+              
+              if [ "$DEPLOY_SUCCESS" != "true" ]; then
+                echo "⚠ Deployment did not complete within expected time"
+                DEPLOY_EXIT_CODE=1
+              fi
+            fi
             
             if [ -z "${DEPLOY_EXIT_CODE:-}" ] || [ "${DEPLOY_EXIT_CODE:-}" = "0" ]; then
               echo "✓ Deployment successful!"
