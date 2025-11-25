@@ -949,8 +949,10 @@ async def get_resource_group_costs(request: CostRequest):
             timeout_seconds = 300.0  # 5 minutes for 50+ resource groups
         elif num_rgs > 20:
             timeout_seconds = 180.0  # 3 minutes for 20-50 resource groups
+        elif num_rgs == 1:
+            timeout_seconds = 30.0   # 30 seconds for single resource group
         else:
-            timeout_seconds = 90.0   # 90 seconds for smaller batches
+            timeout_seconds = 60.0   # 60 seconds for small batches (2-20)
         
         logger.info(f"Fetching costs for {num_rgs} resource groups with {timeout_seconds}s timeout")
         

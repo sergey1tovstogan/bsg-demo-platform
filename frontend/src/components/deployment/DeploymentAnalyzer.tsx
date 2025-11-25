@@ -495,11 +495,12 @@ function ResourceGroupSelector({
     
     try {
       // Calculate timeout based on number of resource groups
+      // For single resource groups, use shorter timeout (30s)
       // Large batches need more time
       const numRGs = resourceGroupNames.length
-      const timeoutMs = numRGs > 50 ? 300000 : numRGs > 20 ? 180000 : 90000 // 5min, 3min, or 90s
+      const timeoutMs = numRGs > 50 ? 300000 : numRGs > 20 ? 180000 : numRGs === 1 ? 30000 : 60000 // 5min, 3min, 60s, or 30s for single
       
-      console.log(`[Costs] Setting timeout to ${timeoutMs / 1000}s for ${numRGs} resource groups`)
+      console.log(`[Costs] Setting timeout to ${timeoutMs / 1000}s for ${numRGs} resource group(s)`)
       
       // Create a timeout promise that rejects after calculated timeout
       const timeoutPromise = new Promise((_, reject) => {
@@ -517,10 +518,11 @@ function ResourceGroupSelector({
         })
       })
       
-      console.log('[Costs] Making API call...')
+      console.log('[Costs] Making API call with abort signal...')
       // Race between the API call and timeout
+      // Pass abort signal to allow cancellation
       const response = await Promise.race([
-        apiService.getResourceGroupCosts(subscriptionId, resourceGroupNames),
+        apiService.getResourceGroupCosts(subscriptionId, resourceGroupNames, undefined, undefined, abortController.signal),
         timeoutPromise
       ]) as any
       
