@@ -567,9 +567,9 @@ function ResourceGroupSelector({
       
       console.log(`[Costs] Setting error state: ${errorMessage}`)
       const costMap: Record<string, any> = {}
-      resourceGroups.forEach(rg => {
-        costMap[rg.name] = {
-          resource_group: rg.name,
+      selected.forEach(rgName => {
+        costMap[rgName] = {
+          resource_group: rgName,
           total_cost: 0,
           services: {},
           error: errorMessage
@@ -591,8 +591,8 @@ function ResourceGroupSelector({
       }, [selected, subscriptionId, costsAbortController])
 
   useEffect(() => {
-    if (resourceGroups.length > 0 && showCosts) {
-      console.log('[Costs] useEffect triggered: fetching costs')
+    if (selected.length > 0 && showCosts) {
+      console.log('[Costs] useEffect triggered: fetching costs for selected groups')
       fetchCosts()
     } else if (!showCosts && costsAbortController) {
       // Cancel request if user hides costs
@@ -601,7 +601,7 @@ function ResourceGroupSelector({
       setLoadingCosts(false)
       setCostsAbortController(null)
     }
-  }, [resourceGroups, showCosts, subscriptionId, fetchCosts, costsAbortController])
+  }, [selected, showCosts, subscriptionId, fetchCosts, costsAbortController])
 
   return (
     <div className="space-y-6">
@@ -613,9 +613,13 @@ function ResourceGroupSelector({
         <div className="flex items-center space-x-3">
           <button
             onClick={() => {
-              if (!showCosts && resourceGroups.length > 30) {
+              if (selected.length === 0) {
+                alert('Please select at least one resource group to view costs.')
+                return
+              }
+              if (!showCosts && selected.length > 30) {
                 const proceed = confirm(
-                  `You are about to load costs for ${resourceGroups.length} resource groups. ` +
+                  `You are about to load costs for ${selected.length} selected resource groups. ` +
                   `This may take several minutes. Do you want to continue?`
                 )
                 if (!proceed) return
@@ -623,8 +627,16 @@ function ResourceGroupSelector({
               setShowCosts(!showCosts)
             }}
             className="btn-secondary flex items-center space-x-2"
-            disabled={loadingCosts}
-            title={loadingCosts ? 'Loading costs...' : showCosts ? 'Hide cost information' : 'Show cost information'}
+            disabled={loadingCosts || selected.length === 0}
+            title={
+              selected.length === 0 
+                ? 'Select at least one resource group to view costs'
+                : loadingCosts 
+                  ? 'Loading costs...' 
+                  : showCosts 
+                    ? 'Hide cost information' 
+                    : 'Show cost information'
+            }
           >
             {loadingCosts ? (
               <>
@@ -635,8 +647,10 @@ function ResourceGroupSelector({
               <>
                 <DollarSign className="w-4 h-4" />
                 <span>{showCosts ? 'Hide' : 'Show'} Costs</span>
-                {!showCosts && resourceGroups.length > 30 && (
-                  <span className="text-xs text-yellow-600 ml-1">({resourceGroups.length} groups - may be slow)</span>
+                {!showCosts && selected.length > 0 && (
+                  <span className="text-xs text-yellow-600 ml-1">
+                    ({selected.length} selected{selected.length > 30 ? ' - may be slow' : ''})
+                  </span>
                 )}
               </>
             )}
