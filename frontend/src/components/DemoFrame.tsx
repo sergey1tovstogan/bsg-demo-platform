@@ -77,11 +77,11 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
   }
 
   // For other components, try to load demo config
-  const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
-  const [session, setSession] = useState<DemoSession | null>(null)
+  const [_demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
+  const [session, _setSession] = useState<DemoSession | null>(null)
   const [loading, setLoading] = useState(true)
-  const [connecting, setConnecting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [_connecting, _setConnecting] = useState(false)
+  const [_error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadDemoConfig()
