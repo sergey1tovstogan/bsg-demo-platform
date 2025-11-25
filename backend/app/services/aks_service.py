@@ -563,7 +563,9 @@ class AKSService:
 
     async def _get_cluster_kubeconfig(self, resource_group: str, cluster_name: str) -> Optional[str]:
         """
-        Get cluster admin credentials (kubeconfig) from Azure.
+        Get cluster credentials (kubeconfig) from Azure.
+        Tries user credentials first (requires "Azure Kubernetes Service Cluster User Role"),
+        then falls back to admin credentials (requires "Azure Kubernetes Service Cluster Admin Role").
         
         Args:
             resource_group: Resource group name
@@ -572,10 +574,30 @@ class AKSService:
         Returns:
             Path to temporary kubeconfig file or None if failed
         """
+        # Try user credentials first (less privileged, more likely to work)
         try:
-            logger.info(f"Getting cluster admin credentials for {cluster_name}...")
+            logger.info(f"Attempting to get cluster user credentials for {cluster_name}...")
+            credential_response = self.client.managed_clusters.list_cluster_user_credentials(
+                resource_group_name=resource_group,
+                resource_name=cluster_name
+            )
             
-            # Get cluster admin credentials from Azure
+            if credential_response.kubeconfigs and len(credential_response.kubeconfigs) > 0:
+                kubeconfig_data = base64.b64decode(credential_response.kubeconfigs[0].value).decode('utf-8')
+                temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
+                temp_file.write(kubeconfig_data)
+                temp_file.close()
+                logger.info(f"✓ Cluster user credentials retrieved and saved to {temp_file.name}")
+                return temp_file.name
+            else:
+                logger.warning(f"No user credentials returned for cluster {cluster_name}, trying admin credentials...")
+        except Exception as e:
+            logger.warning(f"Failed to get cluster user credentials: {e}")
+            logger.info("Trying admin credentials as fallback...")
+        
+        # Fallback to admin credentials (requires admin role)
+        try:
+            logger.info(f"Attempting to get cluster admin credentials for {cluster_name}...")
             credential_response = self.client.managed_clusters.list_cluster_admin_credentials(
                 resource_group_name=resource_group,
                 resource_name=cluster_name
@@ -583,6 +605,9 @@ class AKSService:
             
             if not credential_response.kubeconfigs or len(credential_response.kubeconfigs) == 0:
                 logger.error(f"No kubeconfig returned for cluster {cluster_name}")
+                logger.error("This usually means Managed Identity lacks required permissions:")
+                logger.error("  - 'Azure Kubernetes Service Cluster User Role' (preferred)")
+                logger.error("  - OR 'Azure Kubernetes Service Cluster Admin Role' (fallback)")
                 return None
             
             # Decode the kubeconfig (it's base64 encoded)
@@ -593,13 +618,67 @@ class AKSService:
             temp_file.write(kubeconfig_data)
             temp_file.close()
             
-            logger.info(f"✓ Cluster credentials retrieved and saved to {temp_file.name}")
+            logger.info(f"✓ Cluster admin credentials retrieved and saved to {temp_file.name}")
             return temp_file.name
             
         except Exception as e:
             logger.error(f"Failed to get cluster credentials: {e}", exc_info=True)
+            logger.error("Both user and admin credential methods failed.")
+            logger.error("Please ensure Managed Identity has one of these roles on the AKS cluster:")
+            logger.error("  - 'Azure Kubernetes Service Cluster User Role' (recommended)")
+            logger.error("  - 'Azure Kubernetes Service Cluster Admin Role' (alternative)")
             return None
     
+    async def test_cluster_connection(self, resource_group: str, cluster_name: str) -> Dict[str, Any]:
+        """
+        Test if we can connect to the cluster and get credentials.
+        Returns diagnostic information about the connection attempt.
+        
+        Args:
+            resource_group: Resource group name
+            cluster_name: AKS cluster name
+            
+        Returns:
+            Dict with connection test results
+        """
+        result = {
+            "cluster_name": cluster_name,
+            "resource_group": resource_group,
+            "can_get_kubeconfig": False,
+            "kubeconfig_method": None,
+            "error": None,
+            "kubernetes_client_available": KUBERNETES_AVAILABLE,
+            "kubectl_available": False,
+            "is_azure_app_service": self.is_azure_app_service
+        }
+        
+        # Test kubeconfig retrieval
+        try:
+            kubeconfig_path = await self._get_cluster_kubeconfig(resource_group, cluster_name)
+            if kubeconfig_path and os.path.exists(kubeconfig_path):
+                result["can_get_kubeconfig"] = True
+                result["kubeconfig_method"] = "Azure API"
+                result["kubeconfig_path"] = kubeconfig_path
+                # Clean up
+                try:
+                    os.unlink(kubeconfig_path)
+                except:
+                    pass
+            else:
+                result["error"] = "Failed to retrieve kubeconfig from Azure API"
+        except Exception as e:
+            result["error"] = f"Exception getting kubeconfig: {str(e)}"
+            logger.error(f"Connection test failed: {e}", exc_info=True)
+        
+        # Test kubectl availability
+        import shutil
+        kubectl_path = shutil.which("kubectl") or shutil.which("kubectl.exe")
+        result["kubectl_available"] = kubectl_path is not None
+        if kubectl_path:
+            result["kubectl_path"] = kubectl_path
+        
+        return result
+
     async def list_cluster_namespaces(
         self,
         cluster: AzureResource
@@ -621,6 +700,7 @@ class AKSService:
         logger.info(f"Cluster ID: {cluster.id}")
         logger.info(f"Cluster resource group: {cluster.resource_group}")
         logger.info(f"Kubernetes Python client available: {KUBERNETES_AVAILABLE}")
+        logger.info(f"Running in Azure App Service: {self.is_azure_app_service}")
         logger.info("=" * 80)
         
         namespaces = []
@@ -630,6 +710,25 @@ class AKSService:
             id_parts = cluster.id.split("/")
             resource_group = id_parts[id_parts.index("resourceGroups") + 1] if "resourceGroups" in id_parts else cluster.resource_group
             cluster_name = cluster.name
+            
+            # Test connection first (for diagnostics)
+            try:
+                connection_test = await self.test_cluster_connection(resource_group, cluster_name)
+                logger.info(f"Connection test results:")
+                logger.info(f"  - Can get kubeconfig: {connection_test.get('can_get_kubeconfig')}")
+                logger.info(f"  - kubectl available: {connection_test.get('kubectl_available')}")
+                logger.info(f"  - Kubernetes client available: {connection_test.get('kubernetes_client_available')}")
+                if connection_test.get('error'):
+                    logger.warning(f"  - Connection test error: {connection_test.get('error')}")
+                if not connection_test.get("can_get_kubeconfig"):
+                    logger.error(f"⚠ Cannot get kubeconfig for cluster {cluster_name}")
+                    logger.error(f"  Error: {connection_test.get('error', 'Unknown error')}")
+                    logger.error("  This usually means Managed Identity lacks required permissions:")
+                    logger.error("    - 'Azure Kubernetes Service Cluster User Role' (recommended)")
+                    logger.error("    - OR 'Azure Kubernetes Service Cluster Admin Role' (alternative)")
+                    logger.error("  To fix: Assign one of these roles to the App Service Managed Identity on the AKS cluster")
+            except Exception as e:
+                logger.warning(f"Connection test failed (non-fatal, continuing): {e}")
             
             # Try Kubernetes Python client first (works in Azure App Service)
             if KUBERNETES_AVAILABLE:
@@ -682,15 +781,20 @@ class AKSService:
             kubectl_cmd = "kubectl"
             
             if not kubectl_path:
+                error_msg = f"kubectl not found in PATH"
                 if self.is_azure_app_service:
-                    logger.error(f"kubectl not found and Kubernetes Python client failed")
-                    logger.error("Cannot list namespaces for cluster {cluster_name}")
+                    logger.error(f"{error_msg} and Kubernetes Python client failed")
+                    logger.error(f"Cannot list namespaces for cluster {cluster_name}")
                     logger.error("This should not happen if Kubernetes Python client is properly configured")
+                    logger.error("kubectl should be installed by startup.sh - check if startup script ran successfully")
+                    logger.error("Check App Service logs for startup.sh execution")
                 else:
-                    logger.error(f"kubectl not found in PATH! Cannot list namespaces for cluster {cluster_name}")
+                    logger.error(f"{error_msg}! Cannot list namespaces for cluster {cluster_name}")
                     logger.error("To fix: Install kubectl or ensure it's in PATH")
                     logger.error("On Windows: choco install kubernetes-cli")
                     logger.error("On Linux/Mac: See https://kubernetes.io/docs/tasks/tools/")
+                # Return empty list with detailed error info
+                logger.error(f"Returning empty namespaces list due to: {error_msg}")
                 return namespaces
             
             logger.info(f"✓ kubectl found at: {kubectl_path}, will use '{kubectl_cmd}' command")
@@ -706,46 +810,61 @@ class AKSService:
             logger.info(f"Looking for kubeconfig at: {default_kubeconfig}")
             logger.info(f"Kubeconfig exists: {os.path.exists(default_kubeconfig)}")
             
-            # Ensure credentials are up to date
-            try:
-                # Get credentials to ensure they're in the default kubeconfig
-                creds = await self.get_cluster_credentials(resource_group, cluster_name)
-                # But use default kubeconfig regardless
-                if os.path.exists(default_kubeconfig):
-                    kubeconfig_path = default_kubeconfig
-                    logger.info(f"Using default kubeconfig: {kubeconfig_path}")
-                elif creds and creds.get("kubeconfig_path") and os.path.exists(creds["kubeconfig_path"]):
-                    kubeconfig_path = creds["kubeconfig_path"]
-                    logger.info(f"Using credential kubeconfig: {kubeconfig_path}")
+            # For Azure App Service, we need to get credentials via Azure API (not Azure CLI)
+            # Try to get kubeconfig using the same method as Kubernetes Python client
+            if self.is_azure_app_service:
+                logger.info("Azure App Service detected - getting kubeconfig via Azure API...")
+                kubeconfig_path_from_api = await self._get_cluster_kubeconfig(resource_group, cluster_name)
+                if kubeconfig_path_from_api and os.path.exists(kubeconfig_path_from_api):
+                    kubeconfig_path = kubeconfig_path_from_api
+                    logger.info(f"Using kubeconfig from Azure API: {kubeconfig_path}")
                 else:
-                    logger.error(f"No kubeconfig found for cluster {cluster_name}")
-                    logger.error(f"Default kubeconfig path: {default_kubeconfig}")
-                    logger.error(f"Default kubeconfig exists: {os.path.exists(default_kubeconfig)}")
+                    logger.error(f"Failed to get kubeconfig via Azure API for cluster {cluster_name}")
+                    logger.error("kubectl fallback requires kubeconfig - cannot proceed")
                     return namespaces
-            except Exception as e:
-                logger.warning(f"Error getting credentials, trying default kubeconfig: {e}")
-                if os.path.exists(default_kubeconfig):
-                    kubeconfig_path = default_kubeconfig
-                    logger.info(f"Using default kubeconfig after error: {kubeconfig_path}")
-                else:
-                    logger.error(f"No kubeconfig found for cluster {cluster_name}")
-                    logger.error(f"Default kubeconfig path: {default_kubeconfig}")
-                    return namespaces
+            else:
+                # Local development: try Azure CLI method
+                try:
+                    # Get credentials to ensure they're in the default kubeconfig
+                    creds = await self.get_cluster_credentials(resource_group, cluster_name)
+                    # But use default kubeconfig regardless
+                    if os.path.exists(default_kubeconfig):
+                        kubeconfig_path = default_kubeconfig
+                        logger.info(f"Using default kubeconfig: {kubeconfig_path}")
+                    elif creds and creds.get("kubeconfig_path") and os.path.exists(creds["kubeconfig_path"]):
+                        kubeconfig_path = creds["kubeconfig_path"]
+                        logger.info(f"Using credential kubeconfig: {kubeconfig_path}")
+                    else:
+                        logger.error(f"No kubeconfig found for cluster {cluster_name}")
+                        logger.error(f"Default kubeconfig path: {default_kubeconfig}")
+                        logger.error(f"Default kubeconfig exists: {os.path.exists(default_kubeconfig)}")
+                        return namespaces
+                except Exception as e:
+                    logger.warning(f"Error getting credentials, trying default kubeconfig: {e}")
+                    if os.path.exists(default_kubeconfig):
+                        kubeconfig_path = default_kubeconfig
+                        logger.info(f"Using default kubeconfig after error: {kubeconfig_path}")
+                    else:
+                        logger.error(f"No kubeconfig found for cluster {cluster_name}")
+                        logger.error(f"Default kubeconfig path: {default_kubeconfig}")
+                        return namespaces
             
             logger.info(f"Using kubeconfig: {kubeconfig_path} for cluster {cluster_name}")
             
-            # Set KUBECONFIG environment variable and context
+            # Set KUBECONFIG environment variable
             import asyncio
             loop = asyncio.get_event_loop()
             env = os.environ.copy()
             env["KUBECONFIG"] = kubeconfig_path
             
-            # NOTE: Rancher Desktop kubectl doesn't support "kubectl config" commands
-            # The context should already be set by Azure CLI when we ran "az aks get-credentials"
-            # So we'll skip context switching and just use the current context
-            print(f"Note: Skipping context switch (Rancher Desktop limitation), using current context")
-            logger.info(f"Skipping context switch (Rancher Desktop kubectl doesn't support 'config' command)")
-            logger.info(f"Assuming context '{cluster_name}' is already set from Azure CLI credentials")
+            # For Azure App Service, the kubeconfig from API should already have the correct context
+            # For local development, try to set context if possible
+            if not self.is_azure_app_service:
+                # NOTE: Rancher Desktop kubectl doesn't support "kubectl config" commands
+                # The context should already be set by Azure CLI when we ran "az aks get-credentials"
+                logger.info(f"Using kubeconfig context from Azure CLI credentials")
+            else:
+                logger.info(f"Using kubeconfig from Azure API (context should be set automatically)")
             
             # Build command - simple kubectl get namespaces
             cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]

@@ -1,0 +1,49 @@
+{
+  "workflows": {
+    "deploy-backend": {
+      "name": "Deploy to Azure App Service",
+      "file": "deploy-app-service.yml",
+      "timeout_minutes": 20,
+      "deployment_timeout_minutes": 15,
+      "health_check_url": "https://bsg-demo-platform-app.azurewebsites.net/api/v1/health",
+      "liveness_url": "https://bsg-demo-platform-app.azurewebsites.net/api/v1/live"
+    },
+    "deploy-frontend": {
+      "name": "Deploy to Azure Static Web Apps",
+      "file": "deploy-static-webapp.yml",
+      "timeout_minutes": 20,
+      "health_check_url": "https://kind-beach-01c0a990f.3.azurestaticapps.net"
+    },
+    "test": {
+      "name": "Run Tests",
+      "file": "test.yml",
+      "timeout_minutes": 15
+    }
+  },
+  "monitoring": {
+    "poll_interval_seconds": 10,
+    "max_poll_attempts": 180,
+    "initial_wait_seconds": 5,
+    "health_check_retries": 5,
+    "health_check_delay_seconds": 10
+  },
+  "auto_fix": {
+    "enabled": true,
+    "common_fixes": {
+      "typescript_errors": true,
+      "python_import_errors": true,
+      "build_failures": true,
+      "missing_dependencies": true
+    },
+    "commit_message_prefix": "fix(ci):",
+    "auto_commit": true,
+    "auto_push": true
+  },
+  "notifications": {
+    "on_success": false,
+    "on_failure": true,
+    "on_timeout": true
+  },
+  "branch": "develop"
+}
+

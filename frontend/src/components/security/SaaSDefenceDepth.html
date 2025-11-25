@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Defence-in-Depth</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            width: 100vw;
+            height: 100vh;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .header-label {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #283054;
+            margin-bottom: 30px;
+            padding: 10px;
+            width: 100%;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 40px;
+            padding: 20px;
+            position: relative;
+            min-height: 600px;
+        }
+        
+        .layers-section {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            min-height: 500px;
+            margin-left: 0px;
+        }
+        
+        .concentric-circles {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #722F37;
+        }
+        
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid red;
+        }
+        
+        .circle-dot {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background-color: red;
+            border-radius: 50%;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .circle-1 {
+            width: 500px;
+            height: 500px;
+            background-color: #B0E0E6;
+            z-index: 1;
+        }
+        
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            background-color: #20B2AA;
+            z-index: 2;
+            transform: translateY(50px);
+        }
+        
+        .circle-3 {
+            width: 300px;
+            height: 300px;
+            background-color: #9370DB;
+            z-index: 3;
+            transform: translateY(100px);
+        }
+        
+        .circle-4 {
+            width: 200px;
+            height: 200px;
+            background-color: #4682B4;
+            z-index: 4;
+            transform: translateY(150px);
+        }
+        
+        .circle-5 {
+            width: 120px;
+            height: 120px;
+            background-color: #C7D5E0;
+            z-index: 5;
+            transform: translateY(190px);
+        }
+        
+        .circle-label {
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            color: #722F37;
+            margin-top: 10px;
+        }
+        
+        .circle-1 .circle-label {
+            transform: translateY(-210px);
+        }
+        
+        .circle-2 .circle-label {
+            transform: translateY(-160px);
+        }
+        
+        .circle-3 .circle-label {
+            transform: translateY(-100px);
+        }
+        
+        .circle-4 .circle-label {
+            transform: translateY(-65px);
+        }
+        
+        .circle-5 .circle-label {
+            color: #722F37;
+            font-size: 12px;
+        }
+        
+        .data-label {
+            font-size: 12px;
+            color: white;
+            margin-top: 5px;
+        }
+        
+        .labels-section {
+            flex: 0 0 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            padding: 20px;
+            justify-content: center;
+        }
+        
+        .label-item {
+            font-size: 14px;
+            color: #283054;
+            padding: 8px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            text-align: left;
+        }
+        
+        .labels-section .label-item:first-child {
+            font-weight: bold;
+        }
+        
+        .risk-section {
+            flex: 0 0 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+            transform: rotate(180deg);
+        }
+        
+        .risk-cone {
+            width: 80px;
+            height: 400px;
+            position: relative;
+            margin-bottom: 10px;
+        }
+        
+        .risk-cone-gradient {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #B0E0E6 0%, #20B2AA 25%, #9370DB 50%, #4682B4 75%, #283054 100%);
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+        }
+        
+        .risk-arrow {
+            position: absolute;
+            right: -30px;
+            top: 50%;
+            transform: translateY(-50%) rotate(180deg);
+            font-size: 24px;
+            color: red;
+        }
+        
+        .risk-label {
+            font-size: 20px;
+            font-weight: bold;
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+            transform: rotate(180deg);
+        }
+        
+        .tooltip-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            border-top: 2px solid red;
+            padding: 15px;
+            z-index: 1000;
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .tooltip-container.show {
+            display: block;
+        }
+        
+        .tooltip-title {
+            display: none;
+        }
+        
+        .tooltip-description {
+            font-size: 16px;
+            color: #283054;
+            text-align: left;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .tooltip-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #283054;
+        }
+        
+        .clickable-element {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-label">SaaS Defence-in-Depth</div>
+    
+    <div class="main-container">
+        <!-- Concentric Circles Section -->
+        <div class="layers-section">
+            <div class="concentric-circles clickable-element" id="concentric-circles-element">
+                <!-- Circle 1: Administrative Controls -->
+                <div class="circle circle-1">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">Administrative Controls</div>
+                </div>
+                
+                <!-- Circle 2: Physical Controls -->
+                <div class="circle circle-2">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">Physical Controls</div>
+                </div>
+                
+                <!-- Circle 3: Operational Controls -->
+                <div class="circle circle-3">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">Operational Controls</div>
+                </div>
+                
+                <!-- Circle 4: Technical Controls -->
+                <div class="circle circle-4">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">Technical Controls</div>
+                </div>
+                
+                <!-- Circle 5: SaaS Infrastructure & Client Data -->
+                <div class="circle circle-5">
+                    <div class="circle-dot"></div>
+                    <div class="circle-label">SaaS Infrastructure & Client Data</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Labels Section -->
+        <div class="labels-section">
+            <div class="label-item">EXAMPLES</div>
+            <div class="label-item">Background checks, vetting</div>
+            <div class="label-item">'Clean' Rooms, Smart Cards, CCTV, Guards</div>
+            <div class="label-item">Deny by Default, Privileged Identity & Access Mgmt.</div>
+            <div class="label-item">Private Networks, Isolation, WAFs, anti-DDOS, DLP</div>
+            <div class="label-item">Database Encryption</div>
+        </div>
+        
+        <!-- Residual Risk Reduction Section -->
+        <div class="risk-section clickable-element" id="residual-risk-element">
+            <div class="risk-cone">
+                <div class="risk-cone-gradient"></div>
+                <div class="risk-arrow">↓</div>
+            </div>
+            <div class="risk-label">Residual risk reduction</div>
+        </div>
+    </div>
+    
+    <!-- Tooltip Container -->
+    <div class="tooltip-container" id="tooltip-container">
+        <button class="tooltip-close" id="tooltip-close">&times;</button>
+        <div class="tooltip-title" id="tooltip-title"></div>
+        <div class="tooltip-description" id="tooltip-description"></div>
+    </div>
+    
+    <script>
+        (function() {
+            const TooltipConfig = function(title, description, position) {
+                this.title = title;
+                this.description = description;
+                this.position = position;
+            };
+            
+            const tooltips = [
+                new TooltipConfig(
+                    'Concentric Circles',
+                    'We implement our security controls in a defence in depth security model. This avoids the reliance on a single control and compensates if one should fail. Each of these layers could go into more detail but this "Onion" model helps illustrate the key concepts. Zero Trust works on the principle that nothing should be trusted and should always be verified. Within this idea there are several technologies and best practices that make up a Zero Trust approach. Here are a few of the main principles: * Least-privilege access, which means only allowing access to the information each individual needs. This limits the ability of malware to jump from one system to another and reduces the chances of internal data exfiltration. * Micro-segmentation divides up a network into separate segments with different access credentials. This increases the means of protection and keeps bad actors from running rampant through the network even if one segment is breached. * Data usage controls limit what people can do with data once they are given access. Increasingly, this is done dynamically, such as revoking permission to copy already-downloaded data off.',
+                    'bottom'
+                ),
+                new TooltipConfig(
+                    'Residual Risk',
+                    'Results in material reduction in overall risk. 1. Reducing the likelihood of possible compromise 2. By reducing the available attack surface that can be exploited So, to mitigate this risk, Temenos has adopted the Zero Trust approach which takes away access from anyone and everyone until the network can be certain who you are. Then, continuously monitors the user and system activities and potentially revokes permissions to copy that data elsewhere',
+                    'bottom'
+                )
+            ];
+            
+            const tooltipContainer = document.getElementById('tooltip-container');
+            const tooltipTitle = document.getElementById('tooltip-title');
+            const tooltipDescription = document.getElementById('tooltip-description');
+            const tooltipClose = document.getElementById('tooltip-close');
+            
+            function showTooltip(config) {
+                if (tooltipTitle && tooltipDescription && tooltipContainer) {
+                    tooltipTitle.textContent = config.title;
+                    tooltipDescription.textContent = config.description;
+                    tooltipContainer.classList.add('show');
+                }
+            }
+            
+            function hideTooltip() {
+                if (tooltipContainer) {
+                    tooltipContainer.classList.remove('show');
+                }
+            }
+            
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initTooltips);
+            } else {
+                initTooltips();
+            }
+            
+            function initTooltips() {
+                // Add click handlers
+                const concentricCirclesElement = document.getElementById('concentric-circles-element');
+                if (concentricCirclesElement) {
+                    concentricCirclesElement.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        showTooltip(tooltips[0]);
+                    });
+                }
+                
+                const residualRiskElement = document.getElementById('residual-risk-element');
+                if (residualRiskElement) {
+                    residualRiskElement.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        showTooltip(tooltips[1]);
+                    });
+                }
+                
+                // Close tooltip handler
+                if (tooltipClose) {
+                    tooltipClose.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        hideTooltip();
+                    });
+                }
+                
+                // Close tooltip when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (tooltipContainer && tooltipContainer.classList.contains('show')) {
+                        const target = e.target;
+                        if (!tooltipContainer.contains(target) && 
+                            !concentricCirclesElement?.contains(target) && 
+                            !residualRiskElement?.contains(target)) {
+                            hideTooltip();
+                        }
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
+

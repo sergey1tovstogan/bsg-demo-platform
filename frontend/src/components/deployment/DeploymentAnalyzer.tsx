@@ -5,8 +5,8 @@
  * Provides functionality to connect to Azure, select resource groups, and analyze Temenos components.
  */
 
-import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search, ExternalLink } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search, ExternalLink, DollarSign } from 'lucide-react'
 import { apiService } from '../../services/api'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
@@ -423,7 +423,7 @@ function SubscriptionInput({
 
 // Resource Group Selector Component
 function ResourceGroupSelector({
-  subscriptionId: _subscriptionId,
+  subscriptionId,
   resourceGroups,
   onSelected,
   onBack,
@@ -439,6 +439,17 @@ function ResourceGroupSelector({
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [costs, setCosts] = useState<Record<string, {
+    total_cost: number
+    projections?: {
+      full_month: number
+      annual: number
+    }
+    error?: string
+  }>>({})
+  const [loadingCosts, setLoadingCosts] = useState(false)
+  const [showCosts, setShowCosts] = useState(false)
+  const [costsAbortController, setCostsAbortController] = useState<AbortController | null>(null)
 
   const toggleSelection = (rgName: string) => {
     setSelected(prev =>
@@ -458,6 +469,138 @@ function ResourceGroupSelector({
     rg.location.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const fetchCosts = useCallback(async () => {
+    if (resourceGroups.length === 0) {
+      console.log('[Costs] No resource groups to fetch costs for')
+      return
+    }
+    
+    // Cancel any existing request
+    if (costsAbortController) {
+      console.log('[Costs] Cancelling previous request')
+      costsAbortController.abort()
+    }
+    
+    // Create new abort controller for this request
+    const abortController = new AbortController()
+    setCostsAbortController(abortController)
+    
+    const resourceGroupNames = resourceGroups.map(rg => rg.name)
+    console.log(`[Costs] Starting to fetch costs for ${resourceGroupNames.length} resource groups`)
+    
+    setLoadingCosts(true)
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    
+    try {
+      // Calculate timeout based on number of resource groups
+      // Large batches need more time
+      const numRGs = resourceGroupNames.length
+      const timeoutMs = numRGs > 50 ? 300000 : numRGs > 20 ? 180000 : 90000 // 5min, 3min, or 90s
+      
+      console.log(`[Costs] Setting timeout to ${timeoutMs / 1000}s for ${numRGs} resource groups`)
+      
+      // Create a timeout promise that rejects after calculated timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          console.warn(`[Costs] Request timed out after ${timeoutMs / 1000} seconds`)
+          abortController.abort()
+          reject(new Error(`Costs request timed out after ${timeoutMs / 1000} seconds. Try selecting fewer resource groups.`))
+        }, timeoutMs)
+        
+        // Clear timeout if request completes
+        abortController.signal.addEventListener('abort', () => {
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+          }
+        })
+      })
+      
+      console.log('[Costs] Making API call...')
+      // Race between the API call and timeout
+      const response = await Promise.race([
+        apiService.getResourceGroupCosts(subscriptionId, resourceGroupNames),
+        timeoutPromise
+      ]) as any
+      
+      // Check if request was aborted
+      if (abortController.signal.aborted) {
+        console.log('[Costs] Request was aborted')
+        return
+      }
+      
+      console.log('[Costs] Received response:', response)
+      
+      const costMap: Record<string, any> = {}
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        console.log(`[Costs] Processing ${response.data.data.length} cost results`)
+        response.data.data.forEach((costData: any) => {
+          if (costData?.resource_group) {
+            costMap[costData.resource_group] = costData
+          }
+        })
+      } else {
+        console.warn('[Costs] Unexpected response format:', response)
+      }
+      
+      console.log(`[Costs] Setting costs for ${Object.keys(costMap).length} resource groups`)
+      setCosts(costMap)
+    } catch (err: any) {
+      // Don't show error if request was aborted (user cancelled)
+      if (abortController.signal.aborted) {
+        console.log('[Costs] Request was aborted, not showing error')
+        return
+      }
+      
+      console.error('[Costs] Error fetching costs:', err)
+      console.error('[Costs] Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      })
+      
+      // Set error state for each resource group
+      const errorMessage = err.message?.includes('timeout') || err.message?.includes('aborted')
+        ? 'Request timed out. Cost data may take longer to load for many resource groups.'
+        : err.response?.data?.detail?.error || err.response?.data?.error || err.message || 'Failed to load costs'
+      
+      console.log(`[Costs] Setting error state: ${errorMessage}`)
+      const costMap: Record<string, any> = {}
+      resourceGroups.forEach(rg => {
+        costMap[rg.name] = {
+          resource_group: rg.name,
+          total_cost: 0,
+          services: {},
+          error: errorMessage
+        }
+      })
+      setCosts(costMap)
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      if (!abortController.signal.aborted) {
+        console.log('[Costs] Request completed, clearing loading state')
+        setLoadingCosts(false)
+        setCostsAbortController(null)
+      } else {
+        console.log('[Costs] Request was aborted, keeping loading state')
+      }
+    }
+  }, [resourceGroups, subscriptionId, costsAbortController])
+
+  useEffect(() => {
+    if (resourceGroups.length > 0 && showCosts) {
+      console.log('[Costs] useEffect triggered: fetching costs')
+      fetchCosts()
+    } else if (!showCosts && costsAbortController) {
+      // Cancel request if user hides costs
+      console.log('[Costs] Hiding costs, cancelling request')
+      costsAbortController.abort()
+      setLoadingCosts(false)
+      setCostsAbortController(null)
+    }
+  }, [resourceGroups, showCosts, subscriptionId, fetchCosts, costsAbortController])
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -465,10 +608,42 @@ function ResourceGroupSelector({
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Resource Groups</h2>
           <p className="text-gray-600">Choose which resource groups to analyze for Temenos components</p>
         </div>
-        <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => {
+              if (!showCosts && resourceGroups.length > 30) {
+                const proceed = confirm(
+                  `You are about to load costs for ${resourceGroups.length} resource groups. ` +
+                  `This may take several minutes. Do you want to continue?`
+                )
+                if (!proceed) return
+              }
+              setShowCosts(!showCosts)
+            }}
+            className="btn-secondary flex items-center space-x-2"
+            disabled={loadingCosts}
+            title={loadingCosts ? 'Loading costs...' : showCosts ? 'Hide cost information' : 'Show cost information'}
+          >
+            {loadingCosts ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Loading Costs...</span>
+              </>
+            ) : (
+              <>
+                <DollarSign className="w-4 h-4" />
+                <span>{showCosts ? 'Hide' : 'Show'} Costs</span>
+                {!showCosts && resourceGroups.length > 30 && (
+                  <span className="text-xs text-yellow-600 ml-1">({resourceGroups.length} groups - may be slow)</span>
+                )}
+              </>
+            )}
+          </button>
+          <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -532,6 +707,73 @@ function ResourceGroupSelector({
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900">{rg.name}</h3>
                     <p className="text-sm text-gray-500 mt-1">{rg.location}</p>
+                    {showCosts && costs[rg.name] && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        {costs[rg.name].error ? (
+                          <div className="space-y-1">
+                            <p className="text-xs text-red-600 font-medium">Error loading costs</p>
+                            <p className="text-xs text-red-500">{costs[rg.name].error}</p>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                // Retry fetching costs for this specific resource group
+                                const retryFetch = async () => {
+                                  setLoadingCosts(true)
+                                  try {
+                                    const timeoutPromise = new Promise((_, reject) => {
+                                      setTimeout(() => reject(new Error('Request timed out')), 60000)
+                                    })
+                                    const response = await Promise.race([
+                                      apiService.getResourceGroupCosts(subscriptionId, [rg.name]),
+                                      timeoutPromise
+                                    ]) as any
+                                    if (response.data?.data && response.data.data.length > 0) {
+                                      setCosts(prev => ({
+                                        ...prev,
+                                        [rg.name]: response.data.data[0]
+                                      }))
+                                    }
+                                  } catch (err: any) {
+                                    console.error('Retry failed:', err)
+                                  } finally {
+                                    setLoadingCosts(false)
+                                  }
+                                }
+                                retryFetch()
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 underline mt-1"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-600">Current Month:</span>
+                              <span className="font-semibold text-gray-900">${costs[rg.name].total_cost.toFixed(2)}</span>
+                            </div>
+                            {costs[rg.name].projections && (
+                              <>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-600">Projected Month:</span>
+                                  <span className="font-semibold text-green-600">${costs[rg.name].projections?.full_month.toFixed(2) ?? '0.00'}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-600">Projected Annual:</span>
+                                  <span className="font-semibold text-blue-600">${costs[rg.name].projections?.annual.toFixed(2) ?? '0.00'}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {showCosts && loadingCosts && !costs[rg.name] && (
+                      <div className="mt-2 pt-2 border-t border-gray-200 flex items-center space-x-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                        <span className="text-xs text-gray-500">Loading costs...</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {isSelected && (

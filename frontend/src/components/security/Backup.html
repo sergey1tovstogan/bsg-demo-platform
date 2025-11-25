@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS Backup and Restore</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18pt;
+            font-weight: bold;
+            color: #283054;
+            z-index: 1000;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            padding: 80px 20px 20px 20px;
+            gap: 20px;
+            height: 100%;
+            overflow: hidden;
+            align-items: stretch;
+        }
+        
+        .column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 0;
+        }
+        
+        /* Column 1: Backup Policies */
+        .backup-section {
+            background-color: #8B5CF6;
+            padding: 20px;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14pt;
+            line-height: 1.6;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        
+        .backup-section h3 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+        
+        .backup-section p {
+            margin-bottom: 10px;
+        }
+        
+        .system-backup-section {
+            background-color: #14B8A6;
+            padding: 20px;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14pt;
+            line-height: 1.6;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        
+        .system-backup-section h3 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+        
+        .system-backup-section p {
+            margin-bottom: 10px;
+        }
+        
+        /* Column 2: Restoration Policies */
+        .restoration-section {
+            background-color: #1E3A8A;
+            padding: 20px;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14pt;
+            line-height: 1.6;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        
+        .restoration-section h3 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+        
+        .restoration-section p {
+            margin-bottom: 10px;
+        }
+        
+        .restoration-section ul {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 10px;
+        }
+        
+        .restoration-section li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .restoration-section li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        /* Column 3: Backup Long Term Retention */
+        .retention-section {
+            background-color: #87CEEB;
+            padding: 20px;
+            border-radius: 8px;
+            color: #1a1a1a;
+            font-size: 14pt;
+            line-height: 1.6;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        
+        .retention-section h3 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+        }
+        
+        .retention-section p {
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }
+        
+        .retention-section ul {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 10px;
+        }
+        
+        .retention-section li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+            color: #1a1a1a;
+        }
+        
+        .retention-section li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .button-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 200;
+        }
+        
+        .nav-button {
+            background: #EF4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background 0.3s;
+            white-space: nowrap;
+        }
+        
+        .nav-button:hover {
+            background: #DC2626;
+        }
+        
+        .nav-button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos SaaS Backup and Restore</div>
+    
+    <div class="main-container">
+        <!-- Column 1: Backup Policies -->
+        <div class="column">
+            <div class="backup-section">
+                <h3>Database Backup</h3>
+                <p>After Go-live, DB backups of Class A & Class B Environments only;</p>
+                <p>other environments on an ad-hoc basis subject to additional fees.</p>
+            </div>
+            <div class="system-backup-section">
+                <h3>System Backups</h3>
+                <p>After Go-live, DB backups of Class A & Class B Environments only</p>
+                <p>at the end of every calendar month and year</p>
+            </div>
+        </div>
+        
+        <!-- Column 2: Restoration Policies -->
+        <div class="column">
+            <div class="restoration-section">
+                <h3>Restoration</h3>
+                <p>Class A Environment only</p>
+                <ul>
+                    <li>Point-In-Time-Restore (PITR): restored to any 5-minute restore point in time within the rolling retention period</li>
+                    <li>Transact, TPH : a rolling 14*-day retention period</li>
+                    <li>All other products: rolling 7 day retention period</li>
+                </ul>
+                <p>Other environments on an ad-hoc basis subject to additional fees.</p>
+            </div>
+        </div>
+        
+        <!-- Column 3: Backup Long Term Retention -->
+        <div class="column">
+            <div class="retention-section">
+                <h3>Backup Long Term Retention</h3>
+                <p>Applies to Class A Environment only</p>
+                <ul>
+                    <li>EOM backups retention period = 24 month</li>
+                    <li>EOY backups retention period = 7 year</li>
+                </ul>
+                <p>Extended retention periods are subject to additional fees.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="button-container">
+        <button class="nav-button" onclick="navigateBack()">Back</button>
+    </div>
+    
+    <script>
+        function navigateBack() {
+            window.parent.postMessage({ type: 'hideBackup' }, '*');
+        }
+    </script>
+</body>
+</html>
+

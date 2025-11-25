@@ -1,5 +1,7 @@
 # BSG Demo Platform
 
+> **Automation**: This repository includes automated GitHub Actions monitoring. See [automation/README.md](./automation/README.md) for details.
+
 ## Overview
 
 The **BSG Demo Platform** serves as the central hub for demonstrating Temenos products and capabilities.  
