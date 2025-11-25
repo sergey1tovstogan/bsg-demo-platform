@@ -77,11 +77,11 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
   }
 
   // For other components, try to load demo config
-  const [_demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
-  const [_session, _setSession] = useState<DemoSession | null>(null)
+  const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
+  const [session, setSession] = useState<DemoSession | null>(null)
   const [loading, setLoading] = useState(true)
-  const [_connecting, _setConnecting] = useState(false)
-  const [_error, _setError] = useState<string | null>(null)
+  const [connecting, setConnecting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadDemoConfig()
@@ -90,21 +90,21 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
   useEffect(() => {
     return () => {
       // Cleanup: disconnect on unmount
-      if (_session?.session_id) {
-        apiService.disconnectDemo(componentId, _session.session_id).catch(console.error)
+      if (session?.session_id) {
+        apiService.disconnectDemo(componentId, session.session_id).catch(console.error)
       }
     }
-  }, [_session, componentId])
+  }, [session, componentId])
 
   const loadDemoConfig = async () => {
     try {
       setLoading(true)
-      _setError(null)
+      setError(null)
       const response = await apiService.getDemoConfig(componentId)
       setDemoConfig(response.data) // setDemoConfig is used
-    } catch (err: any) {
+    } catch (err: unknown) {
       // If demo config doesn't exist, that's okay - show placeholder
-      _setError(null)
+      setError(null)
     } finally {
       setLoading(false)
     }
