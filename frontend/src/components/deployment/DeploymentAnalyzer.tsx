@@ -470,8 +470,9 @@ function ResourceGroupSelector({
   )
 
   const fetchCosts = useCallback(async () => {
-    if (resourceGroups.length === 0) {
-      console.log('[Costs] No resource groups to fetch costs for')
+    // Only fetch costs for SELECTED resource groups, not all
+    if (selected.length === 0) {
+      console.log('[Costs] No resource groups selected to fetch costs for')
       return
     }
     
@@ -485,8 +486,9 @@ function ResourceGroupSelector({
     const abortController = new AbortController()
     setCostsAbortController(abortController)
     
-    const resourceGroupNames = resourceGroups.map(rg => rg.name)
-    console.log(`[Costs] Starting to fetch costs for ${resourceGroupNames.length} resource groups`)
+    // Use selected resource group names, not all resource groups
+    const resourceGroupNames = selected
+    console.log(`[Costs] Starting to fetch costs for ${resourceGroupNames.length} selected resource group(s): ${resourceGroupNames.join(', ')}`)
     
     setLoadingCosts(true)
     let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -586,7 +588,7 @@ function ResourceGroupSelector({
         console.log('[Costs] Request was aborted, keeping loading state')
       }
     }
-  }, [resourceGroups, subscriptionId, costsAbortController])
+      }, [selected, subscriptionId, costsAbortController])
 
   useEffect(() => {
     if (resourceGroups.length > 0 && showCosts) {
