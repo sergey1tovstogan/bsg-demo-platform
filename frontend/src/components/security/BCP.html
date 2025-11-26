@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Continuity Policy BCP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #283054;
+            z-index: 10;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            padding: 80px 40px 100px 40px;
+            gap: 20px;
+        }
+        
+        .policy-box {
+            width: 90%;
+            max-width: 1200px;
+            background: #E0F7FA;
+            border-radius: 8px;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .icon-container {
+            flex-shrink: 0;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icon {
+            width: 50px;
+            height: 50px;
+            fill: #1E3A8A;
+        }
+        
+        .icon-box-1 {
+            fill: #8B00FF; /* viola */
+        }
+        
+        .icon-box-1 * {
+            fill: #8B00FF;
+        }
+        
+        .icon-box-2 {
+            fill: #3FFF00; /* harlequin */
+        }
+        
+        .icon-box-2 * {
+            fill: #3FFF00;
+        }
+        
+        .icon-box-3 {
+            fill: #F4C430; /* saffron */
+        }
+        
+        .icon-box-3 * {
+            fill: #F4C430;
+        }
+        
+        .icon-box-4 {
+            fill: #E52B50; /* amaranth */
+        }
+        
+        .icon-box-4 * {
+            fill: #E52B50;
+        }
+        
+        .icon-box-4 line {
+            stroke: #E52B50;
+        }
+        
+        .container .text-content {
+            flex: 1;
+            color: #1a1a1a;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .text-content strong {
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        
+        .text-content .dotted-underline {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-decoration-color: #EF4444;
+            text-underline-offset: 3px;
+        }
+        
+        .nav-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #EF4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background 0.3s;
+            z-index: 100;
+        }
+        
+        .nav-button:hover {
+            background: #DC2626;
+        }
+        
+        .nav-button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Business Continuity Policy BCP</div>
+    
+    <div class="container">
+        <!-- Box 1: Business Impact Analysis -->
+        <div class="policy-box">
+            <div class="icon-container">
+                <svg class="icon icon-box-1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Person with headset -->
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M8 14c0-2.21 1.79-4 4-4s4 1.79 4 4v2H8v-2z"/>
+                    <!-- Headset -->
+                    <path d="M9 10c0-1.1.9-2 2-2h2c1.1 0 2 .9 2 2v1h-6v-1z"/>
+                    <path d="M7 11h10v1H7z"/>
+                </svg>
+            </div>
+            <div class="text-content">
+                Business Impact Analysis along with business continuity and disaster recovery (DR) plans are <strong>Updated & Tested Annually</strong>
+            </div>
+        </div>
+        
+        <!-- Box 2: Oversight by ORB -->
+        <div class="policy-box">
+            <div class="icon-container">
+                <svg class="icon icon-box-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Three people -->
+                    <circle cx="8" cy="7" r="3"/>
+                    <path d="M5 12c0-1.1.9-2 2-2s2 .9 2 2v2H5v-2z"/>
+                    <circle cx="12" cy="7" r="3"/>
+                    <path d="M9 12c0-1.1.9-2 2-2s2 .9 2 2v2H9v-2z"/>
+                    <circle cx="16" cy="7" r="3"/>
+                    <path d="M13 12c0-1.1.9-2 2-2s2 .9 2 2v2h-4v-2z"/>
+                    <!-- Document/screen behind -->
+                    <rect x="4" y="16" width="16" height="4" rx="1" opacity="0.3"/>
+                </svg>
+            </div>
+            <div class="text-content">
+                Oversight by the <span class="dotted-underline">Temenos</span> Operational Review Board (ORB)
+            </div>
+        </div>
+        
+        <!-- Box 3: ISO 22301 Alignment -->
+        <div class="policy-box">
+            <div class="icon-container">
+                <svg class="icon icon-box-3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Single person -->
+                    <circle cx="12" cy="7" r="3"/>
+                    <path d="M8 12c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2H8v-2z"/>
+                </svg>
+            </div>
+            <div class="text-content">
+                Business Continuity Policies are aligned with <strong>ISO 22301</strong>, as well as actions being audited and reflected in the SOC 2 report
+            </div>
+        </div>
+        
+        <!-- Box 4: Group Business Continuity Management Policy -->
+        <div class="policy-box">
+            <div class="icon-container">
+                <svg class="icon icon-box-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Organizational structure: central box with three boxes below -->
+                    <rect x="9" y="2" width="6" height="6"/>
+                    <rect x="3" y="12" width="5" height="5"/>
+                    <rect x="10" y="12" width="5" height="5"/>
+                    <rect x="17" y="12" width="5" height="5"/>
+                    <!-- Connecting lines -->
+                    <line x1="12" y1="8" x2="5.5" y2="12" stroke-width="2"/>
+                    <line x1="12" y1="8" x2="12.5" y2="12" stroke-width="2"/>
+                    <line x1="12" y1="8" x2="19.5" y2="12" stroke-width="2"/>
+                </svg>
+            </div>
+            <div class="text-content">
+                Group Business Continuity Management Policy (<span class="dotted-underline">Temenos</span> corporate Business Continuity provision, <span class="dotted-underline">Temenos</span> Cloud Services Business Continuity, Client Obligations, Limitations).
+            </div>
+        </div>
+    </div>
+    
+    <button class="nav-button" onclick="navigateToProductSecurityAssurance()">Product Security Assurance</button>
+    
+    <script>
+        function navigateToProductSecurityAssurance() {
+            window.parent.postMessage({ type: 'showProductSecurityAssurance' }, '*');
+        }
+    </script>
+</body>
+</html>
+

@@ -16,19 +16,31 @@ if [ ! -f "app/main.py" ]; then
     exit 1
 fi
 
-# Check if requirements are installed
+# Check if requirements are installed (optimized check)
 echo "Checking Python packages..."
 python -c "import fastapi, gunicorn, uvicorn" 2>&1
 if [ $? -ne 0 ]; then
     echo "WARNING: Some required packages may be missing"
-    echo "Installing requirements..."
-    pip install -r requirements.txt --quiet
+    echo "Installing requirements (using pip cache for faster installs)..."
+    pip install --cache-dir /tmp/pip-cache -r requirements.txt --quiet --no-warn-script-location
 fi
 
 # Verify gunicorn is available
 if ! command -v gunicorn &> /dev/null; then
     echo "ERROR: gunicorn not found!"
     pip install gunicorn
+fi
+
+# Install kubectl if not available (needed for AKS namespace discovery)
+if ! command -v kubectl &> /dev/null; then
+    echo "Installing kubectl for AKS namespace discovery..."
+    KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    mv kubectl /usr/local/bin/
+    echo "✓ kubectl installed: $(kubectl version --client --short 2>/dev/null || echo 'installed')"
+else
+    echo "✓ kubectl already available: $(kubectl version --client --short 2>/dev/null || echo 'found')"
 fi
 
 echo ""

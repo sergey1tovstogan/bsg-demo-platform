@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incident Fix Time</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #283054;
+            z-index: 1000;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 60px 20px 20px 20px;
+            gap: 20px;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .top-section {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            flex: 0 0 auto;
+            margin-bottom: 20px;
+        }
+        
+        .info-box {
+            flex: 1;
+            background-color: #40E0D0;
+            padding: 20px;
+            border-radius: 8px;
+            color: #722F37;
+            font-size: 15pt;
+            line-height: 1.6;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+        
+        .info-box li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .info-box li:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-box li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .info-box:last-child {
+            font-size: 15pt;
+            padding: 20px;
+        }
+        
+        .table-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: auto;
+            background: #ffffff;
+        }
+        
+        .sla-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            background: #ffffff;
+            table-layout: fixed;
+        }
+        
+        .sla-table th:nth-child(1),
+        .sla-table td:nth-child(1) {
+            width: 25%;
+        }
+        
+        .sla-table th:nth-child(n+2),
+        .sla-table td:nth-child(n+2) {
+            width: 15%;
+        }
+        
+        .sla-table th {
+            background-color: #8B5CF6;
+            color: #ffffff;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #7C3AED;
+        }
+        
+        .sla-table th:first-child {
+            text-align: left;
+            background-color: #8B5CF6;
+            color: #ffffff;
+        }
+        
+        .sla-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            color: #1a1a1a;
+            vertical-align: top;
+        }
+        
+        .sla-table td:first-child {
+            text-align: left;
+            font-weight: bold;
+            background-color: #ffffff;
+            color: #1a1a1a;
+        }
+        
+        .sla-table tr:nth-child(even) td:first-child {
+            background-color: #f9fafb;
+        }
+        
+        .sla-table tr:hover {
+            background-color: #f9fafb;
+        }
+        
+        .severity-header {
+            font-weight: bold;
+        }
+        
+        .button-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 200;
+        }
+        
+        .nav-button {
+            background: #EF4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background 0.3s;
+            white-space: nowrap;
+        }
+        
+        .nav-button:hover {
+            background: #DC2626;
+        }
+        
+        .nav-button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Incident Fix Time</div>
+    
+    <div class="main-container">
+        <!-- Top Section: Two Info Boxes -->
+        <div class="top-section">
+            <div class="info-box">
+                <ul>
+                    <li>Security Operations Centre (SOC)</li>
+                    <li>Security Incident Response Team (SIRT)</li>
+                    <li>Security Event Monitoring and Logging (SIEM)</li>
+                </ul>
+            </div>
+            <div class="info-box">
+                All support incidents logged on the Temenos Customer Support Portal (TCSP)/Jira by the client will have a priority assigned by Temenos support during analysis of the incident.
+            </div>
+        </div>
+        
+        <!-- Table Section -->
+        <div class="table-container">
+            <table class="sla-table">
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th class="severity-header">1<br>Critical</th>
+                        <th class="severity-header">2<br>Urgent</th>
+                        <th class="severity-header">3<br>High</th>
+                        <th class="severity-header">4<br>Medium</th>
+                        <th class="severity-header">5<br>Low</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Support Hours</td>
+                        <td>24 x 7 x 365</td>
+                        <td>24 x 7 x 365</td>
+                        <td>hours</td>
+                        <td>hours</td>
+                        <td>hours</td>
+                    </tr>
+                    <tr>
+                        <td>Initial Response</td>
+                        <td>Within 15 minutes<sup>[1]</sup></td>
+                        <td>Within 1 hour</td>
+                        <td>Within 1 day</td>
+                        <td>Within 2 days</td>
+                        <td>Within 5 days</td>
+                    </tr>
+                    <tr>
+                        <td>Update Frequency</td>
+                        <td>30 minutes</td>
+                        <td>PLATFORM: 2 hours, SOFTWARE: &lt; 1 day</td>
+                        <td>On progress/ Resolution</td>
+                        <td>On progress/ Resolution</td>
+                        <td>On progress</td>
+                    </tr>
+                    <tr>
+                        <td>Restoration / Data Correction</td>
+                        <td>&lt; 4 hours</td>
+                        <td>PLATFORM: &lt; 8 hours, SOFTWARE: &lt; 7 days</td>
+                        <td>PLATFORM: &lt; 5 days, SOFTWARE: &lt; 10 days</td>
+                        <td>PLATFORM: &lt; 20 days, SOFTWARE: n/a</td>
+                        <td>PLATFORM: On progress, SOFTWARE: n/a</td>
+                    </tr>
+                    <tr>
+                        <td>Target Resolution</td>
+                        <td>Managed under problem management<sup>[3]</sup></td>
+                        <td>PLATFORM: 7 days, SOFTWARE: &lt; 14 days</td>
+                        <td>PLATFORM: 14 days, SOFTWARE: &lt; 21 days</td>
+                        <td>PLATFORM: n/a, SOFTWARE: next release</td>
+                        <td>PLATFORM: n/a, SOFTWARE: next release</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="button-container">
+        <button class="nav-button" onclick="showBackup()">Temenos SaaS Backup</button>
+    </div>
+    
+    <script>
+        // Navigation function if needed
+        function navigateBack() {
+            window.parent.postMessage({ type: 'hideIncidents' }, '*');
+        }
+        
+        function showBackup() {
+            window.parent.postMessage({ type: 'showBackup' }, '*');
+        }
+    </script>
+</body>
+</html>
+

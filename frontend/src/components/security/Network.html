@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS Network Security</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 80px 40px 100px 40px;
+            gap: 40px;
+        }
+        
+        .service-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 350px;
+        }
+        
+        .service-icon {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .icon-firewall {
+            width: 100px;
+            height: 100px;
+            position: relative;
+        }
+        
+        .icon-firewall-cloud {
+            width: 80px;
+            height: 60px;
+            background: #4a90e2;
+            border-radius: 50px 50px 0 0;
+            position: absolute;
+            top: 0;
+            left: 10px;
+        }
+        
+        .icon-firewall-wall {
+            width: 100px;
+            height: 30px;
+            background: #ff0000;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            border-radius: 4px;
+        }
+        
+        .icon-waf {
+            width: 100px;
+            height: 100px;
+            position: relative;
+        }
+        
+        .icon-waf-globe {
+            width: 70px;
+            height: 70px;
+            border: 4px solid #4a90e2;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            left: 15px;
+        }
+        
+        .icon-waf-wall {
+            width: 100px;
+            height: 30px;
+            background: #ff0000;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            border-radius: 4px;
+        }
+        
+        .icon-ddos {
+            width: 80px;
+            height: 80px;
+            background: #22c55e;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            position: relative;
+        }
+        
+        .service-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .azure-service-box {
+            width: 100%;
+            background: #9333ea;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .description-box {
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 20px;
+            min-height: 150px;
+        }
+        
+        .description-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .description-list li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #1a1a1a;
+            line-height: 1.5;
+        }
+        
+        .description-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #1a1a1a;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos SaaS Network Security</div>
+    
+    <div class="main-container">
+        <!-- Column 1: Network Firewall -->
+        <div class="service-column">
+            <div class="service-icon">
+                <div class="icon-firewall">
+                    <div class="icon-firewall-cloud"></div>
+                    <div class="icon-firewall-wall"></div>
+                </div>
+            </div>
+            <div class="service-name">Network Firewall</div>
+            <div class="azure-service-box">Azure Firewall</div>
+            <div class="description-box">
+                <ul class="description-list">
+                    <li>Create firewall rules that provide fine-grained control over network traffic and easily deploy firewall security across multiple VNets.</li>
+                    <li>Automatically scales to cover cloud infrastructure</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Column 2: WAF -->
+        <div class="service-column">
+            <div class="service-icon">
+                <div class="icon-waf">
+                    <div class="icon-waf-globe"></div>
+                    <div class="icon-waf-wall"></div>
+                </div>
+            </div>
+            <div class="service-name">WAF</div>
+            <div class="azure-service-box">Azure WAF</div>
+            <div class="description-box">
+                <ul class="description-list">
+                    <li>Managed WAF solution which protects against common web exploits and bots that can affect availability, compromise security, or consume excessive resources.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Column 3: Anti DDoS -->
+        <div class="service-column">
+            <div class="service-icon">
+                <div class="icon-ddos"></div>
+            </div>
+            <div class="service-name">Anti DDoS</div>
+            <div class="azure-service-box">Azure Basic Anti DDoS</div>
+            <div class="description-box">
+                <ul class="description-list">
+                    <li>Provides protection against Distributed Denial of Service (DDoS) attacks on Azure infrastructure.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showTemenosSaaSAntiDDoS'}, '*');">Temenos SaaS antiDDoS</button>
+</body>
+</html>
+
