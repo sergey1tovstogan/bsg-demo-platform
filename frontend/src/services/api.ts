@@ -578,7 +578,8 @@ class ApiService {
     subscriptionId: string, 
     resourceGroupNames: string[],
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    signal?: AbortSignal
   ) {
     const response = await this.client.post<ApiResponse<{
       data: Array<{
@@ -602,7 +603,7 @@ class ApiService {
       resource_group_names: resourceGroupNames,
       start_date: startDate,
       end_date: endDate
-    })
+    }, { signal }) // Pass abort signal to axios for request cancellation
     return response.data
   }
 
