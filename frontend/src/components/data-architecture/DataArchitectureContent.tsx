@@ -48,6 +48,7 @@ export function DataArchitectureContent() {
   const [spawningTrigger, setSpawningTrigger] = useState(0) // Increment to restart spawning
   const [greyedComponents, setGreyedComponents] = useState<Set<string>>(new Set()) // Components to grey out
   const [completedPaths, setCompletedPaths] = useState<Set<AnimationPath>>(new Set()) // Track which paths have been completed
+  const [shouldSpawnPath1And2, setShouldSpawnPath1And2] = useState(false) // Track if Path 1/2 bubbles should continue spawning
   const spawningIntervalRef = useRef<number | null>(null)
 
   // Static components that are always visible (common starting point for all paths)
@@ -100,17 +101,13 @@ export function DataArchitectureContent() {
     { id: 'arrow-fork-horizontal-right', from: 'fork', to: 'data_hub', points: 'M 606 200 L 732 200', dashArray: '5,5', color: '#293276' },
     { id: 'arrow-fork-etl', from: 'fork', to: 'etl', points: 'M 480 200 L 480 252', dashArray: '5,5', color: '#293276' },
     { id: 'arrow-fork-datahub', from: 'fork', to: 'data_hub', points: 'M 732 200 L 732 245', dashArray: '5,5', color: '#293276' },
-    { id: 'arrow-datahub-analytics', from: 'data_hub', to: 'analytics', points: 'M 576 216 L 592 220', color: '#3B82F6' },
 
     // Path 2 data flow arrows - ETL and SDS to Data Warehouse (intermittent)
     { id: 'arrow-etl-dwh', from: 'etl', to: 'data_warehouse', points: 'M 480 310 L 480 390', dashArray: '5,5', color: '#00B0F0' },
     { id: 'arrow-sds-dwh', from: 'sds', to: 'data_warehouse', points: 'M 771 349 L 771 390', dashArray: '5,5', color: '#00B0F0' },
 
-    // Path 3 arrows - ETL Pipeline path
-    { id: 'arrow-file-etl', from: 'file_left', to: 'etl', points: 'M 172 192 L 264 220', color: '#14B8A6' },
-    { id: 'arrow-etl-warehouse', from: 'etl', to: 'data_warehouse', points: 'M 328 248 L 480 296', color: '#8B5CF6' },
-    { id: 'arrow-pubsub-etl', from: 'pub_sub', to: 'etl', points: 'M 376 144 L 328 192', label: 'Build', dashArray: '5,5', color: '#F59E0B' },
-    { id: 'arrow-warehouse-analytics', from: 'data_warehouse', to: 'analytics', points: 'M 696 320 L 644 248', label: 'Extracts', dashArray: '5,5', color: '#6366F1' },
+    // Path 3 arrows - EOD Process (Flat Files) path
+    { id: 'arrow-file-etl', from: 'file_left', to: 'etl', points: 'M 288 248 L 408 278', dashArray: '5,5', color: '#00B0F0' },
   ]
 
   // Define animation sequences for each path (static components are always visible, so not included)
@@ -136,7 +133,8 @@ export function DataArchitectureContent() {
       { componentId: 'analytics', delay: 2000, type: 'component' },
       // Forked arrows (main → horizontal → down to both sides) and data stores appear together
       { componentId: 'arrow-pubsub-fork-main', delay: 2500, type: 'arrow' },
-      { componentId: 'arrow-fork-horizontal', delay: 2500, type: 'arrow' },
+      { componentId: 'arrow-fork-horizontal-left', delay: 2500, type: 'arrow' },
+      { componentId: 'arrow-fork-horizontal-right', delay: 2500, type: 'arrow' },
       { componentId: 'arrow-fork-etl', delay: 2500, type: 'arrow' },
       { componentId: 'arrow-fork-datahub', delay: 2500, type: 'arrow' },
       { componentId: 'ods', delay: 2500, type: 'component' },
@@ -149,15 +147,31 @@ export function DataArchitectureContent() {
       { componentId: 'arrow-sds-dwh', delay: 3000, type: 'arrow' },
     ],
     'path-b': [
-      // Path 3 (path-b): File → ETL → Data Warehouse → Analytics (Core & DBs are static)
-      { componentId: 'file_left', delay: 0, type: 'component' },
-      { componentId: 'arrow-file-etl', delay: 2000, type: 'arrow' },
-      { componentId: 'etl', delay: 4000, type: 'component' },
-      { componentId: 'arrow-pubsub-etl', delay: 5000, type: 'arrow' },
-      { componentId: 'arrow-etl-warehouse', delay: 6000, type: 'arrow' },
-      { componentId: 'data_warehouse', delay: 8000, type: 'component' },
-      { componentId: 'arrow-warehouse-analytics', delay: 10000, type: 'arrow' },
-      { componentId: 'analytics', delay: 12000, type: 'component' },
+      // Path 3 (path-b): EOD Process - File → ETL → Data Warehouse
+      // First show greyed out Path 1 and Path 2 components with animation
+      { componentId: 'events_left', delay: 0, type: 'component' },
+      { componentId: 'pub_sub', delay: 0, type: 'component' },
+      { componentId: 'microservices', delay: 0, type: 'component' },
+      { componentId: 'data_hub', delay: 0, type: 'component' },
+      { componentId: 'analytics', delay: 0, type: 'component' },
+      { componentId: 'ods', delay: 0, type: 'component' },
+      { componentId: 'sds', delay: 0, type: 'component' },
+      { componentId: 'ads', delay: 0, type: 'component' },
+      { componentId: 'arrow-events-pubsub', delay: 500, type: 'arrow' },
+      { componentId: 'arrow-pubsub-microservices', delay: 500, type: 'arrow' },
+      { componentId: 'arrow-pubsub-fork-main', delay: 500, type: 'arrow' },
+      { componentId: 'arrow-fork-horizontal-left', delay: 500, type: 'arrow' },
+      { componentId: 'arrow-fork-horizontal-right', delay: 500, type: 'arrow' },
+      { componentId: 'arrow-fork-etl', delay: 500, type: 'arrow' },
+      { componentId: 'arrow-fork-datahub', delay: 500, type: 'arrow' },
+      { componentId: 'arrow-sds-dwh', delay: 500, type: 'arrow' },
+
+      // Now show Path 3 active components
+      { componentId: 'file_left', delay: 1000, type: 'component' },
+      { componentId: 'etl', delay: 2000, type: 'component' },
+      { componentId: 'data_warehouse', delay: 3000, type: 'component' },
+      { componentId: 'arrow-file-etl', delay: 4000, type: 'arrow' },
+      { componentId: 'arrow-etl-dwh', delay: 5000, type: 'arrow' },
     ],
   }
 
@@ -192,6 +206,8 @@ export function DataArchitectureContent() {
     if (playbackState === 'completed' && (selectedPath === 'path-c' || selectedPath === 'path-a')) {
       // Mark this path as completed
       setCompletedPaths((prev) => new Set([...prev, selectedPath]))
+      // Enable spawning for Path 1/2 bubbles
+      setShouldSpawnPath1And2(true)
     }
   }, [playbackState, selectedPath])
 
@@ -223,6 +239,17 @@ export function DataArchitectureContent() {
     setActiveDataFlows([])
     setGreyedComponents(new Set())
     setCompletedPaths(new Set()) // Reset completed paths tracking when replaying
+    
+    // Manage spawning flag based on path selection
+    // If switching to Path 3, preserve the spawning state if Path 1/2 were previously active
+    // If switching to Path 1 or Path 2, we'll enable spawning below
+    if (path === 'path-b') {
+      // Keep shouldSpawnPath1And2 as is when going to Path 3 (don't reset it)
+    } else {
+      // Reset spawning flag when switching to Path 1 or Path 2 (will be set to true below)
+      setShouldSpawnPath1And2(false)
+    }
+    
     // Clear spawning interval
     if (spawningIntervalRef.current) {
       clearInterval(spawningIntervalRef.current)
@@ -232,13 +259,39 @@ export function DataArchitectureContent() {
     // Set new path
     setSelectedPath(path)
 
-    // Set greyed out components for Path 2
+    // Set greyed out components based on path
     if (path === 'path-a') {
+      // Path 2: Grey out microservices path
       setGreyedComponents(new Set(['arrow-pubsub-microservices', 'microservices']))
+    } else if (path === 'path-b') {
+      // Path 3: Grey out all Path 1 and Path 2 components except ETL and DWH
+      setGreyedComponents(new Set([
+        'events_left',
+        'pub_sub',
+        'microservices',
+        'arrow-events-pubsub',
+        'arrow-pubsub-microservices',
+        'arrow-pubsub-fork-main',
+        'arrow-fork-horizontal-left',
+        'arrow-fork-horizontal-right',
+        'arrow-fork-etl',
+        'arrow-fork-datahub',
+        'data_hub',
+        'analytics',
+        'ods',
+        'sds',
+        'ads',
+        'arrow-sds-dwh'
+      ]))
+      // Note: Components will be shown via animation sequence, greyed out automatically
     }
 
     // Trigger spawning restart for Path 1 and Path 2
     if (path === 'path-c' || path === 'path-a') {
+      setShouldSpawnPath1And2(true) // Enable spawning when Path 1 or Path 2 is selected
+      setSpawningTrigger(prev => prev + 1)
+    } else if (path === 'path-b' && shouldSpawnPath1And2) {
+      // If switching to Path 3 and Path 1/2 were active, trigger spawning to continue
       setSpawningTrigger(prev => prev + 1)
     }
 
@@ -364,11 +417,13 @@ export function DataArchitectureContent() {
 
   // Spawn Business Event dots for Path 1 and Path 2 (Event-Driven paths)
   useEffect(() => {
-    console.log('[Spawning] useEffect triggered - selectedPath:', selectedPath, 'trigger:', spawningTrigger)
+    console.log('[Spawning] useEffect triggered - selectedPath:', selectedPath, 'trigger:', spawningTrigger, 'shouldSpawn:', shouldSpawnPath1And2)
 
-    // Only spawn for Path 1 and Path 2
-    if (selectedPath !== 'path-c' && selectedPath !== 'path-a') {
-      console.log('[Spawning] Not Path 1 or Path 2, cleaning up')
+    // Spawn for Path 1 and Path 2, or continue spawning if Path 3 is active but Path 1/2 were previously active
+    const shouldSpawn = selectedPath === 'path-c' || selectedPath === 'path-a' || shouldSpawnPath1And2
+    
+    if (!shouldSpawn) {
+      console.log('[Spawning] Not Path 1 or Path 2, and Path 1/2 spawning not enabled, cleaning up')
       if (spawningIntervalRef.current) {
         clearInterval(spawningIntervalRef.current)
         spawningIntervalRef.current = null
@@ -455,7 +510,7 @@ export function DataArchitectureContent() {
         spawningIntervalRef.current = null
       }
     }
-  }, [selectedPath, spawningTrigger]) // Depend on both path and trigger
+  }, [selectedPath, spawningTrigger, shouldSpawnPath1And2]) // Depend on path, trigger, and shouldSpawn flag
 
   // Cleanup completed dots and handle transitions between segments
   useEffect(() => {
@@ -479,8 +534,9 @@ export function DataArchitectureContent() {
                   pathId: 'arrow-pubsub-microservices',
                   startTime: now
                 })
-              } else if (dot.type === 'data' && selectedPath === 'path-a') {
+              } else if (dot.type === 'data' && (selectedPath === 'path-a' || shouldSpawnPath1And2)) {
                 // Data events in Path 2 transition to fork vertical segment
+                // Also transition when Path 3 is active but Path 1/2 spawning is enabled
                 updated.push({
                   ...dot,
                   segment: 'pubsub-fork-main',
@@ -560,12 +616,12 @@ export function DataArchitectureContent() {
     }, 50) // Check every 50ms for smooth animation
 
     return () => clearInterval(interval)
-  }, [selectedPath])
+  }, [selectedPath, shouldSpawnPath1And2])
 
   const pathDescriptions = {
     'path-c': 'Event-Driven Path: Core → Events → Pub/Sub → Microservices',
     'path-a': 'Event-Driven Path: Core → Events → Pub/Sub → Data Hub + Analytics (Data Events only)',
-    'path-b': 'ETL Path: Core → File → ETL → Data Warehouse → Analytics',
+    'path-b': 'EOD Process (Flat Files): Core → File → ETL → Data Warehouse',
   }
 
   return (
@@ -608,7 +664,7 @@ export function DataArchitectureContent() {
             </button>
 
             <button
-              onClick={() => setSelectedPath('path-b')}
+              onClick={() => selectAndPlayPath('path-b')}
               disabled={playbackState === 'playing'}
               className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
                 selectedPath === 'path-b'
@@ -617,7 +673,7 @@ export function DataArchitectureContent() {
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 3 (Key: 3)</div>
-              <div className="text-xs mt-1 opacity-90">ETL Pipeline</div>
+              <div className="text-xs mt-1 opacity-90">EOD Process: Flat Files</div>
             </button>
           </div>
 
@@ -758,7 +814,7 @@ export function DataArchitectureContent() {
                                       arrow.id === 'arrow-pubsub-microservices' ||
                                       arrow.id === 'arrow-fork-etl' ||
                                       arrow.id === 'arrow-fork-datahub'
-              const isCyanArrow = arrow.id === 'arrow-etl-dwh' || arrow.id === 'arrow-sds-dwh'
+              const isCyanArrow = arrow.id === 'arrow-etl-dwh' || arrow.id === 'arrow-sds-dwh' || arrow.id === 'arrow-file-etl'
 
               let markerEnd = undefined
               if (isDarkBlueArrow) {
@@ -842,10 +898,12 @@ export function DataArchitectureContent() {
               const dotColor = dot.type === 'business' ? '#5CB8B2' : '#8246AF'
               const label = dot.type === 'business' ? 'Business Event' : 'Data Event'
 
-              // Determine if this dot should be greyed out (Path 2 business events on microservices path)
-              const isDotGreyed = selectedPath === 'path-a' &&
+              // Determine if this dot should be greyed out
+              // Grey out if: (1) Path 2 business events on microservices path, OR (2) Path 3 is active (all Path 1/2 dots should be greyed)
+              const isDotGreyed = (selectedPath === 'path-a' &&
                                  dot.type === 'business' &&
-                                 dot.segment === 'pubsub-microservices'
+                                 dot.segment === 'pubsub-microservices') ||
+                                 (selectedPath === 'path-b') // Grey out all dots when Path 3 is active
 
               return (
                 <g key={dot.id}>
