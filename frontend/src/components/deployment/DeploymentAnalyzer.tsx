@@ -1118,11 +1118,11 @@ function ServiceAnalysis({
           </div>
         </div>
         {includeCosts && (
-          <div className="card bg-yellow-50 border-yellow-200">
+          <div className="card bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-200/50 dark:border-yellow-500/20">
             <div className="flex items-center space-x-3">
-              <DollarSign className="w-8 h-8 text-yellow-600" />
+              <DollarSign className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
               <div className="flex-1">
-                <p className="text-sm text-yellow-700 font-medium">Total Cost</p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">Total Cost</p>
                 {(() => {
                   const costEntries = Object.values(costs)
                   const hasErrors = costEntries.some(c => c.error)
@@ -1140,9 +1140,9 @@ function ServiceAnalysis({
                     const errorCount = costEntries.filter(c => c.error).length
                     return (
                       <>
-                        <p className="text-2xl font-bold text-yellow-900">${totalCost.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
                         {errorCount > 0 && (
-                          <p className="text-xs text-red-600 mt-1">
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                             {errorCount} of {costEntries.length} RG{costEntries.length !== 1 ? 's' : ''} failed to load
                           </p>
                         )}
@@ -1152,18 +1152,18 @@ function ServiceAnalysis({
 
                   return (
                     <>
-                      <p className="text-2xl font-bold text-yellow-900">${totalCost.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
                       {monthlyProjection !== null && monthlyProjection > 0 && (
-                        <p className="text-xs text-yellow-600 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
                       )}
                       {costsLoading && (
-                        <p className="text-xs text-yellow-600 mt-1 flex items-center space-x-1">
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 flex items-center space-x-1">
                           <Loader2 className="w-3 h-3 animate-spin" />
                           <span>Loading costs...</span>
                         </p>
                       )}
                       {!costsLoading && costEntries.length === 0 && (
-                        <p className="text-xs text-yellow-600 mt-1">No cost data available</p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">No cost data available</p>
                       )}
                     </>
                   )
