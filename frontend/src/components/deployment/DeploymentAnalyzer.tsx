@@ -73,6 +73,29 @@ export function DeploymentAnalyzer() {
   const [costsLoading, setCostsLoading] = useState(false)
   const [logAnalyzerOpen, setLogAnalyzerOpen] = useState(false)
   const [selectedResourceGroupForLogs, setSelectedResourceGroupForLogs] = useState<string | null>(null)
+  const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
+  const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
+
+  const loadResourceGroups = async (subId: string, refresh: boolean = false) => {
+    try {
+      setResourceGroupsLoading(true)
+      setError(null)
+      const response = await apiService.getAzureResourceGroups(subId, refresh)
+      setResourceGroups(response.data?.data || response.data || [])
+      setResourceGroupsCached(response.data?.cached || false)
+    } catch (err: any) {
+      console.error('[DeploymentAnalyzer] Error loading resource groups:', err)
+      setError(err.response?.data?.detail?.error || err.message || 'Failed to load resource groups')
+    } finally {
+      setResourceGroupsLoading(false)
+    }
+  }
+
+  const handleRefreshResourceGroups = async () => {
+    if (subscriptionId) {
+      await loadResourceGroups(subscriptionId, true)
+    }
+  }
 
   const handleSubscriptionSubmit = async (subId: string) => {
     try {
@@ -83,8 +106,7 @@ export function DeploymentAnalyzer() {
       const connectResponse = await apiService.connectAzureSubscription(subId)
       if (connectResponse.data?.status === 'success' || (connectResponse as any).status === 'success') {
         setSubscriptionId(subId)
-        const response = await apiService.getAzureResourceGroups(subId)
-        setResourceGroups(response.data?.data || response.data || [])
+        await loadResourceGroups(subId, false)
         setCurrentStep('resourceGroups')
       } else {
         setError((connectResponse.data as any)?.error || (connectResponse as any).error || 'Failed to connect to Azure')
@@ -495,7 +517,9 @@ export function DeploymentAnalyzer() {
           resourceGroups={resourceGroups}
           onSelected={handleResourceGroupsSelected}
           onBack={handleBack}
-          loading={loading}
+          onRefresh={handleRefreshResourceGroups}
+          loading={resourceGroupsLoading}
+          cached={resourceGroupsCached}
           error={error}
         />
       )}
@@ -663,14 +687,18 @@ function ResourceGroupSelector({
   resourceGroups,
   onSelected,
   onBack,
+  onRefresh,
   loading,
+  cached,
   error
 }: {
 
   resourceGroups: AzureResourceGroup[]
   onSelected: (selected: string[], includeCosts: boolean) => void
   onBack: () => void
+  onRefresh: () => void
   loading: boolean
+  cached: boolean
   error: string | null
 }) {
   const [selected, setSelected] = useState<string[]>([])
@@ -699,10 +727,26 @@ function ResourceGroupSelector({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Select Resource Groups</h2>
+          <div className="flex items-center space-x-3 mb-2">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Select Resource Groups</h2>
+            {cached && (
+              <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">
+                Cached
+              </span>
+            )}
+          </div>
           <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
         </div>
         <div className="flex items-center space-x-3">
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="btn-secondary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh resource groups from Azure"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
           <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>

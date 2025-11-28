@@ -26,6 +26,7 @@ class CacheService:
     AZURE_RESOURCES_TTL = 1  # 1 hour for Azure resources (may change more frequently)
     AKS_NAMESPACES_TTL = 2  # 2 hours for AKS namespaces
     COMPONENT_INFO_TTL = 24 * 7  # 7 days for component identification
+    AZURE_RESOURCE_GROUPS_TTL = 1  # 1 hour for Azure resource groups (may change)
     
     def __init__(self, db: Optional[AsyncIOMotorDatabase] = None):
         """Initialize cache service."""
@@ -345,6 +346,29 @@ class CacheService:
             resource_groups=",".join(sorted(resource_group_names))
         )
         return await self.set(cache_key, namespaces, ttl_hours=self.AKS_NAMESPACES_TTL)
+    
+    async def get_azure_resource_groups(
+        self,
+        subscription_id: str
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Get cached Azure resource groups."""
+        cache_key = self._generate_cache_key(
+            "azure_resource_groups",
+            subscription_id=subscription_id
+        )
+        return await self.get(cache_key)
+    
+    async def set_azure_resource_groups(
+        self,
+        subscription_id: str,
+        resource_groups: List[Dict[str, Any]]
+    ) -> bool:
+        """Cache Azure resource groups."""
+        cache_key = self._generate_cache_key(
+            "azure_resource_groups",
+            subscription_id=subscription_id
+        )
+        return await self.set(cache_key, resource_groups, ttl_hours=self.AZURE_RESOURCE_GROUPS_TTL)
     
     def clear_memory_cache(self):
         """Clear in-memory cache (useful for testing or memory management)."""

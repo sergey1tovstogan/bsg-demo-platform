@@ -226,12 +226,13 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
 
 
 @router.get("/azure/resource-groups")
-async def get_resource_groups(subscriptionId: str):
+async def get_resource_groups(subscriptionId: str, refresh: bool = False):
     """
     Get all resource groups for a subscription.
     
     Args:
         subscriptionId: Azure subscription ID
+        refresh: If True, bypass cache and fetch fresh data
         
     Returns:
         List of resource groups
@@ -240,13 +241,34 @@ async def get_resource_groups(subscriptionId: str):
         if not subscriptionId:
             raise HTTPException(status_code=400, detail="Subscription ID is required")
         
+        # Check cache first unless refresh is requested
+        cache_service = await get_cache_service()
+        cached_resource_groups = None
+        if not refresh:
+            cached_resource_groups = await cache_service.get_azure_resource_groups(subscriptionId)
+            if cached_resource_groups:
+                logger.info(f"Using cached resource groups for subscription {subscriptionId}")
+                return {
+                    "status": "success",
+                    "data": cached_resource_groups,
+                    "count": len(cached_resource_groups),
+                    "cached": True
+                }
+        
+        # Fetch fresh data
         azure_service = get_azure_service(subscriptionId)
         resource_groups = await azure_service.get_resource_groups()
+        resource_groups_dict = [rg.to_dict() for rg in resource_groups]
+        
+        # Cache the results
+        await cache_service.set_azure_resource_groups(subscriptionId, resource_groups_dict)
+        logger.info(f"Cached {len(resource_groups_dict)} resource groups for subscription {subscriptionId}")
         
         return {
             "status": "success",
-            "data": [rg.to_dict() for rg in resource_groups],
-            "count": len(resource_groups)
+            "data": resource_groups_dict,
+            "count": len(resource_groups_dict),
+            "cached": False
         }
     except Exception as e:
         logger.error(f"Error getting resource groups: {e}")

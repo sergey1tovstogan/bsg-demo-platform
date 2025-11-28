@@ -515,7 +515,7 @@ class ApiService {
     }
   }
 
-  async getAzureResourceGroups(subscriptionId: string) {
+  async getAzureResourceGroups(subscriptionId: string, refresh: boolean = false) {
     const response = await this.client.get<ApiResponse<{
       data: Array<{
         id: string
@@ -524,7 +524,8 @@ class ApiService {
         tags?: Record<string, string>
       }>
       count: number
-    }>>(`/deployment/azure/resource-groups?subscriptionId=${subscriptionId}`)
+      cached?: boolean
+    }>>(`/deployment/azure/resource-groups?subscriptionId=${subscriptionId}&refresh=${refresh}`)
     return response.data
   }
 
