@@ -13,7 +13,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
 from app.core.logging import get_logger
-from app.utils.datetime_utils import utc_now
+from app.utils.datetime_utils import utc_now, to_utc
 
 logger = get_logger(__name__)
 
@@ -68,12 +68,14 @@ class CacheService:
         # Check in-memory cache first (fastest)
         if use_memory_cache and cache_key in self._in_memory_cache:
             entry = self._in_memory_cache[cache_key]
-            if entry.get("expires_at") and datetime.fromisoformat(entry["expires_at"]) > utc_now():
-                logger.debug(f"Cache hit (memory): {cache_key}")
-                return entry.get("data")
-            else:
-                # Expired, remove from memory
-                del self._in_memory_cache[cache_key]
+            if entry.get("expires_at"):
+                expires_at = datetime.fromisoformat(entry["expires_at"])
+                expires_at = to_utc(expires_at)  # Ensure timezone-aware
+                if expires_at > utc_now():
+                    logger.debug(f"Cache hit (memory): {cache_key}")
+                    return entry.get("data")
+            # Expired, remove from memory
+            del self._in_memory_cache[cache_key]
         
         # Check persistent cache
         try:
@@ -89,6 +91,8 @@ class CacheService:
             if expires_at:
                 if isinstance(expires_at, str):
                     expires_at = datetime.fromisoformat(expires_at)
+                # Ensure timezone-aware for comparison
+                expires_at = to_utc(expires_at)
                 if expires_at < utc_now():
                     logger.debug(f"Cache expired: {cache_key}")
                     # Delete expired entry
@@ -216,10 +220,13 @@ class CacheService:
             })
             
             # Clear expired from memory cache
-            expired_keys = [
-                key for key, entry in self._in_memory_cache.items()
-                if entry.get("expires_at") and datetime.fromisoformat(entry["expires_at"]) < now
-            ]
+            expired_keys = []
+            for key, entry in self._in_memory_cache.items():
+                if entry.get("expires_at"):
+                    expires_at = datetime.fromisoformat(entry["expires_at"])
+                    expires_at = to_utc(expires_at)  # Ensure timezone-aware
+                    if expires_at < now:
+                        expired_keys.append(key)
             for key in expired_keys:
                 del self._in_memory_cache[key]
             
