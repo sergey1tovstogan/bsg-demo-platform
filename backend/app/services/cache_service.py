@@ -70,12 +70,24 @@ class CacheService:
         if use_memory_cache and cache_key in self._in_memory_cache:
             entry = self._in_memory_cache[cache_key]
             if entry.get("expires_at"):
-                expires_at = datetime.fromisoformat(entry["expires_at"])
-                expires_at = to_utc(expires_at)  # Ensure timezone-aware
-                if expires_at > utc_now():
-                    logger.debug(f"Cache hit (memory): {cache_key}")
-                    return entry.get("data")
-            # Expired, remove from memory
+                try:
+                    expires_at = entry["expires_at"]
+                    # Handle different types: string, datetime (naive or aware)
+                    if isinstance(expires_at, str):
+                        expires_at = datetime.fromisoformat(expires_at)
+                    elif not isinstance(expires_at, datetime):
+                        # Unexpected type, skip expiration check
+                        logger.warning(f"Unexpected expires_at type in memory cache for {cache_key}: {type(expires_at)}")
+                        expires_at = None
+                    
+                    if expires_at:
+                        expires_at = to_utc(expires_at)  # Ensure timezone-aware
+                        if expires_at > utc_now():
+                            logger.debug(f"Cache hit (memory): {cache_key}")
+                            return entry.get("data")
+                except (ValueError, TypeError, AttributeError) as e:
+                    logger.warning(f"Error processing expires_at in memory cache for {cache_key}: {e}")
+            # Expired or invalid, remove from memory
             del self._in_memory_cache[cache_key]
         
         # Check persistent cache
@@ -237,9 +249,20 @@ class CacheService:
             expired_keys = []
             for key, entry in self._in_memory_cache.items():
                 if entry.get("expires_at"):
-                    expires_at = datetime.fromisoformat(entry["expires_at"])
-                    expires_at = to_utc(expires_at)  # Ensure timezone-aware
-                    if expires_at < now:
+                    try:
+                        expires_at = entry["expires_at"]
+                        # Handle different types: string, datetime (naive or aware)
+                        if isinstance(expires_at, str):
+                            expires_at = datetime.fromisoformat(expires_at)
+                        elif not isinstance(expires_at, datetime):
+                            # Unexpected type, skip
+                            continue
+                        expires_at = to_utc(expires_at)  # Ensure timezone-aware
+                        if expires_at < now:
+                            expired_keys.append(key)
+                    except (ValueError, TypeError, AttributeError) as e:
+                        logger.warning(f"Error processing expires_at in clear_expired for {key}: {e}")
+                        # If we can't parse it, consider it expired
                         expired_keys.append(key)
             for key in expired_keys:
                 del self._in_memory_cache[key]
