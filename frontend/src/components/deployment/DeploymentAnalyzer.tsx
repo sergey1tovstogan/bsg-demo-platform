@@ -5,8 +5,8 @@
  * Provides functionality to connect to Azure, select resource groups, and analyze Temenos components.
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Search, ExternalLink, DollarSign } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink } from 'lucide-react'
 import { apiService } from '../../services/api'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
@@ -54,11 +54,22 @@ export function DeploymentAnalyzer() {
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
   const [services, setServices] = useState<AzureResource[]>([])
-  const [clusterNamespaces, setClusterNamespaces] = useState<Array<{cluster_name: string, resource_group: string, namespaces: string[]}>>([])
+  const [clusterNamespaces, setClusterNamespaces] = useState<Array<{ cluster_name: string, resource_group: string, namespaces: string[] }>>([])
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState<{ current: number; total: number; message: string } | null>(null)
+  const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
+  const [includeCostsInAnalysis, setIncludeCostsInAnalysis] = useState(false)
+  const [costs, setCosts] = useState<Record<string, {
+    total_cost: number
+    projections?: {
+      full_month: number
+      annual: number
+    }
+    error?: string
+  }>>({})
+  const [costsLoading, setCostsLoading] = useState(false)
 
   const handleSubscriptionSubmit = async (subId: string) => {
     try {
@@ -80,27 +91,56 @@ export function DeploymentAnalyzer() {
         error: err,
         message: err.message,
         response: err.response,
+        data: err.response?.data,
         code: err.code,
         config: err.config
       })
       // Handle different error formats
       let errorMessage = 'Failed to connect to Azure'
       let recoverySteps: string[] = []
-      
-      if (err.response?.data?.detail) {
-        if (typeof err.response.data.detail === 'string') {
-          errorMessage = err.response.data.detail
-        } else if (err.response.data.detail.error) {
-          errorMessage = err.response.data.detail.error
-          // Extract recovery steps if available
-          if (err.response.data.detail.recoverySteps && Array.isArray(err.response.data.detail.recoverySteps)) {
-            recoverySteps = err.response.data.detail.recoverySteps
+
+      // FastAPI returns errors in different formats:
+      // 1. { detail: { error: "...", recoverySteps: [...] } }
+      // 2. { detail: "string error" }
+      // 3. Direct error object
+      const errorDetail = err.response?.data?.detail
+
+      if (errorDetail) {
+        if (typeof errorDetail === 'string') {
+          errorMessage = errorDetail
+        } else if (typeof errorDetail === 'object') {
+          // Check for nested error structure
+          if (errorDetail.error) {
+            errorMessage = errorDetail.error
+          } else if (errorDetail.message) {
+            errorMessage = errorDetail.message
+          } else {
+            // Try to stringify the whole object
+            errorMessage = JSON.stringify(errorDetail)
           }
+
+          // Extract recovery steps if available
+          if (errorDetail.recoverySteps && Array.isArray(errorDetail.recoverySteps)) {
+            recoverySteps = errorDetail.recoverySteps
+          }
+        }
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error
+        if (err.response.data.recoverySteps) {
+          recoverySteps = err.response.data.recoverySteps
         }
       } else if (err.message) {
         errorMessage = err.message
       }
-      
+
+      // If we still don't have a good error message, use the status code
+      if (errorMessage === 'Failed to connect to Azure' && err.response?.status) {
+        errorMessage = `Request failed with status code ${err.response.status}`
+        if (err.response.data) {
+          errorMessage += `. ${JSON.stringify(err.response.data)}`
+        }
+      }
+
       // Check for common Azure authentication errors
       if (errorMessage.includes('refresh token has expired') || errorMessage.includes('AADSTS70043')) {
         errorMessage = 'Azure authentication token has expired. Please re-authenticate.'
@@ -131,12 +171,12 @@ export function DeploymentAnalyzer() {
           'Refresh this page and try connecting again'
         ]
       }
-      
+
       // Format error message with recovery steps
       if (recoverySteps.length > 0) {
         errorMessage += '\n\nTo fix this:\n' + recoverySteps.map((step, i) => `${i + 1}. ${step}`).join('\n')
       }
-      
+
       setError(errorMessage)
       console.error('Azure connection error:', err)
     } finally {
@@ -144,20 +184,23 @@ export function DeploymentAnalyzer() {
     }
   }
 
-  const handleResourceGroupsSelected = async (selected: string[]) => {
+  const handleResourceGroupsSelected = async (selected: string[], includeCosts: boolean) => {
     try {
       setLoading(true)
       setError(null)
       setAnalysisResults([]) // Clear previous results
-      
+      setSelectedResourceGroups(selected)
+      setIncludeCostsInAnalysis(includeCosts)
+      setCosts({}) // Clear previous costs
+
       // Get Azure resources first
       const response = await apiService.getAzureResources(subscriptionId, selected)
       const servicesData = (response.data as any)?.data || response.data || []
       setServices(Array.isArray(servicesData) ? servicesData : [])
-      
+
       // Check if there are AKS clusters - if so, get namespaces for selection
       const hasAKS = servicesData.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
-      
+
       if (hasAKS) {
         // Get namespaces from AKS clusters
         try {
@@ -202,16 +245,29 @@ export function DeploymentAnalyzer() {
     }
   }
 
-  const handleNamespacesSelected = async (selected: string[]) => {
-    setCurrentStep('analysis')
-    setLoading(true)
-    
-    // Start analysis with selected namespaces
-    analyzeServices(services, selected).catch(err => {
-      console.error('Analysis error:', err)
+  const handleNamespacesSelected = async (selected: string[], includeCosts: boolean) => {
+    try {
+      setLoading(true)
+      setError(null)
+      setIncludeCostsInAnalysis(includeCosts)
+
+      // Ensure we have services to analyze
+      if (!services || services.length === 0) {
+        console.error('[DeploymentAnalyzer] No services available for analysis')
+        setError('No services available to analyze. Please go back and select resource groups again.')
+        setLoading(false)
+        return
+      }
+
+      // Start analysis with selected namespaces
+      setCurrentStep('analysis')
+      await analyzeServices(services, selected)
+    } catch (err: any) {
+      console.error('[DeploymentAnalyzer] Analysis error in handleNamespacesSelected:', err)
       setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
       setLoading(false)
-    })
+      // Don't change step on error - stay on namespaces or go back
+    }
   }
 
   const analyzeServices = async (servicesToAnalyze: AzureResource[], namespaces?: string[]) => {
@@ -219,7 +275,123 @@ export function DeploymentAnalyzer() {
       setLoading(true)
       setError(null)
       setAnalysisProgress({ current: 0, total: servicesToAnalyze.length, message: 'Starting analysis...' })
-      
+
+      // Fetch costs if requested (in parallel with analysis)
+      let costsPromise: Promise<void> | null = null
+      if (includeCostsInAnalysis && selectedResourceGroups.length > 0) {
+        setCostsLoading(true)
+        costsPromise = (async () => {
+          try {
+            console.log(`[Costs] Fetching costs for ${selectedResourceGroups.length} resource groups during analysis...`)
+            console.log(`[Costs] Selected resource groups:`, selectedResourceGroups)
+            console.log(`[Costs] Subscription ID:`, subscriptionId)
+            const numRGs = selectedResourceGroups.length
+            const timeoutMs = numRGs > 50 ? 300000 : numRGs > 20 ? 180000 : numRGs === 1 ? 30000 : 60000
+
+            const abortController = new AbortController()
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => {
+                abortController.abort()
+                reject(new Error(`Costs request timed out after ${timeoutMs / 1000} seconds`))
+              }, timeoutMs)
+            })
+
+            const response = await Promise.race([
+              apiService.getResourceGroupCosts(subscriptionId, selectedResourceGroups, undefined, undefined, abortController.signal),
+              timeoutPromise
+            ]) as any
+
+            console.log('[Costs] Response received:', response)
+            console.log('[Costs] Response data:', response?.data)
+            console.log('[Costs] Response data.data:', response?.data?.data)
+
+            if (!abortController.signal.aborted) {
+              // Handle different response structures
+              let costDataArray: any[] = []
+
+              if (response?.data?.data && Array.isArray(response.data.data)) {
+                costDataArray = response.data.data
+              } else if (Array.isArray(response?.data)) {
+                costDataArray = response.data
+              } else if (response?.data) {
+                // Single cost object
+                costDataArray = [response.data]
+              }
+
+              console.log('[Costs] Parsed cost data array:', costDataArray)
+
+              if (costDataArray.length > 0) {
+                const costMap: Record<string, any> = {}
+                costDataArray.forEach((costData: any) => {
+                  if (costData?.resource_group) {
+                    costMap[costData.resource_group] = {
+                      resource_group: costData.resource_group,
+                      total_cost: costData.total_cost || 0,
+                      services: costData.services || {},
+                      projections: costData.projections,
+                      error: costData.error
+                    }
+                  }
+                })
+                console.log('[Costs] Cost map created:', costMap)
+                setCosts(costMap)
+                setCostsLoading(false)
+                console.log(`[Costs] Successfully loaded costs for ${Object.keys(costMap).length} resource groups`)
+              } else {
+                console.warn('[Costs] No cost data in response, setting empty costs')
+                // Set empty costs for all resource groups
+                const costMap: Record<string, any> = {}
+                selectedResourceGroups.forEach(rgName => {
+                  costMap[rgName] = {
+                    resource_group: rgName,
+                    total_cost: 0,
+                    services: {},
+                    error: 'No cost data returned from API'
+                  }
+                })
+                setCosts(costMap)
+                setCostsLoading(false)
+              }
+            } else {
+              setCostsLoading(false)
+            }
+          } catch (err: any) {
+            console.error('[Costs] Error fetching costs during analysis:', err)
+            console.error('[Costs] Error details:', {
+              message: err.message,
+              response: err.response?.data,
+              status: err.response?.status,
+              url: err.config?.url
+            })
+            // Set error state for costs but don't fail the analysis
+            const costMap: Record<string, any> = {}
+            selectedResourceGroups.forEach(rgName => {
+              let errorMessage = 'Failed to load costs'
+              if (err.response?.data?.detail) {
+                if (typeof err.response.data.detail === 'string') {
+                  errorMessage = err.response.data.detail
+                } else if (err.response.data.detail.error) {
+                  errorMessage = err.response.data.detail.error
+                }
+              } else if (err.message) {
+                errorMessage = err.message
+              }
+              costMap[rgName] = {
+                resource_group: rgName,
+                total_cost: 0,
+                services: {},
+                error: errorMessage
+              }
+            })
+            setCosts(costMap)
+            setCostsLoading(false)
+            console.log('[Costs] Set error costs for resource groups:', costMap)
+          }
+        })()
+      } else {
+        setCostsLoading(false)
+      }
+
       // Simulate progress updates
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
@@ -232,18 +404,59 @@ export function DeploymentAnalyzer() {
           }
         })
       }, 500)
-      
+
       try {
+        // Validate services before analyzing
+        if (!servicesToAnalyze || servicesToAnalyze.length === 0) {
+          throw new Error('No services available to analyze')
+        }
+
         const analysisId = `analysis_${Date.now()}`
+        console.log(`[Analysis] Starting analysis for ${servicesToAnalyze.length} services, namespaces:`, namespaces)
         const response = await apiService.analyzeAzureServices(servicesToAnalyze, analysisId, namespaces)
-        setAnalysisResults((response.data as any)?.data || response.data || [])
+        console.log('[Analysis] Analysis response received:', response)
+
+        const results = (response.data as any)?.data || response.data || []
+        console.log('[Analysis] Parsed results:', results)
+        setAnalysisResults(Array.isArray(results) ? results : [])
         setAnalysisProgress({ current: servicesToAnalyze.length, total: servicesToAnalyze.length, message: 'Analysis complete!' })
+
+        // Don't wait for costs - let them load in background
+        // Costs will update the UI when they're ready
+        if (costsPromise) {
+          costsPromise.catch(err => {
+            console.error('[Costs] Background cost fetching failed:', err)
+            // Error already handled in the promise
+          })
+        }
+      } catch (analysisErr: any) {
+        console.error('[Analysis] Analysis failed:', analysisErr)
+        throw analysisErr // Re-throw to be caught by outer try-catch
       } finally {
         clearInterval(progressInterval)
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
+      console.error('[Analysis] Error in analyzeServices:', err)
+      console.error('[Analysis] Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      })
+
+      let errorMessage = 'Failed to analyze services'
+      if (err.response?.data?.detail) {
+        if (typeof err.response.data.detail === 'string') {
+          errorMessage = err.response.data.detail
+        } else if (err.response.data.detail.error) {
+          errorMessage = err.response.data.detail.error
+        }
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+
+      setError(errorMessage)
       setAnalysisProgress(null)
+      setAnalysisResults([]) // Clear results on error to prevent blank page
     } finally {
       setLoading(false)
       setTimeout(() => setAnalysisProgress(null), 2000)
@@ -266,17 +479,16 @@ export function DeploymentAnalyzer() {
   return (
     <div className="space-y-6">
       {currentStep === 'subscription' && (
-        <SubscriptionInput 
-          onSubmit={handleSubscriptionSubmit} 
-          loading={loading} 
+        <SubscriptionInput
+          onSubmit={handleSubscriptionSubmit}
+          loading={loading}
           error={error}
           defaultSubscriptionId={subscriptionId}
         />
       )}
-      
+
       {currentStep === 'resourceGroups' && (
         <ResourceGroupSelector
-          subscriptionId={subscriptionId}
           resourceGroups={resourceGroups}
           onSelected={handleResourceGroupsSelected}
           onBack={handleBack}
@@ -284,24 +496,29 @@ export function DeploymentAnalyzer() {
           error={error}
         />
       )}
-      
+
       {currentStep === 'namespaces' && (
         <NamespaceSelector
           clusterNamespaces={clusterNamespaces}
           onSelected={handleNamespacesSelected}
           onBack={() => setCurrentStep('resourceGroups')}
           loading={loading}
+          includeCosts={includeCostsInAnalysis}
         />
       )}
-      
+
       {currentStep === 'analysis' && (
         <ServiceAnalysis
           services={services}
           analysisResults={analysisResults}
           loading={loading}
           analysisProgress={analysisProgress}
+          error={error}
           onBack={handleBack}
           onRefresh={() => analyzeServices(services)}
+          costs={costs}
+          costsLoading={costsLoading}
+          includeCosts={includeCostsInAnalysis}
         />
       )}
     </div>
@@ -309,12 +526,12 @@ export function DeploymentAnalyzer() {
 }
 
 // Subscription Input Component
-function SubscriptionInput({ 
-  onSubmit, 
-  loading, 
+function SubscriptionInput({
+  onSubmit,
+  loading,
   error,
   defaultSubscriptionId
-}: { 
+}: {
   onSubmit: (subId: string) => void
   loading: boolean
   error: string | null
@@ -325,9 +542,9 @@ function SubscriptionInput({
     const lastUsed = localStorage.getItem('lastAzureSubscriptionId')
     return lastUsed || defaultSubscriptionId || ''
   }
-  
+
   const [subscriptionId, setSubscriptionId] = useState(getInitialSubscriptionId())
-  
+
   // Save to localStorage when subscription ID changes
   useEffect(() => {
     if (subscriptionId.trim()) {
@@ -348,10 +565,10 @@ function SubscriptionInput({
     <div className="card max-w-2xl mx-auto">
       <div className="flex items-center space-x-3 mb-6">
         <Cloud className="w-8 h-8 text-purple-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Azure Deployment Analyzer</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Azure Deployment Analyzer</h2>
       </div>
-      
-      <p className="text-gray-600 mb-6">
+
+      <p className="text-gray-600 dark:text-gray-300 mb-6">
         Connect to your Azure subscription to analyze Temenos component deployments.
       </p>
 
@@ -386,7 +603,7 @@ function SubscriptionInput({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Azure Subscription ID
           </label>
           <input
@@ -394,10 +611,10 @@ function SubscriptionInput({
             value={subscriptionId}
             onChange={(e) => setSubscriptionId(e.target.value)}
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
             disabled={loading}
           />
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             You can find your subscription ID in the Azure Portal under Subscriptions.
           </p>
         </div>
@@ -423,33 +640,23 @@ function SubscriptionInput({
 
 // Resource Group Selector Component
 function ResourceGroupSelector({
-  subscriptionId,
+
   resourceGroups,
   onSelected,
   onBack,
   loading,
   error
 }: {
-  subscriptionId: string
+
   resourceGroups: AzureResourceGroup[]
-  onSelected: (selected: string[]) => void
+  onSelected: (selected: string[], includeCosts: boolean) => void
   onBack: () => void
   loading: boolean
   error: string | null
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [costs, setCosts] = useState<Record<string, {
-    total_cost: number
-    projections?: {
-      full_month: number
-      annual: number
-    }
-    error?: string
-  }>>({})
-  const [loadingCosts, setLoadingCosts] = useState(false)
-  const [showCosts, setShowCosts] = useState(false)
-  const [costsAbortController, setCostsAbortController] = useState<AbortController | null>(null)
+  const [includeCosts, setIncludeCosts] = useState(false)
 
   const toggleSelection = (rgName: string) => {
     setSelected(prev =>
@@ -469,194 +676,14 @@ function ResourceGroupSelector({
     rg.location.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const fetchCosts = useCallback(async () => {
-    // Only fetch costs for SELECTED resource groups, not all
-    if (selected.length === 0) {
-      console.log('[Costs] No resource groups selected to fetch costs for')
-      return
-    }
-    
-    // Cancel any existing request
-    if (costsAbortController) {
-      console.log('[Costs] Cancelling previous request')
-      costsAbortController.abort()
-    }
-    
-    // Create new abort controller for this request
-    const abortController = new AbortController()
-    setCostsAbortController(abortController)
-    
-    // Use selected resource group names, not all resource groups
-    const resourceGroupNames = selected
-    console.log(`[Costs] Starting to fetch costs for ${resourceGroupNames.length} selected resource group(s): ${resourceGroupNames.join(', ')}`)
-    
-    setLoadingCosts(true)
-    let timeoutId: ReturnType<typeof setTimeout> | null = null
-    
-    try {
-      // Calculate timeout based on number of resource groups
-      // For single resource groups, use shorter timeout (30s)
-      // Large batches need more time
-      const numRGs = resourceGroupNames.length
-      const timeoutMs = numRGs > 50 ? 300000 : numRGs > 20 ? 180000 : numRGs === 1 ? 30000 : 60000 // 5min, 3min, 60s, or 30s for single
-      
-      console.log(`[Costs] Setting timeout to ${timeoutMs / 1000}s for ${numRGs} resource group(s)`)
-      
-      // Create a timeout promise that rejects after calculated timeout
-      const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => {
-          console.warn(`[Costs] Request timed out after ${timeoutMs / 1000} seconds`)
-          abortController.abort()
-          reject(new Error(`Costs request timed out after ${timeoutMs / 1000} seconds. Try selecting fewer resource groups.`))
-        }, timeoutMs)
-        
-        // Clear timeout if request completes
-        abortController.signal.addEventListener('abort', () => {
-          if (timeoutId) {
-            clearTimeout(timeoutId)
-          }
-        })
-      })
-      
-      console.log('[Costs] Making API call with abort signal...')
-      // Race between the API call and timeout
-      // Pass abort signal to allow cancellation
-      const response = await Promise.race([
-        apiService.getResourceGroupCosts(subscriptionId, resourceGroupNames, undefined, undefined, abortController.signal),
-        timeoutPromise
-      ]) as any
-      
-      // Check if request was aborted
-      if (abortController.signal.aborted) {
-        console.log('[Costs] Request was aborted')
-        return
-      }
-      
-      console.log('[Costs] Received response:', response)
-      
-      const costMap: Record<string, any> = {}
-      if (response?.data?.data && Array.isArray(response.data.data)) {
-        console.log(`[Costs] Processing ${response.data.data.length} cost results`)
-        response.data.data.forEach((costData: any) => {
-          if (costData?.resource_group) {
-            costMap[costData.resource_group] = costData
-          }
-        })
-      } else {
-        console.warn('[Costs] Unexpected response format:', response)
-      }
-      
-      console.log(`[Costs] Setting costs for ${Object.keys(costMap).length} resource groups`)
-      setCosts(costMap)
-    } catch (err: any) {
-      // Don't show error if request was aborted (user cancelled)
-      if (abortController.signal.aborted) {
-        console.log('[Costs] Request was aborted, not showing error')
-        return
-      }
-      
-      console.error('[Costs] Error fetching costs:', err)
-      console.error('[Costs] Error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      })
-      
-      // Set error state for each resource group
-      const errorMessage = err.message?.includes('timeout') || err.message?.includes('aborted')
-        ? 'Request timed out. Cost data may take longer to load for many resource groups.'
-        : err.response?.data?.detail?.error || err.response?.data?.error || err.message || 'Failed to load costs'
-      
-      console.log(`[Costs] Setting error state: ${errorMessage}`)
-      const costMap: Record<string, any> = {}
-      selected.forEach(rgName => {
-        costMap[rgName] = {
-          resource_group: rgName,
-          total_cost: 0,
-          services: {},
-          error: errorMessage
-        }
-      })
-      setCosts(costMap)
-    } finally {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-      if (!abortController.signal.aborted) {
-        console.log('[Costs] Request completed, clearing loading state')
-        setLoadingCosts(false)
-        setCostsAbortController(null)
-      } else {
-        console.log('[Costs] Request was aborted, keeping loading state')
-      }
-    }
-      }, [selected, subscriptionId, costsAbortController])
-
-  useEffect(() => {
-    if (selected.length > 0 && showCosts) {
-      console.log('[Costs] useEffect triggered: fetching costs for selected groups')
-      fetchCosts()
-    } else if (!showCosts && costsAbortController) {
-      // Cancel request if user hides costs
-      console.log('[Costs] Hiding costs, cancelling request')
-      costsAbortController.abort()
-      setLoadingCosts(false)
-      setCostsAbortController(null)
-    }
-  }, [selected, showCosts, subscriptionId, fetchCosts, costsAbortController])
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Resource Groups</h2>
-          <p className="text-gray-600">Choose which resource groups to analyze for Temenos components</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Select Resource Groups</h2>
+          <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button
-            onClick={() => {
-              if (selected.length === 0) {
-                alert('Please select at least one resource group to view costs.')
-                return
-              }
-              if (!showCosts && selected.length > 30) {
-                const proceed = confirm(
-                  `You are about to load costs for ${selected.length} selected resource groups. ` +
-                  `This may take several minutes. Do you want to continue?`
-                )
-                if (!proceed) return
-              }
-              setShowCosts(!showCosts)
-            }}
-            className="btn-secondary flex items-center space-x-2"
-            disabled={loadingCosts || selected.length === 0}
-            title={
-              selected.length === 0 
-                ? 'Select at least one resource group to view costs'
-                : loadingCosts 
-                  ? 'Loading costs...' 
-                  : showCosts 
-                    ? 'Hide cost information' 
-                    : 'Show cost information'
-            }
-          >
-            {loadingCosts ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Loading Costs...</span>
-              </>
-            ) : (
-              <>
-                <DollarSign className="w-4 h-4" />
-                <span>{showCosts ? 'Hide' : 'Show'} Costs</span>
-                {!showCosts && selected.length > 0 && (
-                  <span className="text-xs text-yellow-600 ml-1">
-                    ({selected.length} selected{selected.length > 30 ? ' - may be slow' : ''})
-                  </span>
-                )}
-              </>
-            )}
-          </button>
           <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
@@ -680,7 +707,7 @@ function ResourceGroupSelector({
               placeholder="Search resource groups by name or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
             />
           </div>
           <button
@@ -702,7 +729,7 @@ function ResourceGroupSelector({
       {filteredResourceGroups.length === 0 && searchTerm && (
         <div className="card text-center py-8">
           <FolderOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No resource groups found matching "{searchTerm}"</p>
+          <p className="text-gray-600 dark:text-gray-300">No resource groups found matching "{searchTerm}"</p>
         </div>
       )}
 
@@ -713,85 +740,17 @@ function ResourceGroupSelector({
             <div
               key={rg.id}
               onClick={() => toggleSelection(rg.name)}
-              className={`card cursor-pointer transition-all ${
-                isSelected
-                  ? 'ring-2 ring-purple-500 bg-purple-50'
-                  : 'hover:bg-gray-50'
-              }`}
+              className={`card cursor-pointer transition-all ${isSelected
+                ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                : 'hover:bg-gray-50 dark:hover:bg-slate-800'
+                }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3 flex-1">
-                  <FolderOpen className={`w-6 h-6 mt-1 ${isSelected ? 'text-purple-600' : 'text-gray-400'}`} />
+                  <FolderOpen className={`w-6 h-6 mt-1 ${isSelected ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`} />
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{rg.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{rg.location}</p>
-                    {showCosts && costs[rg.name] && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        {costs[rg.name].error ? (
-                          <div className="space-y-1">
-                            <p className="text-xs text-red-600 font-medium">Error loading costs</p>
-                            <p className="text-xs text-red-500">{costs[rg.name].error}</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                // Retry fetching costs for this specific resource group
-                                const retryFetch = async () => {
-                                  setLoadingCosts(true)
-                                  try {
-                                    const timeoutPromise = new Promise((_, reject) => {
-                                      setTimeout(() => reject(new Error('Request timed out')), 60000)
-                                    })
-                                    const response = await Promise.race([
-                                      apiService.getResourceGroupCosts(subscriptionId, [rg.name]),
-                                      timeoutPromise
-                                    ]) as any
-                                    if (response.data?.data && response.data.data.length > 0) {
-                                      setCosts(prev => ({
-                                        ...prev,
-                                        [rg.name]: response.data.data[0]
-                                      }))
-                                    }
-                                  } catch (err: any) {
-                                    console.error('Retry failed:', err)
-                                  } finally {
-                                    setLoadingCosts(false)
-                                  }
-                                }
-                                retryFetch()
-                              }}
-                              className="text-xs text-blue-600 hover:text-blue-800 underline mt-1"
-                            >
-                              Retry
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-600">Current Month:</span>
-                              <span className="font-semibold text-gray-900">${costs[rg.name].total_cost.toFixed(2)}</span>
-                            </div>
-                            {costs[rg.name].projections && (
-                              <>
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-gray-600">Projected Month:</span>
-                                  <span className="font-semibold text-green-600">${costs[rg.name].projections?.full_month.toFixed(2) ?? '0.00'}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-gray-600">Projected Annual:</span>
-                                  <span className="font-semibold text-blue-600">${costs[rg.name].projections?.annual.toFixed(2) ?? '0.00'}</span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {showCosts && loadingCosts && !costs[rg.name] && (
-                      <div className="mt-2 pt-2 border-t border-gray-200 flex items-center space-x-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                        <span className="text-xs text-gray-500">Loading costs...</span>
-                      </div>
-                    )}
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{rg.name}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{rg.location}</p>
                   </div>
                 </div>
                 {isSelected && (
@@ -805,12 +764,33 @@ function ResourceGroupSelector({
         })}
       </div>
 
+      {/* Include Costs Checkbox */}
+      <div className="card">
+        <label className="flex items-center space-x-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={includeCosts}
+            onChange={(e) => setIncludeCosts(e.target.checked)}
+            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+          />
+          <div className="flex items-center space-x-2">
+            <DollarSign className="w-5 h-5 text-green-600" />
+            <span className="text-sm font-medium text-gray-700">
+              Include cost analysis for selected resource groups
+            </span>
+          </div>
+        </label>
+        <p className="text-xs text-gray-500 mt-2 ml-7">
+          This will fetch cost data from Azure Cost Management API (may take a few moments)
+        </p>
+      </div>
+
       <div className="flex justify-end space-x-4">
         <button onClick={onBack} className="btn-secondary">
           Cancel
         </button>
         <button
-          onClick={() => onSelected(selected)}
+          onClick={() => onSelected(selected, includeCosts)}
           disabled={selected.length === 0 || loading}
           className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
         >
@@ -833,23 +813,25 @@ function NamespaceSelector({
   clusterNamespaces,
   onSelected,
   onBack,
-  loading
+  loading,
+  includeCosts
 }: {
-  clusterNamespaces: Array<{cluster_name: string, resource_group: string, namespaces: string[], error?: string}>
-  onSelected: (selected: string[]) => void
+  clusterNamespaces: Array<{ cluster_name: string, resource_group: string, namespaces: string[], error?: string }>
+  onSelected: (selected: string[], includeCosts: boolean) => void
   onBack: () => void
   loading: boolean
+  includeCosts: boolean
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
 
   const allNamespaces = clusterNamespaces.flatMap(c => c.namespaces)
-  const filteredNamespaces = allNamespaces.filter(ns => 
+  const filteredNamespaces = allNamespaces.filter(ns =>
     ns.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const toggleSelection = (namespace: string) => {
-    setSelected(prev => 
+    setSelected(prev =>
       prev.includes(namespace)
         ? prev.filter(n => n !== namespace)
         : [...prev, namespace]
@@ -868,8 +850,8 @@ function NamespaceSelector({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Select AKS Namespaces</h2>
-          <p className="text-gray-600 mt-1">Select which Kubernetes namespaces to analyze for Temenos components</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Select AKS Namespaces</h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">Select which Kubernetes namespaces to analyze for Temenos components</p>
         </div>
       </div>
 
@@ -882,8 +864,8 @@ function NamespaceSelector({
         <>
           {clusterNamespaces.map((cluster, idx) => (
             <div key={idx} className="card">
-              <h3 className="font-semibold text-gray-900 mb-2">Cluster: {cluster.cluster_name}</h3>
-              <p className="text-sm text-gray-500 mb-4">Resource Group: {cluster.resource_group}</p>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Cluster: {cluster.cluster_name}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Resource Group: {cluster.resource_group}</p>
               {cluster.error ? (
                 <div className="text-red-600 text-sm">{cluster.error}</div>
               ) : cluster.namespaces.length === 0 ? (
@@ -896,15 +878,14 @@ function NamespaceSelector({
                       <div
                         key={ns}
                         onClick={() => toggleSelection(ns)}
-                        className={`p-2 rounded border cursor-pointer transition-all ${
-                          isSelected
-                            ? 'bg-purple-50 border-purple-500'
-                            : 'bg-gray-50 border-gray-300 hover:border-purple-300'
-                        }`}
+                        className={`p-2 rounded border cursor-pointer transition-all ${isSelected
+                          ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-500'
+                          : 'bg-gray-50 dark:bg-slate-800 border-gray-300 dark:border-gray-600 hover:border-purple-300'
+                          }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{ns}</span>
-                          {isSelected && <CheckCircle2 className="w-4 h-4 text-purple-600" />}
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{ns}</span>
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />}
                         </div>
                       </div>
                     )
@@ -923,7 +904,7 @@ function NamespaceSelector({
                   placeholder="Search namespaces..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                 />
               </div>
               <button
@@ -945,7 +926,7 @@ function NamespaceSelector({
               Back
             </button>
             <button
-              onClick={() => onSelected(selected)}
+              onClick={() => onSelected(selected, includeCosts)}
               disabled={selected.length === 0 || loading}
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
@@ -971,15 +952,30 @@ function ServiceAnalysis({
   analysisResults,
   loading,
   analysisProgress,
+  error,
   onBack,
-  onRefresh
+  onRefresh,
+  costs,
+  costsLoading,
+  includeCosts
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
   loading: boolean
   analysisProgress: { current: number; total: number; message: string } | null
+  error: string | null
   onBack: () => void
   onRefresh: () => void
+  costs: Record<string, {
+    total_cost: number
+    projections?: {
+      full_month: number
+      annual: number
+    }
+    error?: string
+  }>
+  costsLoading: boolean
+  includeCosts: boolean
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
 
@@ -995,12 +991,58 @@ function ServiceAnalysis({
 
   const selectedResult = identifiedComponents.find(r => r.service.id === selectedComponent) || identifiedComponents[0]
 
+  // Show error if present
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Deployment Analysis</h2>
+            <p className="text-gray-600 dark:text-gray-300">Error occurred during analysis</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button onClick={onRefresh} className="btn-secondary flex items-center space-x-2">
+              <RefreshCw className="w-4 h-4" />
+              <span>Retry</span>
+            </button>
+            <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+          </div>
+        </div>
+        <div className="card bg-red-50 border-2 border-red-300">
+          <div className="flex items-start">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="flex-1">
+              <div className="text-red-800 font-semibold mb-2">Analysis Error</div>
+              <div className="text-red-700 whitespace-pre-line">{error}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Always render something, even if services is empty
   if (!services || services.length === 0) {
     return (
-      <div className="card text-center py-12">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600">No services found to analyze</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Deployment Analysis</h2>
+            <p className="text-gray-600 dark:text-gray-300">No services available</p>
+          </div>
+          <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+        </div>
+        <div className="card text-center py-12">
+          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">No services found to analyze</p>
+          <p className="text-sm text-gray-500 mt-2">Please go back and select resource groups again</p>
+        </div>
       </div>
     )
   }
@@ -1009,8 +1051,8 @@ function ServiceAnalysis({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Deployment Analysis</h2>
-          <p className="text-gray-600">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Deployment Analysis</h2>
+          <p className="text-gray-600 dark:text-gray-300">
             {services.length} Azure service{services.length !== 1 ? 's' : ''} found • {identifiedComponents.length} Temenos component{identifiedComponents.length !== 1 ? 's' : ''} identified
           </p>
         </div>
@@ -1033,7 +1075,7 @@ function ServiceAnalysis({
           {analysisProgress && (
             <div className="mt-4">
               <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                <div 
+                <div
                   className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
                   style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
                 ></div>
@@ -1047,7 +1089,7 @@ function ServiceAnalysis({
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 md:grid-cols-3 ${includeCosts ? 'lg:grid-cols-4' : ''} gap-6`}>
         <div className="card bg-green-50 border-green-200">
           <div className="flex items-center space-x-3">
             <CheckCircle2 className="w-8 h-8 text-green-600" />
@@ -1075,6 +1117,61 @@ function ServiceAnalysis({
             </div>
           </div>
         </div>
+        {includeCosts && (
+          <div className="card bg-yellow-50 border-yellow-200">
+            <div className="flex items-center space-x-3">
+              <DollarSign className="w-8 h-8 text-yellow-600" />
+              <div className="flex-1">
+                <p className="text-sm text-yellow-700 font-medium">Total Cost</p>
+                {(() => {
+                  const costEntries = Object.values(costs)
+                  const hasErrors = costEntries.some(c => c.error)
+                  const totalCost = costEntries.reduce((sum, cost) => {
+                    if (cost.error) return sum
+                    return sum + (cost.total_cost || 0)
+                  }, 0)
+                  const hasProjections = costEntries.some(c => c.projections && !c.error)
+                  const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
+                    if (cost.error || !cost.projections) return sum
+                    return sum + (cost.projections.full_month || 0)
+                  }, 0) : null
+
+                  if (hasErrors && costEntries.length > 0) {
+                    const errorCount = costEntries.filter(c => c.error).length
+                    return (
+                      <>
+                        <p className="text-2xl font-bold text-yellow-900">${totalCost.toFixed(2)}</p>
+                        {errorCount > 0 && (
+                          <p className="text-xs text-red-600 mt-1">
+                            {errorCount} of {costEntries.length} RG{costEntries.length !== 1 ? 's' : ''} failed to load
+                          </p>
+                        )}
+                      </>
+                    )
+                  }
+
+                  return (
+                    <>
+                      <p className="text-2xl font-bold text-yellow-900">${totalCost.toFixed(2)}</p>
+                      {monthlyProjection !== null && monthlyProjection > 0 && (
+                        <p className="text-xs text-yellow-600 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
+                      )}
+                      {costsLoading && (
+                        <p className="text-xs text-yellow-600 mt-1 flex items-center space-x-1">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Loading costs...</span>
+                        </p>
+                      )}
+                      {!costsLoading && costEntries.length === 0 && (
+                        <p className="text-xs text-yellow-600 mt-1">No cost data available</p>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Horizontal Panel Layout: Main Content + Sidebar */}
@@ -1105,11 +1202,10 @@ function ServiceAnalysis({
                     <div
                       key={result.service.id || index}
                       onClick={() => setSelectedComponent(result.service.id || null)}
-                      className={`p-3 rounded-lg cursor-pointer transition-all ${
-                        isSelected
-                          ? 'bg-purple-100 border-2 border-purple-500'
-                          : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-purple-300'
-                      }`}
+                      className={`p-3 rounded-lg cursor-pointer transition-all ${isSelected
+                        ? 'bg-purple-100 border-2 border-purple-500'
+                        : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-purple-300'
+                        }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -1193,7 +1289,7 @@ function formatRAGText(text: string): JSX.Element | null {
 
   for (const line of lines) {
     const trimmed = line.trim()
-    
+
     // Skip empty lines
     if (!trimmed) {
       flushParagraph()
@@ -1285,9 +1381,20 @@ function formatInlineText(text: string): JSX.Element | string | null {
 
 // Component Detail Panel - Horizontal layout with all information visible
 function ComponentDetailPanel({
-  result
+  result,
+
+
 }: {
   result: AnalysisResult
+
+
+
+
+
+
+
+
+
 }) {
   const { service, componentInfo } = result
 
@@ -1375,15 +1482,15 @@ function ComponentDetailPanel({
         <div className="bg-gray-50 rounded-lg p-4">
           <h5 className="font-semibold text-gray-900 mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
           <div className="prose prose-sm max-w-none">
-            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim() 
+            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
               ? formatRAGText(componentInfo.architecturalOverview)
               : <p className="text-gray-500 italic">No architectural overview available</p>}
           </div>
         </div>
 
         {/* Deployment Architecture */}
-        {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') || 
-          componentInfo.architecturalOverview?.toLowerCase().includes('aks') || 
+        {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') ||
+          componentInfo.architecturalOverview?.toLowerCase().includes('aks') ||
           componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes') ||
           componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
           service.type?.toLowerCase().includes('containerservice') ||
@@ -1391,24 +1498,24 @@ function ComponentDetailPanel({
           <div className="bg-blue-50 rounded-lg p-4">
             <h5 className="font-semibold text-gray-900 mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
             <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('containerized') || 
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
                 componentInfo.architecturalOverview?.toLowerCase().includes('docker') ||
                 service.type?.toLowerCase().includes('containerservice')) && (
-                <li>Containerized using Docker and deployed in Azure Kubernetes Service (AKS)</li>
-              )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('orchestrated') || 
+                  <li>Containerized using Docker and deployed in Azure Kubernetes Service (AKS)</li>
+                )}
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('orchestrated') ||
                 componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes')) && (
-                <li>Orchestrated via Kubernetes for automated scaling, health management, and service discovery</li>
-              )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('scaling') || 
+                  <li>Orchestrated via Kubernetes for automated scaling, health management, and service discovery</li>
+                )}
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('scaling') ||
                 componentInfo.architecturalOverview?.toLowerCase().includes('scale')) && (
-                <li>Supports horizontal scaling based on load and demand</li>
-              )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('high-availability') || 
+                  <li>Supports horizontal scaling based on load and demand</li>
+                )}
+              {(componentInfo.architecturalOverview?.toLowerCase().includes('high-availability') ||
                 componentInfo.architecturalOverview?.toLowerCase().includes('availability') ||
                 componentInfo.architecturalOverview?.toLowerCase().includes('replica')) && (
-                <li>Implements high-availability patterns with multiple replicas and health checks</li>
-              )}
+                  <li>Implements high-availability patterns with multiple replicas and health checks</li>
+                )}
               {service.type && (
                 <li>Azure Service Type: {service.type}</li>
               )}

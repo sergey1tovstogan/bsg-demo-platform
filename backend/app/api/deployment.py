@@ -89,7 +89,32 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
             raise HTTPException(status_code=400, detail="Subscription ID is required")
         
         # Create or retrieve Azure service instance
-        azure_service = get_azure_service(subscription_id)
+        try:
+            azure_service = get_azure_service(subscription_id)
+        except Exception as init_error:
+            logger.error(f"Failed to initialize Azure service: {init_error}", exc_info=True)
+            error_msg = str(init_error)
+            error_type = type(init_error).__name__
+            
+            # Provide specific guidance for initialization errors
+            recovery_steps = [
+                "Check if Azure CLI is installed: Run `az --version`",
+                "Login to Azure: Run `az login` or `az login --use-device-code`",
+                "Verify your login: Run `az account show`",
+                f"Set the correct subscription: Run `az account set --subscription {subscription_id}`",
+                "For Azure App Service: Ensure Managed Identity is enabled or Service Principal credentials are configured",
+                "After configuration, restart the backend server"
+            ]
+            
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "status": "error",
+                    "error": f"Failed to initialize Azure service: {error_msg}",
+                    "errorType": error_type,
+                    "recoverySteps": recovery_steps
+                }
+            )
         
         # Test the connection
         await azure_service.test_connection()
@@ -550,7 +575,17 @@ async def get_resources(request: ResourcesRequest):
         cached_resources = await cache_service.get_azure_resources(subscription_id, resource_group_names)
         if cached_resources:
             logger.info(f"Using cached Azure resources for {len(resource_group_names)} resource groups")
-            resources = [AzureResource(**r) for r in cached_resources]
+            # Convert cached resources (which have 'type') to AzureResource (which expects 'resource_type')
+            resources = []
+            for r in cached_resources:
+                # Map 'type' to 'resource_type' for AzureResource constructor
+                resource_dict = r.copy()
+                if 'type' in resource_dict and 'resource_type' not in resource_dict:
+                    resource_dict['resource_type'] = resource_dict.pop('type')
+                # Also map 'resourceGroup' to 'resource_group' if needed
+                if 'resourceGroup' in resource_dict and 'resource_group' not in resource_dict:
+                    resource_dict['resource_group'] = resource_dict.pop('resourceGroup')
+                resources.append(AzureResource(**resource_dict))
         else:
             azure_service = get_azure_service(subscription_id)
             resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
