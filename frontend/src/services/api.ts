@@ -644,6 +644,45 @@ class ApiService {
     return response.data
   }
 
+  async analyzeCloudLogs(params: {
+    platform: 'aks' | 'aca'
+    component_name: string
+    environment: string
+    log_snippet: string
+    symptoms?: string
+    recent_changes?: string
+    resource_group?: string
+    subscription_id?: string
+  }) {
+    const response = await this.client.post<ApiResponse<{
+      summary: string
+      classification: {
+        platform: 'aks' | 'aca'
+        layer: string[]
+        severity: 'Info' | 'Warning' | 'Major' | 'Critical'
+        category: string
+      }
+      root_causes: Array<{
+        hypothesis: string
+        log_evidence: string
+      }>
+      recommended_actions: {
+        checks: string[]
+        commands: {
+          aks?: string[]
+          aca?: string[]
+        }
+        configuration_fixes: string[]
+      }
+      impact_assessment: string
+      insufficient_info?: {
+        message: string
+        follow_up_questions: string[]
+      }
+    }>>('/deployment/cloud-logs/analyze', params)
+    return response.data
+  }
+
   async queryRAG(params: {
     question: string
     region: string

@@ -6,8 +6,9 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText } from 'lucide-react'
 import { apiService } from '../../services/api'
+import { LogAnalyzer } from './LogAnalyzer'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -70,6 +71,8 @@ export function DeploymentAnalyzer() {
     error?: string
   }>>({})
   const [costsLoading, setCostsLoading] = useState(false)
+  const [logAnalyzerOpen, setLogAnalyzerOpen] = useState(false)
+  const [selectedResourceGroupForLogs, setSelectedResourceGroupForLogs] = useState<string | null>(null)
 
   const handleSubscriptionSubmit = async (subId: string) => {
     try {
@@ -519,8 +522,24 @@ export function DeploymentAnalyzer() {
           costs={costs}
           costsLoading={costsLoading}
           includeCosts={includeCostsInAnalysis}
+          onOpenLogAnalyzer={(resourceGroup: string) => {
+            setSelectedResourceGroupForLogs(resourceGroup)
+            setLogAnalyzerOpen(true)
+          }}
+          selectedResourceGroups={selectedResourceGroups}
         />
       )}
+
+      {/* Log Analyzer Modal */}
+      <LogAnalyzer
+        isOpen={logAnalyzerOpen}
+        onClose={() => {
+          setLogAnalyzerOpen(false)
+          setSelectedResourceGroupForLogs(null)
+        }}
+        resourceGroup={selectedResourceGroupForLogs || undefined}
+        subscriptionId={subscriptionId}
+      />
     </div>
   )
 }
@@ -962,7 +981,9 @@ function ServiceAnalysis({
   onRefresh,
   costs,
   costsLoading,
-  includeCosts
+  includeCosts,
+  onOpenLogAnalyzer,
+  selectedResourceGroups
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
@@ -981,6 +1002,8 @@ function ServiceAnalysis({
   }>
   costsLoading: boolean
   includeCosts: boolean
+  onOpenLogAnalyzer: (resourceGroup: string) => void
+  selectedResourceGroups: string[]
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
 
@@ -1062,6 +1085,26 @@ function ServiceAnalysis({
           </p>
         </div>
         <div className="flex items-center space-x-3">
+          {selectedResourceGroups.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  // Open log analyzer with first resource group, or show dropdown if multiple
+                  if (selectedResourceGroups.length === 1) {
+                    onOpenLogAnalyzer(selectedResourceGroups[0])
+                  } else {
+                    // For multiple RGs, open with the first one (user can change in modal)
+                    onOpenLogAnalyzer(selectedResourceGroups[0])
+                  }
+                }}
+                className="btn-secondary flex items-center space-x-2"
+                title="Analyze logs for Temenos components in this resource group"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Log Analyzer</span>
+              </button>
+            </div>
+          )}
           <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
