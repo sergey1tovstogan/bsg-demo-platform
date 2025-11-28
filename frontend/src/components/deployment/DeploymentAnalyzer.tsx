@@ -565,10 +565,10 @@ function SubscriptionInput({
     <div className="card max-w-2xl mx-auto">
       <div className="flex items-center space-x-3 mb-6">
         <Cloud className="w-8 h-8 text-purple-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Azure Deployment Analyzer</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Azure Deployment Analyzer</h2>
       </div>
 
-      <p className="text-gray-600 mb-6">
+      <p className="text-gray-600 dark:text-gray-300 mb-6">
         Connect to your Azure subscription to analyze Temenos component deployments.
       </p>
 
@@ -603,7 +603,7 @@ function SubscriptionInput({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Azure Subscription ID
           </label>
           <input
@@ -611,10 +611,10 @@ function SubscriptionInput({
             value={subscriptionId}
             onChange={(e) => setSubscriptionId(e.target.value)}
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
             disabled={loading}
           />
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             You can find your subscription ID in the Azure Portal under Subscriptions.
           </p>
         </div>
@@ -680,8 +680,8 @@ function ResourceGroupSelector({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Resource Groups</h2>
-          <p className="text-gray-600">Choose which resource groups to analyze for Temenos components</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Select Resource Groups</h2>
+          <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
         </div>
         <div className="flex items-center space-x-3">
           <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
@@ -707,7 +707,7 @@ function ResourceGroupSelector({
               placeholder="Search resource groups by name or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
             />
           </div>
           <button
@@ -729,7 +729,7 @@ function ResourceGroupSelector({
       {filteredResourceGroups.length === 0 && searchTerm && (
         <div className="card text-center py-8">
           <FolderOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No resource groups found matching "{searchTerm}"</p>
+          <p className="text-gray-600 dark:text-gray-300">No resource groups found matching "{searchTerm}"</p>
         </div>
       )}
 
@@ -741,16 +741,16 @@ function ResourceGroupSelector({
               key={rg.id}
               onClick={() => toggleSelection(rg.name)}
               className={`card cursor-pointer transition-all ${isSelected
-                ? 'ring-2 ring-purple-500 bg-purple-50'
-                : 'hover:bg-gray-50'
+                ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                : 'hover:bg-gray-50 dark:hover:bg-slate-800'
                 }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3 flex-1">
-                  <FolderOpen className={`w-6 h-6 mt-1 ${isSelected ? 'text-purple-600' : 'text-gray-400'}`} />
+                  <FolderOpen className={`w-6 h-6 mt-1 ${isSelected ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`} />
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{rg.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{rg.location}</p>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{rg.name}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{rg.location}</p>
                   </div>
                 </div>
                 {isSelected && (
@@ -850,8 +850,8 @@ function NamespaceSelector({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Select AKS Namespaces</h2>
-          <p className="text-gray-600 mt-1">Select which Kubernetes namespaces to analyze for Temenos components</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Select AKS Namespaces</h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">Select which Kubernetes namespaces to analyze for Temenos components</p>
         </div>
       </div>
 
@@ -864,8 +864,8 @@ function NamespaceSelector({
         <>
           {clusterNamespaces.map((cluster, idx) => (
             <div key={idx} className="card">
-              <h3 className="font-semibold text-gray-900 mb-2">Cluster: {cluster.cluster_name}</h3>
-              <p className="text-sm text-gray-500 mb-4">Resource Group: {cluster.resource_group}</p>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Cluster: {cluster.cluster_name}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Resource Group: {cluster.resource_group}</p>
               {cluster.error ? (
                 <div className="text-red-600 text-sm">{cluster.error}</div>
               ) : cluster.namespaces.length === 0 ? (
@@ -879,13 +879,13 @@ function NamespaceSelector({
                         key={ns}
                         onClick={() => toggleSelection(ns)}
                         className={`p-2 rounded border cursor-pointer transition-all ${isSelected
-                          ? 'bg-purple-50 border-purple-500'
-                          : 'bg-gray-50 border-gray-300 hover:border-purple-300'
+                          ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-500'
+                          : 'bg-gray-50 dark:bg-slate-800 border-gray-300 dark:border-gray-600 hover:border-purple-300'
                           }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{ns}</span>
-                          {isSelected && <CheckCircle2 className="w-4 h-4 text-purple-600" />}
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{ns}</span>
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />}
                         </div>
                       </div>
                     )
@@ -904,7 +904,7 @@ function NamespaceSelector({
                   placeholder="Search namespaces..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                 />
               </div>
               <button
@@ -997,8 +997,8 @@ function ServiceAnalysis({
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Deployment Analysis</h2>
-            <p className="text-gray-600">Error occurred during analysis</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Deployment Analysis</h2>
+            <p className="text-gray-600 dark:text-gray-300">Error occurred during analysis</p>
           </div>
           <div className="flex items-center space-x-3">
             <button onClick={onRefresh} className="btn-secondary flex items-center space-x-2">
@@ -1030,8 +1030,8 @@ function ServiceAnalysis({
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Deployment Analysis</h2>
-            <p className="text-gray-600">No services available</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Deployment Analysis</h2>
+            <p className="text-gray-600 dark:text-gray-300">No services available</p>
           </div>
           <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
             <ArrowLeft className="w-4 h-4" />
@@ -1051,8 +1051,8 @@ function ServiceAnalysis({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Deployment Analysis</h2>
-          <p className="text-gray-600">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Deployment Analysis</h2>
+          <p className="text-gray-600 dark:text-gray-300">
             {services.length} Azure service{services.length !== 1 ? 's' : ''} found • {identifiedComponents.length} Temenos component{identifiedComponents.length !== 1 ? 's' : ''} identified
           </p>
         </div>
