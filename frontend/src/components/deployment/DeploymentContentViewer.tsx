@@ -17,7 +17,18 @@ export function DeploymentContentViewer() {
     // Check cache immediately on mount
     const cached = loadCachedContent()
     if (cached) {
-      setRagContent(cached)
+      // Sort cached content for consistent display
+      const sorted = [...cached].sort((a, b) => {
+        const categoryOrder = ['Architecture Overview', 'Service Selection', 'Integration & Extensibility']
+        const aCategoryIndex = categoryOrder.indexOf(a.category) !== -1 ? categoryOrder.indexOf(a.category) : 999
+        const bCategoryIndex = categoryOrder.indexOf(b.category) !== -1 ? categoryOrder.indexOf(b.category) : 999
+        
+        if (aCategoryIndex !== bCategoryIndex) {
+          return aCategoryIndex - bCategoryIndex
+        }
+        return (a.order || 0) - (b.order || 0)
+      })
+      setRagContent(sorted)
       setRagLoading(false)
       setIsFromCache(true)
       console.log('Loaded RAG content from cache')
@@ -79,21 +90,42 @@ export function DeploymentContentViewer() {
 
       // Query RAG API for cloud-native deployments on Azure and AWS - focus on services and capabilities
       // Questions are phrased to ensure positive, informative responses suitable for customer demos
+      // Questions are organized with display order and category for better presentation
       const questions = [
-        "Describe the Azure cloud services architecture for Temenos cloud-native deployments. Detail the specific Azure services used for databases (Azure SQL Database, Azure Database for PostgreSQL, MongoDB), messaging (Azure Event Hub, Apache ActiveMQ), container orchestration (Azure Kubernetes Service AKS, Azure Container Apps ACA), and other infrastructure components, including their roles and purposes.",
-        "Describe the AWS cloud services architecture for Temenos cloud-native deployments. Detail the specific AWS services used for databases (Amazon RDS, DocumentDB, PostgreSQL), messaging (Amazon Kinesis, Apache ActiveMQ), container orchestration (AWS Elastic Kubernetes Service EKS, Amazon ECS), and other infrastructure components, including their roles and purposes.",
-        "Explain the decision criteria and use cases for selecting Azure services in Temenos deployments. When should Azure SQL Database be used versus Azure Database for PostgreSQL? When should Azure Event Hub be used versus Apache ActiveMQ? When should AKS be used versus Azure Container Apps? Provide specific guidance for each service selection.",
-        "Describe Temenos cloud-native deployment capabilities for data-driven enhancements, extensibility, and integration. Explain how the Extensibility Framework supports advanced workflows and what integration patterns are available for connecting with external services and data sources in Azure and AWS environments."
+        {
+          order: 1,
+          category: "Architecture Overview",
+          title: "Azure Cloud Services Architecture",
+          question: "Describe the Azure cloud services architecture for Temenos cloud-native deployments. Detail the specific Azure services used for databases (Azure SQL Database, Azure Database for PostgreSQL, MongoDB), messaging (Azure Event Hub, Apache ActiveMQ), container orchestration (Azure Kubernetes Service AKS, Azure Container Apps ACA), and other infrastructure components, including their roles and purposes."
+        },
+        {
+          order: 2,
+          category: "Architecture Overview",
+          title: "AWS Cloud Services Architecture",
+          question: "Describe the AWS cloud services architecture for Temenos cloud-native deployments. Detail the specific AWS services used for databases (Amazon RDS, DocumentDB, PostgreSQL), messaging (Amazon Kinesis, Apache ActiveMQ), container orchestration (AWS Elastic Kubernetes Service EKS, Amazon ECS), and other infrastructure components, including their roles and purposes."
+        },
+        {
+          order: 3,
+          category: "Service Selection",
+          title: "Azure Service Selection Criteria",
+          question: "Explain the decision criteria and use cases for selecting Azure services in Temenos deployments. When should Azure SQL Database be used versus Azure Database for PostgreSQL? When should Azure Event Hub be used versus Apache ActiveMQ? When should AKS be used versus Azure Container Apps? Provide specific guidance for each service selection."
+        },
+        {
+          order: 4,
+          category: "Integration & Extensibility",
+          title: "Extensibility and Integration Capabilities",
+          question: "Describe Temenos cloud-native deployment capabilities for data-driven enhancements, extensibility, and integration. Explain how the Extensibility Framework supports advanced workflows and what integration patterns are available for connecting with external services and data sources in Azure and AWS environments."
+        }
       ]
 
       // Query multiple questions and combine results
       const ragResults = []
       const errors: string[] = []
 
-      for (const question of questions) {
+      for (const questionItem of questions) {
         try {
           const response = await apiService.queryRAG({
-            question,
+            question: questionItem.question,
             region: 'global',
             RAGmodelId: 'ModularBanking, TechnologyOverview',
             context: 'This is about Temenos cloud architecture models and deployment strategies for a customer demonstration platform. ' +
@@ -115,13 +147,16 @@ export function DeploymentContentViewer() {
 
           if (ragData?.answer) {
             ragResults.push({
-              question,
+              order: questionItem.order,
+              category: questionItem.category,
+              title: questionItem.title,
+              question: questionItem.question,
               answer: ragData.answer,
               sources: ragData.sources || []
             })
           } else {
-            errors.push(`No answer returned for: "${question}". Response structure: ${JSON.stringify(response).substring(0, 200)}`)
-            console.warn(`No answer in RAG response for question: ${question}`, response)
+            errors.push(`No answer returned for: "${questionItem.title}". Response structure: ${JSON.stringify(response).substring(0, 200)}`)
+            console.warn(`No answer in RAG response for question: ${questionItem.title}`, response)
           }
         } catch (err: any) {
           // Extract detailed error message from backend response
@@ -130,13 +165,13 @@ export function DeploymentContentViewer() {
           // Check if it's a network error (backend not reachable)
           if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
             errorMsg = 'Network Error - Unable to reach the backend API. Please check if the backend service is running and accessible.'
-            console.error(`Network error for question "${question}": Backend may not be reachable`, {
+            console.error(`Network error for question "${questionItem.title}": Backend may not be reachable`, {
               apiUrl: (window as any).API_BASE_URL || 'unknown',
               error: err
             })
           } else {
             // Log full error for debugging
-            console.error(`Full error object for question "${question}":`, {
+            console.error(`Full error object for question "${questionItem.title}":`, {
               error: err,
               response: err.response,
               responseData: err.response?.data,
@@ -171,12 +206,26 @@ export function DeploymentContentViewer() {
             }
           }
 
-          errors.push(`Failed to query "${question}": ${errorMsg}`)
-          console.warn(`Failed to query RAG for question: ${question}`, err)
+          errors.push(`Failed to query "${questionItem.title}": ${errorMsg}`)
+          console.warn(`Failed to query RAG for question: ${questionItem.title}`, err)
         }
       }
 
       if (ragResults.length > 0) {
+        // Sort results by category and order for coherent presentation
+        ragResults.sort((a, b) => {
+          // First sort by category for logical grouping
+          const categoryOrder = ['Architecture Overview', 'Service Selection', 'Integration & Extensibility']
+          const aCategoryIndex = categoryOrder.indexOf(a.category) !== -1 ? categoryOrder.indexOf(a.category) : 999
+          const bCategoryIndex = categoryOrder.indexOf(b.category) !== -1 ? categoryOrder.indexOf(b.category) : 999
+          
+          if (aCategoryIndex !== bCategoryIndex) {
+            return aCategoryIndex - bCategoryIndex
+          }
+          // Then by order within category
+          return (a.order || 0) - (b.order || 0)
+        })
+        
         setRagContent(ragResults)
         saveCachedContent(ragResults)
         setIsFromCache(false)
@@ -291,15 +340,31 @@ export function DeploymentContentViewer() {
         )}
 
         {ragContent && ragContent.length > 0 && (
-          <div className="space-y-6">
-            {ragContent.map((item: any, idx: number) => (
-              <div
-                key={idx}
-                className="bg-gray-50 dark:bg-white rounded-lg p-6 border border-gray-300 dark:border-gray-400 shadow-sm"
-              >
-                <h3 className="text-xl font-bold mb-4 border-b-2 border-blue-500 dark:border-blue-400 pb-3 text-gray-900 dark:text-gray-900">
-                  {item.question}
-                </h3>
+          <div className="space-y-8">
+            {(() => {
+              // Group by category for better organization
+              const grouped: { [key: string]: any[] } = {}
+              ragContent.forEach((item: any) => {
+                const cat = item.category || 'Other'
+                if (!grouped[cat]) {
+                  grouped[cat] = []
+                }
+                grouped[cat].push(item)
+              })
+
+              return Object.entries(grouped).map(([category, items]) => (
+                <div key={category} className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white border-b-2 border-blue-600 dark:border-blue-400 pb-2">
+                    {category}
+                  </h2>
+                  {items.map((item: any, idx: number) => (
+                    <div
+                      key={`${category}-${idx}`}
+                      className="bg-gray-50 dark:bg-white rounded-lg p-6 border border-gray-300 dark:border-gray-400 shadow-sm"
+                    >
+                      <h3 className="text-xl font-bold mb-4 border-b-2 border-blue-500 dark:border-blue-400 pb-3 text-gray-900 dark:text-gray-900">
+                        {item.title || item.question}
+                      </h3>
                 <div className="text-gray-800 dark:text-gray-900">
                   <ReactMarkdown
                     components={{
@@ -319,18 +384,21 @@ export function DeploymentContentViewer() {
                     {item.answer}
                   </ReactMarkdown>
                 </div>
-                {item.sources && item.sources.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-400">
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-900 mb-2">Sources:</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-800">
-                      {item.sources.map((source: any, sidx: number) => (
-                        <li key={sidx}>{source.title || source.url || 'Temenos Documentation'}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ))}
+                      {item.sources && item.sources.length > 0 && (
+                        <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-400">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-900 mb-2">Sources:</p>
+                          <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-800">
+                            {item.sources.map((source: any, sidx: number) => (
+                              <li key={sidx}>{source.title || source.url || 'Temenos Documentation'}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))
+            })()}
           </div>
         )}
 
