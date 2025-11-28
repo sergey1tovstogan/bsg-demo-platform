@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Loader2, Cloud, RefreshCw } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 
 const CACHE_KEY = 'deployment_rag_content_cache'
@@ -67,15 +68,15 @@ export function DeploymentContentViewer() {
 
       // Store cached content before refresh in case refresh fails
       const cachedContent = forceRefresh ? loadCachedContent() : null
-      
+
       // Clear cache flag when forcing refresh
       if (forceRefresh) {
         setIsFromCache(false)
       }
-      
+
       setRagLoading(true)
       setRagError(null)
-      
+
       // Query RAG API for Temenos cloud architecture models
       const questions = [
         "What are the Temenos cloud architecture models?",
@@ -83,11 +84,11 @@ export function DeploymentContentViewer() {
         "How does Temenos support cloud-native deployments?",
         "What are the best practices for deploying Temenos components on Azure?"
       ]
-      
+
       // Query multiple questions and combine results
       const ragResults = []
       const errors: string[] = []
-      
+
       for (const question of questions) {
         try {
           const response = await apiService.queryRAG({
@@ -118,7 +119,7 @@ export function DeploymentContentViewer() {
         } catch (err: any) {
           // Extract detailed error message from backend response
           let errorMsg = 'Unknown error'
-          
+
           // Check if it's a network error (backend not reachable)
           if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
             errorMsg = 'Network Error - Unable to reach the backend API. Please check if the backend service is running and accessible.'
@@ -136,7 +137,7 @@ export function DeploymentContentViewer() {
               message: err.message,
               status: err.response?.status
             })
-            
+
             // Try multiple ways to extract the error message
             if (err.response?.data?.detail) {
               const detail = err.response.data.detail
@@ -154,7 +155,7 @@ export function DeploymentContentViewer() {
             } else if (err.message) {
               errorMsg = err.message
             }
-            
+
             // If we still have a generic message, try to get more info
             if (errorMsg === 'Request failed with status code 500' && err.response?.data) {
               errorMsg = `Server error: ${JSON.stringify(err.response.data).substring(0, 200)}`
@@ -162,19 +163,19 @@ export function DeploymentContentViewer() {
               errorMsg = `HTTP ${err.response.status}: ${errorMsg}`
             }
           }
-          
+
           errors.push(`Failed to query "${question}": ${errorMsg}`)
           console.warn(`Failed to query RAG for question: ${question}`, err)
         }
       }
-      
+
       if (ragResults.length > 0) {
         setRagContent(ragResults)
         saveCachedContent(ragResults)
         setIsFromCache(false)
         setRagError(null)
         console.log('Loaded RAG content from API and cached')
-        
+
         // If some queries failed, show a warning but still display successful results
         if (errors.length > 0) {
           const partialErrorMsg = `Some queries failed (${errors.length}/${questions.length}). Showing available results.`
@@ -194,11 +195,11 @@ export function DeploymentContentViewer() {
       }
     } catch (err: any) {
       console.error('RAG query error:', err)
-      const errorMsg = err.response?.data?.detail?.error || 
-                      err.response?.data?.error || 
-                      err.message || 
-                      'Failed to load RAG information'
-      
+      const errorMsg = err.response?.data?.detail?.error ||
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to load RAG information'
+
       // If refresh failed, try to restore cached content
       if (forceRefresh) {
         const cachedContent = loadCachedContent()
@@ -271,11 +272,10 @@ export function DeploymentContentViewer() {
 
 
         {ragError && (
-          <div className={`mb-4 p-4 rounded ${
-            ragError.includes('Showing cached data') 
-              ? 'bg-yellow-100 dark:bg-yellow-200 border border-yellow-300 dark:border-yellow-400 text-yellow-800 dark:text-yellow-900'
-              : 'bg-red-100 dark:bg-red-200 border border-red-300 dark:border-red-400 text-red-800 dark:text-red-900'
-          }`}>
+          <div className={`mb-4 p-4 rounded ${ragError.includes('Showing cached data')
+            ? 'bg-yellow-100 dark:bg-yellow-200 border border-yellow-300 dark:border-yellow-400 text-yellow-800 dark:text-yellow-900'
+            : 'bg-red-100 dark:bg-red-200 border border-red-300 dark:border-red-400 text-red-800 dark:text-red-900'
+            }`}>
             <p className="font-semibold">
               {ragError.includes('Showing cached data') ? 'Warning:' : 'Error loading RAG content:'}
             </p>
@@ -286,15 +286,15 @@ export function DeploymentContentViewer() {
         {ragContent && ragContent.length > 0 && (
           <div className="space-y-6">
             {ragContent.map((item: any, idx: number) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="bg-gray-50 dark:bg-white rounded-lg p-6 border border-gray-300 dark:border-gray-400 shadow-sm"
               >
                 <h3 className="text-xl font-bold mb-3 border-b border-gray-400 dark:border-gray-500 pb-2 text-gray-900 dark:text-gray-900">
                   {item.question}
                 </h3>
-                <div className="whitespace-pre-wrap leading-relaxed text-base text-gray-800 dark:text-gray-900">
-                  {item.answer}
+                <div className="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-900">
+                  <ReactMarkdown>{item.answer}</ReactMarkdown>
                 </div>
                 {item.sources && item.sources.length > 0 && (
                   <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-400">
@@ -320,4 +320,3 @@ export function DeploymentContentViewer() {
     </div>
   )
 }
-
