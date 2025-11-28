@@ -620,7 +620,17 @@ async def get_resources(request: ResourcesRequest):
                 # Also map 'resourceGroup' to 'resource_group' if needed
                 if 'resourceGroup' in resource_dict and 'resource_group' not in resource_dict:
                     resource_dict['resource_group'] = resource_dict.pop('resourceGroup')
-                resources.append(AzureResource(**resource_dict))
+                # Remove fields that are not in AzureResource constructor (like portalUrl)
+                resource_dict_clean = {
+                    'id': resource_dict.get('id', ''),
+                    'name': resource_dict.get('name', ''),
+                    'resource_type': resource_dict.get('type', resource_dict.get('resource_type', '')),
+                    'location': resource_dict.get('location', ''),
+                    'resource_group': resource_dict.get('resource_group', ''),
+                    'tags': resource_dict.get('tags', {}),
+                    'properties': resource_dict.get('properties', {})
+                }
+                resources.append(AzureResource(**resource_dict_clean))
         else:
             azure_service = get_azure_service(subscription_id)
             resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
