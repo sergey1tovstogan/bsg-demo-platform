@@ -51,7 +51,7 @@ export function Chatbot({ componentId }: ChatbotProps) {
         user_level: 'beginner',
       })
       setSessionId(response.data.session_id)
-      
+
       if (response.data.session_id) {
         try {
           const historyResponse = await apiService.getChatHistory(componentId, response.data.session_id)
@@ -147,7 +147,7 @@ export function Chatbot({ componentId }: ChatbotProps) {
           </button>
         </div>
         {loading && (
-          <div className="mt-3 flex items-center space-x-2 text-sm text-blue-600">
+          <div className="mt-3 flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>Retrieving information from RAG knowledge base...</span>
           </div>
@@ -163,11 +163,11 @@ export function Chatbot({ componentId }: ChatbotProps) {
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto space-y-4">
         {messages.length === 0 ? (
-          <div className="text-center text-[#4A5568] py-8">
-            <Bot className="w-12 h-12 mx-auto mb-4 text-[#283054]" />
-            <p className="text-lg font-medium mb-2">Welcome to BSG-Guru</p>
-            <p className="text-sm">Ask me anything about {componentId === 'deployment' ? 'Temenos cloud deployment, architecture, and best practices' : componentId}</p>
-            <p className="text-xs text-gray-500 mt-4">Powered by Temenos RAG Knowledge Base</p>
+          <div className="text-center text-gray-600 dark:text-gray-300 py-8">
+            <Bot className="w-12 h-12 mx-auto mb-4 text-purple-600 dark:text-purple-400" />
+            <p className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Welcome to BSG-Guru</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Ask me anything about {componentId === 'deployment' ? 'Temenos cloud deployment, architecture, and best practices' : componentId}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">Powered by Temenos RAG Knowledge Base</p>
           </div>
         ) : (
           messages.map((message) => (
@@ -176,11 +176,10 @@ export function Chatbot({ componentId }: ChatbotProps) {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-4 ${
-                  message.role === 'user'
-                    ? 'bg-[#283054] text-white'
-                    : 'bg-gray-100 text-[#2D3748]'
-                }`}
+                className={`max-w-[80%] rounded-lg p-4 ${message.role === 'user'
+                    ? 'bg-purple-600 dark:bg-purple-700 text-white'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white'
+                  }`}
               >
                 <div className="flex items-start space-x-2">
                   {message.role === 'assistant' && (
@@ -215,9 +214,9 @@ export function Chatbot({ componentId }: ChatbotProps) {
         )}
         {loading && messages.length > 0 && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg p-4 flex items-center space-x-2">
-              <Loader2 className="w-5 h-5 animate-spin text-[#283054]" />
-              <span className="text-sm text-gray-600">Retrieving information...</span>
+            <div className="bg-gray-100 dark:bg-slate-800 rounded-lg p-4 flex items-center space-x-2">
+              <Loader2 className="w-5 h-5 animate-spin text-purple-600 dark:text-purple-400" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">Retrieving information...</span>
             </div>
           </div>
         )}

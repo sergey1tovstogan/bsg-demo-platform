@@ -14,83 +14,83 @@ import SecurityPolicyHTML from './security/SecurityPolicy.html?raw'
 import ProtectionEmbeddedHTML from './security/ProtectionEmbedded.html?raw'
 
 interface SecurityCard {
-  id: number
-  title: string
-  icon: LucideIcon
-  color: string
-  bgColor: string
+    id: number
+    title: string
+    icon: LucideIcon
+    color: string
+    bgColor: string
 }
 
 const cards: SecurityCard[] = [
-  {
-    id: 1,
-    title: 'Authentication',
-    icon: Key,
-    color: '#3B82F6', // Blue
-    bgColor: '#DBEAFE', // Light blue background
-  },
-  {
-    id: 2,
-    title: 'Authorization',
-    icon: UserCheck,
-    color: '#10B981', // Green
-    bgColor: '#D1FAE5', // Light green background
-  },
-  {
-    id: 3,
-    title: 'Privacy & Encryption',
-    icon: Lock,
-    color: '#8B5CF6', // Purple
-    bgColor: '#EDE9FE', // Light purple background
-  },
-  {
-    id: 4,
-    title: 'Segregation',
-    icon: Shield,
-    color: '#F59E0B', // Amber
-    bgColor: '#FEF3C7', // Light amber background
-  },
-  {
-    id: 5,
-    title: 'Access Management',
-    icon: Eye,
-    color: '#EF4444', // Red
-    bgColor: '#FEE2E2', // Light red background
-  },
-  {
-    id: 6,
-    title: 'Platform Management',
-    icon: Server,
-    color: '#06B6D4', // Cyan
-    bgColor: '#CFFAFE', // Light cyan background
-  },
-  {
-    id: 7,
-    title: 'SaaS Security Services',
-    icon: Cloud,
-    color: '#6366F1', // Indigo
-    bgColor: '#E0E7FF', // Light indigo background
-  },
-  {
-    id: 8,
-    title: 'SaaS BCP, Logs, Incidents',
-    icon: KeyRound,
-    color: '#14B8A6', // Teal
-    bgColor: '#CCFBF1', // Light teal background
-  },
-  {
-    id: 9,
-    title: 'Compliance and Risk Management',
-    icon: FileCheck,
-    color: '#F97316', // Orange
-    bgColor: '#FFEDD5', // Light orange background
-  },
+    {
+        id: 1,
+        title: 'Authentication',
+        icon: Key,
+        color: '#3B82F6', // Blue
+        bgColor: '#DBEAFE', // Light blue background
+    },
+    {
+        id: 2,
+        title: 'Authorization',
+        icon: UserCheck,
+        color: '#10B981', // Green
+        bgColor: '#D1FAE5', // Light green background
+    },
+    {
+        id: 3,
+        title: 'Privacy & Encryption',
+        icon: Lock,
+        color: '#8B5CF6', // Purple
+        bgColor: '#EDE9FE', // Light purple background
+    },
+    {
+        id: 4,
+        title: 'Segregation',
+        icon: Shield,
+        color: '#F59E0B', // Amber
+        bgColor: '#FEF3C7', // Light amber background
+    },
+    {
+        id: 5,
+        title: 'Access Management',
+        icon: Eye,
+        color: '#EF4444', // Red
+        bgColor: '#FEE2E2', // Light red background
+    },
+    {
+        id: 6,
+        title: 'Platform Management',
+        icon: Server,
+        color: '#06B6D4', // Cyan
+        bgColor: '#CFFAFE', // Light cyan background
+    },
+    {
+        id: 7,
+        title: 'SaaS Security Services',
+        icon: Cloud,
+        color: '#6366F1', // Indigo
+        bgColor: '#E0E7FF', // Light indigo background
+    },
+    {
+        id: 8,
+        title: 'SaaS BCP, Logs, Incidents',
+        icon: KeyRound,
+        color: '#14B8A6', // Teal
+        bgColor: '#CCFBF1', // Light teal background
+    },
+    {
+        id: 9,
+        title: 'Compliance and Risk Management',
+        icon: FileCheck,
+        color: '#F97316', // Orange
+        bgColor: '#FFEDD5', // Light orange background
+    },
 ]
 
 const securityCategories = [
-  { id: 1, name: 'Application Security' },
-  { id: 2, name: 'Infrastructure Security' },
-  { id: 3, name: 'SaaS Security' },
+    { id: 1, name: 'Application Security' },
+    { id: 2, name: 'Infrastructure Security' },
+    { id: 3, name: 'SaaS Security' },
 ]
 
 // HTML5 Security Architecture Diagram Content
@@ -7035,1127 +7035,1130 @@ const SecurityAssuranceHTML = `<!DOCTYPE html>
 
 // Log History HTML Content
 export function SecurityContentViewer() {
-  const [selectedCard, setSelectedCard] = useState<number | null>(null)
-  const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
-  const [showUserManagement, setShowUserManagement] = useState(false)
-  const [showExate, setShowExate] = useState(false)
-  const [showSaaSDefenceDepth, setShowSaaSDefenceDepth] = useState(false)
-  const [showSaaSDataAccessControl, setShowSaaSDataAccessControl] = useState(false)
-  const [showSaaSPAM, setShowSaaSPAM] = useState(false)
-  const [showProtectAssets, setShowProtectAssets] = useState(false)
-  const [showSecurityEventFeed, setShowSecurityEventFeed] = useState(false)
-  const [showNetworkSecurityServices, setShowNetworkSecurityServices] = useState(false)
-  const [showTemenosSaaSAntiDDoS, setShowTemenosSaaSAntiDDoS] = useState(false)
-  const [showTemenosSaaSWAF, setShowTemenosSaaSWAF] = useState(false)
-  const [showSecurityAssurance, setShowSecurityAssurance] = useState(false)
-  const [showTemenosLogHistory, setShowTemenosLogHistory] = useState(false)
-  const [showTemenosHistory, setShowTemenosHistory] = useState(false)
-  const [showTemenosSaaSLogs, setShowTemenosSaaSLogs] = useState(false)
-  const [showIncidents, setShowIncidents] = useState(false)
-  const [showBackup, setShowBackup] = useState(false)
-  const [showSaaSComplianceOverview, setShowSaaSComplianceOverview] = useState(false)
-  const [showCompliancePosition, setShowCompliancePosition] = useState(false)
-  const [showTrustCenter, setShowTrustCenter] = useState(false)
-  const [showRiskManagement, setShowRiskManagement] = useState(false)
-  const [showSecurityPolicy, setShowSecurityPolicy] = useState(false)
-  const [showProtectionEmbedded, setShowProtectionEmbedded] = useState(false)
+    const [selectedCard, setSelectedCard] = useState<number | null>(null)
+    const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
+    const [showUserManagement, setShowUserManagement] = useState(false)
+    const [showExate, setShowExate] = useState(false)
+    const [showSaaSDefenceDepth, setShowSaaSDefenceDepth] = useState(false)
+    const [showSaaSDataAccessControl, setShowSaaSDataAccessControl] = useState(false)
+    const [showSaaSPAM, setShowSaaSPAM] = useState(false)
+    const [showProtectAssets, setShowProtectAssets] = useState(false)
+    const [showSecurityEventFeed, setShowSecurityEventFeed] = useState(false)
+    const [showNetworkSecurityServices, setShowNetworkSecurityServices] = useState(false)
+    const [showTemenosSaaSAntiDDoS, setShowTemenosSaaSAntiDDoS] = useState(false)
+    const [showTemenosSaaSWAF, setShowTemenosSaaSWAF] = useState(false)
+    const [showSecurityAssurance, setShowSecurityAssurance] = useState(false)
+    const [showTemenosLogHistory, setShowTemenosLogHistory] = useState(false)
+    const [showTemenosHistory, setShowTemenosHistory] = useState(false)
+    const [showTemenosSaaSLogs, setShowTemenosSaaSLogs] = useState(false)
+    const [showIncidents, setShowIncidents] = useState(false)
+    const [showBackup, setShowBackup] = useState(false)
+    const [showSaaSComplianceOverview, setShowSaaSComplianceOverview] = useState(false)
+    const [showCompliancePosition, setShowCompliancePosition] = useState(false)
+    const [showTrustCenter, setShowTrustCenter] = useState(false)
+    const [showRiskManagement, setShowRiskManagement] = useState(false)
+    const [showSecurityPolicy, setShowSecurityPolicy] = useState(false)
+    const [showProtectionEmbedded, setShowProtectionEmbedded] = useState(false)
 
-  const handleCardClick = (cardId: number) => {
-    if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6 || cardId === 7 || cardId === 8 || cardId === 9) {
-      setSelectedCard(cardId)
+    const handleCardClick = (cardId: number) => {
+        if (cardId === 1 || cardId === 2 || cardId === 3 || cardId === 4 || cardId === 5 || cardId === 6 || cardId === 7 || cardId === 8 || cardId === 9) {
+            setSelectedCard(cardId)
+        }
     }
-  }
 
-  const handleBack = () => {
-    setSelectedCard(null)
-    setShowDetailedExplanation(false)
-    setShowUserManagement(false)
-    setShowExate(false)
-    setShowSaaSDefenceDepth(false)
-    setShowSaaSDataAccessControl(false)
-    setShowSaaSPAM(false)
-    setShowProtectAssets(false)
-    setShowSecurityEventFeed(false)
-    setShowNetworkSecurityServices(false)
-    setShowTemenosSaaSAntiDDoS(false)
-    setShowTemenosSaaSWAF(false)
-    setShowSecurityAssurance(false)
-    setShowTemenosLogHistory(false)
-    setShowTemenosHistory(false)
-    setShowTemenosSaaSLogs(false)
-    setShowIncidents(false)
-    setShowBackup(false)
-    setShowSaaSComplianceOverview(false)
-    setShowCompliancePosition(false)
-    setShowTrustCenter(false)
-    setShowRiskManagement(false)
-    setShowSecurityPolicy(false)
-    setShowProtectionEmbedded(false)
-  }
-
-  const handleBackToArchitecture = () => {
-    setShowDetailedExplanation(false)
-  }
-
-  // Listen for postMessage from iframe
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'showDetailedExplanation') {
-        setShowDetailedExplanation(true)
-      }
-      if (event.data && event.data.type === 'showUserManagement') {
-        setShowUserManagement(true)
-      }
-      if (event.data && event.data.type === 'showExate') {
-        setShowExate(true)
-      }
-      if (event.data && event.data.type === 'showSaaSDefenceDepth') {
-        setShowSaaSDefenceDepth(true)
-      }
-      if (event.data && event.data.type === 'showSaaSAccessData') {
-        setShowSaaSDataAccessControl(true)
-      }
-      if (event.data && event.data.type === 'showPAM') {
-        setShowSaaSPAM(true)
-      }
-      if (event.data && event.data.type === 'showProtectCriticalAssets') {
-        setShowProtectAssets(true)
-      }
-      if (event.data && event.data.type === 'showSecurityEventsFeed') {
-        setShowSecurityEventFeed(true)
-      }
-      if (event.data && event.data.type === 'showNetworkSecurityServices') {
-        setShowNetworkSecurityServices(true)
-      }
-      if (event.data && event.data.type === 'showTemenosSaaSAntiDDoS') {
-        setShowTemenosSaaSAntiDDoS(true)
-      }
-      if (event.data && event.data.type === 'showTemenosSaaSWAF') {
-        setShowTemenosSaaSWAF(true)
-      }
-      if (event.data && event.data.type === 'showProductSecurityAssurance') {
-        setShowSecurityAssurance(true)
-      }
-      if (event.data && event.data.type === 'showTemenosLogHistory') {
-        setShowTemenosLogHistory(true)
-      }
-      if (event.data && event.data.type === 'showTemenosHistory') {
-        setShowTemenosHistory(true)
-      }
-      if (event.data && event.data.type === 'showTemenosSaaSLogs') {
+    const handleBack = () => {
+        setSelectedCard(null)
+        setShowDetailedExplanation(false)
+        setShowUserManagement(false)
+        setShowExate(false)
+        setShowSaaSDefenceDepth(false)
+        setShowSaaSDataAccessControl(false)
+        setShowSaaSPAM(false)
+        setShowProtectAssets(false)
+        setShowSecurityEventFeed(false)
+        setShowNetworkSecurityServices(false)
+        setShowTemenosSaaSAntiDDoS(false)
+        setShowTemenosSaaSWAF(false)
+        setShowSecurityAssurance(false)
         setShowTemenosLogHistory(false)
-        setShowTemenosSaaSLogs(true)
-      }
-      if (event.data && event.data.type === 'showIncidents') {
+        setShowTemenosHistory(false)
         setShowTemenosSaaSLogs(false)
-        setShowIncidents(true)
-      }
-      if (event.data && event.data.type === 'hideIncidents') {
         setShowIncidents(false)
-        setShowTemenosSaaSLogs(true)
-      }
-      if (event.data && event.data.type === 'showBackup') {
-        setShowIncidents(false)
-        setShowBackup(true)
-      }
-      if (event.data && event.data.type === 'hideBackup') {
         setShowBackup(false)
-        setShowIncidents(true)
-      }
-      if (event.data && event.data.type === 'showComplianceOverview') {
-        setShowSaaSComplianceOverview(true)
-      }
-      if (event.data && event.data.type === 'showCompliancePosition') {
-        setShowCompliancePosition(true)
-      }
-      if (event.data && event.data.type === 'showTrustCenter') {
+        setShowSaaSComplianceOverview(false)
         setShowCompliancePosition(false)
-        setShowTrustCenter(true)
-      }
-      if (event.data && event.data.type === 'showRiskManagement') {
         setShowTrustCenter(false)
-        setShowCompliancePosition(false)
-        setShowRiskManagement(true)
-      }
-      if (event.data && event.data.type === 'showSecurityPolicy') {
         setShowRiskManagement(false)
-        setShowTrustCenter(false)
-        setShowCompliancePosition(false)
-        setShowSecurityPolicy(true)
-      }
-      if (event.data && event.data.type === 'showProtectionEmbedded') {
         setShowSecurityPolicy(false)
-        setShowRiskManagement(false)
-        setShowTrustCenter(false)
-        setShowCompliancePosition(false)
-        setShowProtectionEmbedded(true)
-      }
+        setShowProtectionEmbedded(false)
     }
 
-    window.addEventListener('message', handleMessage)
-    return () => {
-      window.removeEventListener('message', handleMessage)
+    const handleBackToArchitecture = () => {
+        setShowDetailedExplanation(false)
     }
-  }, [])
 
-  // Show HTML5 diagram when card 3 is selected
-  if (selectedCard === 3) {
-    // Show eXate page if button was clicked
-    if (showExate) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowExate(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={eXateHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="eXate Solution"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show PrivacyEncryption by default
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={PrivacyEncryptionHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="Privacy & Encryption"
-          sandbox="allow-same-origin allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
-
-  // Show HTML5 diagram when card 4 is selected
-  if (selectedCard === 4) {
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={SaaSCloudSegregationHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="SaaS Cloud Segregation"
-          sandbox="allow-same-origin allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
-
-  // Show HTML5 diagram when card 5 is selected
-  if (selectedCard === 5) {
-    // Show ProtectAssets if button was clicked
-    if (showProtectAssets) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowProtectAssets(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={ProtectAssetsHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Protect Assets"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show SaaSPAM if button was clicked
-    if (showSaaSPAM) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowSaaSPAM(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={SaaSPAMHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="SaaS PAM"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show SaaSDataAccessControl if button was clicked
-    if (showSaaSDataAccessControl) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowSaaSDataAccessControl(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={SaaSDataAccessControlHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="SaaS Data Access Control"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show SaaSAccessData by default
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={SaaSAccessDataHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="SaaS Access Data"
-          sandbox="allow-same-origin allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
-
-  // Show HTML5 diagram when card 6 is selected
-  if (selectedCard === 6) {
-    // Show SaaSDefenceDepth page if button was clicked
-    if (showSaaSDefenceDepth) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowSaaSDefenceDepth(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={SaaSDefenceDepthHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="SaaS Defence-in-Depth"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show PlatformManagement by default
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={PlatformManagementHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="Platform Management"
-          sandbox="allow-same-origin allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
-
-  // Show HTML5 diagram when card 7 is selected
-  if (selectedCard === 7) {
-    // Show TemenosSaaSWAF if button was clicked
-    if (showTemenosSaaSWAF) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowTemenosSaaSWAF(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={WAFHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="WAF"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show TemenosSaaSAntiDDoS if button was clicked
-    if (showTemenosSaaSAntiDDoS) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowTemenosSaaSAntiDDoS(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={DDoSHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="DDoS Protection"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show NetworkSecurityServices if button was clicked
-    if (showNetworkSecurityServices) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowNetworkSecurityServices(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={NetworkHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Network Security"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show SecurityEventFeed if button was clicked
-    if (showSecurityEventFeed) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowSecurityEventFeed(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={SecurityEventFeedHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Security Event Feed"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show ProductSecurityUniform by default
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={ProductSecurityUniformHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="Product Security Uniform"
-          sandbox="allow-same-origin allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
-
-  // Show HTML5 diagram when card 8 is selected
-  if (selectedCard === 8) {
-    // Show Backup if button was clicked (check first to take precedence)
-    if (showBackup) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => {
-                setShowBackup(false)
+    // Listen for postMessage from iframe
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data && event.data.type === 'showDetailedExplanation') {
+                setShowDetailedExplanation(true)
+            }
+            if (event.data && event.data.type === 'showUserManagement') {
+                setShowUserManagement(true)
+            }
+            if (event.data && event.data.type === 'showExate') {
+                setShowExate(true)
+            }
+            if (event.data && event.data.type === 'showSaaSDefenceDepth') {
+                setShowSaaSDefenceDepth(true)
+            }
+            if (event.data && event.data.type === 'showSaaSAccessData') {
+                setShowSaaSDataAccessControl(true)
+            }
+            if (event.data && event.data.type === 'showPAM') {
+                setShowSaaSPAM(true)
+            }
+            if (event.data && event.data.type === 'showProtectCriticalAssets') {
+                setShowProtectAssets(true)
+            }
+            if (event.data && event.data.type === 'showSecurityEventsFeed') {
+                setShowSecurityEventFeed(true)
+            }
+            if (event.data && event.data.type === 'showNetworkSecurityServices') {
+                setShowNetworkSecurityServices(true)
+            }
+            if (event.data && event.data.type === 'showTemenosSaaSAntiDDoS') {
+                setShowTemenosSaaSAntiDDoS(true)
+            }
+            if (event.data && event.data.type === 'showTemenosSaaSWAF') {
+                setShowTemenosSaaSWAF(true)
+            }
+            if (event.data && event.data.type === 'showProductSecurityAssurance') {
+                setShowSecurityAssurance(true)
+            }
+            if (event.data && event.data.type === 'showTemenosLogHistory') {
+                setShowTemenosLogHistory(true)
+            }
+            if (event.data && event.data.type === 'showTemenosHistory') {
+                setShowTemenosHistory(true)
+            }
+            if (event.data && event.data.type === 'showTemenosSaaSLogs') {
+                setShowTemenosLogHistory(false)
+                setShowTemenosSaaSLogs(true)
+            }
+            if (event.data && event.data.type === 'showIncidents') {
+                setShowTemenosSaaSLogs(false)
                 setShowIncidents(true)
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={BackupHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos SaaS Backup and Restore"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show Incidents if button was clicked (check first to take precedence)
-    if (showIncidents) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => {
+            }
+            if (event.data && event.data.type === 'hideIncidents') {
                 setShowIncidents(false)
                 setShowTemenosSaaSLogs(true)
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={IncidentsHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Incident Fix Time"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show LogHistoryPic if Temenos History button was clicked
-    if (showTemenosHistory) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowTemenosHistory(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={LogHistoryPicHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos History"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show SaaSLogs if button was clicked
-    if (showTemenosSaaSLogs) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowTemenosSaaSLogs(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={SaaSLogsHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos SaaS Logging"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show LogHistory if button was clicked
-    if (showTemenosLogHistory) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowTemenosLogHistory(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={LogHistoryHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos Log & History"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show SecurityAssurance if button was clicked
-    if (showSecurityAssurance) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowSecurityAssurance(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={SecurityAssuranceHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos Product Security Assurance"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show BCP by default
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={BCPHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="Business Continuity Policy BCP"
-          sandbox="allow-same-origin allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
-
-  // Show HTML5 diagram when card 9 is selected
-  if (selectedCard === 9) {
-    // Show Trust Center page if button was clicked
-    if (showTrustCenter) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => {
-                setShowTrustCenter(false)
+            }
+            if (event.data && event.data.type === 'showBackup') {
+                setShowIncidents(false)
+                setShowBackup(true)
+            }
+            if (event.data && event.data.type === 'hideBackup') {
+                setShowBackup(false)
+                setShowIncidents(true)
+            }
+            if (event.data && event.data.type === 'showComplianceOverview') {
+                setShowSaaSComplianceOverview(true)
+            }
+            if (event.data && event.data.type === 'showCompliancePosition') {
                 setShowCompliancePosition(true)
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={TrustCenterHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos Trust Center"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show compliance position page if button was clicked
-    if (showCompliancePosition) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowCompliancePosition(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={CompliancePositionHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos Compliance Position"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show Security Policy page if button was clicked
-    if (showSecurityPolicy) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => {
-                setShowSecurityPolicy(false)
-                setShowRiskManagement(true)
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={SecurityPolicyHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos Security Policy"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show Protection Embedded page if button was clicked
-    if (showProtectionEmbedded) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => {
-                setShowProtectionEmbedded(false)
-                setShowSecurityPolicy(true)
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={ProtectionEmbeddedHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos Protection Embedded"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show Risk Management page if button was clicked
-    if (showRiskManagement) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => {
-                setShowRiskManagement(false)
+            }
+            if (event.data && event.data.type === 'showTrustCenter') {
+                setShowCompliancePosition(false)
                 setShowTrustCenter(true)
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={RiskManagementHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Risk Management"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show overview page if button was clicked
-    if (showSaaSComplianceOverview) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowSaaSComplianceOverview(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={SaaSComplianceOverviewHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos SaaS Compliance Overview"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show design page by default
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={SaaSComplianceDesignHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="Temenos SaaS Compliance by Design"
-          sandbox="allow-same-origin allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
+            }
+            if (event.data && event.data.type === 'showRiskManagement') {
+                setShowTrustCenter(false)
+                setShowCompliancePosition(false)
+                setShowRiskManagement(true)
+            }
+            if (event.data && event.data.type === 'showSecurityPolicy') {
+                setShowRiskManagement(false)
+                setShowTrustCenter(false)
+                setShowCompliancePosition(false)
+                setShowSecurityPolicy(true)
+            }
+            if (event.data && event.data.type === 'showProtectionEmbedded') {
+                setShowSecurityPolicy(false)
+                setShowRiskManagement(false)
+                setShowTrustCenter(false)
+                setShowCompliancePosition(false)
+                setShowProtectionEmbedded(true)
+            }
+        }
 
-  // Show HTML5 diagram when card 2 is selected
-  if (selectedCard === 2) {
-    // Show UserManagement if button was clicked
-    if (showUserManagement) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={() => setShowUserManagement(false)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={UserManagementHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="User Management"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show TemenosAuthorization by default
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={TemenosAuthorizationHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="Temenos Authorization"
-          sandbox="allow-same-origin allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
+        window.addEventListener('message', handleMessage)
+        return () => {
+            window.removeEventListener('message', handleMessage)
+        }
+    }, [])
 
-  // Show HTML5 diagram when card 1 is selected
-  if (selectedCard === 1) {
-    // Show TemenosAuthentication if button was clicked
-    if (showDetailedExplanation) {
-      return (
-        <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-          <div className="absolute top-4 right-4 z-10">
-            <button
-              onClick={handleBackToArchitecture}
-              className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-            >
-              <X className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-          </div>
-          <iframe
-            srcDoc={TemenosAuthenticationHTML}
-            className="w-full h-full border-0 rounded-lg"
-            title="Temenos Authentication"
-            sandbox="allow-same-origin allow-scripts"
-            style={{ minHeight: '600px' }}
-          />
-        </div>
-      )
-    }
-    
-    // Show SecurityArchitecture by default
-    return (
-      <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-          >
-            <X className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
-        <iframe
-          srcDoc={SecurityArchitectureHTML}
-          className="w-full h-full border-0 rounded-lg"
-          title="Temenos Security Architecture"
-          sandbox="allow-scripts"
-          style={{ minHeight: '600px' }}
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="card">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#283054] mb-2">Security Content</h2>
-        <p className="text-[#4A5568]">Select a security category and explore content</p>
-      </div>
-
-      {/* Layout: Column with categories + Card palette - Vertical center alignment */}
-      <div className="flex gap-6">
-        {/* Security Categories Column - Vertical */}
-        <div className="w-64 flex-shrink-0 flex flex-col justify-center">
-          <div className="space-y-4">
-            {securityCategories.map((category) => {
-              return (
-                <div
-                  key={category.id}
-                  className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054] flex items-center justify-center"
-                  style={{
-                    minHeight: '200px',
-                    height: '200px',
-                  }}
-                >
-                  <div className="flex flex-col items-center justify-center text-center p-6 w-full">
-                    <h3 className="text-base font-semibold text-[#283054]">
-                      {category.name}
-                    </h3>
-                  </div>
+    // Show HTML5 diagram when card 3 is selected
+    if (selectedCard === 3) {
+        // Show eXate page if button was clicked
+        if (showExate) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowExate(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={eXateHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="eXate Solution"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
                 </div>
-              )
-            })}
-          </div>
-        </div>
+            )
+        }
 
-        {/* Card Palette - 3 rows x 3 cards - Grouped by rows for alignment */}
-        <div className="flex-1">
-          <div className="space-y-4">
-            {/* Row 1: Cards 1, 2, 3 */}
-            <div className="grid grid-cols-3 gap-4">
-              {cards.slice(0, 3).map((card) => {
-                const IconComponent = card.icon
-                return (
-                  <div
-                    key={card.id}
-                    onClick={() => handleCardClick(card.id)}
-                    className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054]"
-                    style={{
-                      borderColor: card.color,
-                      minHeight: '200px',
-                      height: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <div className="flex flex-col items-center text-center p-6 w-full">
-                      <div 
-                        className="mb-4 p-4 rounded-lg"
-                        style={{
-                          backgroundColor: card.bgColor,
-                        }}
-                      >
-                        <IconComponent 
-                          className="w-8 h-8" 
-                          style={{ color: card.color }}
-                        />
-                      </div>
-                      <h3 
-                        className="text-lg font-semibold mb-2"
-                        style={{ color: card.color }}
-                      >
-                        {card.title}
-                      </h3>
-                    </div>
-                  </div>
-                )
-              })}
+        // Show PrivacyEncryption by default
+        return (
+            <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <iframe
+                    srcDoc={PrivacyEncryptionHTML}
+                    className="w-full h-full border-0 rounded-lg"
+                    title="Privacy & Encryption"
+                    sandbox="allow-same-origin allow-scripts"
+                    style={{ minHeight: '600px' }}
+                />
             </div>
-            
-            {/* Row 2: Cards 4, 5, 6 */}
-            <div className="grid grid-cols-3 gap-4">
-              {cards.slice(3, 6).map((card) => {
-                const IconComponent = card.icon
-                return (
-                  <div
-                    key={card.id}
-                    onClick={() => handleCardClick(card.id)}
-                    className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054]"
-                    style={{
-                      borderColor: card.color,
-                      minHeight: '200px',
-                      height: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <div className="flex flex-col items-center text-center p-6 w-full">
-                      <div 
-                        className="mb-4 p-4 rounded-lg"
-                        style={{
-                          backgroundColor: card.bgColor,
-                        }}
-                      >
-                        <IconComponent 
-                          className="w-8 h-8" 
-                          style={{ color: card.color }}
-                        />
-                      </div>
-                      <h3 
-                        className="text-lg font-semibold mb-2"
-                        style={{ color: card.color }}
-                      >
-                        {card.title}
-                      </h3>
-                    </div>
-                  </div>
-                )
-              })}
+        )
+    }
+
+    // Show HTML5 diagram when card 4 is selected
+    if (selectedCard === 4) {
+        return (
+            <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <iframe
+                    srcDoc={SaaSCloudSegregationHTML}
+                    className="w-full h-full border-0 rounded-lg"
+                    title="SaaS Cloud Segregation"
+                    sandbox="allow-same-origin allow-scripts"
+                    style={{ minHeight: '600px' }}
+                />
             </div>
-            
-            {/* Row 3: Cards 7, 8, 9 */}
-            <div className="grid grid-cols-3 gap-4">
-              {cards.slice(6, 9).map((card) => {
-                const IconComponent = card.icon
-                return (
-                  <div
-                    key={card.id}
-                    onClick={() => handleCardClick(card.id)}
-                    className="card hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-[#283054]"
-                    style={{
-                      borderColor: card.color,
-                      minHeight: '200px',
-                      height: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <div className="flex flex-col items-center text-center p-6 w-full">
-                      <div 
-                        className="mb-4 p-4 rounded-lg"
-                        style={{
-                          backgroundColor: card.bgColor,
-                        }}
-                      >
-                        <IconComponent 
-                          className="w-8 h-8" 
-                          style={{ color: card.color }}
-                        />
-                      </div>
-                      <h3 
-                        className="text-lg font-semibold mb-2"
-                        style={{ color: card.color }}
-                      >
-                        {card.title}
-                      </h3>
+        )
+    }
+
+    // Show HTML5 diagram when card 5 is selected
+    if (selectedCard === 5) {
+        // Show ProtectAssets if button was clicked
+        if (showProtectAssets) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowProtectAssets(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
                     </div>
-                  </div>
-                )
-              })}
+                    <iframe
+                        srcDoc={ProtectAssetsHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Protect Assets"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show SaaSPAM if button was clicked
+        if (showSaaSPAM) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowSaaSPAM(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={SaaSPAMHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="SaaS PAM"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show SaaSDataAccessControl if button was clicked
+        if (showSaaSDataAccessControl) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowSaaSDataAccessControl(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={SaaSDataAccessControlHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="SaaS Data Access Control"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show SaaSAccessData by default
+        return (
+            <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <iframe
+                    srcDoc={SaaSAccessDataHTML}
+                    className="w-full h-full border-0 rounded-lg"
+                    title="SaaS Access Data"
+                    sandbox="allow-same-origin allow-scripts"
+                    style={{ minHeight: '600px' }}
+                />
             </div>
-          </div>
+        )
+    }
+
+    // Show HTML5 diagram when card 6 is selected
+    if (selectedCard === 6) {
+        // Show SaaSDefenceDepth page if button was clicked
+        if (showSaaSDefenceDepth) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowSaaSDefenceDepth(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={SaaSDefenceDepthHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="SaaS Defence-in-Depth"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show PlatformManagement by default
+        return (
+            <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <iframe
+                    srcDoc={PlatformManagementHTML}
+                    className="w-full h-full border-0 rounded-lg"
+                    title="Platform Management"
+                    sandbox="allow-same-origin allow-scripts"
+                    style={{ minHeight: '600px' }}
+                />
+            </div>
+        )
+    }
+
+    // Show HTML5 diagram when card 7 is selected
+    if (selectedCard === 7) {
+        // Show TemenosSaaSWAF if button was clicked
+        if (showTemenosSaaSWAF) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowTemenosSaaSWAF(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={WAFHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="WAF"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show TemenosSaaSAntiDDoS if button was clicked
+        if (showTemenosSaaSAntiDDoS) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowTemenosSaaSAntiDDoS(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={DDoSHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="DDoS Protection"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show NetworkSecurityServices if button was clicked
+        if (showNetworkSecurityServices) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowNetworkSecurityServices(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={NetworkHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Network Security"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show SecurityEventFeed if button was clicked
+        if (showSecurityEventFeed) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowSecurityEventFeed(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={SecurityEventFeedHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Security Event Feed"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show ProductSecurityUniform by default
+        return (
+            <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <iframe
+                    srcDoc={ProductSecurityUniformHTML}
+                    className="w-full h-full border-0 rounded-lg"
+                    title="Product Security Uniform"
+                    sandbox="allow-same-origin allow-scripts"
+                    style={{ minHeight: '600px' }}
+                />
+            </div>
+        )
+    }
+
+    // Show HTML5 diagram when card 8 is selected
+    if (selectedCard === 8) {
+        // Show Backup if button was clicked (check first to take precedence)
+        if (showBackup) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => {
+                                setShowBackup(false)
+                                setShowIncidents(true)
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={BackupHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos SaaS Backup and Restore"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show Incidents if button was clicked (check first to take precedence)
+        if (showIncidents) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => {
+                                setShowIncidents(false)
+                                setShowTemenosSaaSLogs(true)
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={IncidentsHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Incident Fix Time"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show LogHistoryPic if Temenos History button was clicked
+        if (showTemenosHistory) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowTemenosHistory(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={LogHistoryPicHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos History"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show SaaSLogs if button was clicked
+        if (showTemenosSaaSLogs) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowTemenosSaaSLogs(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={SaaSLogsHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos SaaS Logging"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show LogHistory if button was clicked
+        if (showTemenosLogHistory) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowTemenosLogHistory(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={LogHistoryHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos Log & History"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show SecurityAssurance if button was clicked
+        if (showSecurityAssurance) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowSecurityAssurance(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={SecurityAssuranceHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos Product Security Assurance"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show BCP by default
+        return (
+            <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <iframe
+                    srcDoc={BCPHTML}
+                    className="w-full h-full border-0 rounded-lg"
+                    title="Business Continuity Policy BCP"
+                    sandbox="allow-same-origin allow-scripts"
+                    style={{ minHeight: '600px' }}
+                />
+            </div>
+        )
+    }
+
+    // Show HTML5 diagram when card 9 is selected
+    if (selectedCard === 9) {
+        // Show Trust Center page if button was clicked
+        if (showTrustCenter) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => {
+                                setShowTrustCenter(false)
+                                setShowCompliancePosition(true)
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={TrustCenterHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos Trust Center"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show compliance position page if button was clicked
+        if (showCompliancePosition) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowCompliancePosition(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={CompliancePositionHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos Compliance Position"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show Security Policy page if button was clicked
+        if (showSecurityPolicy) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => {
+                                setShowSecurityPolicy(false)
+                                setShowRiskManagement(true)
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={SecurityPolicyHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos Security Policy"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show Protection Embedded page if button was clicked
+        if (showProtectionEmbedded) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => {
+                                setShowProtectionEmbedded(false)
+                                setShowSecurityPolicy(true)
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={ProtectionEmbeddedHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos Protection Embedded"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show Risk Management page if button was clicked
+        if (showRiskManagement) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => {
+                                setShowRiskManagement(false)
+                                setShowTrustCenter(true)
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={RiskManagementHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Risk Management"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show overview page if button was clicked
+        if (showSaaSComplianceOverview) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowSaaSComplianceOverview(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={SaaSComplianceOverviewHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos SaaS Compliance Overview"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show design page by default
+        return (
+            <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <iframe
+                    srcDoc={SaaSComplianceDesignHTML}
+                    className="w-full h-full border-0 rounded-lg"
+                    title="Temenos SaaS Compliance by Design"
+                    sandbox="allow-same-origin allow-scripts"
+                    style={{ minHeight: '600px' }}
+                />
+            </div>
+        )
+    }
+
+    // Show HTML5 diagram when card 2 is selected
+    if (selectedCard === 2) {
+        // Show UserManagement if button was clicked
+        if (showUserManagement) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={() => setShowUserManagement(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={UserManagementHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="User Management"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show TemenosAuthorization by default
+        return (
+            <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <iframe
+                    srcDoc={TemenosAuthorizationHTML}
+                    className="w-full h-full border-0 rounded-lg"
+                    title="Temenos Authorization"
+                    sandbox="allow-same-origin allow-scripts"
+                    style={{ minHeight: '600px' }}
+                />
+            </div>
+        )
+    }
+
+    // Show HTML5 diagram when card 1 is selected
+    if (selectedCard === 1) {
+        // Show TemenosAuthentication if button was clicked
+        if (showDetailedExplanation) {
+            return (
+                <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <button
+                            onClick={handleBackToArchitecture}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                        >
+                            <X className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={TemenosAuthenticationHTML}
+                        className="w-full h-full border-0 rounded-lg"
+                        title="Temenos Authentication"
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ minHeight: '600px' }}
+                    />
+                </div>
+            )
+        }
+
+        // Show SecurityArchitecture by default
+        return (
+            <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
+                <div className="absolute top-4 right-4 z-10">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                </div>
+                <iframe
+                    srcDoc={SecurityArchitectureHTML}
+                    className="w-full h-full border-0 rounded-lg"
+                    title="Temenos Security Architecture"
+                    sandbox="allow-scripts"
+                    style={{ minHeight: '600px' }}
+                />
+            </div>
+        )
+    }
+
+    return (
+        <div className="card">
+            <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Security Content</h2>
+                <p className="text-gray-600 dark:text-gray-300">Select a security category and explore content</p>
+            </div>
+
+            {/* Layout: Column with categories + Card palette - Vertical center alignment */}
+            <div className="flex gap-6">
+                {/* Security Categories Column - Vertical */}
+                <div className="w-64 flex-shrink-0 flex flex-col justify-center">
+                    <div className="space-y-4">
+                        {securityCategories.map((category) => {
+                            return (
+                                <div
+                                    key={category.id}
+                                    className="group relative bg-white dark:bg-slate-800 rounded-2xl hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 flex items-center justify-center"
+                                    style={{
+                                        minHeight: '220px',
+                                        height: '220px',
+                                    }}
+                                >
+                                    <div className="flex flex-col items-center justify-center text-center p-6 w-full">
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                            {category.name}
+                                        </h3>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Card Palette - 3 rows x 3 cards - Grouped by rows for alignment */}
+                <div className="flex-1">
+                    <div className="space-y-4">
+                        {/* Row 1: Cards 1, 2, 3 */}
+                        <div className="grid grid-cols-3 gap-6">
+                            {cards.slice(0, 3).map((card) => {
+                                const IconComponent = card.icon
+                                return (
+                                    <div
+                                        key={card.id}
+                                        onClick={() => handleCardClick(card.id)}
+                                        className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-200 dark:border-gray-700"
+                                        style={{
+                                            minHeight: '220px',
+                                            height: '220px',
+                                        }}
+                                    >
+                                        <div
+                                            className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                                            style={{ background: `linear-gradient(135deg, ${card.color}20, ${card.color}40)` }}
+                                        />
+                                        <div className="relative flex flex-col items-center text-center h-full justify-center">
+                                            <div
+                                                className="mb-4 p-5 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110"
+                                                style={{
+                                                    backgroundColor: card.bgColor,
+                                                }}
+                                            >
+                                                <IconComponent
+                                                    className="w-12 h-12"
+                                                    style={{ color: card.color }}
+                                                    strokeWidth={1.5}
+                                                />
+                                            </div>
+                                            <h3
+                                                className="text-lg font-bold mb-1 dark:text-white"
+                                                style={{ color: card.color }}
+                                            >
+                                                {card.title}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+
+                        {/* Row 2: Cards 4, 5, 6 */}
+                        <div className="grid grid-cols-3 gap-6">
+                            {cards.slice(3, 6).map((card) => {
+                                const IconComponent = card.icon
+                                return (
+                                    <div
+                                        key={card.id}
+                                        onClick={() => handleCardClick(card.id)}
+                                        className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-200 dark:border-gray-700"
+                                        style={{
+                                            minHeight: '220px',
+                                            height: '220px',
+                                        }}
+                                    >
+                                        <div
+                                            className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                                            style={{ background: `linear-gradient(135deg, ${card.color}20, ${card.color}40)` }}
+                                        />
+                                        <div className="relative flex flex-col items-center text-center h-full justify-center">
+                                            <div
+                                                className="mb-4 p-5 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110"
+                                                style={{
+                                                    backgroundColor: card.bgColor,
+                                                }}
+                                            >
+                                                <IconComponent
+                                                    className="w-12 h-12"
+                                                    style={{ color: card.color }}
+                                                    strokeWidth={1.5}
+                                                />
+                                            </div>
+                                            <h3
+                                                className="text-lg font-bold mb-1 dark:text-white"
+                                                style={{ color: card.color }}
+                                            >
+                                                {card.title}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+
+                        {/* Row 3: Cards 7, 8, 9 */}
+                        <div className="grid grid-cols-3 gap-6">
+                            {cards.slice(6, 9).map((card) => {
+                                const IconComponent = card.icon
+                                return (
+                                    <div
+                                        key={card.id}
+                                        onClick={() => handleCardClick(card.id)}
+                                        className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-200 dark:border-gray-700"
+                                        style={{
+                                            minHeight: '220px',
+                                            height: '220px',
+                                        }}
+                                    >
+                                        <div
+                                            className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                                            style={{ background: `linear-gradient(135deg, ${card.color}20, ${card.color}40)` }}
+                                        />
+                                        <div className="relative flex flex-col items-center text-center h-full justify-center">
+                                            <div
+                                                className="mb-4 p-5 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110"
+                                                style={{
+                                                    backgroundColor: card.bgColor,
+                                                }}
+                                            >
+                                                <IconComponent
+                                                    className="w-12 h-12"
+                                                    style={{ color: card.color }}
+                                                    strokeWidth={1.5}
+                                                />
+                                            </div>
+                                            <h3
+                                                className="text-lg font-bold mb-1 dark:text-white"
+                                                style={{ color: card.color }}
+                                            >
+                                                {card.title}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  )
+    )
 }

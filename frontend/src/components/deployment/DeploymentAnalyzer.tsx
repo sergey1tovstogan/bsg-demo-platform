@@ -765,22 +765,27 @@ function ResourceGroupSelector({
       </div>
 
       {/* Include Costs Checkbox */}
-      <div className="card">
-        <label className="flex items-center space-x-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={includeCosts}
-            onChange={(e) => setIncludeCosts(e.target.checked)}
-            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-          />
+      {/* Include Costs Checkbox */}
+      <div className="card bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-100 dark:border-purple-500/30 transition-all hover:shadow-md">
+        <label className="flex items-center space-x-3 cursor-pointer group">
+          <div className="relative flex items-center justify-center">
+            <input
+              type="checkbox"
+              checked={includeCosts}
+              onChange={(e) => setIncludeCosts(e.target.checked)}
+              className="peer w-5 h-5 text-purple-600 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500 transition-all cursor-pointer"
+            />
+          </div>
           <div className="flex items-center space-x-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
-            <span className="text-sm font-medium text-gray-700">
+            <div className="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-lg">
+              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <span className="text-base font-medium text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
               Include cost analysis for selected resource groups
             </span>
           </div>
         </label>
-        <p className="text-xs text-gray-500 mt-2 ml-7">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 ml-11">
           This will fetch cost data from Azure Cost Management API (may take a few moments)
         </p>
       </div>
@@ -1179,8 +1184,8 @@ function ServiceAnalysis({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content Area - Selected Component Details */}
           <div className="lg:col-span-2">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
               <span>Temenos Components</span>
             </h3>
             {selectedResult && (
@@ -1191,8 +1196,8 @@ function ServiceAnalysis({
           {/* Quick Overview Sidebar */}
           <div className="lg:col-span-1">
             <div className="card sticky top-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
                 <span>Quick Overview {identifiedComponents.length}</span>
               </h3>
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
@@ -1203,20 +1208,20 @@ function ServiceAnalysis({
                       key={result.service.id || index}
                       onClick={() => setSelectedComponent(result.service.id || null)}
                       className={`p-3 rounded-lg cursor-pointer transition-all ${isSelected
-                        ? 'bg-purple-100 border-2 border-purple-500'
-                        : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-purple-300'
+                        ? 'bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-500 dark:border-purple-400'
+                        : 'bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-purple-300'
                         }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <h4 className={`font-semibold text-sm ${isSelected ? 'text-purple-900' : 'text-gray-900'}`}>
+                            <h4 className={`font-semibold text-sm ${isSelected ? 'text-purple-900 dark:text-purple-100' : 'text-gray-900 dark:text-white'}`}>
                               {result.componentInfo?.componentName || result.service.name}
                             </h4>
-                            {isSelected && <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                            {isSelected && <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />}
                           </div>
-                          <p className="text-xs text-gray-600">{result.componentInfo?.componentType || result.service.type}</p>
-                          <p className="text-xs text-gray-500 mt-1">{result.service.resourceGroup}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-300">{result.componentInfo?.componentType || result.service.type}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{result.service.resourceGroup}</p>
                         </div>
                       </div>
                     </div>
