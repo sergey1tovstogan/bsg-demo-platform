@@ -242,6 +242,7 @@ async def get_resource_groups(subscriptionId: str, refresh: bool = False):
             raise HTTPException(status_code=400, detail="Subscription ID is required")
         
         # Check cache first unless refresh is requested
+        from app.services.cache_service import get_cache_service
         cache_service = await get_cache_service()
         cached_resource_groups = None
         if not refresh:
