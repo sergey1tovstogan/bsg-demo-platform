@@ -89,13 +89,26 @@ class CacheService:
             # Check expiration
             expires_at = result.get("expires_at")
             if expires_at:
-                if isinstance(expires_at, str):
-                    expires_at = datetime.fromisoformat(expires_at)
-                # Ensure timezone-aware for comparison
-                expires_at = to_utc(expires_at)
-                if expires_at < utc_now():
-                    logger.debug(f"Cache expired: {cache_key}")
-                    # Delete expired entry
+                try:
+                    # Handle different types: string, datetime (naive or aware)
+                    if isinstance(expires_at, str):
+                        expires_at = datetime.fromisoformat(expires_at)
+                    elif not isinstance(expires_at, datetime):
+                        # Unexpected type, log and skip expiration check
+                        logger.warning(f"Unexpected expires_at type for {cache_key}: {type(expires_at)}")
+                        expires_at = None
+                    
+                    if expires_at:
+                        # Ensure timezone-aware for comparison (handles both naive and aware datetimes)
+                        expires_at = to_utc(expires_at)
+                        if expires_at < utc_now():
+                            logger.debug(f"Cache expired: {cache_key}")
+                            # Delete expired entry
+                            await db.cache.delete_one({"cache_key": cache_key})
+                            return None
+                except (ValueError, TypeError, AttributeError) as e:
+                    logger.error(f"Error processing expires_at for {cache_key}: {e}. Type: {type(expires_at)}, Value: {expires_at}", exc_info=True)
+                    # If we can't process expiration, assume expired for safety
                     await db.cache.delete_one({"cache_key": cache_key})
                     return None
             
