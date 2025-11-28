@@ -18,13 +18,13 @@ echo   Done.
 echo.
 
 echo [2/4] Starting Backend Server...
-start "BSG Backend" cmd /k "cd /d %~dp0backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+start "BSG Backend" cmd /k "cd /d %~dp0..\backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
 timeout /t 3 /nobreak >nul
 echo   Backend starting in new window...
 echo.
 
 echo [3/4] Starting Frontend Server...
-start "BSG Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
+start "BSG Frontend" cmd /k "cd /d %~dp0..\frontend && npm run dev"
 timeout /t 3 /nobreak >nul
 echo   Frontend starting in new window...
 echo.
