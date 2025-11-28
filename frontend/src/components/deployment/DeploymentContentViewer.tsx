@@ -77,12 +77,12 @@ export function DeploymentContentViewer() {
       setRagLoading(true)
       setRagError(null)
 
-      // Query RAG API for Temenos cloud architecture models
+      // Query RAG API for Temenos cloud architecture models - using unique, non-overlapping questions
       const questions = [
-        "What are the Temenos cloud architecture models?",
-        "What are the deployment options in cloud for Temenos products?",
-        "How does Temenos support cloud-native deployments?",
-        "What are the best practices for deploying Temenos components on Azure?"
+        "What are the Temenos cloud architecture models and their key characteristics?",
+        "What Kubernetes orchestration platforms and container technologies does Temenos support for cloud deployments?",
+        "What database and messaging services are supported in Temenos cloud-native deployments across AWS, Azure, and OpenShift?",
+        "What are the key operational differences and migration considerations between cloud-native and VM-based Temenos deployments?"
       ]
 
       // Query multiple questions and combine results
