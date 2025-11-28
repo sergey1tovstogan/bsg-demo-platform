@@ -115,4 +115,12 @@ function App() {
               ) : (
                 <HomePage onSelectComponent={handleComponentChange} />
               )}
-      
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+export default App

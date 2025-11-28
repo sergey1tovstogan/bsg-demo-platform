@@ -1,5 +1,18 @@
 import { useState, useEffect } from 'react'
-import { Key, UserCheck, Lock, Shield, Eye, Server, Cloud, KeyRound, FileCheck, X, type LucideIcon } from 'lucide-react'
+import {
+    Fingerprint, // Modern Auth
+    ShieldCheck, // Modern Authorization
+    LockKeyhole, // Modern Privacy
+    Layers, // Modern Segregation
+    ScanEye, // Modern Access
+    Cpu, // Modern Platform
+    CloudCog, // Modern SaaS
+    Activity, // Modern Logs/BCP
+    Scale, // Modern Compliance
+    X,
+    type LucideIcon,
+    ChevronRight
+} from 'lucide-react'
 import LogHistoryHTML from './security/LogHistory.html?raw'
 import LogHistoryPicHTML from './security/LogHistoryPic.html?raw'
 import SaaSLogsHTML from './security/SaaSLogs.html?raw'
@@ -19,71 +32,81 @@ interface SecurityCard {
     icon: LucideIcon
     color: string
     bgColor: string
+    description: string
 }
 
 const cards: SecurityCard[] = [
     {
         id: 1,
         title: 'Authentication',
-        icon: Key,
-        color: '#3B82F6', // Blue
-        bgColor: '#DBEAFE', // Light blue background
+        icon: Fingerprint,
+        color: '#60A5FA', // Blue-400
+        bgColor: 'rgba(59, 130, 246, 0.1)',
+        description: 'Identity verification & SSO'
     },
     {
         id: 2,
         title: 'Authorization',
-        icon: UserCheck,
-        color: '#10B981', // Green
-        bgColor: '#D1FAE5', // Light green background
+        icon: ShieldCheck,
+        color: '#34D399', // Emerald-400
+        bgColor: 'rgba(16, 185, 129, 0.1)',
+        description: 'Role-based access control'
     },
     {
         id: 3,
         title: 'Privacy & Encryption',
-        icon: Lock,
-        color: '#8B5CF6', // Purple
-        bgColor: '#EDE9FE', // Light purple background
+        icon: LockKeyhole,
+        color: '#A78BFA', // Violet-400
+        bgColor: 'rgba(139, 92, 246, 0.1)',
+        description: 'Data protection standards'
     },
     {
         id: 4,
         title: 'Segregation',
-        icon: Shield,
-        color: '#F59E0B', // Amber
-        bgColor: '#FEF3C7', // Light amber background
+        icon: Layers,
+        color: '#FBBF24', // Amber-400
+        bgColor: 'rgba(245, 158, 11, 0.1)',
+        description: 'Multi-tenant isolation'
     },
     {
         id: 5,
         title: 'Access Management',
-        icon: Eye,
-        color: '#EF4444', // Red
-        bgColor: '#FEE2E2', // Light red background
+        icon: ScanEye,
+        color: '#F87171', // Red-400
+        bgColor: 'rgba(239, 68, 68, 0.1)',
+        description: 'Privileged access monitoring'
     },
     {
         id: 6,
         title: 'Platform Management',
-        icon: Server,
-        color: '#06B6D4', // Cyan
-        bgColor: '#CFFAFE', // Light cyan background
+        icon: Cpu,
+        color: '#22D3EE', // Cyan-400
+        bgColor: 'rgba(6, 182, 212, 0.1)',
+        description: 'Infrastructure controls'
     },
     {
         id: 7,
         title: 'SaaS Security Services',
-        icon: Cloud,
-        color: '#6366F1', // Indigo
-        bgColor: '#E0E7FF', // Light indigo background
+        icon: CloudCog,
+        color: '#818CF8', // Indigo-400
+        bgColor: 'rgba(99, 102, 241, 0.1)',
+        description: 'Cloud-native security'
     },
     {
         id: 8,
         title: 'SaaS BCP, Logs, Incidents',
-        icon: KeyRound,
-        color: '#14B8A6', // Teal
-        bgColor: '#CCFBF1', // Light teal background
+        icon: Activity,
+        color: '#2DD4BF', // Teal-400
+        bgColor: 'rgba(20, 184, 166, 0.1)',
+        description: 'Resilience & monitoring'
     },
     {
         id: 9,
         title: 'Compliance and Risk Management',
-        icon: FileCheck,
-        color: '#F97316', // Orange
-        bgColor: '#FFEDD5', // Light orange background
+        icon: Scale,
+        color: '#FB923C', // Orange-400
+        bgColor: 'rgba(249, 115, 22, 0.1)',
+        description: 'Regulatory alignment'
     },
 ]
 
@@ -7999,165 +8022,102 @@ export function SecurityContentViewer() {
                 <p className="text-gray-600 dark:text-gray-300">Select a security category and explore content</p>
             </div>
 
-            {/* Layout: Column with categories + Card palette - Vertical center alignment */}
-            <div className="flex gap-6">
-                {/* Security Categories Column - Vertical */}
-                <div className="w-64 flex-shrink-0 flex flex-col justify-center">
-                    <div className="space-y-4">
-                        {securityCategories.map((category) => {
-                            return (
-                                <div
-                                    key={category.id}
-                                    className="group relative bg-white dark:bg-slate-800 rounded-2xl hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 flex items-center justify-center"
-                                    style={{
-                                        minHeight: '220px',
-                                        height: '220px',
-                                    }}
-                                >
-                                    <div className="flex flex-col items-center justify-center text-center p-6 w-full">
-                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                            {category.name}
-                                        </h3>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </div>
+            {/* Layout: Vertical list of categories with their cards */}
+            <div className="space-y-16">
+                {securityCategories.map((category, index) => {
+                    const startIndex = index * 3;
+                    const categoryCards = cards.slice(startIndex, startIndex + 3);
 
-                {/* Card Palette - 3 rows x 3 cards - Grouped by rows for alignment */}
-                <div className="flex-1">
-                    <div className="space-y-4">
-                        {/* Row 1: Cards 1, 2, 3 */}
-                        <div className="grid grid-cols-3 gap-6">
-                            {cards.slice(0, 3).map((card) => {
-                                const IconComponent = card.icon
-                                return (
-                                    <div
-                                        key={card.id}
-                                        onClick={() => handleCardClick(card.id)}
-                                        className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-200 dark:border-gray-700"
-                                        style={{
-                                            minHeight: '220px',
-                                            height: '220px',
-                                        }}
-                                    >
-                                        <div
-                                            className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"
-                                            style={{ background: `linear-gradient(135deg, ${card.color}20, ${card.color}40)` }}
-                                        />
-                                        <div className="relative flex flex-col items-center text-center h-full justify-center">
-                                            <div
-                                                className="mb-4 p-5 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110"
-                                                style={{
-                                                    backgroundColor: card.bgColor,
-                                                }}
-                                            >
-                                                <IconComponent
-                                                    className="w-12 h-12"
-                                                    style={{ color: card.color }}
-                                                    strokeWidth={1.5}
-                                                />
-                                            </div>
-                                            <h3
-                                                className="text-lg font-bold mb-1 dark:text-white"
-                                                style={{ color: card.color }}
-                                            >
-                                                {card.title}
-                                            </h3>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
+                    return (
+                        <div key={category.id} className="space-y-8">
+                            {/* Category Header with Modern Accent */}
+                            <div className="flex items-center gap-4">
+                                <div className="h-8 w-1 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                                <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 tracking-tight">
+                                    {category.name}
+                                </h3>
+                            </div>
 
-                        {/* Row 2: Cards 4, 5, 6 */}
-                        <div className="grid grid-cols-3 gap-6">
-                            {cards.slice(3, 6).map((card) => {
-                                const IconComponent = card.icon
-                                return (
-                                    <div
-                                        key={card.id}
-                                        onClick={() => handleCardClick(card.id)}
-                                        className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-200 dark:border-gray-700"
-                                        style={{
-                                            minHeight: '220px',
-                                            height: '220px',
-                                        }}
-                                    >
+                            {/* Cards Grid for this Category */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {categoryCards.map((card) => {
+                                    const IconComponent = card.icon;
+                                    return (
                                         <div
-                                            className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"
-                                            style={{ background: `linear-gradient(135deg, ${card.color}20, ${card.color}40)` }}
-                                        />
-                                        <div className="relative flex flex-col items-center text-center h-full justify-center">
+                                            key={card.id}
+                                            onClick={() => handleCardClick(card.id)}
+                                            className="group relative overflow-hidden rounded-3xl p-1 cursor-pointer transition-all duration-500 hover:-translate-y-2"
+                                            style={{
+                                                minHeight: '260px',
+                                                height: '260px',
+                                            }}
+                                        >
+                                            {/* Gradient Border Background */}
                                             <div
-                                                className="mb-4 p-5 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110"
-                                                style={{
-                                                    backgroundColor: card.bgColor,
-                                                }}
-                                            >
-                                                <IconComponent
-                                                    className="w-12 h-12"
-                                                    style={{ color: card.color }}
-                                                    strokeWidth={1.5}
-                                                />
-                                            </div>
-                                            <h3
-                                                className="text-lg font-bold mb-1 dark:text-white"
-                                                style={{ color: card.color }}
-                                            >
-                                                {card.title}
-                                            </h3>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
+                                                className="absolute inset-0 bg-gradient-to-br from-gray-200 via-white to-gray-200 dark:from-slate-700 dark:via-slate-800 dark:to-slate-900 opacity-100 transition-all duration-500"
+                                            />
 
-                        {/* Row 3: Cards 7, 8, 9 */}
-                        <div className="grid grid-cols-3 gap-6">
-                            {cards.slice(6, 9).map((card) => {
-                                const IconComponent = card.icon
-                                return (
-                                    <div
-                                        key={card.id}
-                                        onClick={() => handleCardClick(card.id)}
-                                        className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-200 dark:border-gray-700"
-                                        style={{
-                                            minHeight: '220px',
-                                            height: '220px',
-                                        }}
-                                    >
-                                        <div
-                                            className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-300"
-                                            style={{ background: `linear-gradient(135deg, ${card.color}20, ${card.color}40)` }}
-                                        />
-                                        <div className="relative flex flex-col items-center text-center h-full justify-center">
+                                            {/* Active Border Glow on Hover */}
                                             <div
-                                                className="mb-4 p-5 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110"
+                                                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                                                 style={{
-                                                    backgroundColor: card.bgColor,
+                                                    background: `linear-gradient(135deg, ${card.color}, transparent 60%)`
                                                 }}
-                                            >
-                                                <IconComponent
-                                                    className="w-12 h-12"
-                                                    style={{ color: card.color }}
-                                                    strokeWidth={1.5}
-                                                />
+                                            />
+
+                                            {/* Card Content Container */}
+                                            <div className="relative h-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[22px] p-6 flex flex-col items-center justify-center text-center border border-white/20 shadow-xl transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-blue-500/10">
+
+                                                {/* Icon Container with Neon Glow */}
+                                                <div
+                                                    className="mb-6 p-5 rounded-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3"
+                                                    style={{
+                                                        backgroundColor: card.bgColor,
+                                                        boxShadow: `0 0 20px ${card.color}30`
+                                                    }}
+                                                >
+                                                    <IconComponent
+                                                        className="w-10 h-10 transition-all duration-300"
+                                                        style={{
+                                                            color: card.color,
+                                                            filter: `drop-shadow(0 0 8px ${card.color}60)`
+                                                        }}
+                                                        strokeWidth={1.5}
+                                                    />
+                                                </div>
+
+                                                {/* Title */}
+                                                <h3
+                                                    className="text-xl font-bold mb-2 text-gray-800 dark:text-white group-hover:text-transparent group-hover:bg-clip-text transition-all duration-300"
+                                                    style={{
+                                                        backgroundImage: `linear-gradient(135deg, ${card.color}, ${card.color})` // Fallback for non-hover
+                                                    }}
+                                                >
+                                                    {card.title}
+                                                </h3>
+
+                                                {/* Description */}
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium opacity-80 group-hover:opacity-100 transition-opacity duration-300">
+                                                    {card.description}
+                                                </p>
+
+                                                {/* Hover Indicator */}
+                                                <div
+                                                    className="absolute bottom-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0"
+                                                >
+                                                    <ChevronRight
+                                                        className="w-5 h-5"
+                                                        style={{ color: card.color }}
+                                                    />
+                                                </div>
                                             </div>
-                                            <h3
-                                                className="text-lg font-bold mb-1 dark:text-white"
-                                                style={{ color: card.color }}
-                                            >
-                                                {card.title}
-                                            </h3>
                                         </div>
-                                    </div>
-                                )
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    );
+                })}
             </div>
         </div>
     )
