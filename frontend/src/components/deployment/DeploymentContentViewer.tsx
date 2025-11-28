@@ -276,13 +276,13 @@ export function DeploymentContentViewer() {
 
   if (ragLoading) {
     return (
-      <div className="bg-white dark:bg-gray-100 rounded-lg shadow-lg border border-gray-300 dark:border-gray-400 p-8">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-8">
         <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin text-[#283054] mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-900 mb-2">
+          <Loader2 className="w-12 h-12 animate-spin text-[#283054] dark:text-blue-400 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             Retrieving Cloud Architecture Information
           </h3>
-          <p className="text-gray-600 dark:text-gray-700 text-center max-w-md">
+          <p className="text-gray-600 dark:text-gray-300 text-center max-w-md">
             Querying Temenos RAG Knowledge Base for cloud architecture models and deployment strategies. This may take a few moments...
           </p>
           <div className="mt-6 w-full max-w-md">
@@ -298,15 +298,15 @@ export function DeploymentContentViewer() {
   return (
     <div className="space-y-6">
       {/* RAG Content - Temenos Cloud Architecture */}
-      <div className="bg-white dark:bg-gray-100 rounded-lg shadow-lg border border-gray-300 dark:border-gray-400 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Cloud className="w-8 h-8 text-[#283054]" />
+            <Cloud className="w-8 h-8 text-[#283054] dark:text-blue-400" />
             <div>
-              <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-900">
+              <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">
                 Temenos Cloud Architecture Models
               </h2>
-              <p className="text-lg text-gray-700 dark:text-gray-800">
+              <p className="text-lg text-gray-700 dark:text-gray-300">
                 Information from Temenos RAG Knowledge Base
                 {isFromCache && (
                   <span className="ml-2 text-sm text-green-600 dark:text-green-700 font-medium">
@@ -360,12 +360,12 @@ export function DeploymentContentViewer() {
                   {items.map((item: any, idx: number) => (
                     <div
                       key={`${category}-${idx}`}
-                      className="bg-gray-50 dark:bg-white rounded-lg p-6 border border-gray-300 dark:border-gray-400 shadow-sm"
+                      className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-300 dark:border-gray-700 shadow-sm"
                     >
-                      <h3 className="text-xl font-bold mb-4 border-b-2 border-blue-500 dark:border-blue-400 pb-3 text-gray-900 dark:text-gray-900">
+                      <h3 className="text-xl font-bold mb-4 border-b-2 border-blue-500 dark:border-blue-400 pb-3 text-gray-900 dark:text-white">
                         {item.title || item.question}
                       </h3>
-                <div className="text-gray-800 dark:text-gray-900">
+                <div className="text-gray-800 dark:text-gray-200">
                   <ReactMarkdown
                     components={{
                       h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-400 mt-6 mb-4" {...props} />,
@@ -385,9 +385,9 @@ export function DeploymentContentViewer() {
                   </ReactMarkdown>
                 </div>
                       {item.sources && item.sources.length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-400">
-                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-900 mb-2">Sources:</p>
-                          <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-800">
+                        <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-600">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Sources:</p>
+                          <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
                             {item.sources.map((source: any, sidx: number) => (
                               <li key={sidx}>{source.title || source.url || 'Temenos Documentation'}</li>
                             ))}
