@@ -77,12 +77,12 @@ export function DeploymentContentViewer() {
       setRagLoading(true)
       setRagError(null)
 
-      // Query RAG API for Temenos cloud architecture models - using unique, non-overlapping questions
+      // Query RAG API for cloud-native deployments on Azure and AWS - focus on services and AI capabilities
       const questions = [
-        "What are the Temenos cloud architecture models and their key characteristics?",
-        "What Kubernetes orchestration platforms and container technologies does Temenos support for cloud deployments?",
-        "What database and messaging services are supported in Temenos cloud-native deployments across AWS, Azure, and OpenShift?",
-        "What are the key operational differences and migration considerations between cloud-native and VM-based Temenos deployments?"
+        "What Azure cloud services does Temenos use for cloud-native deployments? Specifically detail which services are used for databases (Azure SQL Database, Azure Database for PostgreSQL, MongoDB), messaging (Azure Event Hub, Apache ActiveMQ), container orchestration (Azure Kubernetes Service AKS, Azure Container Apps ACA), and other infrastructure components.",
+        "What AWS cloud services does Temenos use for cloud-native deployments? Specifically detail which services are used for databases (Amazon RDS, DocumentDB, PostgreSQL), messaging (Amazon Kinesis, Apache ActiveMQ), container orchestration (AWS Elastic Kubernetes Service EKS, Amazon ECS), and other infrastructure components.",
+        "What are the specific use cases and purposes for each Azure service in Temenos deployments? Explain when to use Azure SQL Database vs Azure Database for PostgreSQL, when to use Azure Event Hub vs Apache ActiveMQ, and when to use AKS vs Azure Container Apps.",
+        "What AI and machine learning capabilities does Temenos provide in cloud-native deployments? What Azure AI services (Azure OpenAI, Azure Cognitive Services) or AWS AI services (Amazon SageMaker, AWS Bedrock) are integrated, and how are they used for banking operations?"
       ]
 
       // Query multiple questions and combine results
@@ -95,7 +95,7 @@ export function DeploymentContentViewer() {
             question,
             region: 'global',
             RAGmodelId: 'ModularBanking, TechnologyOverview',
-            context: 'This is about Temenos cloud architecture models and deployment strategies for Temenos banking solutions.'
+            context: 'This is about Temenos cloud architecture models and deployment strategies. IMPORTANT: Format the answer using Markdown. Use bold for key terms, bullet points for lists, and clear headers.'
           })
 
           // Handle different response structures
@@ -290,10 +290,22 @@ export function DeploymentContentViewer() {
                 key={idx}
                 className="bg-gray-50 dark:bg-white rounded-lg p-6 border border-gray-300 dark:border-gray-400 shadow-sm"
               >
-                <h3 className="text-xl font-bold mb-3 border-b border-gray-400 dark:border-gray-500 pb-2 text-gray-900 dark:text-gray-900">
+                <h3 className="text-xl font-bold mb-4 border-b-2 border-blue-500 dark:border-blue-400 pb-3 text-gray-900 dark:text-gray-900">
                   {item.question}
                 </h3>
-                <div className="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-900">
+                <div className="prose prose-slate dark:prose-invert max-w-none text-gray-800 dark:text-gray-900 
+                  prose-headings:font-bold prose-headings:text-gray-900 dark:prose-headings:text-gray-900
+                  prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:border-b prose-h2:border-gray-300 dark:prose-h2:border-gray-400 prose-h2:pb-2
+                  prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3 prose-h3:text-blue-700 dark:prose-h3:text-blue-600
+                  prose-h4:text-lg prose-h4:mt-4 prose-h4:mb-2 prose-h4:font-semibold
+                  prose-p:leading-relaxed prose-p:mb-4 prose-p:text-base
+                  prose-strong:font-bold prose-strong:text-gray-900 dark:prose-strong:text-gray-900
+                  prose-ul:my-4 prose-ul:space-y-2 prose-li:ml-6 prose-li:marker:text-blue-500
+                  prose-ol:my-4 prose-ol:space-y-2 prose-ol:ml-6
+                  prose-code:bg-gray-100 dark:prose-code:bg-gray-200 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
+                  prose-pre:bg-gray-900 prose-pre:text-gray-100
+                  prose-a:text-blue-600 dark:prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline
+                  prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic">
                   <ReactMarkdown>{item.answer}</ReactMarkdown>
                 </div>
                 {item.sources && item.sources.length > 0 && (
