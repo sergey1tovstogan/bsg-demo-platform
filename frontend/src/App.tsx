@@ -50,7 +50,7 @@ function App() {
   }
 
   return (
-    <div className={`min-h-screen flex ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#F8FAFC]'}`}>
+    <div className={`min-h-screen flex transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
       {/* Sidebar */}
       <Sidebar
         currentComponent={currentComponent}
@@ -73,32 +73,37 @@ function App() {
       />
 
       {/* Main Content Area */}
-      <main className={`flex-1 ml-20 relative overflow-hidden transition-all duration-300 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#F8FAFC]'}`}>
-        {/* Background Watermark */}
-        <div className="fixed inset-0 pointer-events-none z-0">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className={`text-[400px] font-light select-none opacity-30 ${theme === 'dark' ? 'text-[#1e293b]' : 'text-[#D1D5DB]'}`}>
+      <main className="flex-1 ml-20 relative overflow-hidden transition-all duration-300">
+        {/* Modern Background Elements */}
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+          {/* Main Gradient Orb */}
+          <div className={`absolute top-[-20%] right-[-10%] w-[800px] h-[800px] rounded-full blur-[120px] opacity-20 animate-pulse-slow ${theme === 'dark' ? 'bg-blue-600' : 'bg-blue-400'
+            }`}></div>
+
+          {/* Secondary Gradient Orb */}
+          <div className={`absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full blur-[100px] opacity-20 animate-pulse-slow animation-delay-400 ${theme === 'dark' ? 'bg-violet-600' : 'bg-violet-400'
+            }`}></div>
+
+          {/* Watermark */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+            <span className="text-[400px] font-bold select-none tracking-tighter">
               BSG
             </span>
           </div>
-          {/* Gradient Curve from Bottom Right */}
-          <div className={`absolute bottom-0 right-0 w-[800px] h-[600px] bg-gradient-to-tl rounded-full blur-3xl opacity-40 ${
-            theme === 'dark'
-              ? 'from-[#283054] via-[#283054]/20 to-transparent'
-              : 'from-[#283054] via-[#283054]/10 to-transparent'
-          }`}></div>
         </div>
 
         {/* Content Container */}
-        <div className="relative z-10 px-8 py-8 h-full overflow-y-auto">
-          <Header />
+        <div className="relative z-10 px-8 py-8 h-full overflow-y-auto custom-scrollbar">
+          <div className="max-w-7xl mx-auto">
+            <Header />
 
-          <div className="max-w-7xl">
-            {currentComponent ? (
-              <ComponentPage componentId={currentComponent} />
-            ) : (
-              <HomePage onSelectComponent={handleComponentChange} />
-            )}
+            <div className="mt-8 animate-fade-in">
+              {currentComponent ? (
+                <ComponentPage componentId={currentComponent} />
+              ) : (
+                <HomePage onSelectComponent={handleComponentChange} />
+              )}
+            </div>
           </div>
         </div>
       </main>
@@ -107,4 +112,3 @@ function App() {
 }
 
 export default App
-
