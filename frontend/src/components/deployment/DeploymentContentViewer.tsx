@@ -403,7 +403,7 @@ export function DeploymentContentViewer() {
         )}
 
         {!ragLoading && !ragError && (!ragContent || ragContent.length === 0) && (
-          <div className="text-center py-8 text-gray-700 dark:text-gray-800">
+          <div className="text-center py-8 text-gray-700 dark:text-gray-300">
             <p>No cloud architecture information available at this time.</p>
           </div>
         )}
