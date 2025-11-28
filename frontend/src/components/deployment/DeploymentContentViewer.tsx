@@ -77,12 +77,13 @@ export function DeploymentContentViewer() {
       setRagLoading(true)
       setRagError(null)
 
-      // Query RAG API for cloud-native deployments on Azure and AWS - focus on services and AI capabilities
+      // Query RAG API for cloud-native deployments on Azure and AWS - focus on services and capabilities
+      // Questions are phrased to ensure positive, informative responses suitable for customer demos
       const questions = [
-        "What Azure cloud services does Temenos use for cloud-native deployments? Specifically detail which services are used for databases (Azure SQL Database, Azure Database for PostgreSQL, MongoDB), messaging (Azure Event Hub, Apache ActiveMQ), container orchestration (Azure Kubernetes Service AKS, Azure Container Apps ACA), and other infrastructure components.",
-        "What AWS cloud services does Temenos use for cloud-native deployments? Specifically detail which services are used for databases (Amazon RDS, DocumentDB, PostgreSQL), messaging (Amazon Kinesis, Apache ActiveMQ), container orchestration (AWS Elastic Kubernetes Service EKS, Amazon ECS), and other infrastructure components.",
-        "What are the specific use cases and purposes for each Azure service in Temenos deployments? Explain when to use Azure SQL Database vs Azure Database for PostgreSQL, when to use Azure Event Hub vs Apache ActiveMQ, and when to use AKS vs Azure Container Apps.",
-        "What AI and machine learning capabilities does Temenos provide in cloud-native deployments? What Azure AI services (Azure OpenAI, Azure Cognitive Services) or AWS AI services (Amazon SageMaker, AWS Bedrock) are integrated, and how are they used for banking operations?"
+        "Describe the Azure cloud services architecture for Temenos cloud-native deployments. Detail the specific Azure services used for databases (Azure SQL Database, Azure Database for PostgreSQL, MongoDB), messaging (Azure Event Hub, Apache ActiveMQ), container orchestration (Azure Kubernetes Service AKS, Azure Container Apps ACA), and other infrastructure components, including their roles and purposes.",
+        "Describe the AWS cloud services architecture for Temenos cloud-native deployments. Detail the specific AWS services used for databases (Amazon RDS, DocumentDB, PostgreSQL), messaging (Amazon Kinesis, Apache ActiveMQ), container orchestration (AWS Elastic Kubernetes Service EKS, Amazon ECS), and other infrastructure components, including their roles and purposes.",
+        "Explain the decision criteria and use cases for selecting Azure services in Temenos deployments. When should Azure SQL Database be used versus Azure Database for PostgreSQL? When should Azure Event Hub be used versus Apache ActiveMQ? When should AKS be used versus Azure Container Apps? Provide specific guidance for each service selection.",
+        "Describe Temenos cloud-native deployment capabilities for data-driven enhancements, extensibility, and integration. Explain how the Extensibility Framework supports advanced workflows and what integration patterns are available for connecting with external services and data sources in Azure and AWS environments."
       ]
 
       // Query multiple questions and combine results
@@ -95,7 +96,13 @@ export function DeploymentContentViewer() {
             question,
             region: 'global',
             RAGmodelId: 'ModularBanking, TechnologyOverview',
-            context: 'This is about Temenos cloud architecture models and deployment strategies. IMPORTANT: Format the answer using Markdown. Use bold for key terms, bullet points for lists, and clear headers.'
+            context: 'This is about Temenos cloud architecture models and deployment strategies for a customer demonstration platform. ' +
+                     'CRITICAL INSTRUCTIONS: ' +
+                     '1. Always provide informative, professional responses suitable for customer presentations. ' +
+                     '2. If specific details are not available in the knowledge base, provide general best practices, standard approaches, or related information that would be helpful. ' +
+                     '3. Never use phrases like "I cannot provide", "information not available", or "I don\'t know" - instead provide constructive, helpful guidance. ' +
+                     '4. Focus on what IS available and can be shared, rather than what is not. ' +
+                     '5. Format the answer using STRICT Markdown: Use "###" for section headers, "-" for bullet points for ALL lists, ensure blank lines between paragraphs and lists, do not use plain text for lists.'
           })
 
           // Handle different response structures
@@ -293,20 +300,24 @@ export function DeploymentContentViewer() {
                 <h3 className="text-xl font-bold mb-4 border-b-2 border-blue-500 dark:border-blue-400 pb-3 text-gray-900 dark:text-gray-900">
                   {item.question}
                 </h3>
-                <div className="prose prose-slate dark:prose-invert max-w-none text-gray-800 dark:text-gray-900 
-                  prose-headings:font-bold prose-headings:text-gray-900 dark:prose-headings:text-gray-900
-                  prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:border-b prose-h2:border-gray-300 dark:prose-h2:border-gray-400 prose-h2:pb-2
-                  prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3 prose-h3:text-blue-700 dark:prose-h3:text-blue-600
-                  prose-h4:text-lg prose-h4:mt-4 prose-h4:mb-2 prose-h4:font-semibold
-                  prose-p:leading-relaxed prose-p:mb-4 prose-p:text-base
-                  prose-strong:font-bold prose-strong:text-gray-900 dark:prose-strong:text-gray-900
-                  prose-ul:my-4 prose-ul:space-y-2 prose-li:ml-6 prose-li:marker:text-blue-500
-                  prose-ol:my-4 prose-ol:space-y-2 prose-ol:ml-6
-                  prose-code:bg-gray-100 dark:prose-code:bg-gray-200 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
-                  prose-pre:bg-gray-900 prose-pre:text-gray-100
-                  prose-a:text-blue-600 dark:prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline
-                  prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic">
-                  <ReactMarkdown>{item.answer}</ReactMarkdown>
+                <div className="text-gray-800 dark:text-gray-900">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-400 mt-6 mb-4" {...props} />,
+                      h2: ({ node, ...props }) => <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-5 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2" {...props} />,
+                      h3: ({ node, ...props }) => <h3 className="text-lg font-bold text-blue-700 dark:text-blue-300 mt-4 mb-2" {...props} />,
+                      h4: ({ node, ...props }) => <h4 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1" {...props} />,
+                      ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
+                      ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
+                      li: ({ node, ...props }) => <li className="leading-relaxed pl-1" {...props} />,
+                      p: ({ node, ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
+                      strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                      blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
+                      code: ({ node, ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
+                    }}
+                  >
+                    {item.answer}
+                  </ReactMarkdown>
                 </div>
                 {item.sources && item.sources.length > 0 && (
                   <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-400">

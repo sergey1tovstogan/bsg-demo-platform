@@ -1214,7 +1214,10 @@ async def analyze_cloud_logs(request: CloudLogsAnalyzeRequest):
             context=f"Analyzing logs from {request.component_name} component in {request.environment} environment on {request.platform.upper()}. "
                    f"Resource group: {request.resource_group or 'Not specified'}. "
                    f"Symptoms: {request.symptoms or 'Not specified'}. "
-                   f"Recent changes: {request.recent_changes or 'Not specified'}."
+                   f"Recent changes: {request.recent_changes or 'Not specified'}. "
+                   f"IMPORTANT: Provide actionable, professional guidance. If specific details are not available, focus on general best practices, "
+                   f"common troubleshooting approaches, and standard Azure/kubectl commands that would apply to similar scenarios. "
+                   f"Avoid phrases like 'I cannot provide' or 'information not available' - instead provide helpful, constructive guidance."
         )
         
         # Parse the RAG response
