@@ -1263,7 +1263,7 @@ function formatRAGText(text: string): JSX.Element | null {
       const paragraphText = currentParagraph.join(' ').trim()
       if (paragraphText) {
         elements.push(
-          <p key={key++} className="text-sm text-gray-700 leading-relaxed mb-3">
+          <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
             {formatInlineText(paragraphText)}
           </p>
         )
@@ -1277,7 +1277,7 @@ function formatRAGText(text: string): JSX.Element | null {
       elements.push(
         <ul key={key++} className="list-disc list-inside space-y-2 mb-4 ml-4">
           {listItems.map((item, idx) => (
-            <li key={idx} className="text-sm text-gray-700 leading-relaxed">
+            <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
               {formatInlineText(item)}
             </li>
           ))}
@@ -1303,7 +1303,7 @@ function formatRAGText(text: string): JSX.Element | null {
       flushList()
       const headingText = trimmed.replace(/^(\*\*|##)\s*/, '').replace(/\*\*$/, '').replace(/:$/, '').trim()
       elements.push(
-        <h6 key={key++} className="font-bold text-gray-900 text-base mt-4 mb-2 first:mt-0">
+        <h6 key={key++} className="font-bold text-gray-900 dark:text-white text-base mt-4 mb-2 first:mt-0">
           {formatInlineText(headingText)}
         </h6>
       )
@@ -1326,7 +1326,7 @@ function formatRAGText(text: string): JSX.Element | null {
       flushList()
       const headingText = trimmed.replace(/^\*\*/, '').replace(/\*\*:$/, '').trim()
       elements.push(
-        <h6 key={key++} className="font-semibold text-gray-900 text-sm mt-3 mb-2">
+        <h6 key={key++} className="font-semibold text-gray-900 dark:text-white text-sm mt-3 mb-2">
           {formatInlineText(headingText)}
         </h6>
       )
@@ -1364,7 +1364,7 @@ function formatInlineText(text: string): JSX.Element | string | null {
     }
     // Add bold text
     parts.push(
-      <strong key={key++} className="font-semibold text-gray-900">
+      <strong key={key++} className="font-semibold text-gray-900 dark:text-white">
         {match[1]}
       </strong>
     )
@@ -1412,7 +1412,7 @@ function ComponentDetailPanel({
   if (!componentInfo) {
     return (
       <div className="card">
-        <p className="text-gray-600">No component information available</p>
+        <p className="text-gray-600 dark:text-gray-300">No component information available</p>
       </div>
     )
   }
@@ -1423,11 +1423,11 @@ function ComponentDetailPanel({
       <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-200">
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
-            <Cloud className="w-6 h-6 text-purple-600" />
-            <h4 className="font-bold text-2xl text-gray-900">{componentInfo.componentName}</h4>
+            <Cloud className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <h4 className="font-bold text-2xl text-gray-900 dark:text-white">{componentInfo.componentName}</h4>
           </div>
-          <p className="text-sm text-gray-600 mb-2">{componentInfo.componentType}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{componentInfo.componentType}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Service: <span className="font-medium">{service.name}</span> • Resource Group: <span className="font-medium">{service.resourceGroup}</span>
           </p>
         </div>
@@ -1479,12 +1479,12 @@ function ComponentDetailPanel({
       {/* Horizontal Information Panels */}
       <div className="space-y-6">
         {/* Architectural Overview */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none">
+        <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none dark:prose-invert">
             {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
               ? formatRAGText(componentInfo.architecturalOverview)
-              : <p className="text-gray-500 italic">No architectural overview available</p>}
+              : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
           </div>
         </div>
 
@@ -1495,9 +1495,9 @@ function ComponentDetailPanel({
           componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
           service.type?.toLowerCase().includes('containerservice') ||
           service.type?.toLowerCase().includes('kubernetes')) ? (
-          <div className="bg-blue-50 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
+            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
               {(componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
                 componentInfo.architecturalOverview?.toLowerCase().includes('docker') ||
                 service.type?.toLowerCase().includes('containerservice')) && (
@@ -1524,55 +1524,55 @@ function ComponentDetailPanel({
         ) : null}
 
         {/* Functional Overview */}
-        <div className="bg-purple-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none">
+        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none dark:prose-invert">
             {componentInfo.functionalOverview && componentInfo.functionalOverview.trim()
               ? formatRAGText(componentInfo.functionalOverview)
-              : <p className="text-gray-500 italic">No functional overview available</p>}
+              : <p className="text-gray-500 dark:text-gray-400 italic">No functional overview available</p>}
           </div>
         </div>
 
         {/* Key Capabilities */}
-        <div className="bg-green-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-3 text-lg">KEY CAPABILITIES</h5>
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">KEY CAPABILITIES</h5>
           {componentInfo.capabilities && Array.isArray(componentInfo.capabilities) && componentInfo.capabilities.length > 0 ? (
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
+            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
               {componentInfo.capabilities.map((cap, idx) => (
                 <li key={idx}>{cap}</li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-gray-500 italic">No capabilities listed</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No capabilities listed</p>
           )}
         </div>
 
         {/* Related Services */}
-        <div className="bg-yellow-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-3 text-lg">RELATED SERVICES</h5>
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">RELATED SERVICES</h5>
           {componentInfo.relatedServices && Array.isArray(componentInfo.relatedServices) && componentInfo.relatedServices.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {componentInfo.relatedServices.map((svc, idx) => (
-                <span key={idx} className="px-3 py-1 bg-white rounded-full text-sm text-gray-700 border border-gray-300">
+                <span key={idx} className="px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
                   {svc}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 italic">No related services listed</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No related services listed</p>
           )}
         </div>
 
         {/* Relationships */}
         {componentInfo.relationships && Array.isArray(componentInfo.relationships) && componentInfo.relationships.length > 0 && (
-          <div className="bg-indigo-50 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 mb-3 text-lg">COMPONENT RELATIONSHIPS</h5>
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
+            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">COMPONENT RELATIONSHIPS</h5>
             <div className="space-y-3">
               {componentInfo.relationships.map((rel, idx) => (
-                <div key={idx} className="bg-white rounded p-3 border border-indigo-200">
-                  <div className="font-medium text-gray-900">{rel.targetComponent}</div>
-                  <div className="text-xs text-gray-600 mt-1">{rel.relationshipType}</div>
-                  <div className="text-sm text-gray-700 mt-2">{rel.description}</div>
+                <div key={idx} className="bg-white dark:bg-slate-700 rounded p-3 border border-indigo-200 dark:border-indigo-500/30">
+                  <div className="font-medium text-gray-900 dark:text-white">{rel.targetComponent}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rel.relationshipType}</div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 mt-2">{rel.description}</div>
                 </div>
               ))}
             </div>
