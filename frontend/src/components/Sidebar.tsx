@@ -21,6 +21,7 @@ interface SidebarProps {
   onComponentChange?: (componentId: ComponentId) => void
   onHomeClick?: () => void
   onSettingsClick?: () => void
+  onCollapseRef?: (collapseFn: () => void) => void
 }
 
 interface ComponentCard {
@@ -87,10 +88,21 @@ export function Sidebar({
   currentComponent,
   onComponentChange,
   onHomeClick,
-  onSettingsClick
+  onSettingsClick,
+  onCollapseRef
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [hovered, setHovered] = useState(false)
+
+  // Expose collapse function to parent component
+  useEffect(() => {
+    if (onCollapseRef) {
+      onCollapseRef(() => {
+        setIsCollapsed(true)
+        setHovered(false)
+      })
+    }
+  }, [onCollapseRef])
 
   // Auto-hide after 5 seconds of inactivity (when mouse leaves)
   useEffect(() => {
