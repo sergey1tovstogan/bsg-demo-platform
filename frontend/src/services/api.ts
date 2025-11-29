@@ -548,12 +548,13 @@ class ApiService {
     return response.data
   }
 
-  async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[]) {
-    console.log('[API] getAKSNamespaces called with:', { subscriptionId, resourceGroupNames })
+  async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[], refresh: boolean = true) {
+    console.log('[API] getAKSNamespaces called with:', { subscriptionId, resourceGroupNames, refresh })
     const url = '/deployment/aks/namespaces'
     const payload = {
       subscription_id: subscriptionId,
-      resource_group_names: resourceGroupNames
+      resource_group_names: resourceGroupNames,
+      refresh: refresh // Force refresh to get latest namespaces from actual clusters
     }
     console.log('[API] POST', url, payload)
     try {

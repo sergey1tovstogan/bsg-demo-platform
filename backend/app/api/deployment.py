@@ -47,6 +47,7 @@ class NamespacesRequest(BaseModel):
     """Request model for getting AKS namespaces."""
     subscription_id: str = Field(..., description="Azure subscription ID")
     resource_group_names: List[str] = Field(..., description="List of resource group names")
+    refresh: bool = Field(False, description="Force refresh, bypass cache")
 
 
 class ClusterDiagnosticsRequest(BaseModel):
@@ -348,18 +349,21 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 "message": "No AKS clusters found in selected resource groups"
             }
         
-        # Check cache for AKS namespaces first
+        # Check cache for AKS namespaces first (unless refresh is requested)
         from app.services.cache_service import get_cache_service
         cache_service = await get_cache_service()
         
-        cached_namespaces = await cache_service.get_aks_namespaces(subscription_id, resource_group_names)
-        if cached_namespaces:
-            logger.info(f"Using cached AKS namespaces for {len(resource_group_names)} resource groups")
-            return {
-                "status": "success",
-                "data": cached_namespaces,
-                "count": len(cached_namespaces)
-            }
+        if not request.refresh:
+            cached_namespaces = await cache_service.get_aks_namespaces(subscription_id, resource_group_names)
+            if cached_namespaces:
+                logger.info(f"Using cached AKS namespaces for {len(resource_group_names)} resource groups")
+                return {
+                    "status": "success",
+                    "data": cached_namespaces,
+                    "count": len(cached_namespaces)
+                }
+        else:
+            logger.info(f"Refresh requested, bypassing cache for AKS namespaces")
         
         # Get namespaces from each cluster
         logger.info(f"Initializing AKS service for subscription: {subscription_id}")

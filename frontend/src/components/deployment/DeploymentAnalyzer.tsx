@@ -217,8 +217,10 @@ export function DeploymentAnalyzer() {
       setSelectedResourceGroups(selected)
       setIncludeCostsInAnalysis(includeCosts)
       setCosts({}) // Clear previous costs
+      setAnalysisProgress({ current: 0, total: 2, message: 'Fetching Azure resources...' })
 
       // Get Azure resources first
+      setAnalysisProgress({ current: 1, total: 3, message: 'Loading resources from selected resource groups...' })
       const response = await apiService.getAzureResources(subscriptionId, selected)
       const servicesData = (response.data as any)?.data || response.data || []
       setServices(Array.isArray(servicesData) ? servicesData : [])
@@ -227,15 +229,33 @@ export function DeploymentAnalyzer() {
       const hasAKS = servicesData.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
 
       if (hasAKS) {
-        // Get namespaces from AKS clusters
+        // Get namespaces from AKS clusters - dynamically fetch from actual clusters
         try {
-          console.log('[DeploymentAnalyzer] Calling getAKSNamespaces with:', { subscriptionId, selected })
-          const namespacesResponse = await apiService.getAKSNamespaces(subscriptionId, selected)
+          setAnalysisProgress({ current: 2, total: 3, message: 'Retrieving namespaces from AKS clusters...' })
+          console.log('[DeploymentAnalyzer] Calling getAKSNamespaces with:', { subscriptionId, selected, refresh: true })
+          const namespacesResponse = await apiService.getAKSNamespaces(subscriptionId, selected, true) // Force refresh to get latest namespaces
           console.log('[DeploymentAnalyzer] Namespaces response:', namespacesResponse)
           const namespacesData = (namespacesResponse.data as any)?.data || namespacesResponse.data || []
           console.log('[DeploymentAnalyzer] Parsed namespaces data:', namespacesData)
-          setClusterNamespaces(namespacesData)
-          setCurrentStep('namespaces')
+          
+          // Validate that we got namespaces for the actual clusters in selected RGs
+          if (Array.isArray(namespacesData) && namespacesData.length > 0) {
+            // Filter to only include clusters from selected resource groups
+            const validNamespaces = namespacesData.filter((cluster: any) => 
+              selected.includes(cluster.resource_group)
+            )
+            setClusterNamespaces(validNamespaces)
+            setAnalysisProgress(null)
+            setLoading(false)
+            setCurrentStep('namespaces')
+          } else {
+            // No namespaces found, but we have AKS clusters - show error or proceed
+            console.warn('[DeploymentAnalyzer] No namespaces returned for AKS clusters')
+            setClusterNamespaces([])
+            setAnalysisProgress(null)
+            setLoading(false)
+            setCurrentStep('namespaces')
+          }
         } catch (nsErr: any) {
           console.error('[DeploymentAnalyzer] ERROR getting namespaces:', nsErr)
           console.error('[DeploymentAnalyzer] Error details:', {
@@ -245,6 +265,8 @@ export function DeploymentAnalyzer() {
             url: nsErr.config?.url
           })
           // Continue to analysis without namespace selection
+          setAnalysisProgress(null)
+          setLoading(false)
           setCurrentStep('analysis')
           analyzeServices(servicesData).catch(err => {
             console.error('Analysis error:', err)
@@ -254,6 +276,8 @@ export function DeploymentAnalyzer() {
         }
       } else {
         // No AKS clusters, proceed directly to analysis
+        setAnalysisProgress(null)
+        setLoading(false)
         setCurrentStep('analysis')
         analyzeServices(servicesData).catch(err => {
           console.error('Analysis error:', err)
@@ -264,8 +288,7 @@ export function DeploymentAnalyzer() {
     } catch (err: any) {
       console.error('Resource groups selection error:', err)
       setError(err.response?.data?.detail?.error || err.message || 'Failed to load resources')
-      setLoading(false)
-    } finally {
+      setAnalysisProgress(null)
       setLoading(false)
     }
   }
@@ -347,6 +370,7 @@ export function DeploymentAnalyzer() {
 
               if (costDataArray.length > 0) {
                 const costMap: Record<string, any> = {}
+                // First, add all cost data from the response
                 costDataArray.forEach((costData: any) => {
                   if (costData?.resource_group) {
                     costMap[costData.resource_group] = {
@@ -358,10 +382,22 @@ export function DeploymentAnalyzer() {
                     }
                   }
                 })
+                // Ensure all selected resource groups are in the map
+                // If a RG is missing from the response, add it with zero cost
+                selectedResourceGroups.forEach(rgName => {
+                  if (!costMap[rgName]) {
+                    costMap[rgName] = {
+                      resource_group: rgName,
+                      total_cost: 0,
+                      services: {},
+                      error: 'No cost data returned for this resource group'
+                    }
+                  }
+                })
                 console.log('[Costs] Cost map created:', costMap)
                 setCosts(costMap)
                 setCostsLoading(false)
-                console.log(`[Costs] Successfully loaded costs for ${Object.keys(costMap).length} resource groups`)
+                console.log(`[Costs] Successfully loaded costs for ${Object.keys(costMap).length} resource groups (${selectedResourceGroups.length} selected)`)
               } else {
                 console.warn('[Costs] No cost data in response, setting empty costs')
                 // Set empty costs for all resource groups
@@ -390,24 +426,60 @@ export function DeploymentAnalyzer() {
             })
             // Set error state for costs but don't fail the analysis
             const costMap: Record<string, any> = {}
-            selectedResourceGroups.forEach(rgName => {
-              let errorMessage = 'Failed to load costs'
-              if (err.response?.data?.detail) {
-                if (typeof err.response.data.detail === 'string') {
-                  errorMessage = err.response.data.detail
-                } else if (err.response.data.detail.error) {
-                  errorMessage = err.response.data.detail.error
+            
+            // Check if the response contains cost data with errors (partial success)
+            if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
+              // API returned data but some RGs may have errors
+              err.response.data.data.forEach((costData: any) => {
+                if (costData?.resource_group) {
+                  costMap[costData.resource_group] = {
+                    resource_group: costData.resource_group,
+                    total_cost: costData.total_cost || 0,
+                    services: costData.services || {},
+                    projections: costData.projections,
+                    error: costData.error
+                  }
                 }
-              } else if (err.message) {
-                errorMessage = err.message
-              }
-              costMap[rgName] = {
-                resource_group: rgName,
-                total_cost: 0,
-                services: {},
-                error: errorMessage
-              }
-            })
+              })
+              // Ensure all selected RGs are in the map
+              selectedResourceGroups.forEach(rgName => {
+                if (!costMap[rgName]) {
+                  costMap[rgName] = {
+                    resource_group: rgName,
+                    total_cost: 0,
+                    services: {},
+                    error: 'No cost data returned for this resource group'
+                  }
+                }
+              })
+            } else {
+              // Complete failure - set error for all RGs
+              selectedResourceGroups.forEach(rgName => {
+                let errorMessage = 'Failed to load costs'
+                if (err.response?.data?.detail) {
+                  if (typeof err.response.data.detail === 'string') {
+                    errorMessage = err.response.data.detail
+                  } else if (err.response.data.detail.error) {
+                    errorMessage = err.response.data.detail.error
+                  } else if (err.response.data.detail.recoverySteps) {
+                    // Use first recovery step as hint
+                    errorMessage = `${err.response.data.detail.error || 'Failed to load costs'}. ${err.response.data.detail.recoverySteps[0] || ''}`
+                  }
+                } else if (err.message) {
+                  if (err.message.includes('timeout') || err.message.includes('aborted')) {
+                    errorMessage = `Request timed out. Cost Management API is taking too long to respond.`
+                  } else {
+                    errorMessage = err.message
+                  }
+                }
+                costMap[rgName] = {
+                  resource_group: rgName,
+                  total_cost: 0,
+                  services: {},
+                  error: errorMessage
+                }
+              })
+            }
             setCosts(costMap)
             setCostsLoading(false)
             console.log('[Costs] Set error costs for resource groups:', costMap)
@@ -490,8 +562,11 @@ export function DeploymentAnalyzer() {
 
   const handleBack = () => {
     if (currentStep === 'analysis') {
-      setCurrentStep('namespaces')
+      // Always go back to resource groups selection from analysis
+      setCurrentStep('resourceGroups')
       setAnalysisResults([])
+      setServices([])
+      setClusterNamespaces([])
     } else if (currentStep === 'namespaces') {
       setCurrentStep('resourceGroups')
       setClusterNamespaces([])
@@ -518,9 +593,10 @@ export function DeploymentAnalyzer() {
           onSelected={handleResourceGroupsSelected}
           onBack={handleBack}
           onRefresh={handleRefreshResourceGroups}
-          loading={resourceGroupsLoading}
+          loading={resourceGroupsLoading || loading}
           cached={resourceGroupsCached}
           error={error}
+          analysisProgress={analysisProgress}
         />
       )}
 
@@ -690,7 +766,8 @@ function ResourceGroupSelector({
   onRefresh,
   loading,
   cached,
-  error
+  error,
+  analysisProgress
 }: {
 
   resourceGroups: AzureResourceGroup[]
@@ -700,6 +777,7 @@ function ResourceGroupSelector({
   loading: boolean
   cached: boolean
   error: string | null
+  analysisProgress: { current: number; total: number; message: string } | null
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -757,6 +835,29 @@ function ResourceGroupSelector({
       {error && (
         <div className="card bg-red-50 border border-red-200 text-red-700">
           {error}
+        </div>
+      )}
+
+      {/* Loading/Progress Indicator */}
+      {loading && analysisProgress && (
+        <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30">
+          <div className="flex items-center space-x-4">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                {analysisProgress.message}
+              </p>
+              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                <div
+                  className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                Step {analysisProgress.current} of {analysisProgress.total}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1216,26 +1317,46 @@ function ServiceAnalysis({
               <div className="flex-1">
                 <p className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">Total Cost</p>
                 {(() => {
-                  const costEntries = Object.values(costs)
+                  // Ensure all selected resource groups are accounted for in aggregation
+                  const allRGs = selectedResourceGroups || []
+                  const costEntries = allRGs.map(rgName => {
+                    // Get cost data for this RG, or create a default entry if not found
+                    return costs[rgName] || {
+                      resource_group: rgName,
+                      total_cost: 0,
+                      services: {},
+                      error: costsLoading ? undefined : 'No cost data available'
+                    }
+                  })
+                  
                   const hasErrors = costEntries.some(c => c.error)
                   const totalCost = costEntries.reduce((sum, cost) => {
-                    if (cost.error) return sum
+                    // Only include costs that don't have errors
+                    if (cost.error && !costsLoading) return sum
                     return sum + (cost.total_cost || 0)
                   }, 0)
+                  
                   const hasProjections = costEntries.some(c => c.projections && !c.error)
                   const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
                     if (cost.error || !cost.projections) return sum
                     return sum + (cost.projections.full_month || 0)
                   }, 0) : null
 
-                  if (hasErrors && costEntries.length > 0) {
-                    const errorCount = costEntries.filter(c => c.error).length
+                  const errorCount = costEntries.filter(c => c.error && !costsLoading).length
+                  const successCount = costEntries.length - errorCount
+
+                  if (hasErrors && costEntries.length > 0 && !costsLoading) {
                     return (
                       <>
                         <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
                         {errorCount > 0 && (
                           <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                             {errorCount} of {costEntries.length} RG{costEntries.length !== 1 ? 's' : ''} failed to load
+                          </p>
+                        )}
+                        {successCount > 0 && (
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                            Aggregated from {successCount} resource group{successCount !== 1 ? 's' : ''}
                           </p>
                         )}
                       </>
@@ -1248,10 +1369,15 @@ function ServiceAnalysis({
                       {monthlyProjection !== null && monthlyProjection > 0 && (
                         <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
                       )}
+                      {costEntries.length > 1 && !costsLoading && (
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                          Aggregated from {costEntries.length} resource group{costEntries.length !== 1 ? 's' : ''}
+                        </p>
+                      )}
                       {costsLoading && (
                         <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 flex items-center space-x-1">
                           <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Loading costs...</span>
+                          <span>Loading costs for {allRGs.length} resource group{allRGs.length !== 1 ? 's' : ''}...</span>
                         </p>
                       )}
                       {!costsLoading && costEntries.length === 0 && (
