@@ -237,6 +237,9 @@ export function DeploymentAnalyzer() {
           console.log('[DeploymentAnalyzer] Namespaces response:', namespacesResponse)
           const namespacesData = (namespacesResponse.data as any)?.data || namespacesResponse.data || []
           console.log('[DeploymentAnalyzer] Parsed namespaces data:', namespacesData)
+          console.log('[DeploymentAnalyzer] Response status:', (namespacesResponse.data as any)?.status)
+          console.log('[DeploymentAnalyzer] Successful clusters:', (namespacesResponse.data as any)?.successful_clusters)
+          console.log('[DeploymentAnalyzer] Failed clusters:', (namespacesResponse.data as any)?.failed_clusters)
           
           // Validate that we got namespaces for the actual clusters in selected RGs
           if (Array.isArray(namespacesData) && namespacesData.length > 0) {
@@ -244,13 +247,31 @@ export function DeploymentAnalyzer() {
             const validNamespaces = namespacesData.filter((cluster: any) => 
               selected.includes(cluster.resource_group)
             )
-            setClusterNamespaces(validNamespaces)
+            
+            // Check if any clusters have errors
+            const hasErrors = validNamespaces.some((c: any) => c.error)
+            const hasNamespaces = validNamespaces.some((c: any) => c.namespaces && c.namespaces.length > 0)
+            
+            if (hasErrors && !hasNamespaces) {
+              // All clusters failed - show error
+              console.error('[DeploymentAnalyzer] All clusters failed to retrieve namespaces')
+              const errorMessages = validNamespaces
+                .filter((c: any) => c.error)
+                .map((c: any) => `${c.cluster_name}: ${c.error}`)
+                .join('\n')
+              setError(`Failed to retrieve namespaces from AKS clusters:\n${errorMessages}\n\nPlease check backend logs for kubectl errors. Ensure cluster credentials are configured.`)
+              setClusterNamespaces(validNamespaces) // Still show the error state
+            } else {
+              setClusterNamespaces(validNamespaces)
+            }
+            
             setAnalysisProgress(null)
             setLoading(false)
             setCurrentStep('namespaces')
           } else {
-            // No namespaces found, but we have AKS clusters - show error or proceed
-            console.warn('[DeploymentAnalyzer] No namespaces returned for AKS clusters')
+            // No namespaces found, but we have AKS clusters - show error
+            console.error('[DeploymentAnalyzer] No namespaces returned for AKS clusters')
+            setError('Failed to retrieve namespaces from AKS clusters. Check backend logs for kubectl errors. Ensure cluster credentials are configured (run: az aks get-credentials --resource-group <RG> --name <cluster-name>).')
             setClusterNamespaces([])
             setAnalysisProgress(null)
             setLoading(false)
@@ -1025,9 +1046,10 @@ function NamespaceSelector({
       </div>
 
       {clusterNamespaces.length === 0 ? (
-        <div className="card text-center py-8">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No AKS clusters found or failed to retrieve namespaces</p>
+        <div className="card text-center py-8 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-500/30">
+          <AlertCircle className="w-12 h-12 text-red-600 dark:text-red-400 mx-auto mb-4" />
+          <p className="text-red-800 dark:text-red-200 font-semibold mb-2">No AKS clusters found or failed to retrieve namespaces</p>
+          <p className="text-sm text-red-600 dark:text-red-300">Check backend logs for kubectl errors. Ensure cluster credentials are configured.</p>
         </div>
       ) : (
         <>
@@ -1083,9 +1105,9 @@ function NamespaceSelector({
                 {selected.length === filteredNamespaces.length ? 'Deselect All' : 'Select All'}
               </button>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               {selected.length > 0 && (
-                <span className="font-medium text-purple-600">{selected.length} selected</span>
+                <span className="font-medium text-purple-600 dark:text-purple-400">{selected.length} selected</span>
               )}
             </div>
           </div>

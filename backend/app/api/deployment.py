@@ -409,13 +409,23 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 namespaces = await aks_service.list_cluster_namespaces(cluster)
                 logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name} in RG {cluster.resource_group}")
                 if namespaces:
-                    logger.info(f"Namespaces retrieved: {namespaces}")
+                    logger.info(f"Namespaces retrieved from cluster {cluster.name}: {namespaces}")
                 else:
-                    logger.warning(f"⚠ No namespaces returned for cluster {cluster.name}")
-                    logger.warning("This could mean:")
-                    logger.warning("  1. Cluster has no non-system namespaces")
-                    logger.warning("  2. kubectl/kubectl connection failed")
-                    logger.warning("  3. Cluster credentials not configured")
+                    logger.error(f"⚠ CRITICAL: No namespaces returned for cluster {cluster.name} in RG {cluster.resource_group}")
+                    logger.error("This indicates one of the following issues:")
+                    logger.error("  1. kubectl command failed (check backend logs for kubectl errors)")
+                    logger.error("  2. Cluster credentials not configured or expired")
+                    logger.error("  3. Cluster has no non-system namespaces (unlikely)")
+                    logger.error("  4. Network/connectivity issues to the cluster")
+                    logger.error("  5. Insufficient permissions to list namespaces")
+                    # Return error so frontend knows retrieval failed
+                    cluster_namespaces[cluster.name] = {
+                        "cluster_name": cluster.name,
+                        "resource_group": cluster.resource_group,
+                        "namespaces": [],
+                        "error": "Failed to retrieve namespaces from cluster. Check backend logs for kubectl errors. Ensure cluster credentials are configured (run: az aks get-credentials --resource-group <RG> --name <cluster-name>)."
+                    }
+                    continue
                 
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
@@ -444,16 +454,35 @@ async def get_aks_namespaces(request: NamespacesRequest):
         
         result_data = list(cluster_namespaces.values())
         
+        # Check if we have any successful retrievals
+        successful_clusters = [c for c in result_data if c.get("namespaces") and len(c.get("namespaces", [])) > 0]
+        failed_clusters = [c for c in result_data if c.get("error") or not c.get("namespaces") or len(c.get("namespaces", [])) == 0]
+        
+        if failed_clusters:
+            logger.error(f"⚠ {len(failed_clusters)} cluster(s) failed to retrieve namespaces:")
+            for fc in failed_clusters:
+                logger.error(f"  - Cluster: {fc.get('cluster_name')}, RG: {fc.get('resource_group')}, Error: {fc.get('error', 'No namespaces found')}")
+        
         # Only cache if we successfully retrieved namespaces (don't cache empty/error results)
-        if result_data and any(c.get("namespaces") for c in result_data):
+        if successful_clusters:
             await cache_service.set_aks_namespaces(
                 subscription_id,
                 resource_group_names,
-                result_data
+                successful_clusters  # Only cache successful retrievals
             )
-            logger.info(f"Cached AKS namespaces for {len(resource_group_names)} resource groups")
+            logger.info(f"Cached AKS namespaces for {len(successful_clusters)} successful cluster(s)")
         else:
-            logger.warning(f"Not caching namespace data - no valid namespaces retrieved or all clusters failed")
+            logger.error(f"⚠ CRITICAL: No namespaces retrieved from any cluster! Not caching.")
+            logger.error(f"All {len(result_data)} cluster(s) failed. Check backend logs for kubectl errors.")
+        
+        # Return all results (including errors) so frontend can show appropriate messages
+        return {
+            "status": "success" if successful_clusters else "partial" if result_data else "error",
+            "data": result_data,
+            "count": len(result_data),
+            "successful_clusters": len(successful_clusters),
+            "failed_clusters": len(failed_clusters)
+        }
         
         return {
             "status": "success",
