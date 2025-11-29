@@ -84,7 +84,7 @@ export function ModernSecurityArchitecture() {
     }
 
     return (
-        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-900 rounded-xl relative overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
+        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-800">
             {/* Background Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
                 style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
