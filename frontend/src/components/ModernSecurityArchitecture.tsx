@@ -136,7 +136,7 @@ export function ModernSecurityArchitecture() {
 
                             <div className="h-full flex flex-col gap-4 pt-8">
                                 {/* Row 1: Authentication and Authorization */}
-                                <div className="grid grid-cols-2 gap-4 h-[110px]" id="row1-start">
+                                <div className="grid grid-cols-2 gap-4 h-[110px]">
                                     {/* Authentication */}
                                     <div
                                         className="bg-gradient-to-br from-blue-500/10 to-blue-600/20 dark:from-blue-500/20 dark:to-blue-600/30 rounded-xl border-2 border-blue-500/30 p-4 hover:border-blue-500/50 transition-all duration-300 cursor-help group h-full flex flex-col"
@@ -230,7 +230,7 @@ export function ModernSecurityArchitecture() {
                 </div>
 
                 {/* Column 3: External Services (Right) */}
-                <div className="col-span-4 flex flex-col gap-3 pt-8">
+                <div className="col-span-4 flex flex-col gap-3" style={{ paddingTop: '3.5rem' }}>
                     {/* Bank IAM */}
                     <div
                         className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
