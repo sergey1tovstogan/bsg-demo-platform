@@ -363,7 +363,22 @@ async def get_aks_namespaces(request: NamespacesRequest):
                     "count": len(cached_namespaces)
                 }
         else:
-            logger.info(f"Refresh requested, bypassing cache for AKS namespaces")
+            logger.info(f"Refresh requested, bypassing cache and clearing old cache for AKS namespaces")
+            # Clear cache for these resource groups to ensure fresh data
+            try:
+                # Generate the same cache key that would be used for this request
+                cache_key = cache_service._generate_cache_key(
+                    "aks_namespaces",
+                    subscription_id=subscription_id,
+                    resource_groups=",".join(sorted(resource_group_names))
+                )
+                deleted = await cache_service.delete(cache_key)
+                if deleted:
+                    logger.info(f"✓ Cleared cache for key: {cache_key}")
+                else:
+                    logger.info(f"No cache entry found for key: {cache_key} (will fetch fresh data)")
+            except Exception as e:
+                logger.warning(f"Failed to clear cache (non-fatal, will continue with fresh fetch): {e}")
         
         # Get namespaces from each cluster
         logger.info(f"Initializing AKS service for subscription: {subscription_id}")
@@ -371,28 +386,43 @@ async def get_aks_namespaces(request: NamespacesRequest):
         cluster_namespaces = {}
         
         logger.info(f"Step 4: Processing {len(aks_clusters)} cluster(s) for namespace discovery...")
+        logger.info(f"Selected resource groups: {resource_group_names}")
+        logger.info(f"AKS clusters found: {[c.name for c in aks_clusters]}")
+        
         for idx, cluster in enumerate(aks_clusters, 1):
+            # CRITICAL: Only process clusters that are in the selected resource groups
+            if cluster.resource_group not in resource_group_names:
+                logger.warning(f"Skipping cluster {cluster.name} - not in selected resource groups. Cluster RG: {cluster.resource_group}, Selected RGs: {resource_group_names}")
+                continue
+                
             try:
                 logger.info("=" * 80)
                 logger.info(f"=== CLUSTER {idx}/{len(aks_clusters)}: {cluster.name} ===")
                 logger.info(f"Cluster type: {cluster.type}")
                 logger.info(f"Cluster ID: {cluster.id}")
                 logger.info(f"Resource Group: {cluster.resource_group}")
+                logger.info(f"Verifying cluster is in selected RGs: {resource_group_names}")
                 logger.info("Calling aks_service.list_cluster_namespaces()...")
                 logger.info("=" * 80)
+                
+                # Dynamically retrieve namespaces from the actual cluster
                 namespaces = await aks_service.list_cluster_namespaces(cluster)
-                logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name}")
+                logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name} in RG {cluster.resource_group}")
                 if namespaces:
-                    logger.info(f"Namespaces: {namespaces[:5]}...")  # Show first 5
+                    logger.info(f"Namespaces retrieved: {namespaces}")
                 else:
                     logger.warning(f"⚠ No namespaces returned for cluster {cluster.name}")
-                logger.info(f"Retrieved {len(namespaces)} namespaces from cluster {cluster.name}")
-                logger.info(f"Namespaces list: {namespaces}")
+                    logger.warning("This could mean:")
+                    logger.warning("  1. Cluster has no non-system namespaces")
+                    logger.warning("  2. kubectl/kubectl connection failed")
+                    logger.warning("  3. Cluster credentials not configured")
+                
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
                     "resource_group": cluster.resource_group,
                     "namespaces": namespaces
                 }
+                
                 if len(namespaces) == 0:
                     logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
                     logger.warning("  1. kubectl is not installed or not in PATH")
@@ -414,13 +444,16 @@ async def get_aks_namespaces(request: NamespacesRequest):
         
         result_data = list(cluster_namespaces.values())
         
-        # Cache the namespaces
-        await cache_service.set_aks_namespaces(
-            subscription_id,
-            resource_group_names,
-            result_data
-        )
-        logger.info(f"Cached AKS namespaces for {len(resource_group_names)} resource groups")
+        # Only cache if we successfully retrieved namespaces (don't cache empty/error results)
+        if result_data and any(c.get("namespaces") for c in result_data):
+            await cache_service.set_aks_namespaces(
+                subscription_id,
+                resource_group_names,
+                result_data
+            )
+            logger.info(f"Cached AKS namespaces for {len(resource_group_names)} resource groups")
+        else:
+            logger.warning(f"Not caching namespace data - no valid namespaces retrieved or all clusters failed")
         
         return {
             "status": "success",
