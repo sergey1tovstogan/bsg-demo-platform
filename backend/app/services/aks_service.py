@@ -162,18 +162,26 @@ class AKSService:
             loop = asyncio.get_event_loop()
             
             # Use Azure CLI to get credentials
+            # CRITICAL: Use --admin flag and specify subscription to ensure we get the right cluster
             # On Windows, use az.cmd if az.exe doesn't work
             def _get_credentials():
                 import shutil
                 # Find az command
                 az_cmd = shutil.which("az") or shutil.which("az.cmd") or "az"
+                # Use --admin flag and specify subscription to ensure we get credentials for the correct cluster
+                # This prevents getting credentials for a different cluster with the same name
                 cmd = [
                     az_cmd, "aks", "get-credentials",
                     "--resource-group", resource_group,
                     "--name", cluster_name,
                     "--file", kubeconfig_path,
-                    "--overwrite-existing"
+                    "--overwrite-existing",
+                    "--admin"  # Use admin credentials to ensure we can access the cluster
                 ]
+                # Add subscription if available
+                if self.subscription_id:
+                    cmd.extend(["--subscription", self.subscription_id])
+                logger.info(f"Getting credentials with command: {' '.join(cmd)}")
                 return subprocess.run(
                     cmd,
                     capture_output=True,
