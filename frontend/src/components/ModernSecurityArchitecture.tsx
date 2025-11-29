@@ -103,33 +103,7 @@ export function ModernSecurityArchitecture() {
             {/* Main Content Container */}
             <div className="relative w-full h-full p-8">
 
-                {/* Connection Indicators - Subtle arrows */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none z-5" style={{ opacity: 0.6 }}>
-                    <defs>
-                        <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-                            <path d="M0,0 L0,8 L8,4 z" fill="#ef4444" />
-                        </marker>
-                    </defs>
 
-                    {/* TLS to Temenos - horizontal lines */}
-                    <line x1="16%" y1="25%" x2="21%" y2="25%" stroke="#ef4444" strokeWidth="1.5" markerEnd="url(#arrow)" />
-                    <line x1="16%" y1="50%" x2="21%" y2="50%" stroke="#ef4444" strokeWidth="1.5" markerEnd="url(#arrow)" />
-                    <line x1="16%" y1="75%" x2="21%" y2="75%" stroke="#ef4444" strokeWidth="1.5" markerEnd="url(#arrow)" />
-
-                    {/* Auth to Authz */}
-                    <line x1="42%" y1="32%" x2="48%" y2="32%" stroke="#ef4444" strokeWidth="1.5" markerEnd="url(#arrow)" />
-
-                    {/* Auth to Bank IAM - dashed */}
-                    <line x1="42%" y1="28%" x2="70%" y2="23%" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#arrow)" />
-
-                    {/* Ext Auth to Bank IAM - dashed */}
-                    <line x1="42%" y1="58%" x2="70%" y2="26%" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#arrow)" />
-
-                    {/* Vault to Services */}
-                    <line x1="58%" y1="85%" x2="70%" y2="42%" stroke="#ef4444" strokeWidth="1.5" markerEnd="url(#arrow)" />
-                    <line x1="58%" y1="85%" x2="70%" y2="54%" stroke="#ef4444" strokeWidth="1.5" markerEnd="url(#arrow)" />
-                    <line x1="58%" y1="85%" x2="70%" y2="66%" stroke="#ef4444" strokeWidth="1.5" markerEnd="url(#arrow)" />
-                </svg>
 
                 {/* Layout Grid - Original 3-column structure */}
                 <div className="w-full h-full grid grid-cols-12 gap-4 relative z-10">
@@ -154,12 +128,11 @@ export function ModernSecurityArchitecture() {
                     </div>
 
                     {/* Column 2: Temenos Software (Center) */}
-                    <div className="col-span-6 flex flex-col justify-center">
-                        <div className="bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-3xl p-6 border-2 border-slate-300 dark:border-slate-600 relative">
+                    <div className="col-span-6 flex flex-col">
+                        <div className="bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-3xl p-6 border-2 border-slate-300 dark:border-slate-600 relative h-full">
                             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 px-6 py-2 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 z-10">
                                 <h3 className="font-bold text-slate-800 dark:text-white whitespace-nowrap">Temenos Software</h3>
                             </div>
-
 
                             <div className="h-full flex flex-col gap-4 pt-4">
                                 {/* Row 1: Authentication and Authorization */}
@@ -227,99 +200,128 @@ export function ModernSecurityArchitecture() {
                                     </div>
                                 </div>
 
-                                {/* Row 3: Bank IAM and Vault Services */}
-                                <div className="grid grid-cols-2 gap-4 h-[110px]">
-                                    {/* Bank's IAM */}
+                                {/* Row 3: Database */}
+                                <div className="grid grid-cols-1 gap-4 h-[110px]">
+                                    {/* Database */}
                                     <div
-                                        className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
-                                        onMouseEnter={() => setActiveTooltip('bank-iam')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
-                                    >
-                                        <div className="flex items-center gap-3 mb-1">
-                                            <Server className="w-5 h-5" />
-                                            <h4 className="font-bold text-sm">Bank's IAM</h4>
-                                        </div>
-                                        <p className="text-purple-100 text-xs">Identity Access Management</p>
-                                    </div>
-
-                                    {/* Secrets Management */}
-                                    <div
-                                        className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                                        onMouseEnter={() => setActiveTooltip('secrets-management')}
+                                        className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-help group h-full flex items-center justify-between"
+                                        onMouseEnter={() => setActiveTooltip('data-encryption')}
                                         onMouseLeave={() => setActiveTooltip(null)}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <Key className="w-5 h-5" />
-                                            <h4 className="font-bold text-sm">Secrets Mgmt</h4>
-                                        </div>
-                                    </div>
-
-                                    {/* Key Management */}
-                                    <div
-                                        className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                                        onMouseEnter={() => setActiveTooltip('key-management')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <FileKey className="w-5 h-5" />
-                                            <h4 className="font-bold text-sm">Key Mgmt</h4>
-                                        </div>
-                                    </div>
-
-                                    {/* Certificate Management */}
-                                    <div
-                                        className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                                        onMouseEnter={() => setActiveTooltip('certificate-management')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <FileText className="w-5 h-5" />
-                                            <h4 className="font-bold text-sm">Cert Mgmt</h4>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </div>
-
-                            {/* Tooltip Popup */}
-                            <AnimatePresence>
-                                {activeTooltip && tooltips[activeTooltip] && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        className="absolute bottom-8 left-8 right-8 z-50 pointer-events-none"
-                                    >
-                                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-3xl mx-auto">
-                                            <div className="flex items-start gap-4">
-                                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                                                    <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                                                        {tooltips[activeTooltip].title}
-                                                    </h4>
-                                                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                                                        {tooltips[activeTooltip].description}
-                                                    </p>
-                                                </div>
+                                            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
+                                                <Database className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-sm text-slate-800 dark:text-white">Database</h4>
+                                                <p className="text-xs text-slate-600 dark:text-slate-400">TDE Encrypted</p>
                                             </div>
                                         </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                                        <div className="flex gap-1">
+                                            <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs rounded">AES-256</span>
+                                            <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs rounded">At Rest</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                            {/* Details Button */}
-                            <div className="absolute bottom-6 right-6 z-20">
-                                <button
-                                    onClick={() => setShowAuthDetails(true)}
-                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full hover:shadow-lg hover:scale-105 transition-all font-semibold shadow-blue-500/20"
-                                >
-                                    <span>View Authentication Details</span>
-                                    <ArrowRight className="w-4 h-4" />
-                                </button>
                             </div>
                         </div>
                     </div>
-                    )
+                </div>
+
+                {/* Column 3: External Services (Right) */}
+                <div className="col-span-4 flex flex-col gap-3">
+
+                    {/* Bank IAM */}
+                    <div
+                        className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
+                        onMouseEnter={() => setActiveTooltip('bank-iam')}
+                        onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                        <div className="flex items-center gap-3 mb-1">
+                            <Server className="w-5 h-5" />
+                            <h4 className="font-bold text-sm">Bank's IAM</h4>
+                        </div>
+                        <p className="text-purple-100 text-xs">Identity Access Management</p>
+                    </div>
+
+                    {/* Secrets Management */}
+                    <div
+                        className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                        onMouseEnter={() => setActiveTooltip('secrets-management')}
+                        onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Key className="w-5 h-5" />
+                            <h4 className="font-bold text-sm">Secrets Mgmt</h4>
+                        </div>
+                    </div>
+
+                    {/* Key Management */}
+                    <div
+                        className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                        onMouseEnter={() => setActiveTooltip('key-management')}
+                        onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                        <div className="flex items-center gap-3">
+                            <FileKey className="w-5 h-5" />
+                            <h4 className="font-bold text-sm">Key Mgmt</h4>
+                        </div>
+                    </div>
+
+                    {/* Certificate Management */}
+                    <div
+                        className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                        onMouseEnter={() => setActiveTooltip('certificate-management')}
+                        onMouseLeave={() => setActiveTooltip(null)}
+                    >
+                        <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5" />
+                            <h4 className="font-bold text-sm">Cert Mgmt</h4>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {/* Tooltip Popup */}
+            <AnimatePresence>
+                {activeTooltip && tooltips[activeTooltip] && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute bottom-8 left-8 right-8 z-50 pointer-events-none"
+                    >
+                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-3xl mx-auto">
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                                    <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                                        {tooltips[activeTooltip].title}
+                                    </h4>
+                                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                                        {tooltips[activeTooltip].description}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Details Button */}
+            <div className="absolute bottom-6 right-6 z-20">
+                <button
+                    onClick={() => setShowAuthDetails(true)}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full hover:shadow-lg hover:scale-105 transition-all font-semibold shadow-blue-500/20"
+                >
+                    <span>View Authentication Details</span>
+                    <ArrowRight className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
+    )
 }
