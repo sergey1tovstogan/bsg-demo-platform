@@ -134,7 +134,7 @@ export function ModernSecurityArchitecture() {
                                 <h3 className="font-bold text-slate-800 dark:text-white whitespace-nowrap">Temenos Software</h3>
                             </div>
 
-                            <div className="h-full flex flex-col gap-4 pt-4">
+                            <div className="h-full flex flex-col gap-4 pt-6">
                                 {/* Row 1: Authentication and Authorization */}
                                 <div className="grid grid-cols-2 gap-4 h-[110px]">
                                     {/* Authentication */}
@@ -230,8 +230,7 @@ export function ModernSecurityArchitecture() {
                 </div>
 
                 {/* Column 3: External Services (Right) */}
-                <div className="col-span-4 flex flex-col gap-3">
-
+                <div className="col-span-4 flex flex-col gap-3 pt-6">
                     {/* Bank IAM */}
                     <div
                         className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
@@ -280,7 +279,6 @@ export function ModernSecurityArchitecture() {
                             <h4 className="font-bold text-sm">Cert Mgmt</h4>
                         </div>
                     </div>
-
                 </div>
             </div>
 
