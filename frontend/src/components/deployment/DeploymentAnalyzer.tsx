@@ -1551,9 +1551,9 @@ function formatRAGText(text: string): JSX.Element | null {
     }
 
     // Check if it's a bullet point (starts with - or * or •)
-    if (trimmed.match(/^[\-\*•]\s+/)) {
+    if (trimmed.match(/^[-*•]\s+/)) {
       flushParagraph()
-      const bulletText = trimmed.replace(/^[\-\*•]\s+/, '').trim()
+      const bulletText = trimmed.replace(/^[-*•]\s+/, '').trim()
       if (bulletText) {
         listItems.push(bulletText)
       }
