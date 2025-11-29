@@ -103,8 +103,6 @@ export function ModernSecurityArchitecture() {
             {/* Main Content Container */}
             <div className="relative w-full h-full p-8">
 
-
-
                 {/* Layout Grid - Original 3-column structure */}
                 <div className="w-full h-full grid grid-cols-12 gap-4 relative z-10">
 
