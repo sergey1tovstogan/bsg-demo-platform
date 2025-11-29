@@ -230,7 +230,7 @@ export function ModernSecurityArchitecture() {
                 </div>
 
                 {/* Column 3: External Services (Right) */}
-                <div className="col-span-4 flex flex-col gap-3 pt-8">
+                <div className="col-span-4 flex flex-col gap-3" style={{ paddingTop: '3.5rem' }}>
                     {/* Bank IAM */}
                     <div
                         className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
