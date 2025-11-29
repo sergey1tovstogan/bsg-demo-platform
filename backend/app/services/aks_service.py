@@ -823,31 +823,32 @@ class AKSService:
                     logger.error("kubectl fallback requires kubeconfig - cannot proceed")
                     return namespaces
             else:
-                # Local development: try Azure CLI method
+                # Local development: get cluster-specific kubeconfig
                 try:
-                    # Get credentials to ensure they're in the default kubeconfig
+                    # Get credentials - this creates a cluster-specific kubeconfig
+                    logger.info(f"Getting cluster-specific credentials for {cluster_name} in RG {resource_group}")
                     creds = await self.get_cluster_credentials(resource_group, cluster_name)
-                    # But use default kubeconfig regardless
-                    if os.path.exists(default_kubeconfig):
-                        kubeconfig_path = default_kubeconfig
-                        logger.info(f"Using default kubeconfig: {kubeconfig_path}")
-                    elif creds and creds.get("kubeconfig_path") and os.path.exists(creds["kubeconfig_path"]):
+                    # CRITICAL: Always use the cluster-specific kubeconfig, not the default one
+                    # This ensures we query the correct cluster
+                    if creds and creds.get("kubeconfig_path") and os.path.exists(creds["kubeconfig_path"]):
                         kubeconfig_path = creds["kubeconfig_path"]
-                        logger.info(f"Using credential kubeconfig: {kubeconfig_path}")
+                        logger.info(f"✓ Using cluster-specific kubeconfig: {kubeconfig_path}")
+                        logger.info(f"✓ This ensures we query the correct cluster: {cluster_name} in RG {resource_group}")
                     else:
-                        logger.error(f"No kubeconfig found for cluster {cluster_name}")
-                        logger.error(f"Default kubeconfig path: {default_kubeconfig}")
-                        logger.error(f"Default kubeconfig exists: {os.path.exists(default_kubeconfig)}")
-                        return namespaces
+                        logger.error(f"✗ Failed to get cluster-specific kubeconfig for {cluster_name}")
+                        logger.error(f"  Creds: {creds}")
+                        if os.path.exists(default_kubeconfig):
+                            logger.warning(f"⚠ Falling back to default kubeconfig, but this may query the WRONG cluster!")
+                            logger.warning(f"⚠ Default kubeconfig may have a different 'transact' context")
+                            kubeconfig_path = default_kubeconfig
+                        else:
+                            logger.error(f"No kubeconfig found for cluster {cluster_name}")
+                            return namespaces
                 except Exception as e:
-                    logger.warning(f"Error getting credentials, trying default kubeconfig: {e}")
-                    if os.path.exists(default_kubeconfig):
-                        kubeconfig_path = default_kubeconfig
-                        logger.info(f"Using default kubeconfig after error: {kubeconfig_path}")
-                    else:
-                        logger.error(f"No kubeconfig found for cluster {cluster_name}")
-                        logger.error(f"Default kubeconfig path: {default_kubeconfig}")
-                        return namespaces
+                    logger.error(f"Error getting cluster credentials: {e}", exc_info=True)
+                    logger.error(f"✗ Cannot proceed without cluster-specific kubeconfig")
+                    logger.error(f"  This would query the wrong cluster if we used default kubeconfig")
+                    return namespaces
             
             logger.info(f"Using kubeconfig: {kubeconfig_path} for cluster {cluster_name}")
             
@@ -866,19 +867,36 @@ class AKSService:
             else:
                 logger.info(f"Using kubeconfig from Azure API (context should be set automatically)")
             
-            # Build command - simple kubectl get namespaces
-            cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
+            # Build command - use --context flag to ensure we query the correct cluster
+            # The context name is typically: <cluster-name> or <cluster-name>-admin
+            # Try to determine the correct context name
+            context_name = cluster_name
+            # If using cluster-specific kubeconfig, it should have the right context already
+            # But if using default kubeconfig, we need to specify context
+            if kubeconfig_path == default_kubeconfig:
+                # Try to find the context that matches this cluster
+                # Context names in Azure CLI are usually: <cluster-name> or <cluster-name>-admin
+                # We'll try both
+                logger.info(f"Using default kubeconfig, will try context: {context_name}")
+                cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json", "--context", context_name]
+            else:
+                # Using cluster-specific kubeconfig, context should be correct
+                logger.info(f"Using cluster-specific kubeconfig, context should be automatically correct")
+                cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
             
             # CRITICAL: Print for immediate visibility
             print(f"Executing kubectl: {' '.join(cmd_parts)}")
             print(f"KUBECONFIG={kubeconfig_path}")
             print(f"kubectl path: {kubectl_cmd}")
-            print(f"Using context: {cluster_name}")
+            print(f"Target cluster: {cluster_name} in RG {resource_group}")
             logger.info(f"Executing kubectl: {' '.join(cmd_parts)}")
             logger.info(f"KUBECONFIG={kubeconfig_path}")
             logger.info(f"kubectl path: {kubectl_cmd}")
-            logger.info(f"Using context: {cluster_name}")
-            logger.info(f"Resource group: {resource_group}, Cluster: {cluster_name}")
+            logger.info(f"Target cluster: {cluster_name} in RG {resource_group}")
+            if kubeconfig_path == default_kubeconfig:
+                logger.info(f"Using context: {context_name} (explicitly specified)")
+            else:
+                logger.info(f"Using cluster-specific kubeconfig (context should match {cluster_name})")
             
             # Use run_in_executor for Windows compatibility
             def _run_kubectl():
