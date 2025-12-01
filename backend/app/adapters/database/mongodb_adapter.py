@@ -99,6 +99,10 @@ class MongoDBAdapter(DatabaseAdapter):
                 logger.info(f"Connected to MongoDB database: {self._database_name}")
                 return
                 
+            except asyncio.CancelledError:
+                # Handle graceful shutdown - connection was cancelled
+                logger.info("MongoDB connection cancelled during startup (likely server shutdown)")
+                raise
             except (ConnectionFailure, ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout) as e:
                 logger.warning(f"MongoDB connection attempt {attempt + 1} failed: {e}")
                 if attempt < self._max_retries - 1:
