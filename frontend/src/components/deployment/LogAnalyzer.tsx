@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react'
-import { X, Loader2, FileText, AlertCircle, CheckCircle2, Code, Wrench, Info, AlertTriangle, Zap } from 'lucide-react'
+import { X, Loader2, FileText, AlertCircle, CheckCircle2, Wrench, Info, AlertTriangle, Zap } from 'lucide-react'
 import { apiService } from '../../services/api'
 
 interface LogAnalyzerProps {

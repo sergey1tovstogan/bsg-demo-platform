@@ -365,25 +365,25 @@ export function DeploymentContentViewer() {
                       <h3 className="text-xl font-bold mb-4 border-b-2 border-blue-500 dark:border-blue-400 pb-3 text-gray-900 dark:text-white">
                         {item.title || item.question}
                       </h3>
-                <div className="text-gray-800 dark:text-gray-200">
-                  <ReactMarkdown
-                    components={{
-                      h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-400 mt-6 mb-4" {...props} />,
-                      h2: ({ node, ...props }) => <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-5 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2" {...props} />,
-                      h3: ({ node, ...props }) => <h3 className="text-lg font-bold text-blue-700 dark:text-blue-300 mt-4 mb-2" {...props} />,
-                      h4: ({ node, ...props }) => <h4 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1" {...props} />,
-                      ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
-                      ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
-                      li: ({ node, ...props }) => <li className="leading-relaxed pl-1" {...props} />,
-                      p: ({ node, ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
-                      strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
-                      blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
-                      code: ({ node, ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
-                    }}
-                  >
-                    {item.answer}
-                  </ReactMarkdown>
-                </div>
+                      <div className="text-gray-800 dark:text-gray-200">
+                        <ReactMarkdown
+                          components={{
+                            h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-400 mt-6 mb-4" {...props} />,
+                            h2: ({ node, ...props }) => <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-5 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2" {...props} />,
+                            h3: ({ node, ...props }) => <h3 className="text-lg font-bold text-blue-700 dark:text-blue-300 mt-4 mb-2" {...props} />,
+                            h4: ({ node, ...props }) => <h4 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1" {...props} />,
+                            ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
+                            ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
+                            li: ({ node, ...props }) => <li className="leading-relaxed pl-1" {...props} />,
+                            p: ({ node, ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
+                            strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                            blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
+                            code: ({ node, ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
+                          }}
+                        >
+                          {item.answer}
+                        </ReactMarkdown>
+                      </div>
                       {item.sources && item.sources.length > 0 && (
                         <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-600">
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Sources:</p>

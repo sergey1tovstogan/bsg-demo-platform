@@ -51,6 +51,29 @@ The automation will:
 2. Fix issues automatically
 3. Commit and push fixes automatically
 
+### 2.1 Local Development
+
+To run the platform locally:
+
+```powershell
+# Start all services (backend + frontend)
+.\scripts\start-all.bat
+```
+
+This will start:
+- **Backend:** http://localhost:8000
+- **Frontend:** http://localhost:3000
+- **API Docs:** http://localhost:8000/docs
+
+Two command windows will open:
+- `BSG Backend` - Backend server (FastAPI/Uvicorn on port 8000)
+- `BSG Frontend` - Frontend server (Vite dev server on port 3000)
+
+Wait a few seconds for services to fully start, then:
+1. Open http://localhost:3000 in your browser
+2. Go to Demo → Deployment Analyzer
+3. Connect to Azure and analyze deployments
+
 ### 3. Manual Operations (Optional)
 
 If you need manual control:
@@ -170,6 +193,11 @@ If workflows succeed:
    - Frontend: `https://kind-beach-01c0a990f.3.azurestaticapps.net`
 3. **Report results** in GitHub Actions summary
 4. **Create success summary** with deployment URLs
+
+**Note:** For local development, use:
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:5173`
+- API Docs: `http://localhost:8000/docs`
 
 #### Step 5: Failure Path
 If workflows fail:
@@ -305,8 +333,8 @@ Consolidated script that replaces multiple individual scripts. Provides all auto
 ### Examples
 
 ```powershell
-# Monitor workflows (default action)
-.\ci-automation.ps1 monitor
+# Monitor workflows (defa.\ci-automation.ps1 monitorult action)
+
 .\ci-automation.ps1 monitor -TimeoutMinutes 45 -AutoFix
 
 # List workflows
@@ -403,9 +431,17 @@ Edit `config.json` to customize behavior:
 
 ### Health Checks
 - Backend health endpoint (`/api/v1/health`)
+  - Local: `http://localhost:8000/api/v1/health`
+  - Production: `https://bsg-demo-platform-app.azurewebsites.net/api/v1/health`
 - Backend liveness endpoint (`/api/v1/live`)
+  - Local: `http://localhost:8000/api/v1/live`
+  - Production: `https://bsg-demo-platform-app.azurewebsites.net/api/v1/live`
 - Frontend availability
+  - Local: `http://localhost:3000`
+  - Production: `https://kind-beach-01c0a990f.3.azurestaticapps.net`
 - API documentation endpoint
+  - Local: `http://localhost:8000/docs`
+  - Production: `https://bsg-demo-platform-app.azurewebsites.net/docs`
 
 ### Failure Detection
 - Analyzes workflow logs

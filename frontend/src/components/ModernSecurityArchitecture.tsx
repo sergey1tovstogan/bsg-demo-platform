@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
     Shield,
-    Lock,
     Key,
     FileKey,
     Server,
@@ -23,7 +22,6 @@ interface TooltipConfig {
 
 export function ModernSecurityArchitecture() {
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
-    const [showAuthDetails, setShowAuthDetails] = useState(false)
 
     const tooltips: Record<string, TooltipConfig> = {
         'key-management': {
@@ -311,7 +309,7 @@ export function ModernSecurityArchitecture() {
             {/* Details Button */}
             <div className="absolute bottom-6 right-6 z-20">
                 <button
-                    onClick={() => setShowAuthDetails(true)}
+                    onClick={() => {}}
                     className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full hover:shadow-lg hover:scale-105 transition-all font-semibold shadow-blue-500/20"
                 >
                     <span>View Authentication Details</span>

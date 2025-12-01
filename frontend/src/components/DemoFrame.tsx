@@ -11,6 +11,40 @@ interface DemoFrameProps {
 }
 
 export function DemoFrame({ componentId }: DemoFrameProps) {
+  // All hooks must be called before any conditional returns (React Rules of Hooks)
+  const [_demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
+  const [session, _setSession] = useState<DemoSession | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [_connecting, _setConnecting] = useState(false)
+  const [_error, setError] = useState<string | null>(null)
+
+  const loadDemoConfig = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await apiService.getDemoConfig(componentId)
+      setDemoConfig(response.data) // setDemoConfig is used
+    } catch (err: unknown) {
+      // If demo config doesn't exist, that's okay - show placeholder
+      setError(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadDemoConfig()
+  }, [componentId])
+
+  useEffect(() => {
+    return () => {
+      // Cleanup: disconnect on unmount
+      if (session?.session_id) {
+        apiService.disconnectDemo(componentId, session.session_id).catch(console.error)
+      }
+    }
+  }, [session, componentId])
+
   // Use specialized component for observability
   if (componentId === 'observability') {
     return <ObservabilityDemo />
@@ -74,40 +108,6 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
         </div>
       </div>
     )
-  }
-
-  // For other components, try to load demo config
-  const [_demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
-  const [session, _setSession] = useState<DemoSession | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [_connecting, _setConnecting] = useState(false)
-  const [_error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    loadDemoConfig()
-  }, [componentId])
-
-  useEffect(() => {
-    return () => {
-      // Cleanup: disconnect on unmount
-      if (session?.session_id) {
-        apiService.disconnectDemo(componentId, session.session_id).catch(console.error)
-      }
-    }
-  }, [session, componentId])
-
-  const loadDemoConfig = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await apiService.getDemoConfig(componentId)
-      setDemoConfig(response.data) // setDemoConfig is used
-    } catch (err: unknown) {
-      // If demo config doesn't exist, that's okay - show placeholder
-      setError(null)
-    } finally {
-      setLoading(false)
-    }
   }
 
   // Demo connection functions - reserved for future use

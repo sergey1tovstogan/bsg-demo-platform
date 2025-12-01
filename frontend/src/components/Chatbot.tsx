@@ -18,30 +18,6 @@ export function Chatbot({ componentId }: ChatbotProps) {
   const [chatError, setChatError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Initialize chat session only for non-security components
-  useEffect(() => {
-    if (componentId !== 'security') {
-      initializeSession()
-      return () => {
-        if (sessionId) {
-          apiService.deleteChatSession(componentId, sessionId).catch(console.error)
-        }
-      }
-    } else {
-      setInitializing(false)
-    }
-  }, [componentId])
-
-  useEffect(() => {
-    if (componentId !== 'security') {
-      scrollToBottom()
-    }
-  }, [messages])
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   const initializeSession = async () => {
     try {
       setInitializing(true)
@@ -60,11 +36,36 @@ export function Chatbot({ componentId }: ChatbotProps) {
           // No history yet
         }
       }
-    } catch (err: any) {
-      setChatError(err.message || 'Failed to initialize chat session')
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to initialize chat session'
+      setChatError(errorMessage)
     } finally {
       setInitializing(false)
     }
+  }
+
+  // Initialize chat session only for non-security components
+  useEffect(() => {
+    if (componentId !== 'security') {
+      initializeSession()
+      return () => {
+        if (sessionId) {
+          apiService.deleteChatSession(componentId, sessionId).catch(console.error)
+        }
+      }
+    } else {
+      setInitializing(false)
+    }
+  }, [componentId, initializeSession, sessionId])
+
+  useEffect(() => {
+    if (componentId !== 'security') {
+      scrollToBottom()
+    }
+  }, [messages])
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const sendMessage = async () => {
@@ -85,8 +86,9 @@ export function Chatbot({ componentId }: ChatbotProps) {
     try {
       const response = await apiService.sendChatMessage(componentId, sessionId, input)
       setMessages((prev) => [...prev, response.data])
-    } catch (err: any) {
-      setChatError(err.message || 'Failed to send message')
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
+      setChatError(errorMessage)
       setMessages((prev) => prev.filter((msg) => msg.message_id !== userMessage.message_id))
     } finally {
       setLoading(false)
