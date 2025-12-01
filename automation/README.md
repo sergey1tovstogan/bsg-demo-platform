@@ -70,9 +70,11 @@ Two command windows will open:
 - `BSG Frontend` - Frontend server (Vite dev server on port 3000)
 
 Wait a few seconds for services to fully start, then:
-1. Open http://localhost:3000 in your browser
+1. Open http://localhost:3000 in your browser (frontend dev server)
 2. Go to Demo → Deployment Analyzer
 3. Connect to Azure and analyze deployments
+
+**Note:** The backend (localhost:8000) also serves the frontend static files when deployed, but for local development, always use localhost:3000 for the frontend to get hot-reload and development features.
 
 ### 3. Manual Operations (Optional)
 

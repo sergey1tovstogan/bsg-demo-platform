@@ -18,13 +18,10 @@ import { ModernAuthorization } from './ModernAuthorization'
 import { ModernPrivacyEncryption } from './ModernPrivacyEncryption'
 import { ModernSegregation } from './ModernSegregation'
 import ModernObservability from './ModernObservability'
-import SaaSComplianceDesignHTML from './security/SaaSComplianceDesign.html?raw'
-import SaaSComplianceOverviewHTML from './security/SaaSComplianceOverview.html?raw'
-import CompliancePositionHTML from './security/CompliancePosition.html?raw'
-import TrustCenterHTML from './security/TrustCenter.html?raw'
-import RiskManagementHTML from './security/RiskManagement.html?raw'
-import SecurityPolicyHTML from './security/SecurityPolicy.html?raw'
-import ProtectionEmbeddedHTML from './security/ProtectionEmbedded.html?raw'
+import ModernAccessManagement from './ModernAccessManagement'
+import ModernPlatformManagement from './ModernPlatformManagement'
+import ModernSaaSSecurity from './ModernSaaSSecurity'
+import ModernCompliance from './ModernCompliance'
 
 interface SecurityCard {
     id: number
@@ -5206,13 +5203,7 @@ export function SecurityContentViewer() {
                         <span>Back</span>
                     </button>
                 </div>
-                <iframe
-                    srcDoc={SaaSAccessDataHTML}
-                    className="w-full h-full border-0 rounded-lg"
-                    title="SaaS Access Data"
-                    sandbox="allow-same-origin allow-scripts"
-                    style={{ minHeight: '600px' }}
-                />
+                <ModernAccessManagement />
             </div>
         )
     }
@@ -5255,13 +5246,7 @@ export function SecurityContentViewer() {
                         <span>Back</span>
                     </button>
                 </div>
-                <iframe
-                    srcDoc={PlatformManagementHTML}
-                    className="w-full h-full border-0 rounded-lg"
-                    title="Platform Management"
-                    sandbox="allow-same-origin allow-scripts"
-                    style={{ minHeight: '600px' }}
-                />
+                <ModernPlatformManagement />
             </div>
         )
     }
@@ -5376,13 +5361,7 @@ export function SecurityContentViewer() {
                         <span>Back</span>
                     </button>
                 </div>
-                <iframe
-                    srcDoc={ProductSecurityUniformHTML}
-                    className="w-full h-full border-0 rounded-lg"
-                    title="Product Security Uniform"
-                    sandbox="allow-same-origin allow-scripts"
-                    style={{ minHeight: '600px' }}
-                />
+                <ModernSaaSSecurity />
             </div>
         )
     }
@@ -5575,13 +5554,7 @@ export function SecurityContentViewer() {
                         <span>Back</span>
                     </button>
                 </div>
-                <iframe
-                    srcDoc={SaaSComplianceDesignHTML}
-                    className="w-full h-full border-0 rounded-lg"
-                    title="Temenos SaaS Compliance by Design"
-                    sandbox="allow-same-origin allow-scripts"
-                    style={{ minHeight: '600px' }}
-                />
+                <ModernCompliance />
             </div>
         )
     }

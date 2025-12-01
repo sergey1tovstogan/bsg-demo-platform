@@ -385,6 +385,20 @@ export function DeploymentContentViewer() {
                             strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
                             blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
                             code: ({ node, ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
+                            table: ({ node, ...props }) => (
+                              <div className="overflow-x-auto my-6">
+                                <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg shadow-md" {...props} />
+                              </div>
+                            ),
+                            thead: ({ node, ...props }) => <thead className="bg-blue-50 dark:bg-blue-900/30" {...props} />,
+                            tbody: ({ node, ...props }) => <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props} />,
+                            tr: ({ node, ...props }) => <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" {...props} />,
+                            th: ({ node, ...props }) => (
+                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left text-sm font-bold text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-900/50 first:rounded-tl-lg last:rounded-tr-lg" {...props} />
+                            ),
+                            td: ({ node, ...props }) => (
+                              <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 align-top" {...props} />
+                            ),
                           }}
                         >
                           {item.answer}
