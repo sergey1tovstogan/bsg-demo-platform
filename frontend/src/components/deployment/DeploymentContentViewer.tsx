@@ -112,6 +112,12 @@ export function DeploymentContentViewer() {
         },
         {
           order: 4,
+          category: "Service Selection",
+          title: "AWS Service Selection Criteria",
+          question: "Explain the decision criteria and use cases for selecting AWS services in Temenos deployments. When should Amazon RDS be used versus Amazon DocumentDB? When should Amazon RDS be used versus PostgreSQL? When should Amazon Kinesis be used versus Apache ActiveMQ? When should EKS be used versus Amazon ECS? Provide specific guidance for each service selection."
+        },
+        {
+          order: 5,
           category: "Integration & Extensibility",
           title: "Extensibility and Integration Capabilities",
           question: "Describe Temenos cloud-native deployment capabilities for data-driven enhancements, extensibility, and integration. Explain how the Extensibility Framework supports advanced workflows and what integration patterns are available for connecting with external services and data sources in Azure and AWS environments."
