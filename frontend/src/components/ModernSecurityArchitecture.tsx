@@ -82,7 +82,7 @@ export function ModernSecurityArchitecture() {
     }
 
     return (
-        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-800">
+        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800">
             {/* Background Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
                 style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
@@ -90,8 +90,8 @@ export function ModernSecurityArchitecture() {
 
             {/* Header */}
             <div className="absolute top-6 right-6 z-20 flex gap-4">
-                <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md px-4 py-2 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700">
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md px-4 py-2 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 dark:text-slate-200 flex items-center gap-2">
                         <Info className="w-4 h-4 text-blue-500" />
                         Hover elements for details
                     </p>
@@ -126,8 +126,8 @@ export function ModernSecurityArchitecture() {
                     {/* Column 2: Temenos Software (Center) */}
                     <div className="col-span-6 flex flex-col">
                         <div className="bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-3xl p-6 border-2 border-slate-300 dark:border-slate-600 relative h-full">
-                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 px-6 py-2 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 z-10">
-                                <h3 className="font-bold text-slate-800 dark:text-white whitespace-nowrap">Temenos Software</h3>
+                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 px-6 py-2 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 z-10">
+                                <h3 className="font-bold text-slate-800 dark:text-slate-100 dark:text-white whitespace-nowrap">Temenos Software</h3>
                             </div>
 
                             <div className="h-full flex flex-col gap-4 pt-8">
@@ -141,12 +141,12 @@ export function ModernSecurityArchitecture() {
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-white">Authentication</h4>
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 dark:text-white">Authentication</h4>
                                         </div>
                                         <div className="flex flex-wrap gap-1">
-                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">OAuth 2.0</span>
-                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">OIDC</span>
-                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">SAML</span>
+                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">OAuth 2.0</span>
+                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">OIDC</span>
+                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">SAML</span>
                                         </div>
                                     </div>
 
@@ -158,7 +158,7 @@ export function ModernSecurityArchitecture() {
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <UserCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-white">Authorization</h4>
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 dark:text-white">Authorization</h4>
                                         </div>
                                         <div className="flex flex-wrap gap-1">
                                             <span className="px-2 py-0.5 bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 text-xs rounded">RBAC</span>
@@ -177,9 +177,9 @@ export function ModernSecurityArchitecture() {
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-white">Audit</h4>
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 dark:text-white">Audit</h4>
                                         </div>
-                                        <p className="text-xs text-slate-600 dark:text-slate-400">Full transaction and user activity logging</p>
+                                        <p className="text-xs text-slate-600 dark:text-slate-300 dark:text-slate-400">Full transaction and user activity logging</p>
                                     </div>
 
                                     {/* Externalized Auth */}
@@ -190,7 +190,7 @@ export function ModernSecurityArchitecture() {
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <Globe className="w-5 h-5 text-sky-600 dark:text-sky-400" />
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-white">Ext. Auth</h4>
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 dark:text-white">Ext. Auth</h4>
                                         </div>
                                         <span className="px-2 py-0.5 bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs rounded">XACML</span>
                                     </div>
@@ -209,8 +209,8 @@ export function ModernSecurityArchitecture() {
                                                 <Database className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-sm text-slate-800 dark:text-white">Database</h4>
-                                                <p className="text-xs text-slate-600 dark:text-slate-400">TDE Encrypted</p>
+                                                <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 dark:text-white">Database</h4>
+                                                <p className="text-xs text-slate-600 dark:text-slate-300 dark:text-slate-400">TDE Encrypted</p>
                                             </div>
                                         </div>
                                         <div className="flex gap-1">
@@ -287,16 +287,16 @@ export function ModernSecurityArchitecture() {
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         className="absolute bottom-8 left-8 right-8 z-50 pointer-events-none"
                     >
-                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-3xl mx-auto">
+                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-700 max-w-3xl mx-auto">
                             <div className="flex items-start gap-4">
-                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                                <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
                                     <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div>
                                     <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
                                         {tooltips[activeTooltip].title}
                                     </h4>
-                                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    <p className="text-slate-600 dark:text-slate-300 dark:text-slate-300 leading-relaxed">
                                         {tooltips[activeTooltip].description}
                                     </p>
                                 </div>
@@ -319,3 +319,5 @@ export function ModernSecurityArchitecture() {
         </div>
     )
 }
+
+

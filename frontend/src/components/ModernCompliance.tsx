@@ -25,9 +25,9 @@ const ModernCompliance = () => {
     ];
 
     return (
-        <div className="h-full flex flex-col bg-slate-50 overflow-hidden">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 overflow-hidden">
             {/* Header Tabs */}
-            <div className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm z-10">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 dark:border-slate-700 px-6 py-4 shadow-sm z-10">
                 <div className="flex space-x-4 overflow-x-auto pb-2">
                     {tabs.map((tab) => (
                         <button
@@ -35,7 +35,7 @@ const ModernCompliance = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === tab.id
                                     ? 'bg-orange-600 text-white shadow-md transform scale-105'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
                                 }`}
                         >
                             <tab.icon className="w-4 h-4" />
@@ -75,14 +75,14 @@ const ComplianceByDesignView = () => {
     return (
         <div className="space-y-6">
             {/* Hero Section */}
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-8 rounded-xl border border-orange-100 shadow-sm">
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-8 rounded-xl border border-orange-100 dark:border-orange-800 shadow-sm">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-orange-100 rounded-lg">
+                    <div className="p-3 bg-orange-100 dark:bg-orange-800 rounded-lg">
                         <Scale className="w-8 h-8 text-orange-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-orange-900 mb-3">Temenos SaaS Compliance by Design</h2>
-                        <p className="text-orange-800 leading-relaxed mb-4">
+                        <h2 className="text-2xl font-bold text-orange-900 dark:text-orange-100 mb-3">Temenos SaaS Compliance by Design</h2>
+                        <p className="text-orange-800 dark:text-orange-200 leading-relaxed mb-4">
                             Continuous regulatory updates built into the platform. Certified to industry standards and aligned with global compliance frameworks.
                         </p>
                     </div>
@@ -92,10 +92,10 @@ const ComplianceByDesignView = () => {
             {/* Three Column Layout */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* The Compliance Challenge */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="flex items-center gap-3 mb-4">
                         <AlertTriangle className="w-6 h-6 text-red-600" />
-                        <h3 className="text-lg font-bold text-slate-800">The Compliance Challenge</h3>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">The Compliance Challenge</h3>
                     </div>
                     <ul className="space-y-3">
                         {[
@@ -103,7 +103,7 @@ const ComplianceByDesignView = () => {
                             'Manual compliance = high risk & cost',
                             'Data protection, audit readiness, and operational resilience are mission-critical'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600">
+                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -112,10 +112,10 @@ const ComplianceByDesignView = () => {
                 </div>
 
                 {/* Compliance by Design */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="flex items-center gap-3 mb-4">
                         <Building2 className="w-6 h-6 text-blue-600" />
-                        <h3 className="text-lg font-bold text-slate-800">Compliance by Design</h3>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Compliance by Design</h3>
                     </div>
                     <ul className="space-y-3">
                         {[
@@ -123,7 +123,7 @@ const ComplianceByDesignView = () => {
                             'Certified to ISO 27001, 22301, 20000, SOC 1 & 2 & 3',
                             'DORA-aligned resilience: BC/DR, incident tracking, and monitoring'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600">
+                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                 <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -132,10 +132,10 @@ const ComplianceByDesignView = () => {
                 </div>
 
                 {/* Data Protection & Residency */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="flex items-center gap-3 mb-4">
                         <Lock className="w-6 h-6 text-purple-600" />
-                        <h3 className="text-lg font-bold text-slate-800">Data Protection & Residency</h3>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Data Protection & Residency</h3>
                     </div>
                     <ul className="space-y-3">
                         {[
@@ -143,7 +143,7 @@ const ComplianceByDesignView = () => {
                             'Data residency controls by region',
                             'Regular penetration testing and hyperscaler security'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600">
+                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                 <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -153,8 +153,8 @@ const ComplianceByDesignView = () => {
             </div>
 
             {/* Key Benefits */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Key Benefits</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Key Benefits</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
                         { title: 'Reduced Compliance Burden', desc: 'Automated compliance monitoring and reporting' },
@@ -162,11 +162,11 @@ const ComplianceByDesignView = () => {
                         { title: 'Faster Time to Market', desc: 'Pre-certified platform accelerates deployment' },
                         { title: 'Cost Efficiency', desc: 'Shared compliance infrastructure reduces overhead' }
                     ].map((benefit, idx) => (
-                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                             <div>
-                                <h4 className="font-semibold text-slate-800 text-sm">{benefit.title}</h4>
-                                <p className="text-xs text-slate-600 mt-1">{benefit.desc}</p>
+                                <h4 className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{benefit.title}</h4>
+                                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">{benefit.desc}</p>
                             </div>
                         </div>
                     ))}
@@ -180,12 +180,12 @@ const RegulatoryAlignmentView = () => {
     return (
         <div className="space-y-6">
             {/* Overview */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                     <FileCheck className="w-5 h-5 text-blue-600" />
                     Regulatory Compliance Overview
                 </h3>
-                <p className="text-slate-600 leading-relaxed mb-4">
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
                     Temenos SaaS is designed to meet the most stringent regulatory requirements across multiple jurisdictions and frameworks.
                 </p>
             </div>
@@ -193,14 +193,14 @@ const RegulatoryAlignmentView = () => {
             {/* Certifications Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* ISO 27001 */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100 shadow-sm">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
                             <Shield className="w-6 h-6 text-blue-600" />
                         </div>
-                        <h4 className="font-bold text-blue-900">ISO 27001</h4>
+                        <h4 className="font-bold text-blue-900 dark:text-blue-100">ISO 27001</h4>
                     </div>
-                    <p className="text-sm text-blue-800">Information Security Management System certification ensuring comprehensive security controls.</p>
+                    <p className="text-sm text-blue-800 dark:text-blue-200">Information Security Management System certification ensuring comprehensive security controls.</p>
                 </div>
 
                 {/* ISO 22301 */}
@@ -215,54 +215,54 @@ const RegulatoryAlignmentView = () => {
                 </div>
 
                 {/* ISO 20000 */}
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-6 rounded-xl border border-purple-100 shadow-sm">
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-purple-100 rounded-lg">
+                        <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-lg">
                             <FileText className="w-6 h-6 text-purple-600" />
                         </div>
-                        <h4 className="font-bold text-purple-900">ISO 20000</h4>
+                        <h4 className="font-bold text-purple-900 dark:text-purple-100">ISO 20000</h4>
                     </div>
-                    <p className="text-sm text-purple-800">IT Service Management certification for quality service delivery.</p>
+                    <p className="text-sm text-purple-800 dark:text-purple-200">IT Service Management certification for quality service delivery.</p>
                 </div>
 
                 {/* SOC 1 & 2 & 3 */}
-                <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-xl border border-orange-100 shadow-sm">
+                <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-6 rounded-xl border border-orange-100 dark:border-orange-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-orange-100 rounded-lg">
+                        <div className="p-2 bg-orange-100 dark:bg-orange-800 rounded-lg">
                             <FileCheck className="w-6 h-6 text-orange-600" />
                         </div>
-                        <h4 className="font-bold text-orange-900">SOC 1, 2 & 3</h4>
+                        <h4 className="font-bold text-orange-900 dark:text-orange-100">SOC 1, 2 & 3</h4>
                     </div>
-                    <p className="text-sm text-orange-800">Service Organization Control reports for financial and security controls.</p>
+                    <p className="text-sm text-orange-800 dark:text-orange-200">Service Organization Control reports for financial and security controls.</p>
                 </div>
 
                 {/* DORA */}
-                <div className="bg-gradient-to-br from-red-50 to-rose-50 p-6 rounded-xl border border-red-100 shadow-sm">
+                <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 p-6 rounded-xl border border-red-100 dark:border-red-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-red-100 rounded-lg">
+                        <div className="p-2 bg-red-100 dark:bg-red-800 rounded-lg">
                             <AlertTriangle className="w-6 h-6 text-red-600" />
                         </div>
-                        <h4 className="font-bold text-red-900">DORA</h4>
+                        <h4 className="font-bold text-red-900 dark:text-red-100">DORA</h4>
                     </div>
-                    <p className="text-sm text-red-800">Digital Operational Resilience Act aligned with BC/DR and incident management.</p>
+                    <p className="text-sm text-red-800 dark:text-red-200">Digital Operational Resilience Act aligned with BC/DR and incident management.</p>
                 </div>
 
                 {/* GDPR */}
-                <div className="bg-gradient-to-br from-cyan-50 to-sky-50 p-6 rounded-xl border border-cyan-100 shadow-sm">
+                <div className="bg-gradient-to-br from-cyan-50 to-sky-50 p-6 rounded-xl border border-cyan-100 dark:border-cyan-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-cyan-100 rounded-lg">
+                        <div className="p-2 bg-cyan-100 dark:bg-cyan-800 rounded-lg">
                             <Lock className="w-6 h-6 text-cyan-600" />
                         </div>
-                        <h4 className="font-bold text-cyan-900">GDPR</h4>
+                        <h4 className="font-bold text-cyan-900 dark:text-cyan-100">GDPR</h4>
                     </div>
-                    <p className="text-sm text-cyan-800">General Data Protection Regulation compliance for data privacy and protection.</p>
+                    <p className="text-sm text-cyan-800 dark:text-cyan-200">General Data Protection Regulation compliance for data privacy and protection.</p>
                 </div>
             </div>
 
             {/* Compliance Features */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-bold text-slate-800">Continuous Compliance Features</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Continuous Compliance Features</h3>
                 </div>
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -278,7 +278,7 @@ const RegulatoryAlignmentView = () => {
                         ].map((feature, idx) => (
                             <div key={idx} className="flex items-start gap-3">
                                 <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                <span className="text-sm text-slate-700">{feature}</span>
+                                <span className="text-sm text-slate-700 dark:text-slate-300">{feature}</span>
                             </div>
                         ))}
                     </div>
@@ -292,14 +292,14 @@ const RiskManagementView = () => {
     return (
         <div className="space-y-6">
             {/* Overview */}
-            <div className="bg-gradient-to-br from-red-50 to-orange-50 p-6 rounded-xl border border-red-100 shadow-sm">
+            <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-6 rounded-xl border border-red-100 dark:border-red-800 shadow-sm">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-red-100 rounded-lg">
+                    <div className="p-3 bg-red-100 dark:bg-red-800 rounded-lg">
                         <AlertTriangle className="w-8 h-8 text-red-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-red-900 mb-2">Risk Management Framework</h2>
-                        <p className="text-red-800 leading-relaxed">
+                        <h2 className="text-2xl font-bold text-red-900 dark:text-red-100 mb-2">Risk Management Framework</h2>
+                        <p className="text-red-800 dark:text-red-200 leading-relaxed">
                             Comprehensive risk management approach covering identification, assessment, mitigation, and monitoring of security and operational risks.
                         </p>
                     </div>
@@ -309,8 +309,8 @@ const RiskManagementView = () => {
             {/* Risk Categories */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Security Risks */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                         <Shield className="w-5 h-5 text-blue-600" />
                         Security Risk Management
                     </h3>
@@ -322,7 +322,7 @@ const RiskManagementView = () => {
                             'Threat intelligence and monitoring',
                             'Zero-trust architecture implementation'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600">
+                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                 <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -331,8 +331,8 @@ const RiskManagementView = () => {
                 </div>
 
                 {/* Operational Risks */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                         <Database className="w-5 h-5 text-purple-600" />
                         Operational Risk Management
                     </h3>
@@ -344,7 +344,7 @@ const RiskManagementView = () => {
                             'Incident management and root cause analysis',
                             'Service level agreement (SLA) monitoring'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600">
+                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                 <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -354,9 +354,9 @@ const RiskManagementView = () => {
             </div>
 
             {/* Risk Assessment Matrix */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-bold text-slate-800">Risk Assessment Process</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Risk Assessment Process</h3>
                 </div>
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -376,8 +376,8 @@ const RiskManagementView = () => {
             </div>
 
             {/* Third-Party Risk */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Third-Party Risk Management</h3>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Third-Party Risk Management</h3>
                 <div className="space-y-3">
                     {[
                         'Vendor due diligence and assessment',
@@ -386,9 +386,9 @@ const RiskManagementView = () => {
                         'Supply chain security controls',
                         'Exit and transition planning'
                     ].map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-slate-700">{item}</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-300">{item}</span>
                         </div>
                     ))}
                 </div>
@@ -401,14 +401,14 @@ const TrustCenterView = () => {
     return (
         <div className="space-y-6">
             {/* Hero */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-xl border border-blue-100 shadow-sm">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-8 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-blue-100 rounded-lg">
+                    <div className="p-3 bg-blue-100 dark:bg-blue-800 rounded-lg">
                         <Shield className="w-8 h-8 text-blue-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-blue-900 mb-2">Temenos Trust Center</h2>
-                        <p className="text-blue-800 leading-relaxed">
+                        <h2 className="text-2xl font-bold text-blue-900 dark:text-blue-100 mb-2">Temenos Trust Center</h2>
+                        <p className="text-blue-800 dark:text-blue-200 leading-relaxed">
                             Transparency and trust through comprehensive security documentation, certifications, and compliance reports.
                         </p>
                     </div>
@@ -417,17 +417,17 @@ const TrustCenterView = () => {
 
             {/* Trust Pillars */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center mb-4">
                         <FileCheck className="w-6 h-6 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Certifications</h3>
-                    <p className="text-sm text-slate-600 mb-4">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Certifications</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
                         Industry-leading certifications and attestations demonstrating our commitment to security and compliance.
                     </p>
                     <ul className="space-y-2">
                         {['ISO 27001', 'ISO 22301', 'ISO 20000', 'SOC 1, 2 & 3'].map((cert, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-700">
+                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                                 {cert}
                             </li>
@@ -435,17 +435,17 @@ const TrustCenterView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-800 rounded-lg flex items-center justify-center mb-4">
                         <Lock className="w-6 h-6 text-purple-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Security Practices</h3>
-                    <p className="text-sm text-slate-600 mb-4">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Security Practices</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
                         Comprehensive security controls and best practices protecting your data and operations.
                     </p>
                     <ul className="space-y-2">
                         {['Encryption at rest & in transit', 'Multi-factor authentication', 'Regular security testing', 'Incident response'].map((practice, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-700">
+                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
                                 {practice}
                             </li>
@@ -453,17 +453,17 @@ const TrustCenterView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
                         <Building2 className="w-6 h-6 text-green-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Transparency</h3>
-                    <p className="text-sm text-slate-600 mb-4">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Transparency</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
                         Open communication about our security posture, incidents, and continuous improvements.
                     </p>
                     <ul className="space-y-2">
                         {['Security documentation', 'Compliance reports', 'Audit results', 'Status updates'].map((item, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-700">
+                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                                 <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                                 {item}
                             </li>
@@ -473,9 +473,9 @@ const TrustCenterView = () => {
             </div>
 
             {/* Available Resources */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-bold text-slate-800">Available Resources</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Available Resources</h3>
                 </div>
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -487,9 +487,9 @@ const TrustCenterView = () => {
                             { title: 'Business Continuity Plan', desc: 'Disaster recovery and resilience documentation' },
                             { title: 'Incident Response Plan', desc: 'Security incident handling procedures' }
                         ].map((resource, idx) => (
-                            <div key={idx} className="p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
-                                <h4 className="font-semibold text-slate-800 mb-1">{resource.title}</h4>
-                                <p className="text-xs text-slate-600">{resource.desc}</p>
+                            <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+                                <h4 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">{resource.title}</h4>
+                                <p className="text-xs text-slate-600 dark:text-slate-300">{resource.desc}</p>
                             </div>
                         ))}
                     </div>
@@ -503,12 +503,12 @@ const SecurityPoliciesView = () => {
     return (
         <div className="space-y-6">
             {/* Overview */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                     <FileText className="w-5 h-5 text-blue-600" />
                     Security Policy Framework
                 </h3>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
                     Comprehensive security policies governing all aspects of information security, access control, and operational procedures.
                 </p>
             </div>
@@ -565,16 +565,16 @@ const SecurityPoliciesView = () => {
                         ]
                     }
                 ].map((policy, idx) => (
-                    <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div key={idx} className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                         <div className="flex items-center gap-3 mb-4">
                             <div className={`p-2 bg-${policy.color}-100 rounded-lg`}>
                                 <policy.icon className={`w-6 h-6 text-${policy.color}-600`} />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-800">{policy.title}</h3>
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{policy.title}</h3>
                         </div>
                         <ul className="space-y-2">
                             {policy.items.map((item, itemIdx) => (
-                                <li key={itemIdx} className="flex items-start gap-3 text-slate-600">
+                                <li key={itemIdx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                     <CheckCircle2 className={`w-4 h-4 text-${policy.color}-500 mt-0.5 flex-shrink-0`} />
                                     <span className="text-sm leading-relaxed">{item}</span>
                                 </li>
@@ -585,17 +585,17 @@ const SecurityPoliciesView = () => {
             </div>
 
             {/* Policy Governance */}
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl border border-slate-200">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Policy Governance</h3>
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Policy Governance</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[
                         { title: 'Annual Review', desc: 'All policies reviewed and updated annually' },
                         { title: 'Board Approval', desc: 'Executive oversight and approval process' },
                         { title: 'Employee Training', desc: 'Mandatory security awareness training' }
                     ].map((item, idx) => (
-                        <div key={idx} className="bg-white p-4 rounded-lg">
-                            <h4 className="font-semibold text-slate-800 mb-2">{item.title}</h4>
-                            <p className="text-sm text-slate-600">{item.desc}</p>
+                        <div key={idx} className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                            <h4 className="font-semibold text-slate-800 dark:text-slate-100 mb-2">{item.title}</h4>
+                            <p className="text-sm text-slate-600 dark:text-slate-300">{item.desc}</p>
                         </div>
                     ))}
                 </div>
@@ -608,14 +608,14 @@ const DataProtectionView = () => {
     return (
         <div className="space-y-6">
             {/* Hero */}
-            <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-8 rounded-xl border border-purple-100 shadow-sm">
+            <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-8 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-purple-100 rounded-lg">
+                    <div className="p-3 bg-purple-100 dark:bg-purple-800 rounded-lg">
                         <Lock className="w-8 h-8 text-purple-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-purple-900 mb-2">Data Protection & Privacy</h2>
-                        <p className="text-purple-800 leading-relaxed">
+                        <h2 className="text-2xl font-bold text-purple-900 dark:text-purple-100 mb-2">Data Protection & Privacy</h2>
+                        <p className="text-purple-800 dark:text-purple-200 leading-relaxed">
                             Comprehensive data protection controls ensuring confidentiality, integrity, and availability of customer data.
                         </p>
                     </div>
@@ -624,8 +624,8 @@ const DataProtectionView = () => {
 
             {/* Protection Layers */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                         <Lock className="w-5 h-5 text-blue-600" />
                         Encryption
                     </h3>
@@ -637,7 +637,7 @@ const DataProtectionView = () => {
                             'Database transparent data encryption (TDE)',
                             'Application-level encryption'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600">
+                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -645,8 +645,8 @@ const DataProtectionView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                         <Shield className="w-5 h-5 text-green-600" />
                         Access Controls
                     </h3>
@@ -658,7 +658,7 @@ const DataProtectionView = () => {
                             'Least privilege principle',
                             'Regular access reviews'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600">
+                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -666,8 +666,8 @@ const DataProtectionView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                         <Database className="w-5 h-5 text-purple-600" />
                         Data Residency
                     </h3>
@@ -679,7 +679,7 @@ const DataProtectionView = () => {
                             'Data localization requirements',
                             'Customer-controlled data location'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600">
+                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-purple-500 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -689,9 +689,9 @@ const DataProtectionView = () => {
             </div>
 
             {/* GDPR Compliance */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-bold text-slate-800">GDPR Compliance Features</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">GDPR Compliance Features</h3>
                 </div>
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -703,11 +703,11 @@ const DataProtectionView = () => {
                             { title: 'Data Protection Impact Assessment', desc: 'Regular DPIA for high-risk processing' },
                             { title: 'Data Minimization', desc: 'Collect and retain only necessary data' }
                         ].map((feature, idx) => (
-                            <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                            <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                                 <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                                 <div>
-                                    <h4 className="font-semibold text-slate-800 text-sm">{feature.title}</h4>
-                                    <p className="text-xs text-slate-600 mt-1">{feature.desc}</p>
+                                    <h4 className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{feature.title}</h4>
+                                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">{feature.desc}</p>
                                 </div>
                             </div>
                         ))}
@@ -716,8 +716,8 @@ const DataProtectionView = () => {
             </div>
 
             {/* Security Testing */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Regular Security Testing</h3>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Regular Security Testing</h3>
                 <div className="space-y-3">
                     {[
                         'Annual third-party penetration testing',
@@ -726,9 +726,9 @@ const DataProtectionView = () => {
                         'Automated security scanning',
                         'Red team exercises'
                     ].map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                             <CheckCircle2 className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-slate-700">{item}</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-300">{item}</span>
                         </div>
                     ))}
                 </div>
@@ -738,3 +738,7 @@ const DataProtectionView = () => {
 };
 
 export default ModernCompliance;
+
+
+
+
