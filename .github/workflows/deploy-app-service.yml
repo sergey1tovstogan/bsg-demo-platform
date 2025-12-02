@@ -69,9 +69,14 @@ jobs:
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: |
-          npm ci
-          # Ensure @types/react-dom is properly installed
-          npm list @types/react-dom || npm install --save-dev @types/react-dom@^18.2.43
+          npm ci || npm install
+          # Verify vite binary exists
+          if [ ! -f node_modules/.bin/vite ]; then
+            echo "vite binary not found, installing..."
+            npm install --save-dev vite@^5.0.8 --force
+          fi
+          # Verify @types/react-dom is installed
+          npm list @types/react-dom --depth=0 || npm install --save-dev @types/react-dom@^18.2.43
       
       - name: Type check frontend
         working-directory: ./frontend
@@ -130,7 +135,27 @@ jobs:
         run: |
           echo "Installing dependencies and building in parallel..."
           (
-            cd frontend && npm ci && npm list @types/react-dom || npm install --save-dev @types/react-dom@^18.2.43 && npm run build
+            cd frontend
+            echo "Removing node_modules for clean install..."
+            rm -rf node_modules
+            echo "Installing dependencies with npm install (production + dev)..."
+            npm install --include=dev
+            echo "Verifying vite package exists..."
+            if [ ! -d "node_modules/vite" ]; then
+              echo "ERROR: vite package directory not found!"
+              echo "Installing vite explicitly..."
+              npm install vite@^5.0.8 --save-dev
+            fi
+            echo "Verifying vite binary exists..."
+            if [ ! -f "node_modules/.bin/vite" ]; then
+              echo "ERROR: vite binary not found!"
+              echo "Contents of node_modules/.bin:"
+              ls -la node_modules/.bin/ 2>/dev/null || echo "node_modules/.bin does not exist"
+              echo "Reinstalling vite..."
+              npm install vite@^5.0.8 --save-dev --force
+            fi
+            echo "Running build..."
+            npm run build
           ) &
           FRONTEND_PID=$!
           (
