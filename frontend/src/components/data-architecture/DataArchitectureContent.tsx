@@ -625,25 +625,25 @@ export function DataArchitectureContent() {
   }
 
   return (
-    <div className="h-[calc(100vh-12rem)] flex flex-col space-y-4">
+    <div className="h-[calc(100vh-10rem)] flex flex-col space-y-4">
       {/* Merged Controls Panel with Description */}
-      <div className="bg-white rounded-lg shadow-sm p-6 space-y-4 flex-shrink-0">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 md:p-6 space-y-4 flex-shrink-0">
         {/* Description at top */}
-        <p className="text-gray-700 leading-relaxed text-center">
+        <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-center text-sm md:text-base">
           Visualizing data flow patterns in Temenos architecture. Select a path and watch how data moves through the system.
         </p>
 
         {/* Path Selection and Playback Controls in one row */}
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 md:gap-6">
           {/* Path Selection - Left side */}
-          <div className="flex flex-1 space-x-3">
+          <div className="flex flex-1 space-x-2 md:space-x-3">
             <button
               onClick={() => selectAndPlayPath('path-c')}
               disabled={playbackState === 'playing'}
-              className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
+              className={`flex-1 px-3 md:px-4 py-2 md:py-3 rounded-lg border-2 transition-all duration-300 ease-in-out ${
                 selectedPath === 'path-c'
-                  ? 'border-[#283054] bg-[#283054] text-white'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-[#283054]'
+                  ? 'border-[#283054] bg-[#283054] text-white shadow-md'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#283054] hover:shadow-sm'
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 1</div>
@@ -653,10 +653,10 @@ export function DataArchitectureContent() {
             <button
               onClick={() => selectAndPlayPath('path-a')}
               disabled={playbackState === 'playing'}
-              className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
+              className={`flex-1 px-3 md:px-4 py-2 md:py-3 rounded-lg border-2 transition-all duration-300 ease-in-out ${
                 selectedPath === 'path-a'
-                  ? 'border-[#283054] bg-[#283054] text-white'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-[#283054]'
+                  ? 'border-[#283054] bg-[#283054] text-white shadow-md'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#283054] hover:shadow-sm'
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 2</div>
@@ -666,10 +666,10 @@ export function DataArchitectureContent() {
             <button
               onClick={() => selectAndPlayPath('path-b')}
               disabled={playbackState === 'playing'}
-              className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
+              className={`flex-1 px-3 md:px-4 py-2 md:py-3 rounded-lg border-2 transition-all duration-300 ease-in-out ${
                 selectedPath === 'path-b'
-                  ? 'border-[#283054] bg-[#283054] text-white'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-[#283054]'
+                  ? 'border-[#283054] bg-[#283054] text-white shadow-md'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#283054] hover:shadow-sm'
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 3 (Key: 3)</div>
@@ -678,7 +678,7 @@ export function DataArchitectureContent() {
           </div>
 
           {/* Playback Controls - Right side */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
+          <div className="flex items-center justify-center md:justify-end space-x-2 flex-shrink-0">
             <button
               onClick={handleStepBack}
               disabled={currentStep === 0 || playbackState === 'playing'}
@@ -720,19 +720,20 @@ export function DataArchitectureContent() {
         </div>
 
         {/* Current Path Description */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-sm font-medium text-[#283054] text-center">{pathDescriptions[selectedPath]}</p>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 md:p-3 transition-all duration-300">
+          <p className="text-xs md:text-sm font-medium text-[#283054] dark:text-blue-300 text-center">{pathDescriptions[selectedPath]}</p>
         </div>
       </div>
 
       {/* Diagram Canvas - Dynamically expands to fill available space */}
-      <div className="bg-white rounded-lg shadow-sm p-6 flex-1 flex flex-col min-h-0">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 md:p-6 flex-1 flex flex-col min-h-0">
         {/* Responsive Container with specified styling */}
-        <div className="overflow-auto flex justify-center items-center h-full">
-          <div className="relative rounded-lg border-2 p-4"
+        <div className="overflow-auto flex justify-center items-center h-full" style={{ scrollbarWidth: 'thin' }}>
+          <div className="relative rounded-lg border-2 p-3 md:p-4 transition-all duration-300"
                style={{
-                 width: '1200px',
-                 height: '520px',
+                 width: 'min(1200px, 100%)',
+                 height: 'min(520px, calc(100vh - 20rem))',
+                 maxWidth: '100%',
                  backgroundColor: '#F4F4F6',
                  borderColor: '#3CB5A6',
                  borderRadius: '8px'
@@ -872,7 +873,12 @@ export function DataArchitectureContent() {
               } else if (dot.segment === 'fork-horizontal-left' || dot.segment === 'fork-horizontal-right') {
                 segmentDuration = 800 // Horizontal fork segments
               }
-              const progress = Math.min(age / segmentDuration, 1)
+              // Use easing function for smoother animation
+              const easeInOutCubic = (t: number): number => {
+                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+              }
+              const rawProgress = Math.min(age / segmentDuration, 1)
+              const progress = easeInOutCubic(rawProgress)
 
               // Get path coordinates
               const arrow = arrows.find(a => a.id === dot.pathId)
@@ -888,7 +894,7 @@ export function DataArchitectureContent() {
               const endX = parseFloat(pathParts[4])
               const endY = parseFloat(pathParts[5])
 
-              // Calculate current position along path
+              // Calculate current position along path with smooth interpolation
               const currentX = startX + (endX - startX) * progress
               const currentY = startY + (endY - startY) * progress
 
@@ -907,23 +913,29 @@ export function DataArchitectureContent() {
 
               return (
                 <g key={dot.id}>
-                  {/* Glow effect */}
+                  {/* Glow effect with smooth transition */}
                   <circle
                     cx={currentX}
                     cy={currentY}
                     r="8"
                     fill={dotColor}
                     opacity={isDotGreyed ? 0.1 : 0.3}
-                    style={isDotGreyed ? { filter: 'grayscale(100%)' } : {}}
+                    style={{
+                      filter: isDotGreyed ? 'grayscale(100%)' : 'none',
+                      transition: 'opacity 0.2s ease-out, filter 0.2s ease-out'
+                    }}
                   />
-                  {/* Main dot */}
+                  {/* Main dot with smooth transition */}
                   <circle
                     cx={currentX}
                     cy={currentY}
                     r="6"
                     fill={dotColor}
                     opacity={isDotGreyed ? 0.3 : 1}
-                    style={isDotGreyed ? { filter: 'grayscale(100%)' } : {}}
+                    style={{
+                      filter: isDotGreyed ? 'grayscale(100%)' : 'none',
+                      transition: 'opacity 0.2s ease-out, filter 0.2s ease-out'
+                    }}
                   />
                   {/* Label */}
                   <text
@@ -1026,7 +1038,12 @@ export function DataArchitectureContent() {
                   scale: isVisible ? 1 : 0.8,
                   filter: (isGreyed || (wasAnimated && !isInCurrentPath)) ? 'grayscale(100%)' : 'grayscale(0%)'
                 }}
-                transition={{ duration: 0.5 }}
+                transition={{ 
+                  duration: 0.8,
+                  ease: [0.4, 0, 0.2, 1], // Custom cubic-bezier for smooth easing
+                  opacity: { duration: 0.6 },
+                  scale: { duration: 0.7 }
+                }}
                 onMouseEnter={() => setHoveredComponent(component.id)}
                 onMouseLeave={() => setHoveredComponent(null)}
               >
