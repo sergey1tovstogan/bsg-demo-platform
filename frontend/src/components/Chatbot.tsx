@@ -68,7 +68,7 @@ export function Chatbot({ componentId }: ChatbotProps) {
     if (componentId !== 'security') {
       scrollToBottom()
     }
-  }, [messages])
+  }, [messages, componentId])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

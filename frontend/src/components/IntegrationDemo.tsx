@@ -5,13 +5,13 @@ import { ApiKeyModal } from './ApiKeyModal'
 
 interface ApiResult {
   status?: number
-  data?: any
+  data?: Record<string, unknown> | unknown[] | null
   error?: string
   loading: boolean
 }
 
 // JSON Syntax Highlighter Component
-const JsonView = ({ data, rawText }: { data: any, rawText?: string }) => {
+const JsonView = ({ data, rawText }: { data: unknown, rawText?: string }) => {
   if (!data) {
     // If JSON is invalid, show the raw text without highlighting
     if (rawText) {
@@ -46,7 +46,7 @@ const JsonView = ({ data, rawText }: { data: any, rawText?: string }) => {
   }
 
   // Split JSON into tokens
-  const tokens = formattedJson.split(/("(?:\\.|[^"\\])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[{}[\],:]|\s+)/g).filter(Boolean)
+  const tokens = formattedJson.split(/("(?:\\.|[^"\\])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|[{}[\],:]|\s+)/g).filter(Boolean)
 
   return (
     <pre className="text-xs whitespace-pre-wrap font-mono">
@@ -156,8 +156,9 @@ export function IntegrationDemo() {
           error: 'Failed to retrieve balance'
         })
       }
-    } catch (error: any) {
-      console.error('Balance fetch error:', error) // Debug log
+    } catch (err: unknown) {
+      console.error('Balance fetch error:', err) // Debug log
+      const error = err as { response?: { data?: { detail?: string } }, message?: string }
       setBalance({
         loading: false,
         error: error.response?.data?.detail || error.message || 'Failed to fetch balance'
@@ -189,7 +190,8 @@ export function IntegrationDemo() {
         status: proxyData.status,
         data: proxyData.data
       })
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } }, message?: string }
       setGetResult({
         loading: false,
         error: error.response?.data?.detail || error.message || 'Request failed'
@@ -234,8 +236,9 @@ export function IntegrationDemo() {
       if (proxyData.success && proxyData.status >= 200 && proxyData.status < 300) {
         await fetchBalance()
       }
-    } catch (error: any) {
+    } catch (err: unknown) {
       // Clear balance on error
+      const error = err as { response?: { data?: { detail?: string } }, message?: string }
       setBalance({ loading: false })
       setPostResult({
         loading: false,
@@ -299,7 +302,8 @@ export function IntegrationDemo() {
           data: proxyData.data
         })
       }
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } }, message?: string }
       setPortfolioResult({
         loading: false,
         error: error.response?.data?.detail || error.message || 'Request failed'
@@ -332,7 +336,8 @@ export function IntegrationDemo() {
         status: proxyData.status,
         data: proxyData.data
       })
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } }, message?: string }
       setCustomerResult({
         loading: false,
         error: error.response?.data?.detail || error.message || 'Request failed'
@@ -365,7 +370,8 @@ export function IntegrationDemo() {
         status: proxyData.status,
         data: proxyData.data
       })
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } }, message?: string }
       setAccountsResult({
         loading: false,
         error: error.response?.data?.detail || error.message || 'Request failed'

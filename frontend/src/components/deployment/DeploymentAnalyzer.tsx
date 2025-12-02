@@ -55,7 +55,19 @@ export function DeploymentAnalyzer() {
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
   const [services, setServices] = useState<AzureResource[]>([])
-  const [clusterNamespaces, setClusterNamespaces] = useState<Array<{ cluster_name: string, resource_group: string, namespaces: string[] }>>([])
+  const [clusterNamespaces, setClusterNamespaces] = useState<Array<{ 
+    cluster_name: string
+    resource_group: string
+    namespaces: string[]
+    error?: string
+    error_details?: {
+      message: string
+      cluster: string
+      resource_group: string
+      troubleshooting_steps?: string[]
+      for_azure_app_service?: string[]
+    }
+  }>>([])
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -714,15 +726,16 @@ function SubscriptionInput({
   }
 
   return (
-    <div className="card max-w-2xl mx-auto bg-white dark:bg-slate-800">
-      <div className="flex items-center space-x-3 mb-6">
-        <Cloud className="w-8 h-8 text-purple-600" />
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Azure Deployment Analyzer</h2>
-      </div>
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="card bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 sm:p-8">
+        <div className="flex items-center space-x-3 mb-6">
+          <Cloud className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Azure Deployment Analyzer</h2>
+        </div>
 
-      <p className="text-gray-600 dark:text-gray-300 mb-6">
-        Connect to your Azure subscription to analyze Temenos component deployments.
-      </p>
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
+          Connect to your Azure subscription to analyze Temenos component deployments.
+        </p>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800 rounded-lg">
@@ -786,6 +799,7 @@ function SubscriptionInput({
           )}
         </button>
       </form>
+      </div>
     </div>
   )
 }
@@ -1018,7 +1032,19 @@ function NamespaceSelector({
   loading,
   includeCosts
 }: {
-  clusterNamespaces: Array<{ cluster_name: string, resource_group: string, namespaces: string[], error?: string }>
+  clusterNamespaces: Array<{ 
+    cluster_name: string
+    resource_group: string
+    namespaces: string[]
+    error?: string
+    error_details?: {
+      message: string
+      cluster: string
+      resource_group: string
+      troubleshooting_steps?: string[]
+      for_azure_app_service?: string[]
+    }
+  }>
   onSelected: (selected: string[], includeCosts: boolean) => void
   onBack: () => void
   loading: boolean

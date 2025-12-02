@@ -637,7 +637,6 @@ export function DataArchitectureContent() {
     const updateScale = () => {
       if (diagramContainerRef.current && diagramRef.current) {
         const container = diagramContainerRef.current
-        const diagram = diagramRef.current
         const containerWidth = container.clientWidth - 16 // Account for padding
         const containerHeight = container.clientHeight - 16
         const diagramWidth = 1200

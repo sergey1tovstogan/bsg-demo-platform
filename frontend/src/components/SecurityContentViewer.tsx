@@ -2929,13 +2929,14 @@ const SecurityEventFeedHTML = `<!DOCTYPE html>
             },
             {
                 title: 'Azure Sentinel (SIEM)',
-                description: 'SIEM. Used Azure Sentinel\\'s built-in Insecure Protocol Workbook to discover the use of insecure services and protocols. The Security Operations Centre operate a Security Incident and Event Management platform (SIEM) that collects a subsection of logs which are used to detect patterns, look for known malicious activities and signatures, etc.​ Alerts are correlated to gain a big picture understanding of a potential attack or incident.​\\n\\nTemenos provides a SaaS Event Hub service that enables customers to access their application security logs in real time. This service works by collecting logs from the SaaS environment and pushing them into an Event Hub, which the customer can then integrate with their own monitoring or observability tools (e.g., Splunk, Azure Monitor, ELK Stack).\\n\\nThis capability ensures that customers maintain visibility and control over their operational data in production to support their monitoring needs of compliance, troubleshooting and performance.\\n\\nThis service is optional.\\n\\nForwarding logs to local central log repository is done automatically in real time.\\n\\nSecurity logs are reviewed on a daily, weekly and monthly basis as part of security operations activities. All exceptions and anomalies are analyzed and promptly escalated as per the security incident escalation process.',
+                description: 'SIEM. Used Azure Sentinel\'s built-in Insecure Protocol Workbook to discover the use of insecure services and protocols. The Security Operations Centre operate a Security Incident and Event Management platform (SIEM) that collects a subsection of logs which are used to detect patterns, look for known malicious activities and signatures, etc. Alerts are correlated to gain a big picture understanding of a potential attack or incident.\n\nTemenos provides a SaaS Event Hub service that enables customers to access their application security logs in real time. This service works by collecting logs from the SaaS environment and pushing them into an Event Hub, which the customer can then integrate with their own monitoring or observability tools (e.g., Splunk, Azure Monitor, ELK Stack).\n\nThis capability ensures that customers maintain visibility and control over their operational data in production to support their monitoring needs of compliance, troubleshooting and performance.\n\nThis service is optional.\n\nForwarding logs to local central log repository is done automatically in real time.\n\nSecurity logs are reviewed on a daily, weekly and monthly basis as part of security operations activities. All exceptions and anomalies are analyzed and promptly escalated as per the security incident escalation process.',
                 position: 'bottom'
             }
         ];
         
         function showTooltip(tooltipId) {
             const tooltip = document.getElementById('tooltip');
+            const tooltipTitle = tooltip ? tooltip.querySelector('.tooltip-title') : null;
             const tooltipDescription = tooltip ? tooltip.querySelector('.tooltip-description') : null;
             
             let config;
@@ -2946,7 +2947,9 @@ const SecurityEventFeedHTML = `<!DOCTYPE html>
                 config = tooltips[1];
             }
             
-            if (config && tooltip && tooltipDescription) {
+            if (config && tooltip && tooltipTitle && tooltipDescription) {
+                // Set both title and description
+                tooltipTitle.textContent = config.title;
                 tooltipDescription.textContent = config.description.replace(/\\\\n/g, '\\n');
                 tooltip.style.display = 'block';
                 tooltip.style.position = 'fixed';
