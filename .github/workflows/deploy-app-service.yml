@@ -212,14 +212,15 @@ jobs:
           [ -f backend-deploy.zip ] || (echo "ERROR: Failed to create package!" && exit 1)
           echo "✓ Package created: $(ls -lh backend-deploy.zip | awk '{print $5}')"
       
-      - name: Check and wait for ongoing deployments
+      - name: Stop any ongoing deployments and wait
         run: |
           echo "Checking for ongoing deployments..."
-          MAX_WAIT=120  # Maximum wait time in seconds
-          WAIT_INTERVAL=5
+          MAX_WAIT=180  # Maximum wait time in seconds (3 minutes)
+          WAIT_INTERVAL=10
           ELAPSED=0
           
           while [ $ELAPSED -lt $MAX_WAIT ]; do
+            # Get all active deployments
             ONGOING=$(az webapp deployment list \
               --name ${{ env.AZURE_WEBAPP_NAME }} \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
@@ -230,18 +231,25 @@ jobs:
               break
             fi
             
-            echo "⚠ Ongoing deployment detected (waited ${ELAPSED}s), waiting ${WAIT_INTERVAL}s more..."
+            echo "⚠ Ongoing deployment(s) detected (waited ${ELAPSED}s):"
+            echo "$ONGOING"
+            echo "Waiting ${WAIT_INTERVAL}s more..."
             sleep $WAIT_INTERVAL
             ELAPSED=$((ELAPSED + WAIT_INTERVAL))
           done
           
           if [ $ELAPSED -ge $MAX_WAIT ]; then
-            echo "⚠ Waited maximum time, proceeding anyway..."
+            echo "⚠ Waited maximum time (${MAX_WAIT}s), proceeding anyway..."
+            echo "Note: If deployment fails with 409, it will be retried automatically."
           fi
+          
+          # Additional wait to ensure any locks are released
+          echo "Waiting additional 5 seconds for locks to clear..."
+          sleep 5
         continue-on-error: true
-        timeout-minutes: 3
+        timeout-minutes: 4
       
-      - name: Deploy to Azure Web App (with retry on conflict)
+      - name: Deploy to Azure Web App (attempt 1)
         id: deploy-backend
         uses: azure/webapps-deploy@v3
         with:
@@ -251,22 +259,32 @@ jobs:
         continue-on-error: true
         timeout-minutes: 20
       
-      - name: Retry deployment on conflict
+      - name: Wait before retry (if needed)
         if: steps.deploy-backend.outcome == 'failure'
         run: |
-          echo "Checking if failure was due to conflict..."
-          sleep 15
-          echo "Retrying deployment..."
-        continue-on-error: true
+          echo "First deployment attempt failed. Waiting 30 seconds before retry..."
+          echo "This allows any locks or conflicts to clear."
+          sleep 30
+        timeout-minutes: 1
       
-      - name: Deploy to Azure Web App (retry)
+      - name: Deploy to Azure Web App (attempt 2 - retry)
         if: steps.deploy-backend.outcome == 'failure'
+        id: deploy-backend-retry
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ./backend-deploy.zip
           startup-command: "bash startup.sh"
+        continue-on-error: true
         timeout-minutes: 20
+      
+      - name: Fail if all deployments failed
+        if: steps.deploy-backend.outcome == 'failure' && steps.deploy-backend-retry.outcome == 'failure'
+        run: |
+          echo "✗ Both deployment attempts failed."
+          echo "This may indicate a persistent issue with the App Service."
+          echo "Please check Azure Portal for App Service status and logs."
+          exit 1
       
       - name: Configure App Settings (minimal wait)
         run: |
