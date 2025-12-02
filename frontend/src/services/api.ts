@@ -515,7 +515,7 @@ class ApiService {
     }
   }
 
-  async getAzureResourceGroups(subscriptionId: string) {
+  async getAzureResourceGroups(subscriptionId: string, refresh: boolean = false) {
     const response = await this.client.get<ApiResponse<{
       data: Array<{
         id: string
@@ -524,7 +524,8 @@ class ApiService {
         tags?: Record<string, string>
       }>
       count: number
-    }>>(`/deployment/azure/resource-groups?subscriptionId=${subscriptionId}`)
+      cached?: boolean
+    }>>(`/deployment/azure/resource-groups?subscriptionId=${subscriptionId}&refresh=${refresh}`)
     return response.data
   }
 
@@ -547,12 +548,13 @@ class ApiService {
     return response.data
   }
 
-  async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[]) {
-    console.log('[API] getAKSNamespaces called with:', { subscriptionId, resourceGroupNames })
+  async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[], refresh: boolean = true) {
+    console.log('[API] getAKSNamespaces called with:', { subscriptionId, resourceGroupNames, refresh })
     const url = '/deployment/aks/namespaces'
     const payload = {
       subscription_id: subscriptionId,
-      resource_group_names: resourceGroupNames
+      resource_group_names: resourceGroupNames,
+      refresh: refresh // Force refresh to get latest namespaces from actual clusters
     }
     console.log('[API] POST', url, payload)
     try {
@@ -641,6 +643,45 @@ class ApiService {
 
   async getDeploymentContent() {
     const response = await this.client.get<ApiResponse<any>>('/components/deployment/content')
+    return response.data
+  }
+
+  async analyzeCloudLogs(params: {
+    platform: 'aks' | 'aca'
+    component_name: string
+    environment: string
+    log_snippet: string
+    symptoms?: string
+    recent_changes?: string
+    resource_group?: string
+    subscription_id?: string
+  }) {
+    const response = await this.client.post<ApiResponse<{
+      summary: string
+      classification: {
+        platform: 'aks' | 'aca'
+        layer: string[]
+        severity: 'Info' | 'Warning' | 'Major' | 'Critical'
+        category: string
+      }
+      root_causes: Array<{
+        hypothesis: string
+        log_evidence: string
+      }>
+      recommended_actions: {
+        checks: string[]
+        commands: {
+          aks?: string[]
+          aca?: string[]
+        }
+        configuration_fixes: string[]
+      }
+      impact_assessment: string
+      insufficient_info?: {
+        message: string
+        follow_up_questions: string[]
+      }
+    }>>('/deployment/cloud-logs/analyze', params)
     return response.data
   }
 

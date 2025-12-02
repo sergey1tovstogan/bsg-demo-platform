@@ -15,8 +15,7 @@ param(
     [int]$MaxMinutes = 25,
     [switch]$AutoFix = $false,
     [switch]$VerifyHealth = $true,
-    [switch]$DryRun = $false,
-    [switch]$Verbose = $false
+    [switch]$DryRun = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -239,7 +238,7 @@ function Show-WorkflowRuns {
         
         Write-Host "[$status] $($run.name)" -ForegroundColor $statusColor -NoNewline
         Write-Host " - ID: $($run.databaseId) - $timeStr" -ForegroundColor Gray
-        if ($Verbose) {
+        if ($PSBoundParameters.ContainsKey('Verbose') -or $VerbosePreference -eq 'Continue') {
             Write-Host "  URL: $($run.url)" -ForegroundColor DarkGray
         }
     }
@@ -323,7 +322,7 @@ function Show-Help {
     Write-Host "  -AutoFix             Enable auto-fix (for monitor action)" -ForegroundColor Gray
     Write-Host "  -VerifyHealth        Verify deployment health (default: true)" -ForegroundColor Gray
     Write-Host "  -DryRun              Show what would be done without doing it" -ForegroundColor Gray
-    Write-Host "  -Verbose             Show detailed output" -ForegroundColor Gray
+    Write-Host "  -Verbose             Show detailed output (PowerShell common parameter)" -ForegroundColor Gray
 }
 
 # Main execution

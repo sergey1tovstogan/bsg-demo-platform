@@ -6,8 +6,9 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText } from 'lucide-react'
 import { apiService } from '../../services/api'
+import { LogAnalyzer } from './LogAnalyzer'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -70,6 +71,31 @@ export function DeploymentAnalyzer() {
     error?: string
   }>>({})
   const [costsLoading, setCostsLoading] = useState(false)
+  const [logAnalyzerOpen, setLogAnalyzerOpen] = useState(false)
+  const [selectedResourceGroupForLogs, setSelectedResourceGroupForLogs] = useState<string | null>(null)
+  const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
+  const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
+
+  const loadResourceGroups = async (subId: string, refresh: boolean = false) => {
+    try {
+      setResourceGroupsLoading(true)
+      setError(null)
+      const response = await apiService.getAzureResourceGroups(subId, refresh)
+      setResourceGroups(response.data?.data || response.data || [])
+      setResourceGroupsCached(response.data?.cached || false)
+    } catch (err: any) {
+      console.error('[DeploymentAnalyzer] Error loading resource groups:', err)
+      setError(err.response?.data?.detail?.error || err.message || 'Failed to load resource groups')
+    } finally {
+      setResourceGroupsLoading(false)
+    }
+  }
+
+  const handleRefreshResourceGroups = async () => {
+    if (subscriptionId) {
+      await loadResourceGroups(subscriptionId, true)
+    }
+  }
 
   const handleSubscriptionSubmit = async (subId: string) => {
     try {
@@ -80,8 +106,7 @@ export function DeploymentAnalyzer() {
       const connectResponse = await apiService.connectAzureSubscription(subId)
       if (connectResponse.data?.status === 'success' || (connectResponse as any).status === 'success') {
         setSubscriptionId(subId)
-        const response = await apiService.getAzureResourceGroups(subId)
-        setResourceGroups(response.data?.data || response.data || [])
+        await loadResourceGroups(subId, false)
         setCurrentStep('resourceGroups')
       } else {
         setError((connectResponse.data as any)?.error || (connectResponse as any).error || 'Failed to connect to Azure')
@@ -192,8 +217,10 @@ export function DeploymentAnalyzer() {
       setSelectedResourceGroups(selected)
       setIncludeCostsInAnalysis(includeCosts)
       setCosts({}) // Clear previous costs
+      setAnalysisProgress({ current: 0, total: 2, message: 'Fetching Azure resources...' })
 
       // Get Azure resources first
+      setAnalysisProgress({ current: 1, total: 3, message: 'Loading resources from selected resource groups...' })
       const response = await apiService.getAzureResources(subscriptionId, selected)
       const servicesData = (response.data as any)?.data || response.data || []
       setServices(Array.isArray(servicesData) ? servicesData : [])
@@ -202,15 +229,54 @@ export function DeploymentAnalyzer() {
       const hasAKS = servicesData.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
 
       if (hasAKS) {
-        // Get namespaces from AKS clusters
+        // Get namespaces from AKS clusters - dynamically fetch from actual clusters
         try {
-          console.log('[DeploymentAnalyzer] Calling getAKSNamespaces with:', { subscriptionId, selected })
-          const namespacesResponse = await apiService.getAKSNamespaces(subscriptionId, selected)
+          setAnalysisProgress({ current: 2, total: 3, message: 'Retrieving namespaces from AKS clusters...' })
+          console.log('[DeploymentAnalyzer] Calling getAKSNamespaces with:', { subscriptionId, selected, refresh: true })
+          const namespacesResponse = await apiService.getAKSNamespaces(subscriptionId, selected, true) // Force refresh to get latest namespaces
           console.log('[DeploymentAnalyzer] Namespaces response:', namespacesResponse)
           const namespacesData = (namespacesResponse.data as any)?.data || namespacesResponse.data || []
           console.log('[DeploymentAnalyzer] Parsed namespaces data:', namespacesData)
-          setClusterNamespaces(namespacesData)
-          setCurrentStep('namespaces')
+          console.log('[DeploymentAnalyzer] Response status:', (namespacesResponse.data as any)?.status)
+          console.log('[DeploymentAnalyzer] Successful clusters:', (namespacesResponse.data as any)?.successful_clusters)
+          console.log('[DeploymentAnalyzer] Failed clusters:', (namespacesResponse.data as any)?.failed_clusters)
+          
+          // Validate that we got namespaces for the actual clusters in selected RGs
+          if (Array.isArray(namespacesData) && namespacesData.length > 0) {
+            // Filter to only include clusters from selected resource groups
+            const validNamespaces = namespacesData.filter((cluster: any) => 
+              selected.includes(cluster.resource_group)
+            )
+            
+            // Check if any clusters have errors
+            const hasErrors = validNamespaces.some((c: any) => c.error)
+            const hasNamespaces = validNamespaces.some((c: any) => c.namespaces && c.namespaces.length > 0)
+            
+            if (hasErrors && !hasNamespaces) {
+              // All clusters failed - show error
+              console.error('[DeploymentAnalyzer] All clusters failed to retrieve namespaces')
+              const errorMessages = validNamespaces
+                .filter((c: any) => c.error)
+                .map((c: any) => `${c.cluster_name}: ${c.error}`)
+                .join('\n')
+              setError(`Failed to retrieve namespaces from AKS clusters:\n${errorMessages}\n\nPlease check backend logs for kubectl errors. Ensure cluster credentials are configured.`)
+              setClusterNamespaces(validNamespaces) // Still show the error state
+            } else {
+              setClusterNamespaces(validNamespaces)
+            }
+            
+            setAnalysisProgress(null)
+            setLoading(false)
+            setCurrentStep('namespaces')
+          } else {
+            // No namespaces found, but we have AKS clusters - show error
+            console.error('[DeploymentAnalyzer] No namespaces returned for AKS clusters')
+            setError('Failed to retrieve namespaces from AKS clusters. Check backend logs for kubectl errors. Ensure cluster credentials are configured (run: az aks get-credentials --resource-group <RG> --name <cluster-name>).')
+            setClusterNamespaces([])
+            setAnalysisProgress(null)
+            setLoading(false)
+            setCurrentStep('namespaces')
+          }
         } catch (nsErr: any) {
           console.error('[DeploymentAnalyzer] ERROR getting namespaces:', nsErr)
           console.error('[DeploymentAnalyzer] Error details:', {
@@ -220,6 +286,8 @@ export function DeploymentAnalyzer() {
             url: nsErr.config?.url
           })
           // Continue to analysis without namespace selection
+          setAnalysisProgress(null)
+          setLoading(false)
           setCurrentStep('analysis')
           analyzeServices(servicesData).catch(err => {
             console.error('Analysis error:', err)
@@ -229,6 +297,8 @@ export function DeploymentAnalyzer() {
         }
       } else {
         // No AKS clusters, proceed directly to analysis
+        setAnalysisProgress(null)
+        setLoading(false)
         setCurrentStep('analysis')
         analyzeServices(servicesData).catch(err => {
           console.error('Analysis error:', err)
@@ -239,8 +309,7 @@ export function DeploymentAnalyzer() {
     } catch (err: any) {
       console.error('Resource groups selection error:', err)
       setError(err.response?.data?.detail?.error || err.message || 'Failed to load resources')
-      setLoading(false)
-    } finally {
+      setAnalysisProgress(null)
       setLoading(false)
     }
   }
@@ -322,6 +391,7 @@ export function DeploymentAnalyzer() {
 
               if (costDataArray.length > 0) {
                 const costMap: Record<string, any> = {}
+                // First, add all cost data from the response
                 costDataArray.forEach((costData: any) => {
                   if (costData?.resource_group) {
                     costMap[costData.resource_group] = {
@@ -333,10 +403,22 @@ export function DeploymentAnalyzer() {
                     }
                   }
                 })
+                // Ensure all selected resource groups are in the map
+                // If a RG is missing from the response, add it with zero cost
+                selectedResourceGroups.forEach(rgName => {
+                  if (!costMap[rgName]) {
+                    costMap[rgName] = {
+                      resource_group: rgName,
+                      total_cost: 0,
+                      services: {},
+                      error: 'No cost data returned for this resource group'
+                    }
+                  }
+                })
                 console.log('[Costs] Cost map created:', costMap)
                 setCosts(costMap)
                 setCostsLoading(false)
-                console.log(`[Costs] Successfully loaded costs for ${Object.keys(costMap).length} resource groups`)
+                console.log(`[Costs] Successfully loaded costs for ${Object.keys(costMap).length} resource groups (${selectedResourceGroups.length} selected)`)
               } else {
                 console.warn('[Costs] No cost data in response, setting empty costs')
                 // Set empty costs for all resource groups
@@ -365,24 +447,60 @@ export function DeploymentAnalyzer() {
             })
             // Set error state for costs but don't fail the analysis
             const costMap: Record<string, any> = {}
-            selectedResourceGroups.forEach(rgName => {
-              let errorMessage = 'Failed to load costs'
-              if (err.response?.data?.detail) {
-                if (typeof err.response.data.detail === 'string') {
-                  errorMessage = err.response.data.detail
-                } else if (err.response.data.detail.error) {
-                  errorMessage = err.response.data.detail.error
+            
+            // Check if the response contains cost data with errors (partial success)
+            if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
+              // API returned data but some RGs may have errors
+              err.response.data.data.forEach((costData: any) => {
+                if (costData?.resource_group) {
+                  costMap[costData.resource_group] = {
+                    resource_group: costData.resource_group,
+                    total_cost: costData.total_cost || 0,
+                    services: costData.services || {},
+                    projections: costData.projections,
+                    error: costData.error
+                  }
                 }
-              } else if (err.message) {
-                errorMessage = err.message
-              }
-              costMap[rgName] = {
-                resource_group: rgName,
-                total_cost: 0,
-                services: {},
-                error: errorMessage
-              }
-            })
+              })
+              // Ensure all selected RGs are in the map
+              selectedResourceGroups.forEach(rgName => {
+                if (!costMap[rgName]) {
+                  costMap[rgName] = {
+                    resource_group: rgName,
+                    total_cost: 0,
+                    services: {},
+                    error: 'No cost data returned for this resource group'
+                  }
+                }
+              })
+            } else {
+              // Complete failure - set error for all RGs
+              selectedResourceGroups.forEach(rgName => {
+                let errorMessage = 'Failed to load costs'
+                if (err.response?.data?.detail) {
+                  if (typeof err.response.data.detail === 'string') {
+                    errorMessage = err.response.data.detail
+                  } else if (err.response.data.detail.error) {
+                    errorMessage = err.response.data.detail.error
+                  } else if (err.response.data.detail.recoverySteps) {
+                    // Use first recovery step as hint
+                    errorMessage = `${err.response.data.detail.error || 'Failed to load costs'}. ${err.response.data.detail.recoverySteps[0] || ''}`
+                  }
+                } else if (err.message) {
+                  if (err.message.includes('timeout') || err.message.includes('aborted')) {
+                    errorMessage = `Request timed out. Cost Management API is taking too long to respond.`
+                  } else {
+                    errorMessage = err.message
+                  }
+                }
+                costMap[rgName] = {
+                  resource_group: rgName,
+                  total_cost: 0,
+                  services: {},
+                  error: errorMessage
+                }
+              })
+            }
             setCosts(costMap)
             setCostsLoading(false)
             console.log('[Costs] Set error costs for resource groups:', costMap)
@@ -465,8 +583,11 @@ export function DeploymentAnalyzer() {
 
   const handleBack = () => {
     if (currentStep === 'analysis') {
-      setCurrentStep('namespaces')
+      // Always go back to resource groups selection from analysis
+      setCurrentStep('resourceGroups')
       setAnalysisResults([])
+      setServices([])
+      setClusterNamespaces([])
     } else if (currentStep === 'namespaces') {
       setCurrentStep('resourceGroups')
       setClusterNamespaces([])
@@ -492,8 +613,11 @@ export function DeploymentAnalyzer() {
           resourceGroups={resourceGroups}
           onSelected={handleResourceGroupsSelected}
           onBack={handleBack}
-          loading={loading}
+          onRefresh={handleRefreshResourceGroups}
+          loading={resourceGroupsLoading || loading}
+          cached={resourceGroupsCached}
           error={error}
+          analysisProgress={analysisProgress}
         />
       )}
 
@@ -519,8 +643,24 @@ export function DeploymentAnalyzer() {
           costs={costs}
           costsLoading={costsLoading}
           includeCosts={includeCostsInAnalysis}
+          onOpenLogAnalyzer={(resourceGroup: string) => {
+            setSelectedResourceGroupForLogs(resourceGroup)
+            setLogAnalyzerOpen(true)
+          }}
+          selectedResourceGroups={selectedResourceGroups}
         />
       )}
+
+      {/* Log Analyzer Modal */}
+      <LogAnalyzer
+        isOpen={logAnalyzerOpen}
+        onClose={() => {
+          setLogAnalyzerOpen(false)
+          setSelectedResourceGroupForLogs(null)
+        }}
+        resourceGroup={selectedResourceGroupForLogs || undefined}
+        subscriptionId={subscriptionId}
+      />
     </div>
   )
 }
@@ -644,15 +784,21 @@ function ResourceGroupSelector({
   resourceGroups,
   onSelected,
   onBack,
+  onRefresh,
   loading,
-  error
+  cached,
+  error,
+  analysisProgress
 }: {
 
   resourceGroups: AzureResourceGroup[]
   onSelected: (selected: string[], includeCosts: boolean) => void
   onBack: () => void
+  onRefresh: () => void
   loading: boolean
+  cached: boolean
   error: string | null
+  analysisProgress: { current: number; total: number; message: string } | null
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -680,10 +826,26 @@ function ResourceGroupSelector({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Select Resource Groups</h2>
+          <div className="flex items-center space-x-3 mb-2">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Select Resource Groups</h2>
+            {cached && (
+              <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">
+                Cached
+              </span>
+            )}
+          </div>
           <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
         </div>
         <div className="flex items-center space-x-3">
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="btn-secondary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh resource groups from Azure"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
           <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
@@ -694,6 +856,29 @@ function ResourceGroupSelector({
       {error && (
         <div className="card bg-red-50 border border-red-200 text-red-700">
           {error}
+        </div>
+      )}
+
+      {/* Loading/Progress Indicator */}
+      {loading && analysisProgress && (
+        <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30">
+          <div className="flex items-center space-x-4">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                {analysisProgress.message}
+              </p>
+              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                <div
+                  className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                Step {analysisProgress.current} of {analysisProgress.total}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -765,22 +950,27 @@ function ResourceGroupSelector({
       </div>
 
       {/* Include Costs Checkbox */}
-      <div className="card">
-        <label className="flex items-center space-x-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={includeCosts}
-            onChange={(e) => setIncludeCosts(e.target.checked)}
-            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-          />
+      {/* Include Costs Checkbox */}
+      <div className="card bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-100 dark:border-purple-500/30 transition-all hover:shadow-md">
+        <label className="flex items-center space-x-3 cursor-pointer group">
+          <div className="relative flex items-center justify-center">
+            <input
+              type="checkbox"
+              checked={includeCosts}
+              onChange={(e) => setIncludeCosts(e.target.checked)}
+              className="peer w-5 h-5 text-purple-600 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500 transition-all cursor-pointer"
+            />
+          </div>
           <div className="flex items-center space-x-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
-            <span className="text-sm font-medium text-gray-700">
+            <div className="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-lg">
+              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <span className="text-base font-medium text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
               Include cost analysis for selected resource groups
             </span>
           </div>
         </label>
-        <p className="text-xs text-gray-500 mt-2 ml-7">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 ml-11">
           This will fetch cost data from Azure Cost Management API (may take a few moments)
         </p>
       </div>
@@ -856,9 +1046,10 @@ function NamespaceSelector({
       </div>
 
       {clusterNamespaces.length === 0 ? (
-        <div className="card text-center py-8">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No AKS clusters found or failed to retrieve namespaces</p>
+        <div className="card text-center py-8 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-500/30">
+          <AlertCircle className="w-12 h-12 text-red-600 dark:text-red-400 mx-auto mb-4" />
+          <p className="text-red-800 dark:text-red-200 font-semibold mb-2">No AKS clusters found or failed to retrieve namespaces</p>
+          <p className="text-sm text-red-600 dark:text-red-300">Check backend logs for kubectl errors. Ensure cluster credentials are configured.</p>
         </div>
       ) : (
         <>
@@ -914,9 +1105,9 @@ function NamespaceSelector({
                 {selected.length === filteredNamespaces.length ? 'Deselect All' : 'Select All'}
               </button>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               {selected.length > 0 && (
-                <span className="font-medium text-purple-600">{selected.length} selected</span>
+                <span className="font-medium text-purple-600 dark:text-purple-400">{selected.length} selected</span>
               )}
             </div>
           </div>
@@ -957,7 +1148,9 @@ function ServiceAnalysis({
   onRefresh,
   costs,
   costsLoading,
-  includeCosts
+  includeCosts,
+  onOpenLogAnalyzer,
+  selectedResourceGroups
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
@@ -976,6 +1169,8 @@ function ServiceAnalysis({
   }>
   costsLoading: boolean
   includeCosts: boolean
+  onOpenLogAnalyzer: (resourceGroup: string) => void
+  selectedResourceGroups: string[]
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
 
@@ -1057,6 +1252,26 @@ function ServiceAnalysis({
           </p>
         </div>
         <div className="flex items-center space-x-3">
+          {selectedResourceGroups.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  // Open log analyzer with first resource group, or show dropdown if multiple
+                  if (selectedResourceGroups.length === 1) {
+                    onOpenLogAnalyzer(selectedResourceGroups[0])
+                  } else {
+                    // For multiple RGs, open with the first one (user can change in modal)
+                    onOpenLogAnalyzer(selectedResourceGroups[0])
+                  }
+                }}
+                className="btn-secondary flex items-center space-x-2"
+                title="Analyze logs for Temenos components in this resource group"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Log Analyzer</span>
+              </button>
+            </div>
+          )}
           <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -1118,32 +1333,52 @@ function ServiceAnalysis({
           </div>
         </div>
         {includeCosts && (
-          <div className="card bg-yellow-50 border-yellow-200">
+          <div className="card bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-200/50 dark:border-yellow-500/20">
             <div className="flex items-center space-x-3">
-              <DollarSign className="w-8 h-8 text-yellow-600" />
+              <DollarSign className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
               <div className="flex-1">
-                <p className="text-sm text-yellow-700 font-medium">Total Cost</p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">Total Cost</p>
                 {(() => {
-                  const costEntries = Object.values(costs)
+                  // Ensure all selected resource groups are accounted for in aggregation
+                  const allRGs = selectedResourceGroups || []
+                  const costEntries = allRGs.map(rgName => {
+                    // Get cost data for this RG, or create a default entry if not found
+                    return costs[rgName] || {
+                      resource_group: rgName,
+                      total_cost: 0,
+                      services: {},
+                      error: costsLoading ? undefined : 'No cost data available'
+                    }
+                  })
+                  
                   const hasErrors = costEntries.some(c => c.error)
                   const totalCost = costEntries.reduce((sum, cost) => {
-                    if (cost.error) return sum
+                    // Only include costs that don't have errors
+                    if (cost.error && !costsLoading) return sum
                     return sum + (cost.total_cost || 0)
                   }, 0)
+                  
                   const hasProjections = costEntries.some(c => c.projections && !c.error)
                   const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
                     if (cost.error || !cost.projections) return sum
                     return sum + (cost.projections.full_month || 0)
                   }, 0) : null
 
-                  if (hasErrors && costEntries.length > 0) {
-                    const errorCount = costEntries.filter(c => c.error).length
+                  const errorCount = costEntries.filter(c => c.error && !costsLoading).length
+                  const successCount = costEntries.length - errorCount
+
+                  if (hasErrors && costEntries.length > 0 && !costsLoading) {
                     return (
                       <>
-                        <p className="text-2xl font-bold text-yellow-900">${totalCost.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
                         {errorCount > 0 && (
-                          <p className="text-xs text-red-600 mt-1">
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                             {errorCount} of {costEntries.length} RG{costEntries.length !== 1 ? 's' : ''} failed to load
+                          </p>
+                        )}
+                        {successCount > 0 && (
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                            Aggregated from {successCount} resource group{successCount !== 1 ? 's' : ''}
                           </p>
                         )}
                       </>
@@ -1152,18 +1387,23 @@ function ServiceAnalysis({
 
                   return (
                     <>
-                      <p className="text-2xl font-bold text-yellow-900">${totalCost.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
                       {monthlyProjection !== null && monthlyProjection > 0 && (
-                        <p className="text-xs text-yellow-600 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
+                      )}
+                      {costEntries.length > 1 && !costsLoading && (
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                          Aggregated from {costEntries.length} resource group{costEntries.length !== 1 ? 's' : ''}
+                        </p>
                       )}
                       {costsLoading && (
-                        <p className="text-xs text-yellow-600 mt-1 flex items-center space-x-1">
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 flex items-center space-x-1">
                           <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Loading costs...</span>
+                          <span>Loading costs for {allRGs.length} resource group{allRGs.length !== 1 ? 's' : ''}...</span>
                         </p>
                       )}
                       {!costsLoading && costEntries.length === 0 && (
-                        <p className="text-xs text-yellow-600 mt-1">No cost data available</p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">No cost data available</p>
                       )}
                     </>
                   )
@@ -1179,8 +1419,8 @@ function ServiceAnalysis({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content Area - Selected Component Details */}
           <div className="lg:col-span-2">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
               <span>Temenos Components</span>
             </h3>
             {selectedResult && (
@@ -1191,8 +1431,8 @@ function ServiceAnalysis({
           {/* Quick Overview Sidebar */}
           <div className="lg:col-span-1">
             <div className="card sticky top-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
                 <span>Quick Overview {identifiedComponents.length}</span>
               </h3>
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
@@ -1203,20 +1443,20 @@ function ServiceAnalysis({
                       key={result.service.id || index}
                       onClick={() => setSelectedComponent(result.service.id || null)}
                       className={`p-3 rounded-lg cursor-pointer transition-all ${isSelected
-                        ? 'bg-purple-100 border-2 border-purple-500'
-                        : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-purple-300'
+                        ? 'bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-500 dark:border-purple-400'
+                        : 'bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-purple-300'
                         }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <h4 className={`font-semibold text-sm ${isSelected ? 'text-purple-900' : 'text-gray-900'}`}>
+                            <h4 className={`font-semibold text-sm ${isSelected ? 'text-purple-900 dark:text-purple-100' : 'text-gray-900 dark:text-white'}`}>
                               {result.componentInfo?.componentName || result.service.name}
                             </h4>
-                            {isSelected && <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                            {isSelected && <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />}
                           </div>
-                          <p className="text-xs text-gray-600">{result.componentInfo?.componentType || result.service.type}</p>
-                          <p className="text-xs text-gray-500 mt-1">{result.service.resourceGroup}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-300">{result.componentInfo?.componentType || result.service.type}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{result.service.resourceGroup}</p>
                         </div>
                       </div>
                     </div>
@@ -1263,7 +1503,7 @@ function formatRAGText(text: string): JSX.Element | null {
       const paragraphText = currentParagraph.join(' ').trim()
       if (paragraphText) {
         elements.push(
-          <p key={key++} className="text-sm text-gray-700 leading-relaxed mb-3">
+          <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
             {formatInlineText(paragraphText)}
           </p>
         )
@@ -1277,7 +1517,7 @@ function formatRAGText(text: string): JSX.Element | null {
       elements.push(
         <ul key={key++} className="list-disc list-inside space-y-2 mb-4 ml-4">
           {listItems.map((item, idx) => (
-            <li key={idx} className="text-sm text-gray-700 leading-relaxed">
+            <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
               {formatInlineText(item)}
             </li>
           ))}
@@ -1303,7 +1543,7 @@ function formatRAGText(text: string): JSX.Element | null {
       flushList()
       const headingText = trimmed.replace(/^(\*\*|##)\s*/, '').replace(/\*\*$/, '').replace(/:$/, '').trim()
       elements.push(
-        <h6 key={key++} className="font-bold text-gray-900 text-base mt-4 mb-2 first:mt-0">
+        <h6 key={key++} className="font-bold text-gray-900 dark:text-white text-base mt-4 mb-2 first:mt-0">
           {formatInlineText(headingText)}
         </h6>
       )
@@ -1311,9 +1551,9 @@ function formatRAGText(text: string): JSX.Element | null {
     }
 
     // Check if it's a bullet point (starts with - or * or •)
-    if (trimmed.match(/^[\-\*•]\s+/)) {
+    if (trimmed.match(/^[-*•]\s+/)) {
       flushParagraph()
-      const bulletText = trimmed.replace(/^[\-\*•]\s+/, '').trim()
+      const bulletText = trimmed.replace(/^[-*•]\s+/, '').trim()
       if (bulletText) {
         listItems.push(bulletText)
       }
@@ -1326,7 +1566,7 @@ function formatRAGText(text: string): JSX.Element | null {
       flushList()
       const headingText = trimmed.replace(/^\*\*/, '').replace(/\*\*:$/, '').trim()
       elements.push(
-        <h6 key={key++} className="font-semibold text-gray-900 text-sm mt-3 mb-2">
+        <h6 key={key++} className="font-semibold text-gray-900 dark:text-white text-sm mt-3 mb-2">
           {formatInlineText(headingText)}
         </h6>
       )
@@ -1364,7 +1604,7 @@ function formatInlineText(text: string): JSX.Element | string | null {
     }
     // Add bold text
     parts.push(
-      <strong key={key++} className="font-semibold text-gray-900">
+      <strong key={key++} className="font-semibold text-gray-900 dark:text-white">
         {match[1]}
       </strong>
     )
@@ -1412,7 +1652,7 @@ function ComponentDetailPanel({
   if (!componentInfo) {
     return (
       <div className="card">
-        <p className="text-gray-600">No component information available</p>
+        <p className="text-gray-600 dark:text-gray-300">No component information available</p>
       </div>
     )
   }
@@ -1423,11 +1663,11 @@ function ComponentDetailPanel({
       <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-200">
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
-            <Cloud className="w-6 h-6 text-purple-600" />
-            <h4 className="font-bold text-2xl text-gray-900">{componentInfo.componentName}</h4>
+            <Cloud className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <h4 className="font-bold text-2xl text-gray-900 dark:text-white">{componentInfo.componentName}</h4>
           </div>
-          <p className="text-sm text-gray-600 mb-2">{componentInfo.componentType}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{componentInfo.componentType}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Service: <span className="font-medium">{service.name}</span> • Resource Group: <span className="font-medium">{service.resourceGroup}</span>
           </p>
         </div>
@@ -1479,12 +1719,12 @@ function ComponentDetailPanel({
       {/* Horizontal Information Panels */}
       <div className="space-y-6">
         {/* Architectural Overview */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none">
+        <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none dark:prose-invert">
             {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
               ? formatRAGText(componentInfo.architecturalOverview)
-              : <p className="text-gray-500 italic">No architectural overview available</p>}
+              : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
           </div>
         </div>
 
@@ -1495,9 +1735,9 @@ function ComponentDetailPanel({
           componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
           service.type?.toLowerCase().includes('containerservice') ||
           service.type?.toLowerCase().includes('kubernetes')) ? (
-          <div className="bg-blue-50 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
+            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
               {(componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
                 componentInfo.architecturalOverview?.toLowerCase().includes('docker') ||
                 service.type?.toLowerCase().includes('containerservice')) && (
@@ -1524,55 +1764,55 @@ function ComponentDetailPanel({
         ) : null}
 
         {/* Functional Overview */}
-        <div className="bg-purple-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none">
+        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none dark:prose-invert">
             {componentInfo.functionalOverview && componentInfo.functionalOverview.trim()
               ? formatRAGText(componentInfo.functionalOverview)
-              : <p className="text-gray-500 italic">No functional overview available</p>}
+              : <p className="text-gray-500 dark:text-gray-400 italic">No functional overview available</p>}
           </div>
         </div>
 
         {/* Key Capabilities */}
-        <div className="bg-green-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-3 text-lg">KEY CAPABILITIES</h5>
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">KEY CAPABILITIES</h5>
           {componentInfo.capabilities && Array.isArray(componentInfo.capabilities) && componentInfo.capabilities.length > 0 ? (
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
+            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
               {componentInfo.capabilities.map((cap, idx) => (
                 <li key={idx}>{cap}</li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-gray-500 italic">No capabilities listed</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No capabilities listed</p>
           )}
         </div>
 
         {/* Related Services */}
-        <div className="bg-yellow-50 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 mb-3 text-lg">RELATED SERVICES</h5>
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">RELATED SERVICES</h5>
           {componentInfo.relatedServices && Array.isArray(componentInfo.relatedServices) && componentInfo.relatedServices.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {componentInfo.relatedServices.map((svc, idx) => (
-                <span key={idx} className="px-3 py-1 bg-white rounded-full text-sm text-gray-700 border border-gray-300">
+                <span key={idx} className="px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
                   {svc}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 italic">No related services listed</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No related services listed</p>
           )}
         </div>
 
         {/* Relationships */}
         {componentInfo.relationships && Array.isArray(componentInfo.relationships) && componentInfo.relationships.length > 0 && (
-          <div className="bg-indigo-50 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 mb-3 text-lg">COMPONENT RELATIONSHIPS</h5>
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
+            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">COMPONENT RELATIONSHIPS</h5>
             <div className="space-y-3">
               {componentInfo.relationships.map((rel, idx) => (
-                <div key={idx} className="bg-white rounded p-3 border border-indigo-200">
-                  <div className="font-medium text-gray-900">{rel.targetComponent}</div>
-                  <div className="text-xs text-gray-600 mt-1">{rel.relationshipType}</div>
-                  <div className="text-sm text-gray-700 mt-2">{rel.description}</div>
+                <div key={idx} className="bg-white dark:bg-slate-700 rounded p-3 border border-indigo-200 dark:border-indigo-500/30">
+                  <div className="font-medium text-gray-900 dark:text-white">{rel.targetComponent}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rel.relationshipType}</div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 mt-2">{rel.description}</div>
                 </div>
               ))}
             </div>

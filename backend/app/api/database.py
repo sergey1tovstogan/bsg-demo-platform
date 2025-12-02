@@ -50,9 +50,12 @@ class ConnectionStatus(BaseModel):
 
 class TableInfo(BaseModel):
     """Table information"""
-    schema: str
+    schema_name: str = Field(alias="schema", description="Database schema name")
     name: str
     type: str
+    
+    class Config:
+        populate_by_name = True  # Allow both 'schema' and 'schema_name'
 
 
 class ColumnInfo(BaseModel):

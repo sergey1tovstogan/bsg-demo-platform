@@ -42,50 +42,8 @@ export function DatabaseRecords({ componentId: _componentId }: DatabaseRecordsPr
   const [tablesLoading, setTablesLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<string>('unknown')
-  const [limit, _setLimit] = useState(100)
+  const [limit] = useState(100)
   const [offset, setOffset] = useState(0)
-
-  useEffect(() => {
-    testConnection()
-    loadTables()
-  }, [])
-
-  useEffect(() => {
-    if (selectedTable) {
-      loadTableData()
-    }
-  }, [selectedTable, limit, offset])
-
-  const testConnection = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/api/v1/database/connection/test')
-      const data = await response.json()
-      setConnectionStatus(data.status)
-    } catch (err) {
-      console.error('Connection test failed:', err)
-      setConnectionStatus('failed')
-    }
-  }
-
-  const loadTables = async () => {
-    try {
-      setTablesLoading(true)
-      setError(null)
-      const response = await fetch('http://localhost:8000/api/v1/database/tables')
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch tables')
-      }
-
-      const data = await response.json()
-      setTables(data)
-    } catch (err: any) {
-      console.error('Error loading tables:', err)
-      setError(err.message || 'Failed to load tables')
-    } finally {
-      setTablesLoading(false)
-    }
-  }
 
   const loadTableData = async () => {
     if (!selectedTable) return
@@ -115,11 +73,55 @@ export function DatabaseRecords({ componentId: _componentId }: DatabaseRecordsPr
         const cols = await columnsResponse.json()
         setColumns(cols)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load table data'
       console.error('Error loading table data:', err)
-      setError(err.message || 'Failed to load table data')
+      setError(errorMessage)
     } finally {
       setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    testConnection()
+    loadTables()
+  }, [])
+
+  useEffect(() => {
+    if (selectedTable) {
+      loadTableData()
+    }
+  }, [selectedTable, limit, offset, loadTableData])
+
+  const testConnection = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/database/connection/test')
+      const data = await response.json()
+      setConnectionStatus(data.status)
+    } catch (err) {
+      console.error('Connection test failed:', err)
+      setConnectionStatus('failed')
+    }
+  }
+
+  const loadTables = async () => {
+    try {
+      setTablesLoading(true)
+      setError(null)
+      const response = await fetch('http://localhost:8000/api/v1/database/tables')
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch tables')
+      }
+
+      const data = await response.json()
+      setTables(data)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load tables'
+      console.error('Error loading tables:', err)
+      setError(errorMessage)
+    } finally {
+      setTablesLoading(false)
     }
   }
 
@@ -148,7 +150,7 @@ export function DatabaseRecords({ componentId: _componentId }: DatabaseRecordsPr
     }
   }
 
-  const formatValue = (value: any): string => {
+  const formatValue = (value: unknown): string => {
     if (value === null || value === undefined) {
       return 'NULL'
     }

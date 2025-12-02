@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
 import { SettingsModal } from './components/SettingsModal'
@@ -12,6 +12,7 @@ function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pendingFeature, setPendingFeature] = useState<string | null>(null)
+  const collapseSidebarRef = useRef<(() => void) | null>(null)
 
   // Load theme from localStorage on mount
   useEffect(() => {
@@ -57,6 +58,9 @@ function App() {
         onComponentChange={handleComponentChange}
         onHomeClick={handleHomeClick}
         onSettingsClick={() => setSettingsOpen(true)}
+        onCollapseRef={(collapseFn) => {
+          collapseSidebarRef.current = collapseFn
+        }}
       />
 
       {/* Settings Modal */}
@@ -73,7 +77,15 @@ function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 ml-20 relative overflow-hidden transition-all duration-300">
+      <main 
+        className="flex-1 ml-20 relative overflow-hidden transition-all duration-300"
+        onClick={() => {
+          // Collapse sidebar immediately when clicking anywhere on main content
+          if (collapseSidebarRef.current) {
+            collapseSidebarRef.current()
+          }
+        }}
+      >
         {/* Modern Background Elements */}
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
           {/* Main Gradient Orb */}

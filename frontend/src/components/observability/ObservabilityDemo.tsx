@@ -52,10 +52,10 @@ export function ObservabilityDemo() {
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold text-[#283054] mb-1">Channel Transaction Summary</h3>
-              <p className="text-sm text-[#4A5568]">View transaction metrics and channel performance</p>
+              <h3 className="text-xl font-bold text-[#283054] dark:text-white mb-1">Channel Transaction Summary</h3>
+              <p className="text-sm text-[#4A5568] dark:text-gray-300">View transaction metrics and channel performance</p>
             </div>
-            <ExternalLink className="w-5 h-5 text-[#4A5568] group-hover:text-[#283054] transition-colors" />
+            <ExternalLink className="w-5 h-5 text-[#4A5568] dark:text-gray-400 group-hover:text-[#283054] dark:group-hover:text-white transition-colors" />
           </div>
         </button>
 
@@ -68,10 +68,10 @@ export function ObservabilityDemo() {
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold text-[#283054] mb-1">IRIS Monitor</h3>
-              <p className="text-sm text-[#4A5568]">Monitor IRIS system metrics and health</p>
+              <h3 className="text-xl font-bold text-[#283054] dark:text-white mb-1">IRIS Monitor</h3>
+              <p className="text-sm text-[#4A5568] dark:text-gray-300">Monitor IRIS system metrics and health</p>
             </div>
-            <ExternalLink className="w-5 h-5 text-[#4A5568] group-hover:text-[#283054] transition-colors" />
+            <ExternalLink className="w-5 h-5 text-[#4A5568] dark:text-gray-400 group-hover:text-[#283054] dark:group-hover:text-white transition-colors" />
           </div>
         </button>
       </div>

@@ -47,7 +47,7 @@ export function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProps) {
         // Also store in localStorage
         localStorage.setItem('temenos_api_key', response.data.api_key)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log('Using localStorage for API key storage')
       // Silently fail and use localStorage
     } finally {
@@ -103,7 +103,7 @@ export function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProps) {
       setTimeout(() => {
         onClose()
       }, 1500)
-    } catch (error: any) {
+    } catch (error: unknown) {
       setMessage({
         type: 'error',
         text: 'Failed to save API key'
