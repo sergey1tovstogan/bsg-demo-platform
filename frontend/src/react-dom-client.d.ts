@@ -1,15 +1,28 @@
-/// <reference types="react-dom/client" />
-
-// Ensure react-dom/client types are available
+// Type declaration for react-dom/client
+// This ensures TypeScript recognizes the module even if @types/react-dom is not fully resolved
 declare module 'react-dom/client' {
-  import * as ReactDOM from 'react-dom'
-  export * from 'react-dom'
+  import { ReactNode } from 'react'
   
-  interface Root {
-    render(children: React.ReactNode): void
+  export interface Root {
+    render(children: ReactNode): void
     unmount(): void
   }
   
-  export function createRoot(container: Element | DocumentFragment): Root
+  export function createRoot(
+    container: Element | DocumentFragment,
+    options?: {
+      identifierPrefix?: string
+      onRecoverableError?: (error: unknown) => void
+    }
+  ): Root
+  
+  export function hydrateRoot(
+    container: Element | DocumentFragment,
+    initialChildren: ReactNode,
+    options?: {
+      identifierPrefix?: string
+      onRecoverableError?: (error: unknown) => void
+    }
+  ): Root
 }
 
