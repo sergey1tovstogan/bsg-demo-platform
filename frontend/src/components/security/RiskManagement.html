@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: auto;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 60px 20px 100px 20px;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18pt;
+            font-weight: bold;
+            color: #283054;
+            z-index: 1000;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            gap: 30px;
+            padding-top: 20px;
+            min-height: 0;
+        }
+        
+        /* Left Section - Framework Overview */
+        .framework-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+        }
+        
+        .framework-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: red;
+            margin-bottom: 10px;
+        }
+        
+        /* Board of Directors */
+        .board-bar {
+            background: #8A2BE2;
+            color: #ffffff;
+            padding: 15px 20px;
+            border-radius: 6px;
+            font-size: 13pt;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* CEO / Executive Management */
+        .ceo-bar {
+            background: #8A2BE2;
+            color: #ffffff;
+            padding: 15px 20px;
+            border-radius: 6px;
+            font-size: 13pt;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-top: 10px;
+        }
+        
+        /* Three Lines of Defense Container */
+        .lines-container {
+            display: flex;
+            flex-direction: row;
+            gap: 15px;
+            margin-top: 20px;
+            position: relative;
+            align-items: flex-start;
+        }
+        
+        /* External Entities */
+        .external-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-left: 15px;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        
+        .external-audit {
+            background: #d4a5d4;
+            color: #333;
+            padding: 15px 6px;
+            border-radius: 6px;
+            font-size: 11pt;
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            width: 50px;
+        }
+        
+        .regulator {
+            background: #d4a5d4;
+            color: #333;
+            padding: 15px 6px;
+            border-radius: 6px;
+            font-size: 11pt;
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            width: 50px;
+        }
+        
+        /* Line of Defense Box */
+        .line-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+        
+        .line-label {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #283054;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        
+        .line-content {
+            background: #20B2AA;
+            color: #ffffff;
+            padding: 12px 15px;
+            border-radius: 6px;
+            font-size: 11pt;
+            font-weight: bold;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .line-internal-box {
+            background: #87CEEB;
+            color: #333;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 10pt;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+            position: relative;
+        }
+        
+        /* Arrow pointing up from internal box */
+        .arrow-up {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 12px solid #00ff00;
+            margin-top: 8px;
+            position: relative;
+        }
+        
+        /* Right Section - Roles and Responsibilities */
+        .roles-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .roles-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: red;
+            margin-bottom: 10px;
+        }
+        
+        .role-group {
+            margin-bottom: 20px;
+        }
+        
+        .role-title {
+            font-size: 13pt;
+            font-weight: bold;
+            color: #800020;
+            margin-bottom: 8px;
+        }
+        
+        .role-item {
+            font-size: 11pt;
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 6px;
+            padding-left: 15px;
+            position: relative;
+        }
+        
+        .role-item::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #333;
+            font-size: 14pt;
+        }
+        
+        /* Bottom Banner */
+        .bottom-banner {
+            position: fixed;
+            bottom: -20px;
+            left: 20px;
+            right: 20px;
+            background: #20B2AA;
+            color: #ffffff;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 13pt;
+            line-height: 1.6;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 999;
+        }
+        
+        /* Action Button */
+        .action-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s;
+            white-space: nowrap;
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+        
+        .action-button:active {
+            transform: scale(0.98);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .lines-container {
+                flex-wrap: wrap;
+            }
+            
+            .external-container {
+                flex-direction: row;
+                margin-left: 0;
+                margin-top: 10px;
+            }
+            
+            .external-audit,
+            .regulator {
+                writing-mode: horizontal-tb;
+                height: auto;
+                padding: 12px 20px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 50px 10px 100px 10px;
+            }
+            
+            .lines-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Risk Management</div>
+    
+    <div class="main-container">
+        <!-- Left Section - Framework Overview -->
+        <div class="framework-section">
+            <div class="framework-title">Framework Overview</div>
+            
+            <!-- Board of Directors -->
+            <div class="board-bar">Board of Directors / Audit Committee</div>
+            
+            <!-- CEO / Executive Management -->
+            <div class="ceo-bar">CEO / Executive Management</div>
+            
+            <!-- Three Lines of Defense -->
+            <div class="lines-container">
+                <!-- 1st Line of Defense -->
+                <div class="line-box">
+                    <div class="line-label">1st Line of Defense</div>
+                    <div class="line-content">1st Line of Defense</div>
+                    <div class="line-internal-box">
+                        Operational Management Functions
+                    </div>
+                    <div class="arrow-up"></div>
+                </div>
+                
+                <!-- 2nd Line of Defense -->
+                <div class="line-box">
+                    <div class="line-label">2nd Line of Defense</div>
+                    <div class="line-content">2nd Line of Defense</div>
+                    <div class="line-internal-box">
+                        Risk Management Functions
+                    </div>
+                    <div class="arrow-up"></div>
+                </div>
+                
+                <!-- 3rd Line of Defense -->
+                <div class="line-box">
+                    <div class="line-label">3rd Line of Defense</div>
+                    <div class="line-content">3rd Line of Defense</div>
+                    <div class="line-internal-box">
+                        Internal Audit
+                    </div>
+                    <div class="arrow-up"></div>
+                </div>
+                
+                <!-- External Entities -->
+                <div class="external-container">
+                    <div class="external-audit">External Audit</div>
+                    <div class="regulator">Regulator</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Section - Roles and Responsibilities -->
+        <div class="roles-section">
+            <div class="roles-title">Roles and Responsibilities</div>
+            
+            <div class="role-group">
+                <div class="role-title">Board of Directors / Audit Committee:</div>
+                <div class="role-item">Direction on organization's risk appetite in cooperation with Senior Management.</div>
+                <div class="role-item">apprised of the most significant risks for the organization and whether Senior Management is responding appropriately.</div>
+            </div>
+            
+            <div class="role-group">
+                <div class="role-title">CEO and Senior Management:</div>
+                <div class="role-item">Ultimate ownership responsibility for the organization's risk management and control framework</div>
+                <div class="role-item">Senior Management assigns responsibilities, including for risk management procedures, to managers in specific processes, functions or departments</div>
+            </div>
+            
+            <div class="role-group">
+                <div class="role-title">Operational Management:</div>
+                <div class="role-item">Ownership, responsibility and accountability for managing risks develop and self assess controls aimed to address risk.</div>
+            </div>
+            
+            <div class="role-group">
+                <div class="role-title">Risk Management function:</div>
+                <div class="role-item">Maintains an effective risk management framework, integrated view of risk exposure across the enterprise, reporting to stakeholders. Conduct independent review and challenges the 1Lod.</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bottom Banner -->
+    <div class="bottom-banner">
+        Temenos adheres to the ISO 31000 Risk management principle and guidelines.
+    </div>
+    
+    <button class="action-button" onclick="navigateToSecurityPolicy()">Temenos Security Policy</button>
+    
+    <script>
+        function navigateToSecurityPolicy() {
+            // Handle navigation to security policy
+            window.parent.postMessage({ type: 'showSecurityPolicy' }, '*');
+        }
+    </script>
+</body>
+</html>
+

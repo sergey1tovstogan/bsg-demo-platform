@@ -31,7 +31,7 @@ bsg-demo-platform/
 │
 ├── infrastructure/      # Deployment infrastructure
 │   ├── .github/        # GitHub Actions workflows
-│   └── *.sh, *.ps1     # Deployment scripts
+│   └── *.sh, *.bat      # Deployment scripts
 │
 ├── docs/               # Documentation
 │   ├── ARCHITECTURE.md # System architecture documentation
@@ -39,8 +39,7 @@ bsg-demo-platform/
 │   └── *.md            # Other documentation files
 │
 ├── scripts/            # Root-level utility scripts
-│   ├── start-*.bat     # Windows start scripts
-│   ├── start-*.ps1     # PowerShell start scripts
+│   ├── start-*.bat     # Windows batch start scripts
 │   ├── start-*.sh      # Linux/Mac start scripts
 │   └── restart-*.bat   # Restart scripts
 │
@@ -80,24 +79,24 @@ Contains the React frontend application:
 
 Contains deployment and infrastructure scripts:
 - **`.github/workflows/`**: GitHub Actions workflows for CI/CD
-- **`*.sh`, `*.ps1`**: Infrastructure setup scripts
+- **`*.sh`, `*.bat`**: Infrastructure setup scripts
 
 ### `/docs`
 
 Contains all project documentation:
 - **`ARCHITECTURE.md`**: Detailed system architecture documentation
 - **`USAGE.md`**: Comprehensive usage guide
-- **`CHECK_TOKEN_SETUP.md`**: JWT token configuration guide
-- **`.claude/claude.md`**: Development context (synced with .cursor/rules)
+- **`USER_GUIDE.md`**: Complete user guide
+- **`TROUBLESHOOTING.md`**: Troubleshooting guide
+- **`AZURE_CONFIGURATION.md`**: Azure setup and configuration
 - Other documentation files for specific features
 
 ### `/scripts`
 
 Contains root-level utility scripts for managing the application:
-- **Start scripts**: `start.bat`, `start.ps1`, `start.sh` - Start all services
-- **Restart scripts**: `restart-all.bat`, `restart-all.ps1` - Restart all services
+- **Start scripts**: `start.bat`, `start.sh` - Start all services
+- **Restart scripts**: `restart-all.bat` - Restart all services
 - **Stop scripts**: `stop.bat`, `stop.sh` - Stop all services
-- **Sync scripts**: `sync.ps1`, `sync.sh` - Sync with git repository
 
 ### `/tools`
 
@@ -124,7 +123,7 @@ Contains application logs (excluded from git):
 - **Getting Started**: See [README.md](../README.md)
 - **Architecture**: See [docs/ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Usage**: See [docs/USAGE.md](./USAGE.md)
-- **Development**: See `.claude/claude.md` or `.cursor/rules`
+- **Development**: See `.cursor/rules`
 
 ---
 

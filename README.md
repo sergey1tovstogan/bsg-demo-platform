@@ -1,5 +1,7 @@
 # BSG Demo Platform
 
+> **Automation**: This repository includes automated GitHub Actions monitoring. See [automation/README.md](./automation/README.md) for details.
+
 ## Overview
 
 The **BSG Demo Platform** serves as the central hub for demonstrating Temenos products and capabilities.  
@@ -92,6 +94,8 @@ For detailed structure, see [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE
 For detailed documentation, see:
 - [Architecture Documentation](./docs/ARCHITECTURE.md)
 - [Usage Guide](./docs/USAGE.md)
+- [Azure Services Explained](./docs/AZURE_SERVICES_EXPLAINED.md) - Learn about Static Web Apps vs App Service
+- [Azure Configuration Guide](./docs/AZURE_CONFIGURATION.md)
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md)
 
 ---

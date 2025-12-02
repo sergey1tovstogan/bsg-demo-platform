@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Trust Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            padding: 60px 20px 100px 20px;
+            gap: 30px;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18pt;
+            font-weight: bold;
+            color: #283054;
+            z-index: 1000;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        /* Left Section - Monitor Display */
+        .monitor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            max-width: 55%;
+        }
+        
+        .monitor-frame {
+            background: #ADD8E6;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+        }
+        
+        .monitor-screen {
+            background: #ffffff;
+            border-radius: 4px;
+            overflow: hidden;
+            width: 100%;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .browser-bar {
+            background: #f0f0f0;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .browser-url {
+            flex: 1;
+            background: #ffffff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11pt;
+            color: #333;
+            border: 1px solid #ccc;
+            font-family: monospace;
+        }
+        
+        .webpage-content {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+        }
+        
+        .sidebar-nav {
+            width: 50px;
+            background: #FFD700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 5px;
+            gap: 20px;
+        }
+        
+        .nav-icon {
+            width: 35px;
+            height: 35px;
+            background: #FFA500;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 16pt;
+            cursor: pointer;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .logo {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #003d47;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 5px;
+            flex: 1;
+        }
+        
+        .nav-tab {
+            padding: 8px 15px;
+            font-size: 11pt;
+            color: #666;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            transition: all 0.2s;
+        }
+        
+        .nav-tab.active {
+            background: #003d47;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        
+        .description-text {
+            font-size: 11pt;
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 15px;
+        }
+        
+        .show-all-btn {
+            padding: 6px 12px;
+            background: #003d47;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            font-size: 10pt;
+            cursor: pointer;
+        }
+        
+        .entries-select {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 10pt;
+        }
+        
+        .search-box {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 10pt;
+            min-width: 150px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .data-table th {
+            background: #003d47;
+            color: #ffffff;
+            padding: 12px;
+            text-align: left;
+            font-size: 11pt;
+            font-weight: bold;
+            border: 1px solid #002d35;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            font-size: 10pt;
+            color: #333;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .action-btn {
+            padding: 4px 10px;
+            border: 1px solid #003d47;
+            background: #ffffff;
+            color: #003d47;
+            border-radius: 3px;
+            font-size: 9pt;
+            cursor: pointer;
+        }
+        
+        .action-btn:hover {
+            background: #003d47;
+            color: #ffffff;
+        }
+        
+        /* Right Section - Trust Centre Collateral */
+        .collateral-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding-top: 40px;
+            max-width: 45%;
+        }
+        
+        .collateral-box {
+            background: #20B2AA;
+            color: #ffffff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .collateral-title {
+            font-size: 18pt;
+            font-weight: bold;
+            text-align: left;
+        }
+        
+        .collateral-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+        
+        .collateral-item {
+            font-size: 14pt;
+            color: #333;
+            padding: 10px 0;
+            padding-left: 25px;
+            position: relative;
+            line-height: 1.6;
+        }
+        
+        .collateral-item::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #333;
+            font-size: 18pt;
+            line-height: 1;
+        }
+        
+        /* Risk Management Button */
+        .risk-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s;
+            white-space: nowrap;
+        }
+        
+        .risk-button:hover {
+            background: #cc0000;
+        }
+        
+        .risk-button:active {
+            transform: scale(0.98);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            body {
+                flex-direction: column;
+                padding: 60px 15px 100px 15px;
+            }
+            
+            .monitor-container,
+            .collateral-container {
+                max-width: 100%;
+            }
+            
+            .monitor-screen {
+                height: 500px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .monitor-screen {
+                height: 400px;
+            }
+            
+            .collateral-item {
+                font-size: 12pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos Trust Center http://tcsp.temenos.com/trustcenter</div>
+    
+    <!-- Left Section - Monitor Display -->
+    <div class="monitor-container">
+        <div class="monitor-frame">
+            <div class="monitor-screen">
+                <div class="browser-bar">
+                    <div class="browser-url">https://tcsp.temenos.com/trustcenter/SitePages/Home.aspx</div>
+                </div>
+                <div class="webpage-content">
+                    <div class="sidebar-nav">
+                        <div class="nav-icon">⌂</div>
+                        <div class="nav-icon">👤</div>
+                        <div class="nav-icon">⚙</div>
+                        <div class="nav-icon">📊</div>
+                        <div class="nav-icon">📁</div>
+                    </div>
+                    <div class="main-content">
+                        <div class="header-nav">
+                            <div class="logo">temenos</div>
+                            <div class="nav-tabs">
+                                <div class="nav-tab">Policies</div>
+                                <div class="nav-tab">Security Reports and Certifications</div>
+                                <div class="nav-tab active">Standards</div>
+                                <div class="nav-tab">Insurance Policy</div>
+                            </div>
+                        </div>
+                        <div class="description-text">
+                            The Standards Section outlines the benchmarks and criteria that guide the quality and performance expectations within Temenos. This section serves to ensure consistency, reliability, and excellence in our products and services.
+                        </div>
+                        <div class="table-controls">
+                            <button class="show-all-btn">show all</button>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <span style="font-size: 10pt; color: #666;">Show</span>
+                                <select class="entries-select">
+                                    <option>50 entries</option>
+                                    <option>25 entries</option>
+                                    <option>100 entries</option>
+                                </select>
+                                <input type="text" class="search-box" placeholder="Search">
+                            </div>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Document Name</th>
+                                    <th>Document Type</th>
+                                    <th>Last Modified Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>BCM Collateral Document 092024</td>
+                                    <td>Standard</td>
+                                    <td>10-Oct-2024</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="action-btn">View</button>
+                                            <button class="action-btn">Download</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Client Audit Requests 092024</td>
+                                    <td>Standard</td>
+                                    <td>10-Oct-2024</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="action-btn">View</button>
+                                            <button class="action-btn">Download</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Section - Trust Centre Collateral -->
+    <div class="collateral-container">
+        <div class="collateral-box">
+            <div class="collateral-title">Trust Centre Collateral</div>
+        </div>
+        <ul class="collateral-list">
+            <li class="collateral-item">Incident Management Framework</li>
+            <li class="collateral-item">Product Security Standard</li>
+            <li class="collateral-item">Procurement and Vendor Management</li>
+            <li class="collateral-item">GRM Framework</li>
+            <li class="collateral-item">Responsible Risk Management</li>
+            <li class="collateral-item">Business Continuity Management Framework</li>
+            <li class="collateral-item">Ethical Conduct</li>
+            <li class="collateral-item">People & Development Standard</li>
+            <li class="collateral-item">Client Audit Request</li>
+            <li class="collateral-item">Cloud and Physical security framework</li>
+        </ul>
+    </div>
+    
+    <button class="risk-button" onclick="navigateToRiskManagement()">Risk Management</button>
+    
+    <script>
+        function navigateToRiskManagement() {
+            // Send message to parent to show Risk Management page
+            window.parent.postMessage({ type: 'showRiskManagement' }, '*');
+        }
+    </script>
+</body>
+</html>
+

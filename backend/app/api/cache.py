@@ -171,3 +171,30 @@ async def delete_cache(cache_key: str, db: AsyncIOMotorDatabase = Depends(get_da
     except Exception as e:
         logger.error(f"Error deleting cache: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error deleting cache: {str(e)}")
+
+
+@router.post("/clear-expired")
+async def clear_expired_cache(db: AsyncIOMotorDatabase = Depends(get_database)):
+    """
+    Clear all expired cache entries.
+
+    Args:
+        db: MongoDB database
+
+    Returns:
+        Number of entries cleared
+    """
+    try:
+        from app.services.cache_service import get_cache_service
+        cache_service = await get_cache_service()
+        cleared_count = await cache_service.clear_expired()
+
+        return {
+            "success": True,
+            "message": f"Cleared {cleared_count} expired cache entries",
+            "cleared_count": cleared_count
+        }
+
+    except Exception as e:
+        logger.error(f"Error clearing expired cache: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error clearing expired cache: {str(e)}")

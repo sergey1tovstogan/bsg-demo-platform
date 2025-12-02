@@ -1,0 +1,267 @@
+name: Auto Monitor and Fix Workflows
+
+# This workflow monitors deployment workflows and can auto-fix issues
+on:
+  workflow_run:
+    workflows: 
+      - "Deploy to Azure App Service"
+      - "Deploy to Azure Static Web Apps"
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      workflow_run_id:
+        description: 'Workflow run ID to monitor'
+        required: false
+        type: string
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  monitor-and-verify:
+    name: Monitor and Verify Deployment
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v1
+      
+      - name: Determine workflow run ID
+        id: get-run-id
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ github.event.inputs.workflow_run_id }}") {
+            $runId = "${{ github.event.inputs.workflow_run_id }}"
+          } else {
+            $runId = "${{ github.event.workflow_run.id }}"
+          }
+          echo "run_id=$runId" >> $env:GITHUB_OUTPUT
+          echo "Monitoring workflow run: $runId"
+      
+      - name: Get workflow run details
+        id: workflow-details
+        shell: pwsh
+        run: |
+          $runId = "${{ steps.get-run-id.outputs.run_id }}"
+          gh run view $runId --json status,conclusion,workflowName,displayTitle,url,headBranch --jq '.' > workflow-details.json
+          
+          $details = Get-Content workflow-details.json | ConvertFrom-Json
+          echo "workflow_name=$($details.workflowName)" >> $env:GITHUB_OUTPUT
+          echo "conclusion=$($details.conclusion)" >> $env:GITHUB_OUTPUT
+          echo "status=$($details.status)" >> $env:GITHUB_OUTPUT
+          echo "branch=$($details.headBranch)" >> $env:GITHUB_OUTPUT
+          
+          Write-Host "Workflow: $($details.workflowName)"
+          Write-Host "Status: $($details.status) / $($details.conclusion)"
+          Write-Host "Branch: $($details.headBranch)"
+      
+      - name: Check if monitoring needed
+        id: should-monitor
+        shell: pwsh
+        run: |
+          $branch = "${{ steps.workflow-details.outputs.branch }}"
+          $conclusion = "${{ steps.workflow-details.outputs.conclusion }}"
+          
+          if ($branch -eq "develop" -and ($conclusion -eq "failure" -or $conclusion -eq "success")) {
+            echo "monitor=true" >> $env:GITHUB_OUTPUT
+            Write-Host "✓ Monitoring needed for develop branch"
+          } else {
+            echo "monitor=false" >> $env:GITHUB_OUTPUT
+            Write-Host "⚠ Skipping monitoring (branch: $branch, conclusion: $conclusion)"
+          }
+      
+      - name: Wait for deployment to stabilize
+        if: steps.should-monitor.outputs.monitor == 'true' && steps.workflow-details.outputs.conclusion == 'success'
+        shell: pwsh
+        run: |
+          Write-Host "⏳ Waiting 60 seconds for deployment to stabilize..."
+          Start-Sleep -Seconds 60
+      
+      - name: Check deployment health
+        id: health-check
+        if: steps.should-monitor.outputs.monitor == 'true' && steps.workflow-details.outputs.conclusion == 'success'
+        shell: pwsh
+        run: |
+          $backendUrl = "https://bsg-demo-platform-app.azurewebsites.net"
+          $frontendUrl = "https://kind-beach-01c0a990f.3.azurestaticapps.net"
+          
+          $allHealthy = $true
+          
+          # Check backend health
+          Write-Host "🏥 Checking backend health..."
+          try {
+            $response = Invoke-WebRequest -Uri "$backendUrl/api/v1/health" -Method Get -TimeoutSec 10 -UseBasicParsing
+            if ($response.StatusCode -eq 200) {
+              Write-Host "✅ Backend health check passed"
+            } else {
+              Write-Host "⚠ Backend returned status: $($response.StatusCode)"
+              $allHealthy = $false
+            }
+          } catch {
+            Write-Host "❌ Backend health check failed: $($_.Exception.Message)"
+            $allHealthy = $false
+          }
+          
+          # Check backend liveness
+          Write-Host "🏥 Checking backend liveness..."
+          try {
+            $response = Invoke-WebRequest -Uri "$backendUrl/api/v1/live" -Method Get -TimeoutSec 10 -UseBasicParsing
+            if ($response.StatusCode -eq 200) {
+              Write-Host "✅ Backend liveness check passed"
+            } else {
+              Write-Host "⚠ Backend liveness returned status: $($response.StatusCode)"
+              $allHealthy = $false
+            }
+          } catch {
+            Write-Host "❌ Backend liveness check failed: $($_.Exception.Message)"
+            $allHealthy = $false
+          }
+          
+          # Check frontend
+          Write-Host "🏥 Checking frontend..."
+          try {
+            $response = Invoke-WebRequest -Uri $frontendUrl -Method Get -TimeoutSec 10 -UseBasicParsing
+            if ($response.StatusCode -eq 200) {
+              Write-Host "✅ Frontend check passed"
+            } else {
+              Write-Host "⚠ Frontend returned status: $($response.StatusCode)"
+              $allHealthy = $false
+            }
+          } catch {
+            Write-Host "❌ Frontend check failed: $($_.Exception.Message)"
+            $allHealthy = $false
+          }
+          
+          if ($allHealthy) {
+            echo "healthy=true" >> $env:GITHUB_OUTPUT
+            Write-Host "✅ All health checks passed!"
+          } else {
+            echo "healthy=false" >> $env:GITHUB_OUTPUT
+            Write-Host "❌ Some health checks failed"
+          }
+      
+      - name: Analyze workflow failure
+        id: analyze-failure
+        if: steps.should-monitor.outputs.monitor == 'true' && steps.workflow-details.outputs.conclusion == 'failure'
+        shell: pwsh
+        run: |
+          $runId = "${{ steps.get-run-id.outputs.run_id }}"
+          Write-Host "🔍 Analyzing workflow failure..."
+          
+          # Get workflow logs
+          gh run view $runId --log > workflow-logs.txt 2>&1 || true
+          
+          $logs = Get-Content workflow-logs.txt -Raw -ErrorAction SilentlyContinue
+          
+          $issues = @()
+          
+          # Detect common issues
+          if ($logs -match "TypeScript.*error|tsc.*error|Type.*error") {
+            Write-Host "⚠ Detected TypeScript errors"
+            $issues += "typescript_errors"
+          }
+          
+          if ($logs -match "ModuleNotFoundError|ImportError|No module named") {
+            Write-Host "⚠ Detected Python import errors"
+            $issues += "python_import_errors"
+          }
+          
+          if ($logs -match "Build failed|npm.*error|pip.*error") {
+            Write-Host "⚠ Detected build failures"
+            $issues += "build_failures"
+          }
+          
+          if ($logs -match "package.*not found|module.*not found|Cannot find module") {
+            Write-Host "⚠ Detected missing dependencies"
+            $issues += "missing_dependencies"
+          }
+          
+          if ($issues.Count -gt 0) {
+            $issuesJson = $issues | ConvertTo-Json -Compress
+            echo "issues=$issuesJson" >> $env:GITHUB_OUTPUT
+            echo "has_issues=true" >> $env:GITHUB_OUTPUT
+            Write-Host "Found issues: $($issues -join ', ')"
+          } else {
+            echo "has_issues=false" >> $env:GITHUB_OUTPUT
+            Write-Host "No automatically fixable issues detected"
+          }
+      
+      - name: Create issue comment on failure
+        if: steps.should-monitor.outputs.monitor == 'true' && steps.workflow-details.outputs.conclusion == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = '${{ steps.get-run-id.outputs.run_id }}';
+            const workflowName = '${{ steps.workflow-details.outputs.workflowName }}';
+            const hasIssues = '${{ steps.analyze-failure.outputs.has_issues }}' === 'true';
+            const issues = '${{ steps.analyze-failure.outputs.issues }}';
+            
+            const comment = `## ⚠️ Workflow Failure Detected
+            
+            **Workflow:** ${workflowName}
+            **Run ID:** ${runId}
+            **Branch:** ${{ steps.workflow-details.outputs.branch }}
+            
+            ${hasIssues ? `**Detected Issues:** ${issues}` : '**Status:** Manual intervention may be required'}
+            
+            [View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${runId})
+            `;
+            
+            // Try to find associated PR
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${{ github.repository_owner }}:${{ steps.workflow-details.outputs.branch }}`
+            });
+            
+            if (prs.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prs.data[0].number,
+                body: comment
+              });
+            }
+      
+      - name: Create success summary
+        if: steps.should-monitor.outputs.monitor == 'true' && steps.workflow-details.outputs.conclusion == 'success'
+        shell: pwsh
+        run: |
+          $runId = "${{ steps.get-run-id.outputs.run_id }}"
+          $healthy = "${{ steps.health-check.outputs.healthy }}" -eq "true"
+          
+          Write-Host "## ✅ Deployment Summary" >> $env:GITHUB_STEP_SUMMARY
+          Write-Host "" >> $env:GITHUB_STEP_SUMMARY
+          Write-Host "**Workflow:** ${{ steps.workflow-details.outputs.workflowName }}" >> $env:GITHUB_STEP_SUMMARY
+          Write-Host "**Run ID:** $runId" >> $env:GITHUB_STEP_SUMMARY
+          Write-Host "**Branch:** ${{ steps.workflow-details.outputs.branch }}" >> $env:GITHUB_STEP_SUMMARY
+          Write-Host "" >> $env:GITHUB_STEP_SUMMARY
+          
+          if ($healthy) {
+            Write-Host "**Health Status:** ✅ All checks passed" >> $env:GITHUB_STEP_SUMMARY
+            Write-Host "" >> $env:GITHUB_STEP_SUMMARY
+            Write-Host "**Backend:** https://bsg-demo-platform-app.azurewebsites.net" >> $env:GITHUB_STEP_SUMMARY
+            Write-Host "**Frontend:** https://kind-beach-01c0a990f.3.azurestaticapps.net" >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            Write-Host "**Health Status:** ⚠️ Some health checks failed" >> $env:GITHUB_STEP_SUMMARY
+            Write-Host "" >> $env:GITHUB_STEP_SUMMARY
+            Write-Host "Please verify deployment manually." >> $env:GITHUB_STEP_SUMMARY
+          }
+      
+      - name: Fail if health checks failed
+        if: steps.should-monitor.outputs.monitor == 'true' && steps.workflow-details.outputs.conclusion == 'success' && steps.health-check.outputs.healthy == 'false'
+        shell: pwsh
+        run: |
+          Write-Host "❌ Deployment health checks failed"
+          Write-Host "The workflow completed but the deployment is not healthy"
+          exit 1
+

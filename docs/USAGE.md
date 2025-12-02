@@ -1,4 +1,6 @@
-# BSG Demo Platform - Usage Guide
+# BSG Demo Platform - Quick Usage Reference
+
+> **Note**: For comprehensive documentation, see [USER_GUIDE.md](./USER_GUIDE.md)
 
 ## Quick Start
 
@@ -8,7 +10,7 @@
 - **Node.js 20+** and npm installed
 - **Git** for version control
 - **Azure CLI** (optional, for Azure deployments)
-- **PowerShell** (Windows) or **Bash** (Linux/Mac)
+- **Command Prompt** (Windows) or **Bash** (Linux/Mac)
 
 ### Initial Setup
 
@@ -70,16 +72,16 @@ cd frontend
 npm run dev
 ```
 
-### Option 3: Using PowerShell Scripts
+### Option 3: Using Individual Batch Scripts
 
 **Start Backend:**
-```powershell
+```cmd
 cd backend
-.\start-backend.ps1
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Start Frontend:**
-```powershell
+```cmd
 cd frontend
 npm run dev
 ```
@@ -129,7 +131,7 @@ The **Deployment** component includes an Azure Deployment Analyzer:
 - Automatic Temenos component identification
 - RAG-powered component information
 - Azure resource analysis
-- Kubernetes namespace discovery
+- Kubernetes namespace discovery (local development only - see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for Azure App Service limitations)
 
 ### BSG-Guru Chatbot
 
@@ -258,10 +260,10 @@ pip install -r requirements.txt
 ```
 
 **Check environment variables:**
-```bash
-# Windows PowerShell
-$env:DATABASE_URL
-$env:DATABASE_NAME
+```cmd
+# Windows Command Prompt
+echo %DATABASE_URL%
+echo %DATABASE_NAME%
 ```
 
 **Check port availability:**
@@ -409,9 +411,10 @@ The platform is automatically deployed to Azure via GitHub Actions:
 
 ## Getting Help
 
+- **Full User Guide**: See [USER_GUIDE.md](./USER_GUIDE.md) for comprehensive documentation
 - **API Documentation**: http://localhost:8000/docs (when backend is running)
 - **Architecture Documentation**: See [ARCHITECTURE.md](./ARCHITECTURE.md)
-- **Component Documentation**: See component-specific README files
+- **Troubleshooting**: See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 - **Issues**: Create an issue on GitHub
 
 ---

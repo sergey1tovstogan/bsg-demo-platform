@@ -10,19 +10,12 @@ interface ContentViewerProps {
 }
 
 export function ContentViewer({ componentId }: ContentViewerProps) {
-  // Use SecurityContentViewer for security component
-  if (componentId === 'security') {
-    return <SecurityContentViewer />
-  }
+  // All hooks must be called before any conditional returns (React Rules of Hooks)
   const [contents, setContents] = useState<Content[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number | null>(null)
-
-  useEffect(() => {
-    loadContents()
-  }, [componentId])
 
   const loadContents = async () => {
     try {
@@ -32,15 +25,28 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
       const sortedContents = (response.data || []).sort((a, b) => a.order - b.order)
       setContents(sortedContents)
       setCurrentIndex(0)
-    } catch (err: any) {
+    } catch (err: unknown) {
       // For integration component, don't show error - just show empty state
       if (componentId !== 'integration') {
-        setError(err.message || 'Failed to load content')
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load content'
+        setError(errorMessage)
       }
       setContents([])
     } finally {
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    // Only load contents if not security component
+    if (componentId !== 'security') {
+      loadContents()
+    }
+  }, [componentId, loadContents])
+
+  // Use SecurityContentViewer for security component (after hooks)
+  if (componentId === 'security') {
+    return <SecurityContentViewer />
   }
 
   const goToPrevious = () => {
@@ -98,7 +104,7 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
         )}
 
         {/* Image content with interactive areas */}
-        {currentContent.type === 'document' && (currentContent.body as any)?.image_url && (
+        {currentContent.type === 'document' && (currentContent.body as { image_url?: string; interactive_areas?: Array<{ position: { top: number; left: number; width: number; height: number }; title: string; description: string; url?: string }> })?.image_url && (
           <>
             {/* Use native HTML component for API Overview, otherwise use image */}
             {componentId === 'integration' && currentContent.title === 'API Overview' ? (
@@ -106,11 +112,11 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
             ) : (
               <div className="relative mb-4">
                 <img
-                  src={(currentContent.body as any).image_url}
+                  src={(currentContent.body as { image_url: string }).image_url}
                   alt={currentContent.title}
                   className="w-full h-auto rounded-lg shadow-md"
                 />
-                {(currentContent.body as any).interactive_areas?.map((area: any, idx: number) => (
+                {((currentContent.body as { interactive_areas?: Array<{ position: { top: number; left: number; width: number; height: number }; title: string; description: string; url?: string }> }).interactive_areas || []).map((area: { position: { top: number; left: number; width: number; height: number }; title: string; description: string; url?: string }, idx: number) => (
                   <div
                     key={idx}
                     className="absolute cursor-help"
