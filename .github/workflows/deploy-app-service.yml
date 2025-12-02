@@ -141,124 +141,61 @@ jobs:
           VITE_API_URL: /api/v1
           NODE_ENV: production
       
-      - name: Install kubectl (for AKS namespace discovery) - SKIPPED for speed
+      - name: Prepare backend package (consolidated: copy, cleanup, verify, package)
         run: |
-          echo "⚠ Skipping kubectl installation to speed up deployment"
-          echo "kubectl is not needed for deployment - it's only used at runtime for AKS namespace discovery"
-          echo "If namespace discovery is needed, kubectl can be installed in Azure App Service separately"
-        continue-on-error: true
-        id: install-kubectl
-      
-      - name: Copy frontend build to backend static (Fast)
-        run: |
-          echo "Copying frontend build to backend static directory..."
+          echo "Preparing backend package (consolidated steps)..."
+          
+          # Copy frontend build to backend static
           mkdir -p backend/app/static
           if [ -d "frontend/dist" ] && [ "$(ls -A frontend/dist)" ]; then
-            # Use rsync if available for faster copy, otherwise cp
             if command -v rsync &> /dev/null; then
               rsync -a --delete frontend/dist/ backend/app/static/
             else
               cp -r frontend/dist/* backend/app/static/
             fi
-            # Quick verification only
             [ -f "backend/app/static/index.html" ] || (echo "ERROR: index.html not found!" && exit 1)
-            echo "✓ Frontend files copied successfully"
+            echo "✓ Frontend files copied"
           else
             echo "ERROR: frontend/dist directory is empty or doesn't exist!"
             exit 1
           fi
-      
-      - name: Make startup script executable
-        run: |
-          echo "Making startup.sh executable..."
+          
+          # Make startup script executable
           chmod +x backend/startup.sh
-          echo "✓ startup.sh is now executable"
-      
-      - name: Clean up unnecessary files (fast - parallel)
-        working-directory: ./backend
-        run: |
-          echo "Fast cleanup of unnecessary files..."
-          # Run cleanup operations in parallel where possible
-          (
-            rm -rf scripts/ infrastructure/ uploads/ tests/ .pytest_cache/ .vscode/ .idea/ || true
-            find . -maxdepth 1 -name "*.md" -delete 2>/dev/null || true
-            find . -maxdepth 1 -name "*.html" -not -path "./app/static/*" -delete 2>/dev/null || true
-            rm -f create_*.py export_*.py insert_*.py seed_*.py test_*.py verify_*.py observability_preview.html start-backend.sh 2>/dev/null || true
-            find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-            find . -type f \( -name "*.pyc" -o -name "*.pyo" -o -name "*.log" -o -name "*.tmp" -o -name "*.temp" \) -delete 2>/dev/null || true
-            rm -rf node_modules/ package*.json 2>/dev/null || true
-            find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
-            find . \( -name "*.zip" -o -name "*.tar.gz" -o -name "*.tar" \) -delete 2>/dev/null || true
-          ) &
-          CLEANUP_PID=$!
-          wait $CLEANUP_PID
-          echo "✓ Cleanup complete"
-      
-      - name: Verify requirements.txt exists
-        run: |
-          if [ ! -f "backend/requirements.txt" ]; then
-            echo "❌ ERROR: requirements.txt not found in backend directory"
-            exit 1
-          fi
-          echo "✓ requirements.txt found"
-          echo "First 20 lines of requirements.txt:"
-          head -20 backend/requirements.txt
-      
-      # Note: App settings moved to AFTER deployment to avoid SCM container restart conflicts
-      # The deployment action will use default settings, then we configure after deployment completes
-      
-      - name: Quick package size check (optional)
-        run: |
-          echo "Quick package size check..."
+          
+          # Quick cleanup (only essential files)
           cd backend
-          if [ -d "app/static" ]; then
-            echo "✓ Static directory exists"
-            [ -f "app/static/index.html" ] && echo "✓ index.html found" || echo "⚠ index.html missing"
-          else
-            echo "⚠ Static directory not found!"
-            exit 1
-          fi
+          rm -rf scripts/ infrastructure/ uploads/ tests/ .pytest_cache/ .vscode/ .idea/ || true
+          find . -maxdepth 1 -name "*.md" -delete 2>/dev/null || true
+          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find . -type f \( -name "*.pyc" -o -name "*.pyo" -o -name "*.log" \) -delete 2>/dev/null || true
           cd ..
-        continue-on-error: true
-        timeout-minutes: 1
+          
+          # Verify requirements.txt
+          [ -f "backend/requirements.txt" ] || (echo "ERROR: requirements.txt not found!" && exit 1)
+          
+          # Create deployment package
+          cd backend
+          zip -q -r ../backend-deploy.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc" -x "*.pyo" 2>/dev/null || {
+            tar -czf ../backend-deploy.tar.gz --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' --exclude='*.pyo' . 2>/dev/null
+            [ -f ../backend-deploy.tar.gz ] && mv ../backend-deploy.tar.gz ../backend-deploy.zip
+          }
+          cd ..
+          [ -f backend-deploy.zip ] || (echo "ERROR: Failed to create package!" && exit 1)
+          echo "✓ Package created: $(ls -lh backend-deploy.zip | awk '{print $5}')"
       
-      - name: Quick SCM check (skip if not critical) - REMOVED for speed
+      - name: Check for ongoing deployments (non-blocking)
         run: |
-          echo "⚠ SCM check removed to speed up deployment"
-          echo "OneDeploy will handle SCM readiness automatically"
-        continue-on-error: true
-        timeout-minutes: 1
-      
-      - name: Check for ongoing deployments (quick check)
-        run: |
-          echo "Quick check for ongoing deployments..."
           ONGOING=$(az webapp deployment list \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --query "[?status=='InProgress'].id" -o tsv 2>/dev/null || echo "")
-          
           if [ -n "$ONGOING" ]; then
-            echo "⚠ Ongoing deployment detected, waiting 20 seconds (reduced from 45s)..."
-            sleep 20
-          else
-            echo "✓ No ongoing deployments detected"
+            echo "⚠ Ongoing deployment detected, waiting 10 seconds..."
+            sleep 10
           fi
         continue-on-error: true
         timeout-minutes: 1
-      
-      - name: Create deployment package
-        run: |
-          echo "Creating deployment package..."
-          cd backend
-          zip -r ../backend-deploy.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc" -x "*.pyo" || {
-            # Fallback if zip command not available
-            echo "Using tar+gzip as fallback..."
-            tar -czf ../backend-deploy.tar.gz --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' --exclude='*.pyo' .
-            mv ../backend-deploy.tar.gz ../backend-deploy.zip
-          }
-          cd ..
-          echo "Package created: backend-deploy.zip"
-          ls -lh backend-deploy.zip || echo "Package file check"
       
       - name: Deploy to Azure Web App (with settings)
         id: deploy-backend
@@ -315,20 +252,13 @@ jobs:
       # NOTE: App settings are configured via the deployment action's app-settings parameter
       # This avoids SCM container restart conflicts by letting Azure handle it during deployment
       
-      - name: Quick Health Check (Background - Non-blocking)
+      - name: Quick Health Check (non-blocking)
         continue-on-error: true
-        timeout-minutes: 1
+        timeout-seconds: 10
         run: |
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-          echo "Quick health check (non-blocking)..."
-          # Single quick check - don't block deployment
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $WEBAPP_URL/api/v1/live 2>/dev/null || echo "000")
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✓ App is responding!"
-          else
-            echo "⚠ App may still be starting (normal - can take 1-2 minutes)"
-            echo "Deployment completed. Check: $WEBAPP_URL/api/v1/live"
-          fi
+          [ "$HTTP_CODE" = "200" ] && echo "✓ App responding" || echo "⚠ App starting (check: $WEBAPP_URL/api/v1/live)"
       
       - name: Deployment Summary
         run: |
