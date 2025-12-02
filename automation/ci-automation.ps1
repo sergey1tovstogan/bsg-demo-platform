@@ -160,9 +160,9 @@ function Start-Monitoring {
         $runId = $run.databaseId
         $startTime = Get-Date
         
-        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+        Write-Host "──────────────────────────────────────────" -ForegroundColor DarkGray
         Write-Host "Monitoring: $($run.name)" -ForegroundColor Cyan
-        Write-Host "Run ID: $runId" -ForegroundColor Gray
+        Write-Host "Run ID: $runId" -ForegroundColor DarkGray
         Write-Host ""
         
         while ($true) {
@@ -212,7 +212,7 @@ function Show-WorkflowRuns {
     param([string]$BranchFilter, [int]$Limit = 20)
     
     Write-Host "[LIST] Recent Workflow Runs" -ForegroundColor Cyan
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+    Write-Host "──────────────────────────────────────────" -ForegroundColor DarkGray
     
     $runs = Get-WorkflowRuns -BranchFilter $BranchFilter -Limit $Limit
     
@@ -370,8 +370,65 @@ switch ($Action) {
             Write-Host "[ERROR] RunId required for fix action. Use: .\ci-automation.ps1 fix -RunId <id>" -ForegroundColor Red
             exit 1
         }
-        Write-Host "[FIX] Auto-fix functionality - use GitHub Actions workflow for automatic fixes" -ForegroundColor Yellow
-        Write-Host "The auto-fix workflow runs automatically when workflows fail." -ForegroundColor Gray
+        
+        Write-Host "[FIX] Analyzing failed workflow run $RunId..." -ForegroundColor Cyan
+        Write-Host ""
+        
+        $runStatus = Get-WorkflowRunStatus -RunId $RunId
+        
+        if ($runStatus.conclusion -ne "failure") {
+            Write-Host "[INFO] Workflow run $RunId did not fail (status: $($runStatus.conclusion))" -ForegroundColor Yellow
+            exit 0
+        }
+        
+        Write-Host "Workflow: $($runStatus.workflowName)" -ForegroundColor Cyan
+        Write-Host "Title: $($runStatus.displayTitle)" -ForegroundColor Gray
+        Write-Host "URL: $($runStatus.url)" -ForegroundColor DarkGray
+        Write-Host ""
+        
+        # Get failed jobs
+        try {
+            $jobs = gh run view $RunId --json jobs --jq '.jobs[] | select(.conclusion == "failure")' | ConvertFrom-Json
+            if ($jobs) {
+                Write-Host "[ERROR] Failed job(s):" -ForegroundColor Red
+                foreach ($job in $jobs) {
+                    Write-Host "  - $($job.name)" -ForegroundColor Red
+                    $jobUrl = "$($runStatus.url)/job/$($job.databaseId)"
+                    Write-Host "    Logs: $jobUrl" -ForegroundColor DarkGray
+                }
+            }
+        } catch {
+            Write-Host "[WARN] Could not retrieve job details" -ForegroundColor Yellow
+        }
+        
+        # Get error annotations
+        try {
+            $annotations = gh run view $RunId --json annotations --jq '.annotations[] | select(.annotation_level == "failure")' | ConvertFrom-Json
+            if ($annotations) {
+                Write-Host ""
+                Write-Host "[ERROR] Error Summary:" -ForegroundColor Red
+                $errorCount = 0
+                foreach ($annotation in $annotations) {
+                    $errorCount++
+                    Write-Host "  [$errorCount] $($annotation.message)" -ForegroundColor Red
+                    if ($annotation.path) {
+                        Write-Host "      Location: $($annotation.path):$($annotation.start_line)" -ForegroundColor DarkGray
+                    }
+                }
+            }
+        } catch {
+            Write-Host "[INFO] Could not retrieve error annotations" -ForegroundColor Gray
+        }
+        
+        Write-Host ""
+        Write-Host "[ACTION] Recommended actions:" -ForegroundColor Cyan
+        Write-Host "  1. Review the full logs: $($runStatus.url)" -ForegroundColor White
+        Write-Host "  2. Check for common issues:" -ForegroundColor White
+        Write-Host "     - TypeScript/compilation errors" -ForegroundColor Gray
+        Write-Host "     - Missing dependencies" -ForegroundColor Gray
+        Write-Host "     - Configuration issues" -ForegroundColor Gray
+        Write-Host "  3. Fix the issues and push again" -ForegroundColor White
+        Write-Host "  4. Or retry the run: gh run rerun $RunId" -ForegroundColor White
     }
     "status" {
         $runs = Get-WorkflowRuns -BranchFilter $Branch -Limit 5
