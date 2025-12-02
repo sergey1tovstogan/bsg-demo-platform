@@ -136,14 +136,21 @@ jobs:
             echo "Verifying package-lock.json exists..."
             ls -la package-lock.json || echo "WARNING: package-lock.json not found"
             echo "Running npm ci..."
-            npm ci --verbose || {
-              echo "npm ci failed, trying npm install..."
-              npm install
-            }
+            npm ci --verbose
+            echo "Checking if node_modules exists..."
+            ls -la node_modules | head -5 || echo "WARNING: node_modules not found"
             echo "Verifying vite is installed..."
-            npm list vite || npm install --save-dev vite@^5.0.8
+            if ! npm list vite --depth=0 2>/dev/null | grep -q vite; then
+              echo "vite not found, installing..."
+              npm install --save-dev vite@^5.0.8
+            fi
             echo "Verifying @types/react-dom is installed..."
-            npm list @types/react-dom || npm install --save-dev @types/react-dom@^18.2.43
+            if ! npm list @types/react-dom --depth=0 2>/dev/null | grep -q "@types/react-dom"; then
+              echo "@types/react-dom not found, installing..."
+              npm install --save-dev @types/react-dom@^18.2.43
+            fi
+            echo "Verifying vite binary exists..."
+            ls -la node_modules/.bin/vite || echo "ERROR: vite binary not found"
             echo "Running build..."
             npm run build
           ) &

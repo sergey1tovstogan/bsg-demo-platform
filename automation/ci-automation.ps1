@@ -160,7 +160,7 @@ function Start-Monitoring {
         $runId = $run.databaseId
         $startTime = Get-Date
         
-        Write-Host "──────────────────────────────────────────" -ForegroundColor DarkGray
+        Write-Host "==========================================" -ForegroundColor DarkGray
         Write-Host "Monitoring: $($run.name)" -ForegroundColor Cyan
         Write-Host "Run ID: $runId" -ForegroundColor DarkGray
         Write-Host ""
