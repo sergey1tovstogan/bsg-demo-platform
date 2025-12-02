@@ -68,7 +68,10 @@ jobs:
       
       - name: Install frontend dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: |
+          npm ci
+          # Ensure @types/react-dom is properly installed
+          npm list @types/react-dom || npm install --save-dev @types/react-dom@^18.2.43
       
       - name: Type check frontend
         working-directory: ./frontend
@@ -127,7 +130,7 @@ jobs:
         run: |
           echo "Installing dependencies and building in parallel..."
           (
-            cd frontend && npm ci && npm run build
+            cd frontend && npm ci && npm list @types/react-dom || npm install --save-dev @types/react-dom@^18.2.43 && npm run build
           ) &
           FRONTEND_PID=$!
           (
