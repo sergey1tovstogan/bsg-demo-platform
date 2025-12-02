@@ -16,6 +16,7 @@ import json
 import re
 import tempfile
 import os
+import gzip
 
 # Kubernetes Python client
 try:
@@ -591,7 +592,22 @@ class AKSService:
             )
             
             if credential_response.kubeconfigs and len(credential_response.kubeconfigs) > 0:
-                kubeconfig_data = base64.b64decode(credential_response.kubeconfigs[0].value).decode('utf-8')
+                # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed)
+                decoded_bytes = base64.b64decode(credential_response.kubeconfigs[0].value)
+                
+                # Try to decompress if it's gzip-compressed
+                try:
+                    kubeconfig_data = gzip.decompress(decoded_bytes).decode('utf-8')
+                    logger.debug("Kubeconfig was gzip-compressed, decompressed successfully")
+                except (gzip.BadGzipFile, OSError):
+                    # Not compressed, decode directly as UTF-8
+                    try:
+                        kubeconfig_data = decoded_bytes.decode('utf-8')
+                    except UnicodeDecodeError as e:
+                        logger.error(f"Failed to decode kubeconfig as UTF-8: {e}")
+                        logger.error(f"First 100 bytes (hex): {decoded_bytes[:100].hex()}")
+                        raise
+                
                 temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
                 temp_file.write(kubeconfig_data)
                 temp_file.close()
@@ -618,8 +634,21 @@ class AKSService:
                 logger.error("  - OR 'Azure Kubernetes Service Cluster Admin Role' (fallback)")
                 return None
             
-            # Decode the kubeconfig (it's base64 encoded)
-            kubeconfig_data = base64.b64decode(credential_response.kubeconfigs[0].value).decode('utf-8')
+            # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed)
+            decoded_bytes = base64.b64decode(credential_response.kubeconfigs[0].value)
+            
+            # Try to decompress if it's gzip-compressed
+            try:
+                kubeconfig_data = gzip.decompress(decoded_bytes).decode('utf-8')
+                logger.debug("Kubeconfig was gzip-compressed, decompressed successfully")
+            except (gzip.BadGzipFile, OSError):
+                # Not compressed, decode directly as UTF-8
+                try:
+                    kubeconfig_data = decoded_bytes.decode('utf-8')
+                except UnicodeDecodeError as e:
+                    logger.error(f"Failed to decode kubeconfig as UTF-8: {e}")
+                    logger.error(f"First 100 bytes (hex): {decoded_bytes[:100].hex()}")
+                    raise
             
             # Write to temporary file
             temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
