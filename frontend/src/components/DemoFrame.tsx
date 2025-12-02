@@ -12,11 +12,10 @@ interface DemoFrameProps {
 
 export function DemoFrame({ componentId }: DemoFrameProps) {
   // All hooks must be called before any conditional returns (React Rules of Hooks)
-  const [_demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
-  const [session, _setSession] = useState<DemoSession | null>(null)
+  const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
+  const [session] = useState<DemoSession | null>(null)
   const [loading, setLoading] = useState(true)
-  const [_connecting, _setConnecting] = useState(false)
-  const [_error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const loadDemoConfig = async () => {
     try {
@@ -34,7 +33,7 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
 
   useEffect(() => {
     loadDemoConfig()
-  }, [componentId])
+  }, [componentId, loadDemoConfig])
 
   useEffect(() => {
     return () => {

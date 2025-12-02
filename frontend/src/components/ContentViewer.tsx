@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, Loader2, Info } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { Content, ComponentId } from '../types'
@@ -17,7 +17,7 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
   const [error, setError] = useState<string | null>(null)
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number | null>(null)
 
-  const loadContents = async () => {
+  const loadContents = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -35,7 +35,7 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [componentId])
 
   useEffect(() => {
     // Only load contents if not security or integration component

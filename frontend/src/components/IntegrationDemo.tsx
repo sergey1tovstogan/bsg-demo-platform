@@ -46,7 +46,7 @@ const JsonView = ({ data, rawText }: { data: any, rawText?: string }) => {
   }
 
   // Split JSON into tokens
-  const tokens = formattedJson.split(/("(?:\\.|[^"\\])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[{}[\],:]|\s+)/g).filter(Boolean)
+  const tokens = formattedJson.split(/("(?:\\.|[^"\\])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|[{}[\],:]|\s+)/g).filter(Boolean)
 
   return (
     <pre className="text-xs whitespace-pre-wrap font-mono">
