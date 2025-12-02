@@ -50,6 +50,9 @@ export function DataArchitectureContent() {
   const [completedPaths, setCompletedPaths] = useState<Set<AnimationPath>>(new Set()) // Track which paths have been completed
   const [shouldSpawnPath1And2, setShouldSpawnPath1And2] = useState(false) // Track if Path 1/2 bubbles should continue spawning
   const spawningIntervalRef = useRef<number | null>(null)
+  const diagramContainerRef = useRef<HTMLDivElement>(null)
+  const diagramRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
 
   // Static components that are always visible (common starting point for all paths)
   const staticComponents: ComponentItem[] = [
@@ -624,6 +627,30 @@ export function DataArchitectureContent() {
     'path-b': 'EOD Process (Flat Files): Core → File → ETL → Data Warehouse',
   }
 
+  // Calculate scale to fit diagram in viewport
+  useEffect(() => {
+    const updateScale = () => {
+      if (diagramContainerRef.current && diagramRef.current) {
+        const container = diagramContainerRef.current
+        const diagram = diagramRef.current
+        const containerWidth = container.clientWidth - 16 // Account for padding
+        const containerHeight = container.clientHeight - 16
+        const diagramWidth = 1200
+        const diagramHeight = 520
+        
+        const scaleX = containerWidth / diagramWidth
+        const scaleY = containerHeight / diagramHeight
+        const newScale = Math.min(scaleX, scaleY, 1) // Don't scale up, only down
+        
+        setScale(newScale)
+      }
+    }
+
+    updateScale()
+    window.addEventListener('resize', updateScale)
+    return () => window.removeEventListener('resize', updateScale)
+  }, [])
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col space-y-3">
       {/* Merged Controls Panel with Description */}
@@ -728,30 +755,21 @@ export function DataArchitectureContent() {
       {/* Diagram Canvas - Dynamically expands to fill available space */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-2 md:p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Responsive Container with specified styling - no scroll, scales to fit */}
-        <div className="flex justify-center items-center h-full w-full overflow-hidden">
+        <div 
+          ref={diagramContainerRef}
+          className="flex justify-center items-center h-full w-full overflow-hidden"
+        >
           <div 
-            className="relative rounded-lg border-2 p-2 md:p-4 transition-all duration-300"
+            ref={diagramRef}
+            className="relative rounded-lg border-2 p-2 md:p-4 transition-transform duration-300"
             style={{
               width: '1200px',
               height: '520px',
               backgroundColor: '#F4F4F6',
               borderColor: '#3CB5A6',
               borderRadius: '8px',
-              transform: 'scale(1)',
-              transformOrigin: 'center center',
-              maxWidth: '100%',
-              maxHeight: '100%'
-            }}
-            ref={(el) => {
-              if (el && el.parentElement) {
-                const parent = el.parentElement
-                const parentWidth = parent.clientWidth
-                const parentHeight = parent.clientHeight
-                const scaleX = Math.min(1, (parentWidth - 16) / 1200)
-                const scaleY = Math.min(1, (parentHeight - 16) / 520)
-                const scale = Math.min(scaleX, scaleY)
-                el.style.transform = `scale(${scale})`
-              }
+              transform: `scale(${scale})`,
+              transformOrigin: 'center center'
             }}
           >
           {/* Content area for components */}
