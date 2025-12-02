@@ -243,46 +243,30 @@ jobs:
       
       - name: Deploy to Azure Web App (with retry on conflict)
         id: deploy-backend
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ./backend-deploy.zip
+          startup-command: "bash startup.sh"
+        continue-on-error: true
+        timeout-minutes: 20
+      
+      - name: Retry deployment on conflict
+        if: steps.deploy-backend.outcome == 'failure'
         run: |
-          MAX_RETRIES=3
-          RETRY_DELAY=15
-          RETRY_COUNT=0
-          
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            echo "Deployment attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
-            
-            if [ $RETRY_COUNT -gt 0 ]; then
-              echo "Waiting ${RETRY_DELAY}s before retry..."
-              sleep $RETRY_DELAY
-            fi
-            
-            # Use Azure CLI to deploy with better error handling
-            DEPLOY_OUTPUT=$(az webapp deployment source config-zip \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --src ./backend-deploy.zip \
-              --timeout 1200 2>&1) || DEPLOY_EXIT_CODE=$?
-            
-            if [ ${DEPLOY_EXIT_CODE:-0} -eq 0 ]; then
-              echo "✓ Deployment successful!"
-              exit 0
-            fi
-            
-            # Check if it's a 409 conflict
-            if echo "$DEPLOY_OUTPUT" | grep -q "409\|Conflict"; then
-              echo "⚠ Conflict detected (409), will retry..."
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-            else
-              echo "✗ Deployment failed with non-conflict error:"
-              echo "$DEPLOY_OUTPUT"
-              exit 1
-            fi
-          done
-          
-          echo "✗ Deployment failed after $MAX_RETRIES attempts"
-          exit 1
-        continue-on-error: false
-        timeout-minutes: 25
+          echo "Checking if failure was due to conflict..."
+          sleep 15
+          echo "Retrying deployment..."
+        continue-on-error: true
+      
+      - name: Deploy to Azure Web App (retry)
+        if: steps.deploy-backend.outcome == 'failure'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ./backend-deploy.zip
+          startup-command: "bash startup.sh"
+        timeout-minutes: 20
       
       - name: Configure App Settings (minimal wait)
         run: |
