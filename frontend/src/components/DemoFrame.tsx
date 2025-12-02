@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Code2, Radio, Database as DatabaseIcon, Loader2 } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { ComponentId, DemoConfig, DemoSession } from '../types'
@@ -12,37 +12,27 @@ interface DemoFrameProps {
 
 export function DemoFrame({ componentId }: DemoFrameProps) {
   // All hooks must be called before any conditional returns (React Rules of Hooks)
-  const [demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
-  const [session] = useState<DemoSession | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  const loadDemoConfig = async () => {
+  const loadDemoConfig = useCallback(async () => {
     try {
       setLoading(true)
-      setError(null)
       const response = await apiService.getDemoConfig(componentId)
-      setDemoConfig(response.data) // setDemoConfig is used
+      // Config loaded but not used yet - reserved for future use
+      console.log('Demo config loaded:', response.data)
     } catch (err: unknown) {
       // If demo config doesn't exist, that's okay - show placeholder
-      setError(null)
+      console.log('No demo config available')
     } finally {
       setLoading(false)
     }
-  }
+  }, [componentId])
 
   useEffect(() => {
     loadDemoConfig()
-  }, [componentId, loadDemoConfig])
+  }, [loadDemoConfig])
 
-  useEffect(() => {
-    return () => {
-      // Cleanup: disconnect on unmount
-      if (session?.session_id) {
-        apiService.disconnectDemo(componentId, session.session_id).catch(console.error)
-      }
-    }
-  }, [session, componentId])
+  // Session cleanup removed - session is not used
 
   // Use specialized component for observability
   if (componentId === 'observability') {

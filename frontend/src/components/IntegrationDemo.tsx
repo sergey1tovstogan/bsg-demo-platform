@@ -5,13 +5,13 @@ import { ApiKeyModal } from './ApiKeyModal'
 
 interface ApiResult {
   status?: number
-  data?: any
+  data?: unknown
   error?: string
   loading: boolean
 }
 
 // JSON Syntax Highlighter Component
-const JsonView = ({ data, rawText }: { data: any, rawText?: string }) => {
+const JsonView = ({ data, rawText }: { data: unknown, rawText?: string }) => {
   if (!data) {
     // If JSON is invalid, show the raw text without highlighting
     if (rawText) {
@@ -156,8 +156,9 @@ export function IntegrationDemo() {
           error: 'Failed to retrieve balance'
         })
       }
-    } catch (error: any) {
-      console.error('Balance fetch error:', error) // Debug log
+    } catch (err: unknown) {
+      console.error('Balance fetch error:', err) // Debug log
+      const error = err as { response?: { data?: { detail?: string } }, message?: string }
       setBalance({
         loading: false,
         error: error.response?.data?.detail || error.message || 'Failed to fetch balance'
