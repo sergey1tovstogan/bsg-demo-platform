@@ -141,7 +141,7 @@ jobs:
           VITE_API_URL: /api/v1
           NODE_ENV: production
       
-      - name: Prepare backend package (consolidated: copy, cleanup, verify, package)
+      - name: Prepare backend package (consolidated - copy, cleanup, verify, package)
         run: |
           echo "Preparing backend package (consolidated steps)..."
           
