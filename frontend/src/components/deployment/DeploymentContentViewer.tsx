@@ -390,10 +390,10 @@ export function DeploymentContentViewer() {
                                 <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg shadow-md" {...props} />
                               </div>
                             ),
-                            thead: ({ node, ...props }) => <thead className="bg-blue-50 dark:bg-blue-900/30" {...props} />,
-                            tbody: ({ node, ...props }) => <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props} />,
-                            tr: ({ node, ...props }) => <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" {...props} />,
-                            th: ({ node, ...props }) => (
+                            thead: ({ ...props }) => <thead className="bg-blue-50 dark:bg-blue-900/30" {...props} />,
+                            tbody: ({ ...props }) => <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props} />,
+                            tr: ({ ...props }) => <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" {...props} />,
+                            th: ({ ...props }) => (
                               <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left text-sm font-bold text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-900/50 first:rounded-tl-lg last:rounded-tr-lg" {...props} />
                             ),
                             td: ({ ...props }) => (
