@@ -259,7 +259,13 @@ export function DeploymentAnalyzer() {
                 .filter((c: any) => c.error)
                 .map((c: any) => `${c.cluster_name}: ${c.error}`)
                 .join('\n')
-              setError(`Failed to retrieve namespaces from AKS clusters:\n${errorMessages}\n\nPlease check backend logs for kubectl errors. Ensure cluster credentials are configured.`)
+              const troubleshootingSteps = [
+                '1. Verify Azure CLI login: `az account show`',
+                '2. Refresh cluster credentials: `az aks get-credentials --resource-group <RG> --name <cluster-name> --overwrite-existing`',
+                '3. Check backend logs for detailed kubectl error messages',
+                '4. Ensure you have proper permissions on the AKS cluster'
+              ]
+              setError(`Failed to retrieve namespaces from AKS clusters:\n${errorMessages}\n\nTroubleshooting:\n${troubleshootingSteps.join('\n')}`)
               setClusterNamespaces(validNamespaces) // Still show the error state
             } else {
               setClusterNamespaces(validNamespaces)
