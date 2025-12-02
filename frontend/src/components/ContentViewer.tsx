@@ -17,18 +17,6 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
   const [error, setError] = useState<string | null>(null)
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number | null>(null)
 
-  useEffect(() => {
-    // Only load contents if not security component
-    if (componentId !== 'security') {
-      loadContents()
-    }
-  }, [componentId])
-
-  // Use SecurityContentViewer for security component (after hooks)
-  if (componentId === 'security') {
-    return <SecurityContentViewer />
-  }
-
   const loadContents = async () => {
     try {
       setLoading(true)
@@ -47,6 +35,18 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    // Only load contents if not security component
+    if (componentId !== 'security') {
+      loadContents()
+    }
+  }, [componentId, loadContents])
+
+  // Use SecurityContentViewer for security component (after hooks)
+  if (componentId === 'security') {
+    return <SecurityContentViewer />
   }
 
   const goToPrevious = () => {

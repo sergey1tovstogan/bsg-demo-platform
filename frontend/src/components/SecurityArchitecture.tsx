@@ -9,7 +9,7 @@ interface TooltipConfig {
 
 export function SecurityArchitecture() {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
-  const [showAuthDetails, setShowAuthDetails] = useState(false)
+  const [showAuthDetails, setShowAuthDetails] = useState(false) // Used on line 153 and set on lines 78, 173
 
   const tooltips: Record<string, TooltipConfig> = {
     'key-management': {

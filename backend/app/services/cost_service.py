@@ -47,6 +47,7 @@ class CostService:
             "User-Agent": "bsg-demo-platform/1.0"
         }
         
+        last_error = None
         for attempt in range(max_retries):
             try:
                 if method == "GET":
@@ -65,21 +66,46 @@ class CostService:
                         continue
                     else:
                         logger.error("Rate limit exceeded after all retries")
-                        return {}
+                        return {"error": "Rate limit exceeded", "status_code": 429}
+                
+                # Check for HTTP errors
+                if response.status_code >= 400:
+                    error_detail = {}
+                    try:
+                        error_detail = response.json()
+                    except:
+                        error_detail = {"message": response.text[:200]}
+                    
+                    logger.error(f"API request failed with status {response.status_code}: {error_detail}")
+                    return {
+                        "error": f"HTTP {response.status_code}: {error_detail.get('error', {}).get('message', response.text[:200])}",
+                        "status_code": response.status_code,
+                        "detail": error_detail
+                    }
                 
                 response.raise_for_status()
                 return response.json()
                 
+            except requests.exceptions.Timeout as e:
+                last_error = f"Request timeout: {str(e)}"
+                if attempt < max_retries - 1:
+                    logger.warning(f"Request timeout, retrying in 2s: {e}")
+                    time.sleep(2)
+                    continue
+                else:
+                    logger.error(f"Request timeout after {max_retries} attempts: {e}")
+                    return {"error": last_error, "status_code": 504}
             except requests.exceptions.RequestException as e:
+                last_error = str(e)
                 if attempt < max_retries - 1:
                     logger.warning(f"API request failed, retrying in 2s: {e}")
                     time.sleep(2)
                     continue
                 else:
                     logger.error(f"API request failed after {max_retries} attempts: {e}")
-                    return {}
+                    return {"error": last_error, "status_code": 500}
         
-        return {}
+        return {"error": last_error or "Unknown error", "status_code": 500}
     
     def get_resource_group_costs(
         self, 
@@ -149,10 +175,50 @@ class CostService:
             url = f"{self.base_url}{rg_scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
             result = self._make_api_request(url, "POST", query_definition)
             
+            # Check if the result contains an error
+            if result.get('error'):
+                error_msg = result.get('error', 'Unknown error')
+                status_code = result.get('status_code', 500)
+                # If it's a 404 or 403, try subscription scope as fallback
+                if status_code in [403, 404]:
+                    logger.info(f"Resource group scope failed with {status_code}, trying subscription scope")
+                    url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
+                    result = self._make_api_request(url, "POST", query_definition)
+                    if result.get('error'):
+                        # Both failed, return error
+                        return {
+                            'resource_group': resource_group_name,
+                            'total_cost': 0.0,
+                            'services': {},
+                            'error': f'Cost Management API error: {result.get("error")}. Verify you have "Cost Management Reader" role on the subscription.',
+                            'start_date': start_date.isoformat(),
+                            'end_date': end_date.isoformat()
+                        }
+                else:
+                    # Other errors, return immediately
+                    return {
+                        'resource_group': resource_group_name,
+                        'total_cost': 0.0,
+                        'services': {},
+                        'error': f'Cost Management API error: {error_msg}',
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat()
+                    }
+            
             # If that fails, try subscription scope
             if not result or not result.get('properties', {}).get('rows'):
                 url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
                 result = self._make_api_request(url, "POST", query_definition)
+                # Check for errors in subscription scope attempt
+                if result.get('error'):
+                    return {
+                        'resource_group': resource_group_name,
+                        'total_cost': 0.0,
+                        'services': {},
+                        'error': f'Cost Management API error: {result.get("error")}. Verify you have "Cost Management Reader" role on the subscription.',
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat()
+                    }
             
             if result and 'properties' in result and 'rows' in result['properties'] and result['properties']['rows']:
                 return self._parse_cost_result(result, resource_group_name, start_date, end_date)

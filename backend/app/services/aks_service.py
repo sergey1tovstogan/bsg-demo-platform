@@ -162,18 +162,26 @@ class AKSService:
             loop = asyncio.get_event_loop()
             
             # Use Azure CLI to get credentials
+            # CRITICAL: Use --admin flag and specify subscription to ensure we get the right cluster
             # On Windows, use az.cmd if az.exe doesn't work
             def _get_credentials():
                 import shutil
                 # Find az command
                 az_cmd = shutil.which("az") or shutil.which("az.cmd") or "az"
+                # Use --admin flag and specify subscription to ensure we get credentials for the correct cluster
+                # This prevents getting credentials for a different cluster with the same name
                 cmd = [
                     az_cmd, "aks", "get-credentials",
                     "--resource-group", resource_group,
                     "--name", cluster_name,
                     "--file", kubeconfig_path,
-                    "--overwrite-existing"
+                    "--overwrite-existing",
+                    "--admin"  # Use admin credentials to ensure we can access the cluster
                 ]
+                # Add subscription if available
+                if self.subscription_id:
+                    cmd.extend(["--subscription", self.subscription_id])
+                logger.info(f"Getting credentials with command: {' '.join(cmd)}")
                 return subprocess.run(
                     cmd,
                     capture_output=True,
@@ -823,31 +831,96 @@ class AKSService:
                     logger.error("kubectl fallback requires kubeconfig - cannot proceed")
                     return namespaces
             else:
-                # Local development: try Azure CLI method
+                # Local development: get cluster-specific kubeconfig
                 try:
-                    # Get credentials to ensure they're in the default kubeconfig
+                    # Get credentials - this creates a cluster-specific kubeconfig
+                    logger.info(f"Getting cluster-specific credentials for {cluster_name} in RG {resource_group}")
                     creds = await self.get_cluster_credentials(resource_group, cluster_name)
-                    # But use default kubeconfig regardless
-                    if os.path.exists(default_kubeconfig):
-                        kubeconfig_path = default_kubeconfig
-                        logger.info(f"Using default kubeconfig: {kubeconfig_path}")
-                    elif creds and creds.get("kubeconfig_path") and os.path.exists(creds["kubeconfig_path"]):
+                    # CRITICAL: Always use the cluster-specific kubeconfig, not the default one
+                    # This ensures we query the correct cluster
+                    if creds and creds.get("kubeconfig_path") and os.path.exists(creds["kubeconfig_path"]):
                         kubeconfig_path = creds["kubeconfig_path"]
-                        logger.info(f"Using credential kubeconfig: {kubeconfig_path}")
+                        logger.info(f"✓ Using cluster-specific kubeconfig: {kubeconfig_path}")
+                        logger.info(f"✓ This ensures we query the correct cluster: {cluster_name} in RG {resource_group}")
+                        
+                        # CRITICAL: Verify the kubeconfig actually points to the correct cluster
+                        # Get the cluster's actual server URL from Azure and verify kubectl connects to it
+                        try:
+                            from azure.mgmt.containerservice import ContainerServiceClient
+                            from azure.identity import AzureCliCredential
+                            
+                            credential = AzureCliCredential()
+                            container_client = ContainerServiceClient(credential, self.subscription_id)
+                            cluster_info = container_client.managed_clusters.get(resource_group, cluster_name)
+                            expected_fqdn = cluster_info.fqdn
+                            expected_server_url = f"https://{expected_fqdn}:443" if expected_fqdn else None
+                            
+                            if expected_server_url:
+                                logger.info(f"Expected cluster server URL from Azure: {expected_server_url}")
+                                
+                                # Verify kubeconfig points to correct server using kubectl cluster-info
+                                def _verify_cluster():
+                                    # Use kubectl to get the actual cluster server we're connected to
+                                    kubectl_cmd = shutil.which("kubectl") or "kubectl"
+                                    env_check = os.environ.copy()
+                                    env_check["KUBECONFIG"] = kubeconfig_path
+                                    result = subprocess.run(
+                                        [kubectl_cmd, "cluster-info"],
+                                        capture_output=True,
+                                        text=True,
+                                        timeout=10,
+                                        env=env_check,
+                                        shell=False
+                                    )
+                                    if result.returncode == 0:
+                                        # Parse the server URL from cluster-info output
+                                        # Format: "Kubernetes control plane is running at https://..."
+                                        output = result.stdout
+                                        if "running at" in output:
+                                            # Extract URL
+                                            import re
+                                            match = re.search(r'https://[^\s]+', output)
+                                            if match:
+                                                actual_server = match.group(0).rstrip('/')
+                                                return actual_server
+                                    return None
+                                
+                                actual_server = await loop.run_in_executor(None, _verify_cluster)
+                                logger.info(f"Actual cluster server URL from kubectl: {actual_server}")
+                                
+                                if actual_server and expected_server_url:
+                                    expected_clean = expected_server_url.rstrip('/').lower()
+                                    actual_clean = actual_server.rstrip('/').lower()
+                                    
+                                    if actual_clean != expected_clean:
+                                        logger.error(f"✗ CRITICAL MISMATCH: Kubeconfig points to WRONG cluster!")
+                                        logger.error(f"  Expected (from Azure): {expected_server_url}")
+                                        logger.error(f"  Actual (from kubectl): {actual_server}")
+                                        logger.error(f"  This kubeconfig is for a DIFFERENT cluster!")
+                                        logger.error(f"  Cannot proceed - would query wrong cluster and return wrong namespaces")
+                                        logger.error(f"  Cluster in selected RGs: {cluster_name} in {resource_group}")
+                                        logger.error(f"  But kubectl is connected to a different cluster")
+                                        return namespaces
+                                    else:
+                                        logger.info(f"✓ Verified: Kubeconfig points to correct cluster server")
+                                        logger.info(f"✓ Cluster matches: {cluster_name} in {resource_group}")
+                                elif not actual_server:
+                                    logger.warning(f"Could not verify cluster server (kubectl cluster-info failed)")
+                                    logger.warning(f"Proceeding, but cluster verification incomplete")
+                        except Exception as verify_err:
+                            logger.warning(f"Could not verify cluster server URL (non-fatal): {verify_err}")
+                            logger.warning(f"Proceeding anyway, but cluster verification skipped")
                     else:
-                        logger.error(f"No kubeconfig found for cluster {cluster_name}")
-                        logger.error(f"Default kubeconfig path: {default_kubeconfig}")
-                        logger.error(f"Default kubeconfig exists: {os.path.exists(default_kubeconfig)}")
+                        logger.error(f"✗ Failed to get cluster-specific kubeconfig for {cluster_name}")
+                        logger.error(f"  Creds: {creds}")
+                        logger.error(f"  Cannot proceed without cluster-specific kubeconfig")
+                        logger.error(f"  Would query wrong cluster if we used default kubeconfig")
                         return namespaces
                 except Exception as e:
-                    logger.warning(f"Error getting credentials, trying default kubeconfig: {e}")
-                    if os.path.exists(default_kubeconfig):
-                        kubeconfig_path = default_kubeconfig
-                        logger.info(f"Using default kubeconfig after error: {kubeconfig_path}")
-                    else:
-                        logger.error(f"No kubeconfig found for cluster {cluster_name}")
-                        logger.error(f"Default kubeconfig path: {default_kubeconfig}")
-                        return namespaces
+                    logger.error(f"Error getting cluster credentials: {e}", exc_info=True)
+                    logger.error(f"✗ Cannot proceed without cluster-specific kubeconfig")
+                    logger.error(f"  This would query the wrong cluster if we used default kubeconfig")
+                    return namespaces
             
             logger.info(f"Using kubeconfig: {kubeconfig_path} for cluster {cluster_name}")
             
@@ -866,19 +939,36 @@ class AKSService:
             else:
                 logger.info(f"Using kubeconfig from Azure API (context should be set automatically)")
             
-            # Build command - simple kubectl get namespaces
-            cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
+            # Build command - use --context flag to ensure we query the correct cluster
+            # The context name is typically: <cluster-name> or <cluster-name>-admin
+            # Try to determine the correct context name
+            context_name = cluster_name
+            # If using cluster-specific kubeconfig, it should have the right context already
+            # But if using default kubeconfig, we need to specify context
+            if kubeconfig_path == default_kubeconfig:
+                # Try to find the context that matches this cluster
+                # Context names in Azure CLI are usually: <cluster-name> or <cluster-name>-admin
+                # We'll try both
+                logger.info(f"Using default kubeconfig, will try context: {context_name}")
+                cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json", "--context", context_name]
+            else:
+                # Using cluster-specific kubeconfig, context should be correct
+                logger.info(f"Using cluster-specific kubeconfig, context should be automatically correct")
+                cmd_parts = [kubectl_cmd, "get", "namespaces", "-o", "json"]
             
             # CRITICAL: Print for immediate visibility
             print(f"Executing kubectl: {' '.join(cmd_parts)}")
             print(f"KUBECONFIG={kubeconfig_path}")
             print(f"kubectl path: {kubectl_cmd}")
-            print(f"Using context: {cluster_name}")
+            print(f"Target cluster: {cluster_name} in RG {resource_group}")
             logger.info(f"Executing kubectl: {' '.join(cmd_parts)}")
             logger.info(f"KUBECONFIG={kubeconfig_path}")
             logger.info(f"kubectl path: {kubectl_cmd}")
-            logger.info(f"Using context: {cluster_name}")
-            logger.info(f"Resource group: {resource_group}, Cluster: {cluster_name}")
+            logger.info(f"Target cluster: {cluster_name} in RG {resource_group}")
+            if kubeconfig_path == default_kubeconfig:
+                logger.info(f"Using context: {context_name} (explicitly specified)")
+            else:
+                logger.info(f"Using cluster-specific kubeconfig (context should match {cluster_name})")
             
             # Use run_in_executor for Windows compatibility
             def _run_kubectl():

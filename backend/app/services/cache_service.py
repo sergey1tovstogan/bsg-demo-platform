@@ -13,7 +13,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
 from app.core.logging import get_logger
-from app.utils.datetime_utils import utc_now
+from app.utils.datetime_utils import utc_now, to_utc
 
 logger = get_logger(__name__)
 
@@ -26,6 +26,7 @@ class CacheService:
     AZURE_RESOURCES_TTL = 1  # 1 hour for Azure resources (may change more frequently)
     AKS_NAMESPACES_TTL = 2  # 2 hours for AKS namespaces
     COMPONENT_INFO_TTL = 24 * 7  # 7 days for component identification
+    AZURE_RESOURCE_GROUPS_TTL = 1  # 1 hour for Azure resource groups (may change)
     
     def __init__(self, db: Optional[AsyncIOMotorDatabase] = None):
         """Initialize cache service."""
@@ -68,12 +69,26 @@ class CacheService:
         # Check in-memory cache first (fastest)
         if use_memory_cache and cache_key in self._in_memory_cache:
             entry = self._in_memory_cache[cache_key]
-            if entry.get("expires_at") and datetime.fromisoformat(entry["expires_at"]) > utc_now():
-                logger.debug(f"Cache hit (memory): {cache_key}")
-                return entry.get("data")
-            else:
-                # Expired, remove from memory
-                del self._in_memory_cache[cache_key]
+            if entry.get("expires_at"):
+                try:
+                    expires_at = entry["expires_at"]
+                    # Handle different types: string, datetime (naive or aware)
+                    if isinstance(expires_at, str):
+                        expires_at = datetime.fromisoformat(expires_at)
+                    elif not isinstance(expires_at, datetime):
+                        # Unexpected type, skip expiration check
+                        logger.warning(f"Unexpected expires_at type in memory cache for {cache_key}: {type(expires_at)}")
+                        expires_at = None
+                    
+                    if expires_at:
+                        expires_at = to_utc(expires_at)  # Ensure timezone-aware
+                        if expires_at > utc_now():
+                            logger.debug(f"Cache hit (memory): {cache_key}")
+                            return entry.get("data")
+                except (ValueError, TypeError, AttributeError) as e:
+                    logger.warning(f"Error processing expires_at in memory cache for {cache_key}: {e}")
+            # Expired or invalid, remove from memory
+            del self._in_memory_cache[cache_key]
         
         # Check persistent cache
         try:
@@ -87,11 +102,26 @@ class CacheService:
             # Check expiration
             expires_at = result.get("expires_at")
             if expires_at:
-                if isinstance(expires_at, str):
-                    expires_at = datetime.fromisoformat(expires_at)
-                if expires_at < utc_now():
-                    logger.debug(f"Cache expired: {cache_key}")
-                    # Delete expired entry
+                try:
+                    # Handle different types: string, datetime (naive or aware)
+                    if isinstance(expires_at, str):
+                        expires_at = datetime.fromisoformat(expires_at)
+                    elif not isinstance(expires_at, datetime):
+                        # Unexpected type, log and skip expiration check
+                        logger.warning(f"Unexpected expires_at type for {cache_key}: {type(expires_at)}")
+                        expires_at = None
+                    
+                    if expires_at:
+                        # Ensure timezone-aware for comparison (handles both naive and aware datetimes)
+                        expires_at = to_utc(expires_at)
+                        if expires_at < utc_now():
+                            logger.debug(f"Cache expired: {cache_key}")
+                            # Delete expired entry
+                            await db.cache.delete_one({"cache_key": cache_key})
+                            return None
+                except (ValueError, TypeError, AttributeError) as e:
+                    logger.error(f"Error processing expires_at for {cache_key}: {e}. Type: {type(expires_at)}, Value: {expires_at}", exc_info=True)
+                    # If we can't process expiration, assume expired for safety
                     await db.cache.delete_one({"cache_key": cache_key})
                     return None
             
@@ -216,10 +246,24 @@ class CacheService:
             })
             
             # Clear expired from memory cache
-            expired_keys = [
-                key for key, entry in self._in_memory_cache.items()
-                if entry.get("expires_at") and datetime.fromisoformat(entry["expires_at"]) < now
-            ]
+            expired_keys = []
+            for key, entry in self._in_memory_cache.items():
+                if entry.get("expires_at"):
+                    try:
+                        expires_at = entry["expires_at"]
+                        # Handle different types: string, datetime (naive or aware)
+                        if isinstance(expires_at, str):
+                            expires_at = datetime.fromisoformat(expires_at)
+                        elif not isinstance(expires_at, datetime):
+                            # Unexpected type, skip
+                            continue
+                        expires_at = to_utc(expires_at)  # Ensure timezone-aware
+                        if expires_at < now:
+                            expired_keys.append(key)
+                    except (ValueError, TypeError, AttributeError) as e:
+                        logger.warning(f"Error processing expires_at in clear_expired for {key}: {e}")
+                        # If we can't parse it, consider it expired
+                        expired_keys.append(key)
             for key in expired_keys:
                 del self._in_memory_cache[key]
             
@@ -325,6 +369,29 @@ class CacheService:
             resource_groups=",".join(sorted(resource_group_names))
         )
         return await self.set(cache_key, namespaces, ttl_hours=self.AKS_NAMESPACES_TTL)
+    
+    async def get_azure_resource_groups(
+        self,
+        subscription_id: str
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Get cached Azure resource groups."""
+        cache_key = self._generate_cache_key(
+            "azure_resource_groups",
+            subscription_id=subscription_id
+        )
+        return await self.get(cache_key)
+    
+    async def set_azure_resource_groups(
+        self,
+        subscription_id: str,
+        resource_groups: List[Dict[str, Any]]
+    ) -> bool:
+        """Cache Azure resource groups."""
+        cache_key = self._generate_cache_key(
+            "azure_resource_groups",
+            subscription_id=subscription_id
+        )
+        return await self.set(cache_key, resource_groups, ttl_hours=self.AZURE_RESOURCE_GROUPS_TTL)
     
     def clear_memory_cache(self):
         """Clear in-memory cache (useful for testing or memory management)."""

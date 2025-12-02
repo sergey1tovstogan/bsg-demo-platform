@@ -47,6 +47,7 @@ class NamespacesRequest(BaseModel):
     """Request model for getting AKS namespaces."""
     subscription_id: str = Field(..., description="Azure subscription ID")
     resource_group_names: List[str] = Field(..., description="List of resource group names")
+    refresh: bool = Field(False, description="Force refresh, bypass cache")
 
 
 class ClusterDiagnosticsRequest(BaseModel):
@@ -62,6 +63,18 @@ class CostRequest(BaseModel):
     resource_group_names: List[str] = Field(..., description="List of resource group names")
     start_date: Optional[str] = Field(None, description="Start date in ISO format (YYYY-MM-DD). Defaults to first day of current month")
     end_date: Optional[str] = Field(None, description="End date in ISO format (YYYY-MM-DD). Defaults to current date")
+
+
+class CloudLogsAnalyzeRequest(BaseModel):
+    """Request model for cloud logs analysis."""
+    platform: str = Field(..., description="Platform: 'aks' or 'aca'")
+    component_name: str = Field(..., description="Temenos component name (e.g. transact-app, transact-web, irf-provider)")
+    environment: str = Field(..., description="Environment description (e.g. zkb_poc, dev, test)")
+    log_snippet: str = Field(..., description="Log snippet to analyze (max a few hundred lines)")
+    symptoms: Optional[str] = Field(None, description="Optional symptoms (e.g. COB hangs, API 500s, CrashLoopBackOff)")
+    recent_changes: Optional[str] = Field(None, description="Optional recent changes (deploy, Helm values, DB password, scaling, etc.)")
+    resource_group: Optional[str] = Field(None, description="Azure resource group name")
+    subscription_id: Optional[str] = Field(None, description="Azure subscription ID")
 
 
 def get_azure_service(subscription_id: str) -> AzureService:
@@ -214,12 +227,13 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
 
 
 @router.get("/azure/resource-groups")
-async def get_resource_groups(subscriptionId: str):
+async def get_resource_groups(subscriptionId: str, refresh: bool = False):
     """
     Get all resource groups for a subscription.
     
     Args:
         subscriptionId: Azure subscription ID
+        refresh: If True, bypass cache and fetch fresh data
         
     Returns:
         List of resource groups
@@ -228,13 +242,35 @@ async def get_resource_groups(subscriptionId: str):
         if not subscriptionId:
             raise HTTPException(status_code=400, detail="Subscription ID is required")
         
+        # Check cache first unless refresh is requested
+        from app.services.cache_service import get_cache_service
+        cache_service = await get_cache_service()
+        cached_resource_groups = None
+        if not refresh:
+            cached_resource_groups = await cache_service.get_azure_resource_groups(subscriptionId)
+            if cached_resource_groups:
+                logger.info(f"Using cached resource groups for subscription {subscriptionId}")
+                return {
+                    "status": "success",
+                    "data": cached_resource_groups,
+                    "count": len(cached_resource_groups),
+                    "cached": True
+                }
+        
+        # Fetch fresh data
         azure_service = get_azure_service(subscriptionId)
         resource_groups = await azure_service.get_resource_groups()
+        resource_groups_dict = [rg.to_dict() for rg in resource_groups]
+        
+        # Cache the results
+        await cache_service.set_azure_resource_groups(subscriptionId, resource_groups_dict)
+        logger.info(f"Cached {len(resource_groups_dict)} resource groups for subscription {subscriptionId}")
         
         return {
             "status": "success",
-            "data": [rg.to_dict() for rg in resource_groups],
-            "count": len(resource_groups)
+            "data": resource_groups_dict,
+            "count": len(resource_groups_dict),
+            "cached": False
         }
     except Exception as e:
         logger.error(f"Error getting resource groups: {e}")
@@ -313,18 +349,36 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 "message": "No AKS clusters found in selected resource groups"
             }
         
-        # Check cache for AKS namespaces first
+        # Check cache for AKS namespaces first (unless refresh is requested)
         from app.services.cache_service import get_cache_service
         cache_service = await get_cache_service()
         
-        cached_namespaces = await cache_service.get_aks_namespaces(subscription_id, resource_group_names)
-        if cached_namespaces:
-            logger.info(f"Using cached AKS namespaces for {len(resource_group_names)} resource groups")
-            return {
-                "status": "success",
-                "data": cached_namespaces,
-                "count": len(cached_namespaces)
-            }
+        if not request.refresh:
+            cached_namespaces = await cache_service.get_aks_namespaces(subscription_id, resource_group_names)
+            if cached_namespaces:
+                logger.info(f"Using cached AKS namespaces for {len(resource_group_names)} resource groups")
+                return {
+                    "status": "success",
+                    "data": cached_namespaces,
+                    "count": len(cached_namespaces)
+                }
+        else:
+            logger.info(f"Refresh requested, bypassing cache and clearing old cache for AKS namespaces")
+            # Clear cache for these resource groups to ensure fresh data
+            try:
+                # Generate the same cache key that would be used for this request
+                cache_key = cache_service._generate_cache_key(
+                    "aks_namespaces",
+                    subscription_id=subscription_id,
+                    resource_groups=",".join(sorted(resource_group_names))
+                )
+                deleted = await cache_service.delete(cache_key)
+                if deleted:
+                    logger.info(f"✓ Cleared cache for key: {cache_key}")
+                else:
+                    logger.info(f"No cache entry found for key: {cache_key} (will fetch fresh data)")
+            except Exception as e:
+                logger.warning(f"Failed to clear cache (non-fatal, will continue with fresh fetch): {e}")
         
         # Get namespaces from each cluster
         logger.info(f"Initializing AKS service for subscription: {subscription_id}")
@@ -332,28 +386,53 @@ async def get_aks_namespaces(request: NamespacesRequest):
         cluster_namespaces = {}
         
         logger.info(f"Step 4: Processing {len(aks_clusters)} cluster(s) for namespace discovery...")
+        logger.info(f"Selected resource groups: {resource_group_names}")
+        logger.info(f"AKS clusters found: {[c.name for c in aks_clusters]}")
+        
         for idx, cluster in enumerate(aks_clusters, 1):
+            # CRITICAL: Only process clusters that are in the selected resource groups
+            if cluster.resource_group not in resource_group_names:
+                logger.warning(f"Skipping cluster {cluster.name} - not in selected resource groups. Cluster RG: {cluster.resource_group}, Selected RGs: {resource_group_names}")
+                continue
+                
             try:
                 logger.info("=" * 80)
                 logger.info(f"=== CLUSTER {idx}/{len(aks_clusters)}: {cluster.name} ===")
                 logger.info(f"Cluster type: {cluster.type}")
                 logger.info(f"Cluster ID: {cluster.id}")
                 logger.info(f"Resource Group: {cluster.resource_group}")
+                logger.info(f"Verifying cluster is in selected RGs: {resource_group_names}")
                 logger.info("Calling aks_service.list_cluster_namespaces()...")
                 logger.info("=" * 80)
+                
+                # Dynamically retrieve namespaces from the actual cluster
                 namespaces = await aks_service.list_cluster_namespaces(cluster)
-                logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name}")
+                logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name} in RG {cluster.resource_group}")
                 if namespaces:
-                    logger.info(f"Namespaces: {namespaces[:5]}...")  # Show first 5
+                    logger.info(f"Namespaces retrieved from cluster {cluster.name}: {namespaces}")
                 else:
-                    logger.warning(f"⚠ No namespaces returned for cluster {cluster.name}")
-                logger.info(f"Retrieved {len(namespaces)} namespaces from cluster {cluster.name}")
-                logger.info(f"Namespaces list: {namespaces}")
+                    logger.error(f"⚠ CRITICAL: No namespaces returned for cluster {cluster.name} in RG {cluster.resource_group}")
+                    logger.error("This indicates one of the following issues:")
+                    logger.error("  1. kubectl command failed (check backend logs for kubectl errors)")
+                    logger.error("  2. Cluster credentials not configured or expired")
+                    logger.error("  3. Cluster has no non-system namespaces (unlikely)")
+                    logger.error("  4. Network/connectivity issues to the cluster")
+                    logger.error("  5. Insufficient permissions to list namespaces")
+                    # Return error so frontend knows retrieval failed
+                    cluster_namespaces[cluster.name] = {
+                        "cluster_name": cluster.name,
+                        "resource_group": cluster.resource_group,
+                        "namespaces": [],
+                        "error": "Failed to retrieve namespaces from cluster. Check backend logs for kubectl errors. Ensure cluster credentials are configured (run: az aks get-credentials --resource-group <RG> --name <cluster-name>)."
+                    }
+                    continue
+                
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
                     "resource_group": cluster.resource_group,
                     "namespaces": namespaces
                 }
+                
                 if len(namespaces) == 0:
                     logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
                     logger.warning("  1. kubectl is not installed or not in PATH")
@@ -375,13 +454,35 @@ async def get_aks_namespaces(request: NamespacesRequest):
         
         result_data = list(cluster_namespaces.values())
         
-        # Cache the namespaces
-        await cache_service.set_aks_namespaces(
-            subscription_id,
-            resource_group_names,
-            result_data
-        )
-        logger.info(f"Cached AKS namespaces for {len(resource_group_names)} resource groups")
+        # Check if we have any successful retrievals
+        successful_clusters = [c for c in result_data if c.get("namespaces") and len(c.get("namespaces", [])) > 0]
+        failed_clusters = [c for c in result_data if c.get("error") or not c.get("namespaces") or len(c.get("namespaces", [])) == 0]
+        
+        if failed_clusters:
+            logger.error(f"⚠ {len(failed_clusters)} cluster(s) failed to retrieve namespaces:")
+            for fc in failed_clusters:
+                logger.error(f"  - Cluster: {fc.get('cluster_name')}, RG: {fc.get('resource_group')}, Error: {fc.get('error', 'No namespaces found')}")
+        
+        # Only cache if we successfully retrieved namespaces (don't cache empty/error results)
+        if successful_clusters:
+            await cache_service.set_aks_namespaces(
+                subscription_id,
+                resource_group_names,
+                successful_clusters  # Only cache successful retrievals
+            )
+            logger.info(f"Cached AKS namespaces for {len(successful_clusters)} successful cluster(s)")
+        else:
+            logger.error(f"⚠ CRITICAL: No namespaces retrieved from any cluster! Not caching.")
+            logger.error(f"All {len(result_data)} cluster(s) failed. Check backend logs for kubectl errors.")
+        
+        # Return all results (including errors) so frontend can show appropriate messages
+        return {
+            "status": "success" if successful_clusters else "partial" if result_data else "error",
+            "data": result_data,
+            "count": len(result_data),
+            "successful_clusters": len(successful_clusters),
+            "failed_clusters": len(failed_clusters)
+        }
         
         return {
             "status": "success",
@@ -585,7 +686,17 @@ async def get_resources(request: ResourcesRequest):
                 # Also map 'resourceGroup' to 'resource_group' if needed
                 if 'resourceGroup' in resource_dict and 'resource_group' not in resource_dict:
                     resource_dict['resource_group'] = resource_dict.pop('resourceGroup')
-                resources.append(AzureResource(**resource_dict))
+                # Remove fields that are not in AzureResource constructor (like portalUrl)
+                resource_dict_clean = {
+                    'id': resource_dict.get('id', ''),
+                    'name': resource_dict.get('name', ''),
+                    'resource_type': resource_dict.get('type', resource_dict.get('resource_type', '')),
+                    'location': resource_dict.get('location', ''),
+                    'resource_group': resource_dict.get('resource_group', ''),
+                    'tags': resource_dict.get('tags', {}),
+                    'properties': resource_dict.get('properties', {})
+                }
+                resources.append(AzureResource(**resource_dict_clean))
         else:
             azure_service = get_azure_service(subscription_id)
             resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
@@ -1065,6 +1176,209 @@ async def get_resource_group_costs(request: CostRequest):
                     "Cost data may take 24-48 hours to appear after resource creation"
                 ]
             }
+        )
+
+
+@router.post("/cloud-logs/analyze")
+async def analyze_cloud_logs(request: CloudLogsAnalyzeRequest):
+    """
+    Analyze Temenos cloud logs using AI sub-agent.
+    
+    This endpoint uses the Temenos RAG API to analyze logs from Temenos components
+    deployed on AKS or ACA and provides structured troubleshooting guidance.
+    
+    Args:
+        request: Cloud logs analysis request
+        
+    Returns:
+        Structured analysis result with summary, classification, root causes,
+        recommended actions, and impact assessment
+    """
+    try:
+        # Validate platform
+        if request.platform not in ['aks', 'aca']:
+            raise HTTPException(
+                status_code=400,
+                detail="platform must be 'aks' or 'aca'"
+            )
+        
+        # Construct the analysis prompt based on the sub-agent specification
+        prompt_parts = [
+            "You are the 'Temenos Cloud Logs Analyzer' AI sub-agent.",
+            "",
+            "YOUR ROLE:",
+            "- You analyze and explain logs coming from Temenos core banking components",
+            f"  (e.g. Transact app/web, IRIS/IRF providers, batch/COB services, ingesters, adapters)",
+            f"  deployed on: {request.platform.upper()} ({'Azure Kubernetes Service' if request.platform == 'aks' else 'Azure Container Apps'})",
+            "",
+            "GOAL:",
+            "- Help cloud/DevOps/BSG engineers quickly understand what is going wrong.",
+            "- Propose concrete next troubleshooting steps and Azure / kubectl commands.",
+            "- When possible, map the issue to the most likely infrastructure or application layer.",
+            "",
+            "INPUT PROVIDED:",
+            f"- platform: {request.platform}",
+            f"- component_name: {request.component_name}",
+            f"- environment: {request.environment}",
+            f"- log_snippet: (provided below)",
+            f"- symptoms: {request.symptoms or 'Not specified'}",
+            f"- recent_changes: {request.recent_changes or 'Not specified'}",
+            "",
+            "LOG SNIPPET:",
+            "```",
+            request.log_snippet[:5000],  # Limit log snippet to 5000 chars
+            "```",
+            "",
+            "EXPECTED OUTPUT:",
+            "Respond ALWAYS using the following structure:",
+            "",
+            "1. Short Summary",
+            "- 2–4 sentences explaining in plain language what seems to be the problem.",
+            "",
+            "2. Classification",
+            f"- Platform: {request.platform.upper()}",
+            "- Layer: choose one or more: [Application, Database, Network, Configuration, Resource/Capacity, Azure Platform]",
+            "- Severity: choose one: [Info, Warning, Major, Critical]",
+            "- Category: short tag (e.g. 'DB connection', 'Timeout', 'Authentication', 'CrashLoopBackOff', 'OutOfMemory', 'Config mismatch')",
+            "",
+            "3. Most Likely Root Causes (bullet list)",
+            "- 2–5 bullets with concrete hypotheses linked to specific log lines.",
+            "- For each bullet, quote the minimum necessary log fragment (no more than one line) to justify your reasoning.",
+            "",
+            "4. Recommended Actions for Engineer",
+            "Split by platform:",
+            "",
+            "4.1. Checks to perform",
+            "- Concrete checks, e.g. verify DB connectivity, test DNS resolution, check secret/ConfigMap values, etc.",
+            "",
+            "4.2. Suggested commands",
+            f"- For {request.platform.upper()}, propose specific `{'kubectl' if request.platform == 'aks' else 'az containerapp'}` commands",
+            "- Include placeholders for names (e.g. <NAMESPACE>, <POD_NAME>, <RESOURCE_GROUP>, <CONTAINERAPP_NAME>).",
+            "",
+            "4.3. Possible configuration fixes",
+            "- Suggest which Helm values, environment variables, secrets, or scaling settings the engineer should review.",
+            "- When relevant, mention typical Temenos settings (e.g. DB URL, user, connection pool, JVM heap limits, thread pools)",
+            "  but do NOT invent proprietary values.",
+            "",
+            "5. Impact Assessment",
+            "- Briefly describe how this issue likely impacts the bank:",
+            "  e.g. 'Only COB batch affected', 'Only back-office UI', 'All APIs unavailable', 'Non-critical background job'.",
+            "",
+            "6. If Information Is Insufficient",
+            "- If the logs are not enough to be confident, clearly say what is missing.",
+            "- Ask 2–4 very specific follow-up questions.",
+            "",
+            "STYLE & RULES:",
+            "- Be concise but actionable. Prefer bullet points over long paragraphs.",
+            "- Never fabricate exact configuration values, passwords, or internal hostnames.",
+            "- If you are uncertain, explicitly say so and offer multiple plausible hypotheses.",
+            "- When suggesting commands, always provide them in code blocks.",
+            "- Assume the engineer is familiar with Azure and kubectl, but not necessarily with all Temenos internals.",
+            "",
+            "Now analyze the provided log snippet and respond in the exact structure specified above.",
+            "",
+            "IMPORTANT: Respond in valid JSON format with the following structure:",
+            "{",
+            '  "summary": "2-4 sentence summary",',
+            '  "classification": {',
+            f'    "platform": "{request.platform}",',
+            '    "layer": ["Application"],',
+            '    "severity": "Warning",',
+            '    "category": "category name"',
+            '  },',
+            '  "root_causes": [',
+            '    {"hypothesis": "...", "log_evidence": "..."}',
+            '  ],',
+            '  "recommended_actions": {',
+            '    "checks": ["check1", "check2"],',
+            f'    "commands": {{"{request.platform}": ["command1", "command2"]}},',
+            '    "configuration_fixes": ["fix1", "fix2"]',
+            '  },',
+            '  "impact_assessment": "impact description",',
+            '  "insufficient_info": {',
+            '    "message": "if info is insufficient (optional)",',
+            '    "follow_up_questions": ["q1", "q2"]',
+            '  }',
+            '}'
+        ]
+        
+        analysis_prompt = "\n".join(prompt_parts)
+        
+        # Call RAG API with the analysis prompt
+        temenos_service = TemenosService()
+        rag_result = await temenos_service.query_rag(
+            question=analysis_prompt,
+            region="global",
+            rag_model_id="ModularBanking, TechnologyOverview",
+            context=f"Analyzing logs from {request.component_name} component in {request.environment} environment on {request.platform.upper()}. "
+                   f"Resource group: {request.resource_group or 'Not specified'}. "
+                   f"Symptoms: {request.symptoms or 'Not specified'}. "
+                   f"Recent changes: {request.recent_changes or 'Not specified'}. "
+                   f"IMPORTANT: Provide actionable, professional guidance. If specific details are not available, focus on general best practices, "
+                   f"common troubleshooting approaches, and standard Azure/kubectl commands that would apply to similar scenarios. "
+                   f"Avoid phrases like 'I cannot provide' or 'information not available' - instead provide helpful, constructive guidance."
+        )
+        
+        # Parse the RAG response
+        answer = rag_result.get("data", {}).get("answer", rag_result.get("answer", ""))
+        
+        # Try to extract and parse JSON from the response
+        import json
+        import re
+        
+        try:
+            # Try to extract JSON from the response (look for JSON object)
+            json_match = re.search(r'\{[\s\S]*\}', answer, re.MULTILINE)
+            if json_match:
+                json_str = json_match.group()
+                parsed_result = json.loads(json_str)
+                # Ensure all required fields are present
+                if "summary" in parsed_result and "classification" in parsed_result:
+                    return {
+                        "status": "success",
+                        "data": parsed_result
+                    }
+        except (json.JSONDecodeError, AttributeError, KeyError) as e:
+            logger.warning(f"Failed to parse JSON from RAG response: {e}. Using fallback structure.")
+        
+        # Fallback: Return structured format with full analysis text
+        # Frontend can parse or display the full text
+        return {
+            "status": "success",
+            "data": {
+                "summary": answer.split('\n')[0] if answer else "Analysis completed. Please review the full analysis text.",
+                "classification": {
+                    "platform": request.platform,
+                    "layer": ["Application", "Infrastructure"],
+                    "severity": "Warning",
+                    "category": "Log Analysis"
+                },
+                "root_causes": [
+                    {
+                        "hypothesis": "See full analysis below for detailed root cause analysis",
+                        "log_evidence": "Refer to log snippet provided in the request"
+                    }
+                ],
+                "recommended_actions": {
+                    "checks": ["Review full analysis text for specific checks to perform"],
+                    "commands": {
+                        request.platform: ["See full analysis text for specific commands"]
+                    },
+                    "configuration_fixes": ["See full analysis text for configuration recommendations"]
+                },
+                "impact_assessment": "See full analysis text for impact assessment",
+                "full_analysis": answer,
+                "note": "Structured JSON parsing unavailable. Full analysis text provided. The AI sub-agent response is in the 'full_analysis' field."
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cloud logs analysis error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to analyze cloud logs: {str(e)}"
         )
 
 

@@ -21,6 +21,7 @@ interface SidebarProps {
   onComponentChange?: (componentId: ComponentId) => void
   onHomeClick?: () => void
   onSettingsClick?: () => void
+  onCollapseRef?: (collapseFn: () => void) => void
 }
 
 interface ComponentCard {
@@ -87,22 +88,48 @@ export function Sidebar({
   currentComponent,
   onComponentChange,
   onHomeClick,
-  onSettingsClick
+  onSettingsClick,
+  onCollapseRef
 }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const [hovered, setHovered] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(true) // Start collapsed
+  const [lastInteractionTime, setLastInteractionTime] = useState(Date.now())
 
-  // Auto-hide after 5 seconds of inactivity (when mouse leaves)
+  // Expose collapse function to parent component
   useEffect(() => {
-    if (!hovered && !isCollapsed) {
+    if (onCollapseRef) {
+      onCollapseRef(() => {
+        setIsCollapsed(true)
+      })
+    }
+  }, [onCollapseRef])
+
+  // Auto-hide after 5 seconds of inactivity
+  useEffect(() => {
+    if (!isCollapsed) {
       const timer = setTimeout(() => {
         setIsCollapsed(true)
       }, 5000)
       return () => clearTimeout(timer)
     }
-  }, [hovered, isCollapsed])
+  }, [isCollapsed, lastInteractionTime])
 
-  const isExpanded = hovered || !isCollapsed
+  // Reset auto-hide timer when sidebar is expanded
+  const handleToggle = () => {
+    const newState = !isCollapsed
+    setIsCollapsed(newState)
+    if (!newState) {
+      setLastInteractionTime(Date.now())
+    }
+  }
+
+  // Track interactions to reset auto-hide timer
+  const handleInteraction = () => {
+    if (!isCollapsed) {
+      setLastInteractionTime(Date.now())
+    }
+  }
+
+  const isExpanded = !isCollapsed
 
   // Update body data attribute to adjust main content margin
   useEffect(() => {
@@ -116,15 +143,14 @@ export function Sidebar({
         "bg-slate-900/95 backdrop-blur-xl border-r border-white/10 shadow-2xl",
         isExpanded ? "w-72" : "w-20"
       )}
-      onMouseEnter={() => {
-        setHovered(true)
-        setIsCollapsed(false)
-      }}
-      onMouseLeave={() => setHovered(false)}
+      onClick={handleInteraction}
     >
       {/* Toggle Button */}
       <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        onClick={(e) => {
+          e.stopPropagation()
+          handleToggle()
+        }}
         className="absolute -right-3 top-20 bg-blue-600 text-white p-1.5 rounded-full shadow-lg shadow-blue-500/30 hover:bg-blue-500 transition-all z-10 border-2 border-slate-900"
         title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
@@ -163,7 +189,11 @@ export function Sidebar({
       <nav className="flex-1 flex flex-col px-3 space-y-2 overflow-y-auto custom-scrollbar mt-4">
         {/* Home Button */}
         <button
-          onClick={onHomeClick}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleInteraction()
+            onHomeClick?.()
+          }}
           className={clsx(
             "group relative flex items-center rounded-xl transition-all duration-200",
             isExpanded ? "px-4 py-3 space-x-3" : "justify-center p-3",
@@ -195,7 +225,11 @@ export function Sidebar({
             return (
               <button
                 key={component.id}
-                onClick={() => onComponentChange?.(component.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleInteraction()
+                  onComponentChange?.(component.id)
+                }}
                 className={clsx(
                   "group relative w-full flex items-center rounded-xl transition-all duration-200",
                   isExpanded ? "px-4 py-3 text-left" : "justify-center p-3",
@@ -236,7 +270,11 @@ export function Sidebar({
       {/* Bottom Actions */}
       <div className="p-4 border-t border-white/10 space-y-2">
         <button
-          onClick={onSettingsClick}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleInteraction()
+            onSettingsClick?.()
+          }}
           className={clsx(
             "w-full flex items-center rounded-xl transition-all duration-200 text-slate-400 hover:bg-white/5 hover:text-white",
             isExpanded ? "px-4 py-3 space-x-3" : "justify-center p-3"
@@ -247,6 +285,10 @@ export function Sidebar({
           {isExpanded && <span className="text-sm font-medium">Settings</span>}
         </button>
         <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleInteraction()
+          }}
           className={clsx(
             "w-full flex items-center rounded-xl transition-all duration-200 text-slate-400 hover:bg-white/5 hover:text-red-400",
             isExpanded ? "px-4 py-3 space-x-3" : "justify-center p-3"
