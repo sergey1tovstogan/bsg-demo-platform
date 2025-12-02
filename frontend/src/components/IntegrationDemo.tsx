@@ -5,7 +5,7 @@ import { ApiKeyModal } from './ApiKeyModal'
 
 interface ApiResult {
   status?: number
-  data?: unknown
+  data?: Record<string, unknown> | unknown[] | null
   error?: string
   loading: boolean
 }

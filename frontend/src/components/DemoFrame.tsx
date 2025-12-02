@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Code2, Radio, Database as DatabaseIcon, Loader2 } from 'lucide-react'
 import { apiService } from '../services/api'
-import type { ComponentId, DemoConfig, DemoSession } from '../types'
+import type { ComponentId } from '../types'
 import { DatabaseRecords } from './DatabaseRecords'
 import { ObservabilityDemo } from './observability/ObservabilityDemo'
 import { IntegrationDemo } from './IntegrationDemo'
