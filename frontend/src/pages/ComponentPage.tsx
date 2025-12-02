@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BookOpen, Video, MessageSquare, Play } from 'lucide-react'
 import { ContentViewer } from '../components/ContentViewer'
 import { VideoPlayer } from '../components/VideoPlayer'
@@ -13,12 +13,21 @@ import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
   componentId: ComponentId
+  initialSelectedCard?: number // For security component sub-sections
+  initialTab?: 'content' | 'video' | 'demo' | 'chatbot' // For specific tabs
 }
 
 type Tab = 'content' | 'video' | 'demo' | 'chatbot'
 
-export function ComponentPage({ componentId }: ComponentPageProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('content')
+export function ComponentPage({ componentId, initialSelectedCard, initialTab }: ComponentPageProps) {
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'content')
+  
+  // Update activeTab when initialTab prop changes
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab)
+    }
+  }, [initialTab])
 
   // For deployment component, exclude video tab and rename chatbot
   const tabs = componentId === 'deployment' 
@@ -69,7 +78,7 @@ export function ComponentPage({ componentId }: ComponentPageProps) {
           ) : componentId === 'design-time' ? (
             <DesignTimeContentViewer />
           ) : (
-            <ContentViewer componentId={componentId} />
+            <ContentViewer componentId={componentId} initialSelectedCard={initialSelectedCard} />
           )
         )}
         {activeTab === 'video' && <VideoPlayer componentId={componentId} />}
