@@ -381,7 +381,7 @@ export function ApiOverview() {
     <div className="card">
       {/* Title */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#283054]">API Overview</h2>
+        <h2 className="text-2xl font-bold text-[#283054] dark:text-white">API Overview</h2>
       </div>
 
       {/* API Framework Diagram */}
@@ -418,7 +418,7 @@ export function ApiOverview() {
         <div className="w-[30%] p-6 space-y-4 z-10 flex flex-col justify-center">
           {/* API Icon & Text */}
           <div
-            className={`bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'expose-data' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'expose-data' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('expose-data')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('expose-data')}
@@ -428,7 +428,7 @@ export function ApiOverview() {
                 <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
                   <svg className="w-full h-full p-1.5" viewBox="0 0 100 100" fill="none">
                     {/* Clean symmetrical gear with 8 teeth */}
-                    <path fill="white" d="M50,10 L53,10 L53,18 L58,18 L61,14 L63.5,16.5 L59.5,20.5 L65,26 L69,22 L71.5,24.5 L67.5,28.5 L73,34 L77,30 L79.5,32.5 L75.5,36.5 L82,42 L82,47 L90,47 L90,53 L82,53 L82,58 L86,61 L83.5,63.5 L79.5,59.5 L74,65 L78,69 L75.5,71.5 L71.5,67.5 L66,73 L70,77 L67.5,79.5 L63.5,75.5 L58,82 L53,82 L53,90 L47,90 L47,82 L42,82 L39,86 L36.5,83.5 L40.5,79.5 L35,74 L31,78 L28.5,75.5 L32.5,71.5 L27,66 L23,70 L20.5,67.5 L24.5,63.5 L18,58 L18,53 L10,53 L10,47 L18,47 L18,42 L14,39 L16.5,36.5 L20.5,40.5 L26,35 L22,31 L24.5,28.5 L28.5,32.5 L34,27 L30,23 L32.5,20.5 L36.5,24.5 L42,18 L47,18 L47,10 Z M50,28 A22,22 0 1,0 50,72 A22,22 0 1,0 50,28 Z"/>
+                    <path fill="white" d="M50,10 L53,10 L53,18 L58,18 L61,14 L63.5,16.5 L59.5,20.5 L65,26 L69,22 L71.5,24.5 L67.5,28.5 L73,34 L77,30 L79.5,32.5 L75.5,36.5 L82,42 L82,47 L90,47 L90,53 L82,53 L82,58 L86,61 L83.5,63.5 L79.5,59.5 L74,65 L78,69 L75.5,71.5 L71.5,67.5 L66,73 L70,77 L67.5,79.5 L63.5,75.5 L58,82 L53,82 L53,90 L47,90 L47,82 L42,82 L39,86 L36.5,83.5 L40.5,79.5 L35,74 L31,78 L28.5,75.5 L32.5,71.5 L27,66 L23,70 L20.5,67.5 L24.5,63.5 L18,58 L18,53 L10,53 L10,47 L18,47 L18,42 L14,39 L16.5,36.5 L20.5,40.5 L26,35 L22,31 L24.5,28.5 L28.5,32.5 L34,27 L30,23 L32.5,20.5 L36.5,24.5 L42,18 L47,18 L47,10 Z M50,28 A22,22 0 1,0 50,72 A22,22 0 1,0 50,28 Z" />
                     {/* Inner circle for text - purple background */}
                     <circle cx="50" cy="50" r="16" fill="#7C3AED" />
                     {/* API text - white */}
@@ -437,15 +437,15 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Expose data & business</h3>
-                <p className="text-base font-bold text-purple-700 leading-tight">capabilities as REST APIs</p>
+                <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">Expose data & business</h3>
+                <p className="text-base font-bold text-purple-700 dark:text-purple-400 leading-tight">capabilities as REST APIs</p>
               </div>
             </div>
           </div>
 
           {/* Shopping Cart Icon & Text - Public API Catalog */}
           <div
-            className={`bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative group ${pinnedTooltip === 'api-catalog' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative group ${pinnedTooltip === 'api-catalog' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('api-catalog')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('api-catalog')}
@@ -468,15 +468,15 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Public API Catalog</h3>
-                <p className="text-base font-bold text-purple-700 leading-tight">and documentation</p>
+                <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">Public API Catalog</h3>
+                <p className="text-base font-bold text-purple-700 dark:text-purple-400 leading-tight">and documentation</p>
               </div>
             </div>
           </div>
 
           {/* Open Standards Icon & Text */}
           <div
-            className={`bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'open-standards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'open-standards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('open-standards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('open-standards')}
@@ -490,7 +490,7 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight mb-2">Open standards and tooling</h3>
+                <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight mb-2">Open standards and tooling</h3>
                 <div className="flex items-center space-x-4 mt-2">
                   <img
                     src="/images/berlingroupe.jpg"
@@ -522,9 +522,9 @@ export function ApiOverview() {
           {/* API Schema Diagram - Two boxes with U-shaped connection */}
           <div className="relative flex flex-col items-center justify-center" style={{ minHeight: '200px', gap: '38px' }}>
             {/* Bank's System Box - spans width of both columns */}
-            <div className="bg-white rounded-lg shadow-md border-2 border-[#097BED]" style={{ width: '320px', padding: '11px 16px' }}>
-              <div className="text-center text-base font-semibold text-[#283054] leading-tight">
-                Bank's system<br/>
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md border-2 border-[#097BED]" style={{ width: '320px', padding: '11px 16px' }}>
+              <div className="text-center text-base font-semibold text-[#283054] dark:text-slate-200 leading-tight">
+                Bank's system<br />
                 <span className="text-xs">(channel, real-time interface, etc.)</span>
               </div>
             </div>
@@ -583,14 +583,14 @@ export function ApiOverview() {
                 </div>
 
                 {/* Temenos Business Logic Box */}
-                <div className="bg-white rounded-lg p-2.5 shadow-md border-2 border-[#097BED]" style={{ minWidth: '150px' }}>
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED]" style={{ minWidth: '150px' }}>
                   <div className="text-center">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#097BED] to-[#0868CC] rounded-lg flex items-center justify-center mx-auto mb-1 shadow-sm">
                       <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                         <path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                       </svg>
                     </div>
-                    <div className="text-xs font-semibold text-[#283054] leading-tight">Temenos<br/>Business Logic</div>
+                    <div className="text-xs font-semibold text-[#283054] dark:text-slate-200 leading-tight">Temenos<br />Business Logic</div>
                   </div>
                 </div>
               </div>
@@ -661,14 +661,14 @@ export function ApiOverview() {
                 </div>
 
                 {/* Business Microservices Box */}
-                <div className="bg-white rounded-lg p-2.5 shadow-md border-2 border-[#097BED]" style={{ minWidth: '150px' }}>
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED]" style={{ minWidth: '150px' }}>
                   <div className="text-center">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#097BED] to-[#0868CC] rounded-lg flex items-center justify-center mx-auto mb-1 shadow-sm">
                       <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                         <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
                       </svg>
                     </div>
-                    <div className="text-xs font-semibold text-[#283054] leading-tight">Business<br/>Microservices</div>
+                    <div className="text-xs font-semibold text-[#283054] dark:text-slate-200 leading-tight">Business<br />Microservices</div>
                   </div>
                 </div>
               </div>
@@ -680,7 +680,7 @@ export function ApiOverview() {
         <div className="w-[30%] p-6 space-y-4 z-10 flex flex-col justify-center">
           {/* Desktop/Wizard Icon & Text */}
           <div
-            className={`bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'graphical-wizards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'graphical-wizards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('graphical-wizards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('graphical-wizards')}
@@ -697,15 +697,15 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Graphical wizards for better</h3>
-                <p className="text-base font-bold text-purple-700 leading-tight">productivity</p>
+                <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">Graphical wizards for better</h3>
+                <p className="text-base font-bold text-purple-700 dark:text-purple-400 leading-tight">productivity</p>
               </div>
             </div>
           </div>
 
           {/* Security Shield Icon & Text */}
           <div
-            className={`bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'security-standards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'security-standards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('security-standards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('security-standards')}
@@ -720,15 +720,15 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Security standards for data</h3>
-                <p className="text-base font-bold text-purple-700 leading-tight">privacy and authentication</p>
+                <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">Security standards for data</h3>
+                <p className="text-base font-bold text-purple-700 dark:text-purple-400 leading-tight">privacy and authentication</p>
               </div>
             </div>
           </div>
 
           {/* Upgradability Icon & Text */}
           <div
-            className={`bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'upgradability' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'upgradability' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('upgradability')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('upgradability')}
@@ -744,13 +744,13 @@ export function ApiOverview() {
                 </div>
               </div>
               <div className="flex-1 min-w-0 flex items-center justify-between">
-                <h3 className="text-base font-bold text-[#1a1f3a] leading-tight">Upgradability and versioning</h3>
+                <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">Upgradability and versioning</h3>
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowApiVersioning(true)
                   }}
-                  className="text-purple-600 hover:text-purple-800 transition-colors ml-2"
+                  className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors ml-2"
                   title="View API Versioning details"
                 >
                   <Link className="w-5 h-5" />
@@ -779,22 +779,22 @@ export function ApiOverview() {
           }
         }}
       >
-        <div className="p-4 bg-white border-2 border-purple-500 rounded-lg shadow-lg text-sm">
+        <div className="p-4 bg-white dark:bg-slate-800 border-2 border-purple-500 rounded-lg shadow-lg text-sm">
           <div className="flex items-start space-x-2">
             <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               {showKafkaTooltip && (
                 <div>
-                  <h3 className="font-bold text-purple-900 mb-2">
+                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
                     Kafka - Event-Driven Architecture
                   </h3>
                   {kafkaTooltipLoading ? (
-                    <div className="flex items-center space-x-2 text-gray-600">
+                    <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Loading Kafka capabilities from RAG...</span>
                     </div>
                   ) : (
-                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                    <p className="text-gray-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                       {kafkaTooltipContent}
                     </p>
                   )}
@@ -802,23 +802,23 @@ export function ApiOverview() {
               )}
               {activeTooltip && !showKafkaTooltip && (
                 <div>
-                  <h3 className="font-bold text-purple-900 mb-2">
+                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
                     {tooltips.find(t => t.id === activeTooltip)?.title}
                   </h3>
-                  <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                  <div className="text-gray-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                     {renderMarkdownContent(tooltips.find(t => t.id === activeTooltip)?.description || '')}
                   </div>
                 </div>
               )}
               {!activeTooltip && !showKafkaTooltip && (
-                <p className="text-gray-600 italic">Hover over a feature card or the kafka box to see details</p>
+                <p className="text-gray-600 dark:text-slate-400 italic">Hover over a feature card or the kafka box to see details</p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      <p className="text-sm text-[#4A5568] mt-4">
+      <p className="text-sm text-[#4A5568] dark:text-slate-400 mt-4">
         Integration architecture and API endpoints overview
         <span className="ml-2 text-purple-600 text-xs font-medium">(Hover over feature cards or the kafka box for more details)</span>
       </p>

@@ -27,7 +27,7 @@ export const ModernAuthorization: React.FC = () => {
     };
 
     return (
-        <div className="w-full h-full bg-slate-50 dark:bg-slate-900 rounded-xl relative overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 p-8">
+        <div className="w-full h-full bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800 p-8">
             {/* Background Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
                 style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
@@ -35,11 +35,11 @@ export const ModernAuthorization: React.FC = () => {
 
             {/* Header */}
             <div className="relative z-10 mb-8 text-center">
-                <div className="inline-flex items-center gap-3 bg-white dark:bg-slate-800 px-6 py-2 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 mb-4">
+                <div className="inline-flex items-center gap-3 bg-white dark:bg-slate-800 px-6 py-2 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 mb-4">
                     <Shield className="w-6 h-6 text-emerald-500" />
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">Temenos Authorization</h2>
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 dark:text-white">Temenos Authorization</h2>
                 </div>
-                <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                <p className="text-slate-600 dark:text-slate-300 dark:text-slate-400 max-w-2xl mx-auto">
                     Role-Based Access Control (RBAC) and Organizational Hierarchy for granular permission management.
                 </p>
             </div>
@@ -47,7 +47,7 @@ export const ModernAuthorization: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100%-100px)] relative z-10">
                 {/* Left Column: User -> Role Flow */}
                 <div className="flex flex-col gap-6">
-                    <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 h-full relative group">
+                    <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group">
                         <div className="absolute -top-3 left-6 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-4 py-1 rounded-full text-sm font-bold border border-emerald-200 dark:border-emerald-800">
                             Access Flow
                         </div>
@@ -55,15 +55,15 @@ export const ModernAuthorization: React.FC = () => {
                         <div className="flex flex-col justify-center h-full gap-8">
                             {/* User Step */}
                             <div
-                                className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 hover:border-emerald-500 transition-all duration-300 cursor-help"
+                                className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 dark:border-slate-700 hover:border-emerald-500 transition-all duration-300 cursor-help"
                                 onMouseEnter={() => setActiveTooltip('user-role')}
                                 onMouseLeave={() => setActiveTooltip(null)}
                             >
-                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                                <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-lg">
                                     <User className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-800 dark:text-white">User Identity</h3>
+                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 dark:text-white">User Identity</h3>
                                     <p className="text-sm text-slate-500 dark:text-slate-400">Authenticated Entity</p>
                                 </div>
                                 <ArrowRight className="ml-auto text-slate-300" />
@@ -76,15 +76,15 @@ export const ModernAuthorization: React.FC = () => {
 
                             {/* Role Step */}
                             <div
-                                className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 hover:border-emerald-500 transition-all duration-300 cursor-help"
+                                className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 dark:border-slate-700 hover:border-emerald-500 transition-all duration-300 cursor-help"
                                 onMouseEnter={() => setActiveTooltip('user-role')}
                                 onMouseLeave={() => setActiveTooltip(null)}
                             >
-                                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                                <div className="p-3 bg-purple-100 dark:bg-purple-800 dark:bg-purple-900/30 rounded-lg">
                                     <UserCog className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-800 dark:text-white">Assigned Roles</h3>
+                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 dark:text-white">Assigned Roles</h3>
                                     <p className="text-sm text-slate-500 dark:text-slate-400">Defined Permissions</p>
                                 </div>
                                 <ArrowRight className="ml-auto text-slate-300" />
@@ -111,24 +111,24 @@ export const ModernAuthorization: React.FC = () => {
 
                 {/* Right Column: Hierarchy */}
                 <div className="flex flex-col gap-6">
-                    <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 h-full relative group">
-                        <div className="absolute -top-3 left-6 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-1 rounded-full text-sm font-bold border border-blue-200 dark:border-blue-800">
+                    <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group">
+                        <div className="absolute -top-3 left-6 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-1 rounded-full text-sm font-bold border border-blue-200 dark:border-blue-800">
                             Hierarchy Inheritance
                         </div>
 
-                        <div className="flex flex-col justify-center h-full gap-4 pl-8 border-l-2 border-slate-200 dark:border-slate-700 ml-4">
+                        <div className="flex flex-col justify-center h-full gap-4 pl-8 border-l-2 border-slate-200 dark:border-slate-700 dark:border-slate-700 ml-4">
                             {/* Company Level */}
                             <div
-                                className="relative flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all duration-300 cursor-help ml-0"
+                                className="relative flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 dark:border-slate-700 hover:border-blue-500 transition-all duration-300 cursor-help ml-0"
                                 onMouseEnter={() => setActiveTooltip('hierarchy')}
                                 onMouseLeave={() => setActiveTooltip(null)}
                             >
                                 <div className="absolute -left-[34px] top-1/2 -translate-y-1/2 w-8 h-0.5 bg-slate-200 dark:bg-slate-700"></div>
-                                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                                <div className="p-3 bg-indigo-100 dark:bg-indigo-800 dark:bg-indigo-900/30 rounded-lg">
                                     <Building2 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-800 dark:text-white">Company</h3>
+                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 dark:text-white">Company</h3>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">Global Policies</p>
                                 </div>
                                 <Lock className="w-4 h-4 text-slate-400 ml-auto" />
@@ -136,17 +136,17 @@ export const ModernAuthorization: React.FC = () => {
 
                             {/* Department Level */}
                             <div
-                                className="relative flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all duration-300 cursor-help ml-8"
+                                className="relative flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 dark:border-slate-700 hover:border-blue-500 transition-all duration-300 cursor-help ml-8"
                                 onMouseEnter={() => setActiveTooltip('hierarchy')}
                                 onMouseLeave={() => setActiveTooltip(null)}
                             >
                                 <div className="absolute -left-[34px] top-1/2 -translate-y-1/2 w-8 h-0.5 bg-slate-200 dark:bg-slate-700"></div>
                                 <div className="absolute -left-[34px] -top-[4.5rem] bottom-1/2 w-0.5 bg-slate-200 dark:bg-slate-700"></div>
-                                <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                                <div className="p-3 bg-cyan-100 dark:bg-cyan-800 dark:bg-cyan-900/30 rounded-lg">
                                     <Briefcase className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-800 dark:text-white">Department</h3>
+                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 dark:text-white">Department</h3>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">Dept. Specifics</p>
                                 </div>
                                 <Lock className="w-4 h-4 text-slate-400 ml-auto" />
@@ -154,7 +154,7 @@ export const ModernAuthorization: React.FC = () => {
 
                             {/* Group Level */}
                             <div
-                                className="relative flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all duration-300 cursor-help ml-16"
+                                className="relative flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 dark:border-slate-700 hover:border-blue-500 transition-all duration-300 cursor-help ml-16"
                                 onMouseEnter={() => setActiveTooltip('hierarchy')}
                                 onMouseLeave={() => setActiveTooltip(null)}
                             >
@@ -164,7 +164,7 @@ export const ModernAuthorization: React.FC = () => {
                                     <Users className="w-6 h-6 text-teal-600 dark:text-teal-400" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-800 dark:text-white">Group</h3>
+                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 dark:text-white">Group</h3>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">Team Access</p>
                                 </div>
                                 <Lock className="w-4 h-4 text-slate-400 ml-auto" />
@@ -183,11 +183,11 @@ export const ModernAuthorization: React.FC = () => {
                         exit={{ opacity: 0, y: 20 }}
                         className="absolute bottom-6 left-6 right-6 z-50 pointer-events-none"
                     >
-                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
-                            <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
+                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-700">
+                            <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 dark:text-white mb-2">
                                 {tooltips[activeTooltip as keyof typeof tooltips].title}
                             </h4>
-                            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                            <p className="text-slate-600 dark:text-slate-300 dark:text-slate-300 leading-relaxed">
                                 {tooltips[activeTooltip as keyof typeof tooltips].description}
                             </p>
                         </div>
@@ -197,3 +197,5 @@ export const ModernAuthorization: React.FC = () => {
         </div>
     );
 };
+
+

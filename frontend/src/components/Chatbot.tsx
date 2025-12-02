@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, Loader2, Bot, User } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { ComponentId, ChatMessage } from '../types'
@@ -17,8 +17,9 @@ export function Chatbot({ componentId }: ChatbotProps) {
   const [initializing, setInitializing] = useState(true)
   const [chatError, setChatError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const sessionIdRef = useRef<string | null>(null)
 
-  const initializeSession = async () => {
+  const initializeSession = useCallback(async () => {
     try {
       setInitializing(true)
       setChatError(null)
@@ -26,11 +27,13 @@ export function Chatbot({ componentId }: ChatbotProps) {
         topic: componentId,
         user_level: 'beginner',
       })
-      setSessionId(response.data.session_id)
+      const newSessionId = response.data.session_id
+      setSessionId(newSessionId)
+      sessionIdRef.current = newSessionId
 
-      if (response.data.session_id) {
+      if (newSessionId) {
         try {
-          const historyResponse = await apiService.getChatHistory(componentId, response.data.session_id)
+          const historyResponse = await apiService.getChatHistory(componentId, newSessionId)
           setMessages(historyResponse.data.messages || [])
         } catch {
           // No history yet
@@ -39,30 +42,33 @@ export function Chatbot({ componentId }: ChatbotProps) {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize chat session'
       setChatError(errorMessage)
+      console.error('Failed to initialize chat session:', err)
     } finally {
       setInitializing(false)
     }
-  }
+  }, [componentId])
 
   // Initialize chat session only for non-security components
   useEffect(() => {
     if (componentId !== 'security') {
       initializeSession()
       return () => {
-        if (sessionId) {
-          apiService.deleteChatSession(componentId, sessionId).catch(console.error)
+        // Cleanup: delete session on unmount
+        const currentSessionId = sessionIdRef.current
+        if (currentSessionId) {
+          apiService.deleteChatSession(componentId, currentSessionId).catch(console.error)
         }
       }
     } else {
       setInitializing(false)
     }
-  }, [componentId, initializeSession, sessionId])
+  }, [componentId, initializeSession])
 
   useEffect(() => {
     if (componentId !== 'security') {
       scrollToBottom()
     }
-  }, [messages])
+  }, [messages, componentId])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

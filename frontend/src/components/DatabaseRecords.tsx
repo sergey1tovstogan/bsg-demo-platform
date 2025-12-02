@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   RefreshCw,
   Database as DatabaseIcon,
@@ -45,7 +45,7 @@ export function DatabaseRecords({ componentId: _componentId }: DatabaseRecordsPr
   const [limit] = useState(100)
   const [offset, setOffset] = useState(0)
 
-  const loadTableData = async () => {
+  const loadTableData = useCallback(async () => {
     if (!selectedTable) return
 
     try {
@@ -80,7 +80,7 @@ export function DatabaseRecords({ componentId: _componentId }: DatabaseRecordsPr
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedTable, limit, offset])
 
   useEffect(() => {
     testConnection()

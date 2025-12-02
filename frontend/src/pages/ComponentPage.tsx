@@ -8,6 +8,7 @@ import { ObservabilityContent } from '../components/observability/ObservabilityC
 import { DeploymentAnalyzer } from '../components/deployment/DeploymentAnalyzer'
 import { DeploymentContentViewer } from '../components/deployment/DeploymentContentViewer'
 import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
+import { DesignTimeContentViewer } from '../components/design-time/DesignTimeContentViewer'
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
@@ -65,6 +66,8 @@ export function ComponentPage({ componentId }: ComponentPageProps) {
             <DeploymentContentViewer />
           ) : componentId === 'data-architecture' ? (
             <DataArchitectureContent />
+          ) : componentId === 'design-time' ? (
+            <DesignTimeContentViewer />
           ) : (
             <ContentViewer componentId={componentId} />
           )
