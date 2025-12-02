@@ -625,9 +625,9 @@ export function DataArchitectureContent() {
   }
 
   return (
-    <div className="h-[calc(100vh-10rem)] flex flex-col space-y-4">
+    <div className="h-[calc(100vh-8rem)] flex flex-col space-y-3">
       {/* Merged Controls Panel with Description */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 md:p-6 space-y-4 flex-shrink-0">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 md:p-4 space-y-3 flex-shrink-0">
         {/* Description at top */}
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-center text-sm md:text-base">
           Visualizing data flow patterns in Temenos architecture. Select a path and watch how data moves through the system.
@@ -726,18 +726,34 @@ export function DataArchitectureContent() {
       </div>
 
       {/* Diagram Canvas - Dynamically expands to fill available space */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 md:p-6 flex-1 flex flex-col min-h-0">
-        {/* Responsive Container with specified styling */}
-        <div className="overflow-auto flex justify-center items-center h-full" style={{ scrollbarWidth: 'thin' }}>
-          <div className="relative rounded-lg border-2 p-3 md:p-4 transition-all duration-300"
-               style={{
-                 width: 'min(1200px, 100%)',
-                 height: 'min(520px, calc(100vh - 20rem))',
-                 maxWidth: '100%',
-                 backgroundColor: '#F4F4F6',
-                 borderColor: '#3CB5A6',
-                 borderRadius: '8px'
-               }}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-2 md:p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Responsive Container with specified styling - no scroll, scales to fit */}
+        <div className="flex justify-center items-center h-full w-full overflow-hidden">
+          <div 
+            className="relative rounded-lg border-2 p-2 md:p-4 transition-all duration-300"
+            style={{
+              width: '1200px',
+              height: '520px',
+              backgroundColor: '#F4F4F6',
+              borderColor: '#3CB5A6',
+              borderRadius: '8px',
+              transform: 'scale(1)',
+              transformOrigin: 'center center',
+              maxWidth: '100%',
+              maxHeight: '100%'
+            }}
+            ref={(el) => {
+              if (el && el.parentElement) {
+                const parent = el.parentElement
+                const parentWidth = parent.clientWidth
+                const parentHeight = parent.clientHeight
+                const scaleX = Math.min(1, (parentWidth - 16) / 1200)
+                const scaleY = Math.min(1, (parentHeight - 16) / 520)
+                const scale = Math.min(scaleX, scaleY)
+                el.style.transform = `scale(${scale})`
+              }
+            }}
+          >
           {/* Content area for components */}
 
           {/* SVG Layer for Arrows and Data Flow Dots */}
