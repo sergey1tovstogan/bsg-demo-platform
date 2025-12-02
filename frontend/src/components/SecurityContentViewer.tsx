@@ -1414,385 +1414,7 @@ const eXateHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
-// Platform Management HTML Content
-const PlatformManagementHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Platform Management</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background: #f5f5f5;
-            width: 100vw;
-            height: 100vh;
-            overflow: auto;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
-        
-        .header-label {
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            color: #283054;
-            margin-bottom: 25px;
-            padding: 10px;
-            width: 100%;
-        }
-        
-        .intro-statements {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 30px;
-            padding: 0 20px;
-        }
-        
-        .intro-statement {
-            font-size: 16px;
-            color: #333;
-            line-height: 1.6;
-        }
-        
-        .main-container {
-            display: flex;
-            flex: 1;
-            gap: 0;
-            min-height: 0;
-            position: relative;
-        }
-        
-        .divider {
-            width: 2px;
-            background-color: #000;
-            flex-shrink: 0;
-        }
-        
-        .section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 0 20px;
-        }
-        
-        .section-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 12px;
-        }
-        
-        .section-description {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-        
-        .arrow-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 15px;
-        }
-        
-        .arrow {
-            width: 0;
-            height: 0;
-            border-left: 12px solid transparent;
-            border-right: 12px solid transparent;
-            border-top: 25px solid #8B5CF6;
-        }
-        
-        .content-box {
-            background: #B0E0E6;
-            border: 2px solid #87CEEB;
-            border-radius: 6px;
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            min-height: 150px;
-        }
-        
-        .content-item {
-            font-size: 14px;
-            color: #333;
-            line-height: 1.5;
-        }
-        
-        .exate-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #EF4444;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            transition: background-color 0.3s ease;
-        }
-        
-        .exate-button:hover {
-            background-color: #DC2626;
-        }
-        
-        .tooltip {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: white;
-            border-top: 2px solid #ff0000;
-            border-radius: 0;
-            padding: 15px;
-            font-size: 16px;
-            line-height: 1.5;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
-            z-index: 2000;
-            display: none;
-            max-height: 300px;
-            overflow-y: auto;
-            word-wrap: break-word;
-            white-space: pre-wrap;
-            text-align: left;
-        }
-        
-        .tooltip.show {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
-        
-        .tooltip-title {
-            display: none;
-        }
-        
-        .tooltip-description {
-            color: #333;
-            font-size: 16px;
-            text-align: left;
-            line-height: 1;
-            margin: 0;
-            padding: 0;
-        }
-        
-        .tooltip-close {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #283054;
-            z-index: 2001;
-        }
-        
-        .tooltip-close:hover {
-            color: #ff0000;
-        }
-        
-        .section {
-            cursor: pointer;
-        }
-        
-        .section:hover {
-            opacity: 0.9;
-        }
-        
-        @media (max-width: 768px) {
-            .main-container {
-                flex-direction: column;
-            }
-            
-            .divider {
-                width: 100%;
-                height: 2px;
-                margin: 20px 0;
-            }
-            
-            .section {
-                padding: 0;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="header-label">Temenos Privacy & Encryption</div>
-    
-    <div class="intro-statements">
-        <div class="intro-statement">
-            1. All components storing data (as a permanent data store or transitory, e.g., Cloud Storage, Event Hub, virtual disks) must support encryption at the block level
-        </div>
-        <div class="intro-statement">
-            2. Encryption in transit - TLS for all traffic (e.g., PostgreSQL, Azure SQL), or encrypted protocol (e.g., SSH)
-        </div>
-        <div class="intro-statement">
-            3. Encrypt data using supplementary encryption, e.g., TLS1.2, SSH, AES256, IPSEC and DLP usage
-        </div>
-    </div>
-    
-    <div class="main-container">
-        <!-- Left Section: Data in Transit -->
-        <div id="left-section" class="section">
-            <div class="section-title">Data in Transit</div>
-            <div class="section-description">
-                Data that is traversing a network or temporarily residing in computer memory to be read or updated.
-            </div>
-            <div class="arrow-container">
-                <div class="arrow"></div>
-            </div>
-            <div class="content-box">
-                <div class="content-item">HTTPS (TLS 1.2)</div>
-                <div class="content-item">SMBv3 / SFTP / FTPS</div>
-                <div class="content-item">Data Loss Prevention</div>
-            </div>
-        </div>
-        
-        <!-- Vertical Divider -->
-        <div class="divider"></div>
-        
-        <!-- Right Section: Data at Rest -->
-        <div id="right-section" class="section">
-            <div class="section-title">Data at Rest</div>
-            <div class="section-description">
-                Inactive data stored physically in databases, data warehouses, spreadsheets, archives, tapes, off-site backups, etc...
-            </div>
-            <div class="arrow-container">
-                <div class="arrow"></div>
-            </div>
-            <div class="content-box">
-                <div class="content-item">Transparent Data Encryption for Databases</div>
-                <div class="content-item">Database audit monitoring</div>
-                <div class="content-item">Block level encryption in storage, queues</div>
-                <div class="content-item">Data Loss Prevention</div>
-            </div>
-        </div>
-    </div>
-    
-    <button class="exate-button" onclick="window.parent.postMessage({type: 'showExate'}, '*');">eXate (Temenos Exchange) solution</button>
-    
-    <div id="tooltip" class="tooltip">
-        <button class="tooltip-close" id="tooltip-close">&times;</button>
-        <div class="tooltip-title" id="tooltip-title"></div>
-        <div class="tooltip-description" id="tooltip-description"></div>
-    </div>
-    
-    <script>
-        // Tooltip Configuration
-        const tooltips = [
-            {
-                id: "left-section",
-                title: "Left Section",
-                description: "Data in Transit: \\n\\nFor data in transit, all communications are secured using modern Transport Layer Security (TLS) protocols, specifically TLS 1.2.\\n\\nAPI communications are encrypted end-to-end, leveraging partner-supported encryption mechanisms to maintain data security during exchanges. File transfers, including SFTP services, use SSH encryption standards and secure key management practices. Connections to web applications and APIs are exclusively over HTTPS.\\n\\nSecure Access: Access to interfaces that are not classified as public is subject to additional access controls. Public interfaces have to be protected by Web Application Firewalls (WAF) and Denial of Service (DoS) protection (done for Temenos SaaS.\\n\\nSecure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilised, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\\n\\nLogging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorised access attempts and ensuring compliance with security policies.",
-                position: "right"
-            },
-            {
-                id: "right-section",
-                title: "Right Section",
-                description: "Data at Rest: \\n\\nFor data at rest, encryption is applied comprehensively across storage layers. \\n\\n1. Databases utilise Transparent Data Encryption (TDE) with AES 256-bit encryption algorithms. TDE performs real-time I/O encryption and decryption of the data at the page level. Each page is decrypted when it's read into memory and then encrypted before being written to disk. \\n\\n2. TDE encrypts the entire database, including logs and backups, protecting data on disks and during backups.\\n\\n3. Storage devices, including disk volumes and containers, benefit from full disk encryption and block-level encryption.",
-                position: "left"
-            }
-        ];
-        
-        const tooltip = document.getElementById('tooltip');
-        const tooltipTitle = document.getElementById('tooltip-title');
-        const tooltipDescription = document.getElementById('tooltip-description');
-        const tooltipClose = document.getElementById('tooltip-close');
-        
-        function showTooltip(config, element) {
-            if (!tooltip || !tooltipTitle || !tooltipDescription) {
-                console.error('Tooltip elements not found');
-                return;
-            }
-            
-            tooltipTitle.textContent = config.title;
-            tooltipDescription.textContent = config.description.replace(/\\\\n/g, '\\n');
-            
-            // Position tooltip at bottom with full width
-            tooltip.style.position = 'fixed';
-            tooltip.style.bottom = '0';
-            tooltip.style.left = '0';
-            tooltip.style.width = '100%';
-            tooltip.style.right = '0';
-            tooltip.style.top = 'auto';
-            
-            // Show tooltip
-            tooltip.style.display = 'block';
-            tooltip.style.visibility = 'visible';
-            tooltip.style.opacity = '1';
-            tooltip.classList.add('show');
-        }
-        
-        function hideTooltip() {
-            if (tooltip) {
-                tooltip.classList.remove('show');
-                tooltip.style.display = 'none';
-                tooltip.style.visibility = 'hidden';
-                tooltip.style.opacity = '0';
-            }
-        }
-        
-        function initializeTooltips() {
-            tooltips.forEach(function(config) {
-                const element = document.getElementById(config.id);
-                if (element) {
-                    element.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        const isSameTooltip = tooltip && tooltip.classList.contains('show') && tooltipTitle && tooltipTitle.textContent === config.title;
-                        if (isSameTooltip) {
-                            hideTooltip();
-                        } else {
-                            showTooltip(config, element);
-                        }
-                    });
-                }
-            });
-            
-            // Close tooltip handler
-            if (tooltipClose) {
-                tooltipClose.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    hideTooltip();
-                });
-            }
-            
-            // Hide tooltip when clicking outside
-            document.addEventListener('click', function(e) {
-                const target = e.target;
-                const isTooltipElement = tooltips.some(function(config) {
-                    const element = document.getElementById(config.id);
-                    return element && element.contains(target);
-                });
-                const isTooltipBox = tooltip && tooltip.contains(target);
-                if (!isTooltipElement && !isTooltipBox) {
-                    hideTooltip();
-                }
-            });
-        }
-        
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeTooltips);
-        } else {
-            initializeTooltips();
-        }
-    </script>
-</body>
-</html>`
+// Platform Management HTML Content (unused - removed)
 
 // SaaS Defence-in-Depth HTML Content
 const SaaSDefenceDepthHTML = `<!DOCTYPE html>
@@ -2118,330 +1740,7 @@ const SaaSDefenceDepthHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
-// SaaS Access Data HTML Content
-const SaaSAccessDataHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temenos SaaS Access Data</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background: #ffffff;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-        }
-        
-        .container {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            padding: 80px 40px 40px 40px;
-        }
-        
-        .title-label {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-weight: bold;
-            font-size: 18px;
-            color: #000;
-            z-index: 1000;
-            text-align: center;
-        }
-        
-        .columns-container {
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-start;
-            gap: 30px;
-            flex: 1;
-            padding: 20px 0;
-        }
-        
-        .column {
-            flex: 1;
-            border: 3px solid #9333ea;
-            border-radius: 12px;
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: #ffffff;
-            min-height: 500px;
-            max-width: 400px;
-        }
-        
-        .icon-container {
-            width: 80px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        
-        .icon-cloud {
-            width: 80px;
-            height: 60px;
-            background: transparent;
-            border: 3px solid #333;
-            border-radius: 50px 50px 0 0;
-            position: relative;
-        }
-        
-        .icon-cloud::before {
-            content: '';
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: transparent;
-            border: 3px solid #333;
-            border-radius: 50px;
-            top: -25px;
-            left: 10px;
-        }
-        
-        .icon-cloud::after {
-            content: '';
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: transparent;
-            border: 3px solid #333;
-            border-radius: 50px;
-            top: -20px;
-            right: 10px;
-        }
-        
-        .icon-network {
-            width: 80px;
-            height: 80px;
-            position: relative;
-        }
-        
-        .network-node {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background: #333;
-            border-radius: 50%;
-        }
-        
-        .network-node-1 {
-            top: 0;
-            left: 30px;
-        }
-        
-        .network-node-2 {
-            top: 20px;
-            left: 10px;
-        }
-        
-        .network-node-3 {
-            top: 20px;
-            right: 10px;
-        }
-        
-        .network-node-4 {
-            top: 40px;
-            left: 20px;
-        }
-        
-        .network-node-5 {
-            top: 40px;
-            right: 20px;
-        }
-        
-        .network-node-6 {
-            bottom: 0;
-            left: 30px;
-        }
-        
-        .network-line {
-            position: absolute;
-            background: #333;
-            height: 2px;
-        }
-        
-        .network-line-1 {
-            width: 30px;
-            top: 10px;
-            left: 30px;
-            transform: rotate(25deg);
-        }
-        
-        .network-line-2 {
-            width: 30px;
-            top: 10px;
-            right: 30px;
-            transform: rotate(-25deg);
-        }
-        
-        .network-line-3 {
-            width: 25px;
-            top: 30px;
-            left: 20px;
-            transform: rotate(45deg);
-        }
-        
-        .network-line-4 {
-            width: 25px;
-            top: 30px;
-            right: 20px;
-            transform: rotate(-45deg);
-        }
-        
-        .network-line-5 {
-            width: 20px;
-            top: 50px;
-            left: 30px;
-        }
-        
-        .icon-database {
-            width: 60px;
-            height: 80px;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        .database-cylinder {
-            width: 60px;
-            height: 20px;
-            background: #333;
-            border-radius: 10px 10px 0 0;
-            position: relative;
-        }
-        
-        .database-cylinder::after {
-            content: '';
-            position: absolute;
-            bottom: -15px;
-            left: 0;
-            width: 60px;
-            height: 15px;
-            background: #333;
-            border-radius: 0 0 10px 10px;
-        }
-        
-        .title-box {
-            background: #14B8A6;
-            color: #ffffff;
-            padding: 12px 20px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 20px;
-            text-align: center;
-            width: 100%;
-        }
-        
-        .main-statement {
-            font-size: 14px;
-            color: #333;
-            line-height: 1.6;
-            margin-bottom: 20px;
-            text-align: left;
-            width: 100%;
-        }
-        
-        .examples-list {
-            list-style-type: disc;
-            padding-left: 25px;
-            font-size: 14px;
-            color: #333;
-            line-height: 1.8;
-            width: 100%;
-            text-align: left;
-        }
-        
-        .examples-list li {
-            margin-bottom: 8px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="title-label">Temenos SaaS Cloud Segregation</div>
-        
-        <div class="columns-container">
-            <!-- Column 1: Cloud Subscription -->
-            <div class="column">
-                <div class="icon-container">
-                    <div class="icon-cloud"></div>
-                </div>
-                <div class="title-box">Cloud Subscription</div>
-                <div class="main-statement">
-                    Different cloud subscriptions within the Temenos Cloud EA can be used to segregate data:
-                </div>
-                <ul class="examples-list">
-                    <li>Internal Temenos activities from Client services</li>
-                    <li>Separation of client services for different access control</li>
-                </ul>
-            </div>
-            
-            <!-- Column 2: Network -->
-            <div class="column">
-                <div class="icon-container">
-                    <div class="icon-network">
-                        <div class="network-node network-node-1"></div>
-                        <div class="network-node network-node-2"></div>
-                        <div class="network-node network-node-3"></div>
-                        <div class="network-node network-node-4"></div>
-                        <div class="network-node network-node-5"></div>
-                        <div class="network-node network-node-6"></div>
-                        <div class="network-line network-line-1"></div>
-                        <div class="network-line network-line-2"></div>
-                        <div class="network-line network-line-3"></div>
-                        <div class="network-line network-line-4"></div>
-                        <div class="network-line network-line-5"></div>
-                    </div>
-                </div>
-                <div class="title-box">Network</div>
-                <div class="main-statement">
-                    Virtual networks and subnets can be used to segregate data with NSG defining access controls between subnets:
-                </div>
-                <ul class="examples-list">
-                    <li>Production and non-production services</li>
-                    <li>Network tiers - DMZ, Application and Data tiers</li>
-                    <li>Public and private channels</li>
-                </ul>
-            </div>
-            
-            <!-- Column 3: Database -->
-            <div class="column">
-                <div class="icon-container">
-                    <div class="icon-database">
-                        <div class="database-cylinder"></div>
-                        <div class="database-cylinder"></div>
-                        <div class="database-cylinder"></div>
-                    </div>
-                </div>
-                <div class="title-box">Database</div>
-                <div class="main-statement">
-                    Database segregation can be used to segregate data.
-                </div>
-                <ul class="examples-list">
-                    <li>Different data stores for different environments</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</body>
-</html>`
+// SaaS Access Data HTML Content (unused - removed)
 
 // SaaS Data Access Control HTML Content
 const SaaSDataAccessControlHTML = `<!DOCTYPE html>
@@ -3186,264 +2485,7 @@ const ProtectAssetsHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
-// Product Security Uniform HTML Content
-const ProductSecurityUniformHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temenos Product Security Uniform</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background: #ffffff;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .title-label {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-weight: bold;
-            font-size: 18px;
-            color: #000;
-            z-index: 1000;
-            text-align: center;
-        }
-        
-        .main-container {
-            flex: 1;
-            display: flex;
-            padding: 80px 40px 100px 40px;
-            gap: 40px;
-            height: 100%;
-        }
-        
-        .left-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding-right: 20px;
-        }
-        
-        .bullet-list {
-            list-style: none;
-            padding: 0;
-        }
-        
-        .bullet-list li {
-            position: relative;
-            padding-left: 30px;
-            margin-bottom: 25px;
-            font-size: 16px;
-            color: #1a1a1a;
-            line-height: 1.5;
-        }
-        
-        .bullet-list li::before {
-            content: '•';
-            position: absolute;
-            left: 0;
-            color: #1a1a1a;
-            font-size: 20px;
-            font-weight: bold;
-        }
-        
-        .red-underline {
-            text-decoration: underline;
-            text-decoration-style: dotted;
-            text-decoration-color: #ff0000;
-            text-underline-offset: 3px;
-        }
-        
-        .right-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            padding-left: 20px;
-        }
-        
-        .documents-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
-            height: 600px;
-        }
-        
-        .document-cover {
-            position: absolute;
-            width: 400px;
-            height: 550px;
-            background: #ffffff;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            overflow: hidden;
-        }
-        
-        .document-cover-top {
-            right: 0;
-            top: 0;
-            z-index: 2;
-        }
-        
-        .document-cover-bottom {
-            left: 0;
-            bottom: 0;
-            z-index: 1;
-        }
-        
-        .blue-shape {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60%;
-            height: 70%;
-            background: linear-gradient(135deg, #87CEEB 0%, #B0E0E6 100%);
-            clip-path: polygon(0 100%, 0 40%, 100% 0, 100% 100%);
-        }
-        
-        .document-content {
-            position: relative;
-            z-index: 10;
-            padding: 40px 30px;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .temenos-logo {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 14px;
-            color: #1a1a1a;
-            font-weight: normal;
-            text-transform: lowercase;
-        }
-        
-        .document-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #1a1a1a;
-            margin-bottom: 15px;
-            margin-top: 40px;
-        }
-        
-        .document-subtitle {
-            font-size: 18px;
-            color: #1a1a1a;
-            margin-bottom: 20px;
-        }
-        
-        .document-date {
-            font-size: 14px;
-            color: #1a1a1a;
-            margin-bottom: auto;
-        }
-        
-        .document-disclaimer {
-            position: absolute;
-            bottom: 15px;
-            right: 20px;
-            font-size: 8px;
-            color: #ffffff;
-            line-height: 1.2;
-            max-width: 200px;
-            text-align: right;
-        }
-        
-        .action-button {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: #ff0000;
-            color: #ffffff;
-            border: none;
-            padding: 12px 24px;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            z-index: 1000;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-        
-        .action-button:hover {
-            background: #cc0000;
-        }
-    </style>
-</head>
-<body>
-    <div class="title-label">Temenos Product Security Uniform</div>
-    
-    <div class="main-container">
-        <!-- Left Section: Text Content -->
-        <div class="left-section">
-            <ul class="bullet-list">
-                <li>Fostering transparency and clarity in <span class="red-underline">Temenos</span>' client interactions.</li>
-                <li>Serve as the foundation for understanding the services provided, obligations, and rights of both parties involved.</li>
-                <li>Provide a clear and consistent guidance and structure for all interactions would have with <span class="red-underline">Temenos</span>.</li>
-                <li>With <span class="red-underline">standardized</span> terms, the Bank can confidently navigate <span class="red-underline">Temenos</span> services, knowing exactly what to expect and easily understanding <span class="red-underline">Temenos</span> policies.</li>
-            </ul>
-        </div>
-        
-        <!-- Right Section: Document Covers -->
-        <div class="right-section">
-            <div class="documents-container">
-                <!-- Bottom Document Cover (Left) -->
-                <div class="document-cover document-cover-bottom">
-                    <div class="blue-shape"></div>
-                    <div class="document-content">
-                        <div class="temenos-logo">temenos</div>
-                        <div class="document-title">Temenos Cloud Services</div>
-                        <div class="document-subtitle">Security Uniform Terms</div>
-                        <div class="document-date">31 March 2024</div>
-                        <div class="document-disclaimer">
-                            Information in this document is subject to change without notice.<br>
-                            © 2024 Temenos Headquarters SA - all rights reserved.<br>
-                            TEMENOS Security Uniform Terms v1.0
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Top Document Cover (Right) -->
-                <div class="document-cover document-cover-top">
-                    <div class="blue-shape"></div>
-                    <div class="document-content">
-                        <div class="temenos-logo">temenos</div>
-                        <div class="document-title">Temenos Cloud Services</div>
-                        <div class="document-subtitle">Business Continuity Uniform Terms</div>
-                        <div class="document-date">31 March 2024</div>
-                        <div class="document-disclaimer">
-                            Information in this document is subject to change without notice.<br>
-                            © 2024 Temenos Headquarters SA - all rights reserved.<br>
-                            TEMENOS Business Continuity Uniform Terms v1.0
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <button class="action-button" onclick="window.parent.postMessage({type: 'showSecurityEventsFeed'}, '*');">Security Events Feed</button>
-</body>
-</html>`
+// Product Security Uniform HTML Content (unused - removed)
 
 // Security Event Feed HTML Content
 const SecurityEventFeedHTML = `<!DOCTYPE html>
@@ -4929,6 +3971,115 @@ const WAFHTML = `<!DOCTYPE html>
             </div>
         </div>
     </div>
+</body>
+</html>`
+
+// Missing HTML constants - placeholder content
+const TrustCenterHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Trust Center</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        h1 { color: #283054; }
+        p { line-height: 1.6; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Temenos Trust Center</h1>
+    <p>Content coming soon...</p>
+</body>
+</html>`
+
+const CompliancePositionHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Compliance Position</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        h1 { color: #283054; }
+        p { line-height: 1.6; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Temenos Compliance Position</h1>
+    <p>Content coming soon...</p>
+</body>
+</html>`
+
+const SecurityPolicyHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Security Policy</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        h1 { color: #283054; }
+        p { line-height: 1.6; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Temenos Security Policy</h1>
+    <p>Content coming soon...</p>
+</body>
+</html>`
+
+const ProtectionEmbeddedHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos Protection Embedded</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        h1 { color: #283054; }
+        p { line-height: 1.6; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Temenos Protection Embedded</h1>
+    <p>Content coming soon...</p>
+</body>
+</html>`
+
+const RiskManagementHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Management</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        h1 { color: #283054; }
+        p { line-height: 1.6; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Risk Management</h1>
+    <p>Content coming soon...</p>
+</body>
+</html>`
+
+const SaaSComplianceOverviewHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS Compliance Overview</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        h1 { color: #283054; }
+        p { line-height: 1.6; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Temenos SaaS Compliance Overview</h1>
+    <p>Content coming soon...</p>
 </body>
 </html>`
 

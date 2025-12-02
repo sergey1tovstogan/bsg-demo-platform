@@ -223,14 +223,14 @@ jobs:
             exit 1
           fi
         continue-on-error: true
-        timeout-seconds: 10
+        timeout-minutes: 1
       
       - name: Quick SCM check (skip if not critical) - REMOVED for speed
         run: |
           echo "⚠ SCM check removed to speed up deployment"
           echo "OneDeploy will handle SCM readiness automatically"
         continue-on-error: true
-        timeout-seconds: 1
+        timeout-minutes: 1
       
       - name: Check for ongoing deployments (quick check)
         run: |
@@ -321,7 +321,7 @@ jobs:
       
       - name: Quick Health Check (Background - Non-blocking)
         continue-on-error: true
-        timeout-seconds: 10
+        timeout-minutes: 1
         run: |
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
           echo "Quick health check (non-blocking)..."
