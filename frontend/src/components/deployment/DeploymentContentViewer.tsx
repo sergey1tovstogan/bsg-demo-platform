@@ -382,10 +382,10 @@ export function DeploymentContentViewer() {
                             ol: ({ ...props }) => <ol className="list-decimal list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
                             li: ({ ...props }) => <li className="leading-relaxed pl-1" {...props} />,
                             p: ({ ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
-                            strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
-                            blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
-                            code: ({ node, ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
-                            table: ({ node, ...props }) => (
+                            strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                            blockquote: ({ ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
+                            code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
+                            table: ({ ...props }) => (
                               <div className="overflow-x-auto my-6">
                                 <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg shadow-md" {...props} />
                               </div>
