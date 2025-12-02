@@ -69,11 +69,13 @@ jobs:
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: |
-          npm ci
+          npm install
           # Ensure @types/react-dom is properly installed (fallback if needed)
-          npm list @types/react-dom || npm install --save-dev @types/react-dom@^18.2.43
+          npm list @types/react-dom --depth=0 || npm install --save-dev @types/react-dom@^18.2.43
           # Verify vite is installed
-          npm list vite || npm install --save-dev vite@^5.0.8
+          npm list vite --depth=0 || npm install --save-dev vite@^5.0.8
+          # Verify vite binary exists
+          test -f node_modules/.bin/vite || npm install --save-dev vite@^5.0.8
       
       - name: Type check frontend
         working-directory: ./frontend
@@ -133,24 +135,27 @@ jobs:
           echo "Installing dependencies and building in parallel..."
           (
             cd frontend
-            echo "Verifying package-lock.json exists..."
-            ls -la package-lock.json || echo "WARNING: package-lock.json not found"
-            echo "Running npm ci..."
-            npm ci --verbose
-            echo "Checking if node_modules exists..."
-            ls -la node_modules | head -5 || echo "WARNING: node_modules not found"
+            echo "Cleaning any existing node_modules..."
+            rm -rf node_modules package-lock.json 2>/dev/null || true
+            echo "Installing dependencies with npm install..."
+            npm install
             echo "Verifying vite is installed..."
-            if ! npm list vite --depth=0 2>/dev/null | grep -q vite; then
-              echo "vite not found, installing..."
+            npm list vite --depth=0 || {
+              echo "vite not found, installing explicitly..."
+              npm install --save-dev vite@^5.0.8
+            }
+            echo "Verifying @types/react-dom is installed..."
+            npm list @types/react-dom --depth=0 || {
+              echo "@types/react-dom not found, installing explicitly..."
+              npm install --save-dev @types/react-dom@^18.2.43
+            }
+            echo "Verifying vite binary exists..."
+            if [ ! -f node_modules/.bin/vite ]; then
+              echo "ERROR: vite binary not found, listing node_modules/.bin..."
+              ls -la node_modules/.bin/ | head -10
+              echo "Reinstalling vite..."
               npm install --save-dev vite@^5.0.8
             fi
-            echo "Verifying @types/react-dom is installed..."
-            if ! npm list @types/react-dom --depth=0 2>/dev/null | grep -q "@types/react-dom"; then
-              echo "@types/react-dom not found, installing..."
-              npm install --save-dev @types/react-dom@^18.2.43
-            fi
-            echo "Verifying vite binary exists..."
-            ls -la node_modules/.bin/vite || echo "ERROR: vite binary not found"
             echo "Running build..."
             npm run build
           ) &
