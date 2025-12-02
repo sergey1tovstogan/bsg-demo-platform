@@ -222,6 +222,7 @@ jobs:
             echo "⚠ Static directory not found!"
             exit 1
           fi
+          cd ..
         continue-on-error: true
         timeout-minutes: 1
       
@@ -249,14 +250,27 @@ jobs:
         continue-on-error: true
         timeout-minutes: 1
       
+      - name: Create deployment package
+        run: |
+          echo "Creating deployment package..."
+          cd backend
+          zip -r ../backend-deploy.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc" -x "*.pyo" || {
+            # Fallback if zip command not available
+            echo "Using tar+gzip as fallback..."
+            tar -czf ../backend-deploy.tar.gz --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' --exclude='*.pyo' .
+            mv ../backend-deploy.tar.gz ../backend-deploy.zip
+          }
+          cd ..
+          echo "Package created: backend-deploy.zip"
+          ls -lh backend-deploy.zip || echo "Package file check"
+      
       - name: Deploy to Azure Web App using GitHub Action (Optimized)
         id: deploy-backend
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: ./backend
+          package: ./backend-deploy.zip
           startup-command: "bash startup.sh"
-          type: zip
         timeout-minutes: 15
         continue-on-error: false
       
