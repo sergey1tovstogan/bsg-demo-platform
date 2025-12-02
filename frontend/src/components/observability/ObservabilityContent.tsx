@@ -480,7 +480,7 @@ export function ObservabilityContent() {
       case 'pillars': return renderPillars()
       case 'stack': return renderStack()
       case 'temenos-stack': return renderTemenosStack()
-      default: return <div className="dark:text-slate-300" style={{ color: '#475569' }}>Select a page</div>
+      default: return <div className="text-slate-600 dark:text-slate-300">Select a page</div>
     }
   }
 
@@ -514,7 +514,7 @@ export function ObservabilityContent() {
       </div>
 
       {/* Content - Below the navigation */}
-      <div className="min-h-[600px] bg-white">
+      <div className="min-h-[600px] bg-white dark:bg-slate-900">
         {renderContent()}
       </div>
     </div>
