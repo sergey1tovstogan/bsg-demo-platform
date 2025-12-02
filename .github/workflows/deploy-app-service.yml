@@ -133,9 +133,18 @@ jobs:
           echo "Installing dependencies and building in parallel..."
           (
             cd frontend
-            npm ci
-            # Ensure @types/react-dom is installed (fallback if needed)
+            echo "Verifying package-lock.json exists..."
+            ls -la package-lock.json || echo "WARNING: package-lock.json not found"
+            echo "Running npm ci..."
+            npm ci --verbose || {
+              echo "npm ci failed, trying npm install..."
+              npm install
+            }
+            echo "Verifying vite is installed..."
+            npm list vite || npm install --save-dev vite@^5.0.8
+            echo "Verifying @types/react-dom is installed..."
             npm list @types/react-dom || npm install --save-dev @types/react-dom@^18.2.43
+            echo "Running build..."
             npm run build
           ) &
           FRONTEND_PID=$!
