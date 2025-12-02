@@ -592,7 +592,7 @@ class AKSService:
             )
             
             if credential_response.kubeconfigs and len(credential_response.kubeconfigs) > 0:
-                # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed)
+                # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed or encrypted)
                 decoded_bytes = base64.b64decode(credential_response.kubeconfigs[0].value)
                 
                 # Try to decompress if it's gzip-compressed
@@ -600,13 +600,14 @@ class AKSService:
                     kubeconfig_data = gzip.decompress(decoded_bytes).decode('utf-8')
                     logger.debug("Kubeconfig was gzip-compressed, decompressed successfully")
                 except (gzip.BadGzipFile, OSError):
-                    # Not compressed, decode directly as UTF-8
+                    # Not compressed, try to decode as UTF-8
                     try:
                         kubeconfig_data = decoded_bytes.decode('utf-8')
-                    except UnicodeDecodeError as e:
-                        logger.error(f"Failed to decode kubeconfig as UTF-8: {e}")
-                        logger.error(f"First 100 bytes (hex): {decoded_bytes[:100].hex()}")
-                        raise
+                    except UnicodeDecodeError:
+                        # If UTF-8 decoding fails, the data might be encrypted or in a different format
+                        # This can happen with some Azure API responses. Fall back to using Azure CLI.
+                        logger.warning("Kubeconfig data from Azure API cannot be decoded (may be encrypted). Falling back to Azure CLI method.")
+                        raise ValueError("Kubeconfig data appears to be encrypted or in unsupported format")
                 
                 temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
                 temp_file.write(kubeconfig_data)
@@ -634,7 +635,7 @@ class AKSService:
                 logger.error("  - OR 'Azure Kubernetes Service Cluster Admin Role' (fallback)")
                 return None
             
-            # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed)
+            # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed or encrypted)
             decoded_bytes = base64.b64decode(credential_response.kubeconfigs[0].value)
             
             # Try to decompress if it's gzip-compressed
@@ -642,13 +643,14 @@ class AKSService:
                 kubeconfig_data = gzip.decompress(decoded_bytes).decode('utf-8')
                 logger.debug("Kubeconfig was gzip-compressed, decompressed successfully")
             except (gzip.BadGzipFile, OSError):
-                # Not compressed, decode directly as UTF-8
+                # Not compressed, try to decode as UTF-8
                 try:
                     kubeconfig_data = decoded_bytes.decode('utf-8')
-                except UnicodeDecodeError as e:
-                    logger.error(f"Failed to decode kubeconfig as UTF-8: {e}")
-                    logger.error(f"First 100 bytes (hex): {decoded_bytes[:100].hex()}")
-                    raise
+                except UnicodeDecodeError:
+                    # If UTF-8 decoding fails, the data might be encrypted or in a different format
+                    # This can happen with some Azure API responses. Fall back to using Azure CLI.
+                    logger.warning("Admin kubeconfig data from Azure API cannot be decoded (may be encrypted). Falling back to Azure CLI method.")
+                    raise ValueError("Kubeconfig data appears to be encrypted or in unsupported format")
             
             # Write to temporary file
             temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
@@ -658,6 +660,10 @@ class AKSService:
             logger.info(f"✓ Cluster admin credentials retrieved and saved to {temp_file.name}")
             return temp_file.name
             
+        except (ValueError, UnicodeDecodeError) as e:
+            # If both API methods failed due to encoding issues, fall back to Azure CLI
+            logger.info("Azure API kubeconfig decoding failed (data may be encrypted). Falling back to Azure CLI method.")
+            return None
         except Exception as e:
             logger.error(f"Failed to get cluster credentials: {e}", exc_info=True)
             logger.error("Both user and admin credential methods failed.")
