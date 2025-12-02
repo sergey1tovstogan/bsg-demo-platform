@@ -37,7 +37,7 @@ export function DatabaseRecords({ componentId: _componentId }: DatabaseRecordsPr
   const [tables, setTables] = useState<Table[]>([])
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
   const [tableData, setTableData] = useState<TableData | null>(null)
-  const [columns, setColumns] = useState<Column[]>([])
+  const [_columns, setColumns] = useState<Column[]>([])
   const [loading, setLoading] = useState(false)
   const [tablesLoading, setTablesLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
