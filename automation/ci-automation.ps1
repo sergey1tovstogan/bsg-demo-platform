@@ -160,9 +160,9 @@ function Start-Monitoring {
         $runId = $run.databaseId
         $startTime = Get-Date
         
-        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+        Write-Host "──────────────────────────────────────────" -ForegroundColor DarkGray
         Write-Host "Monitoring: $($run.name)" -ForegroundColor Cyan
-        Write-Host "Run ID: $runId" -ForegroundColor Gray
+        Write-Host "Run ID: $runId" -ForegroundColor DarkGray
         Write-Host ""
         
         while ($true) {
@@ -184,18 +184,85 @@ function Start-Monitoring {
             Write-Host "[$timeStr] Status: $($currentRun.status)" -ForegroundColor Gray -NoNewline
             
             if ($currentRun.conclusion) {
-                Write-Host " -> $($currentRun.conclusion)" -ForegroundColor $(if ($currentRun.conclusion -eq "success") { "Green" } else { "Red" })
+                $conclusionColor = switch ($currentRun.conclusion) {
+                    "success" { "Green" }
+                    "failure" { "Red" }
+                    "cancelled" { "Yellow" }
+                    default { "Gray" }
+                }
+                Write-Host " -> $($currentRun.conclusion)" -ForegroundColor $conclusionColor
                 Write-Host ""
                 
                 if ($currentRun.conclusion -eq "success" -and $VerifyHealthCheck) {
+                    Write-Host "[HEALTH] Waiting 30 seconds before health check..." -ForegroundColor Cyan
                     Start-Sleep -Seconds 30
                     $healthy = Test-DeploymentHealth
                     if (-not $healthy) {
                         Write-Host "[WARN] Deployment health checks failed" -ForegroundColor Yellow
+                        Write-Host "[INFO] The deployment completed but services may still be starting." -ForegroundColor Gray
+                        Write-Host "[INFO] Check again in a few minutes: $($currentRun.url)" -ForegroundColor Gray
+                    } else {
+                        Write-Host "[SUCCESS] All health checks passed!" -ForegroundColor Green
                     }
-                } elseif ($currentRun.conclusion -eq "failure" -and $AutoFixEnabled) {
-                    Write-Host "[AUTO-FIX] Analyzing failure for auto-fix..." -ForegroundColor Yellow
-                    # Auto-fix logic would be called here
+                } elseif ($currentRun.conclusion -eq "failure") {
+                    Write-Host "[FAILURE] Workflow failed!" -ForegroundColor Red
+                    Write-Host "[INFO] Analyzing failure details..." -ForegroundColor Yellow
+                    
+                    # Get failed job details
+                    try {
+                        $jobsJson = gh run view $runId --json jobs | ConvertFrom-Json
+                        $failedJobs = $jobsJson.jobs | Where-Object { $_.conclusion -eq "failure" }
+                        if ($failedJobs) {
+                            Write-Host "[ERROR] Failed job(s):" -ForegroundColor Red
+                            foreach ($job in $failedJobs) {
+                                Write-Host "  - $($job.name) (ID: $($job.databaseId))" -ForegroundColor Red
+                                
+                                # Get job logs URL
+                                $logsUrl = "$($currentRun.url)/job/$($job.databaseId)"
+                                Write-Host "    View logs: $logsUrl" -ForegroundColor DarkGray
+                            }
+                        }
+                    } catch {
+                        Write-Host "[INFO] Could not retrieve job details: $($_.Exception.Message)" -ForegroundColor Gray
+                    }
+                    
+                    # Get annotations/errors
+                    try {
+                        $annotationsJson = gh run view $runId --json annotations | ConvertFrom-Json
+                        $errorAnnotations = $annotationsJson.annotations | Where-Object { $_.annotation_level -eq "failure" }
+                        if ($errorAnnotations) {
+                            Write-Host "[ERROR] Error details:" -ForegroundColor Red
+                            $errorCount = 0
+                            foreach ($annotation in $errorAnnotations) {
+                                $errorCount++
+                                if ($errorCount -le 5) {  # Show first 5 errors
+                                    Write-Host "  [$errorCount] $($annotation.message)" -ForegroundColor Red
+                                    if ($annotation.path) {
+                                        Write-Host "      File: $($annotation.path):$($annotation.start_line)" -ForegroundColor DarkGray
+                                    }
+                                }
+                            }
+                            if ($errorAnnotations.Count -gt 5) {
+                                Write-Host "  ... and $($errorAnnotations.Count - 5) more error(s)" -ForegroundColor DarkGray
+                            }
+                        }
+                    } catch {
+                        Write-Host "[INFO] Could not retrieve error annotations" -ForegroundColor Gray
+                    }
+                    
+                    Write-Host ""
+                    Write-Host "[ACTION] View full details: $($currentRun.url)" -ForegroundColor Cyan
+                    Write-Host "[ACTION] To retry: gh run rerun $runId" -ForegroundColor Cyan
+                    
+                    if ($AutoFixEnabled) {
+                        Write-Host "[AUTO-FIX] Auto-fix enabled - analyzing failure..." -ForegroundColor Yellow
+                        # Auto-fix logic would be called here
+                        Write-Host "[AUTO-FIX] Auto-fix not yet implemented. Check logs for details." -ForegroundColor Yellow
+                    }
+                } elseif ($currentRun.conclusion -eq "cancelled") {
+                    Write-Host "[CANCELLED] Workflow was cancelled" -ForegroundColor Yellow
+                    Write-Host "[INFO] This may have been due to timeout or manual cancellation." -ForegroundColor Gray
+                    Write-Host "[INFO] View details: $($currentRun.url)" -ForegroundColor Cyan
                 }
                 break
             }
@@ -212,7 +279,7 @@ function Show-WorkflowRuns {
     param([string]$BranchFilter, [int]$Limit = 20)
     
     Write-Host "[LIST] Recent Workflow Runs" -ForegroundColor Cyan
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+    Write-Host "──────────────────────────────────────────" -ForegroundColor DarkGray
     
     $runs = Get-WorkflowRuns -BranchFilter $BranchFilter -Limit $Limit
     
@@ -370,8 +437,65 @@ switch ($Action) {
             Write-Host "[ERROR] RunId required for fix action. Use: .\ci-automation.ps1 fix -RunId <id>" -ForegroundColor Red
             exit 1
         }
-        Write-Host "[FIX] Auto-fix functionality - use GitHub Actions workflow for automatic fixes" -ForegroundColor Yellow
-        Write-Host "The auto-fix workflow runs automatically when workflows fail." -ForegroundColor Gray
+        
+        Write-Host "[FIX] Analyzing failed workflow run $RunId..." -ForegroundColor Cyan
+        Write-Host ""
+        
+        $runStatus = Get-WorkflowRunStatus -RunId $RunId
+        
+        if ($runStatus.conclusion -ne "failure") {
+            Write-Host "[INFO] Workflow run $RunId did not fail (status: $($runStatus.conclusion))" -ForegroundColor Yellow
+            exit 0
+        }
+        
+        Write-Host "Workflow: $($runStatus.workflowName)" -ForegroundColor Cyan
+        Write-Host "Title: $($runStatus.displayTitle)" -ForegroundColor Gray
+        Write-Host "URL: $($runStatus.url)" -ForegroundColor DarkGray
+        Write-Host ""
+        
+        # Get failed jobs
+        try {
+            $jobs = gh run view $RunId --json jobs --jq '.jobs[] | select(.conclusion == "failure")' | ConvertFrom-Json
+            if ($jobs) {
+                Write-Host "[ERROR] Failed job(s):" -ForegroundColor Red
+                foreach ($job in $jobs) {
+                    Write-Host "  - $($job.name)" -ForegroundColor Red
+                    $jobUrl = "$($runStatus.url)/job/$($job.databaseId)"
+                    Write-Host "    Logs: $jobUrl" -ForegroundColor DarkGray
+                }
+            }
+        } catch {
+            Write-Host "[WARN] Could not retrieve job details" -ForegroundColor Yellow
+        }
+        
+        # Get error annotations
+        try {
+            $annotations = gh run view $RunId --json annotations --jq '.annotations[] | select(.annotation_level == "failure")' | ConvertFrom-Json
+            if ($annotations) {
+                Write-Host ""
+                Write-Host "[ERROR] Error Summary:" -ForegroundColor Red
+                $errorCount = 0
+                foreach ($annotation in $annotations) {
+                    $errorCount++
+                    Write-Host "  [$errorCount] $($annotation.message)" -ForegroundColor Red
+                    if ($annotation.path) {
+                        Write-Host "      Location: $($annotation.path):$($annotation.start_line)" -ForegroundColor DarkGray
+                    }
+                }
+            }
+        } catch {
+            Write-Host "[INFO] Could not retrieve error annotations" -ForegroundColor Gray
+        }
+        
+        Write-Host ""
+        Write-Host "[ACTION] Recommended actions:" -ForegroundColor Cyan
+        Write-Host "  1. Review the full logs: $($runStatus.url)" -ForegroundColor White
+        Write-Host "  2. Check for common issues:" -ForegroundColor White
+        Write-Host "     - TypeScript/compilation errors" -ForegroundColor Gray
+        Write-Host "     - Missing dependencies" -ForegroundColor Gray
+        Write-Host "     - Configuration issues" -ForegroundColor Gray
+        Write-Host "  3. Fix the issues and push again" -ForegroundColor White
+        Write-Host "  4. Or retry the run: gh run rerun $RunId" -ForegroundColor White
     }
     "status" {
         $runs = Get-WorkflowRuns -BranchFilter $Branch -Limit 5

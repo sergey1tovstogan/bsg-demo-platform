@@ -71,14 +71,14 @@ const InfrastructureView = () => {
     return (
         <div className="space-y-6">
             {/* Hero Section */}
-            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 p-8 rounded-xl border border-cyan-100 dark:border-cyan-800 shadow-sm">
+            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 dark:from-cyan-900/20 dark:to-blue-900/20 p-8 rounded-xl border border-cyan-100 dark:border-cyan-800 dark:border-cyan-800 shadow-sm">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-cyan-100 dark:bg-cyan-800 rounded-lg">
+                    <div className="p-3 bg-cyan-100 dark:bg-cyan-800 dark:bg-cyan-800 rounded-lg">
                         <Server className="w-8 h-8 text-cyan-600 dark:text-cyan-300" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-cyan-900 dark:text-cyan-100 mb-3">Infrastructure Controls</h2>
-                        <p className="text-cyan-800 dark:text-cyan-200 leading-relaxed">
+                        <h2 className="text-2xl font-bold text-cyan-900 dark:text-cyan-100 dark:text-cyan-100 mb-3">Infrastructure Controls</h2>
+                        <p className="text-cyan-800 dark:text-cyan-200 dark:text-cyan-200 leading-relaxed">
                             Secure, scalable, and resilient infrastructure built on industry-leading cloud platforms with comprehensive security controls.
                         </p>
                     </div>
@@ -88,7 +88,7 @@ const InfrastructureView = () => {
             {/* Cloud Infrastructure */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
                         <Cloud className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Cloud Platform</h3>
@@ -106,7 +106,7 @@ const InfrastructureView = () => {
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-800 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-4">
                         <Database className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Data Layer</h3>
@@ -187,8 +187,8 @@ const ResourceManagementView = () => {
 
             {/* Resource Categories */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
-                    <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-4">Compute Resources</h3>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 dark:border-blue-800 shadow-sm">
+                    <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 dark:text-blue-100 mb-4">Compute Resources</h3>
                     <ul className="space-y-3">
                         {[
                             'Auto-scaling based on demand',
@@ -197,7 +197,7 @@ const ResourceManagementView = () => {
                             'Container orchestration (Kubernetes)',
                             'Serverless function execution'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-blue-800 dark:text-blue-200">
+                            <li key={idx} className="flex items-start gap-3 text-blue-800 dark:text-blue-200 dark:text-blue-200">
                                 <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -205,8 +205,8 @@ const ResourceManagementView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
-                    <h3 className="text-lg font-bold text-purple-900 dark:text-purple-100 mb-4">Storage Resources</h3>
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 dark:border-purple-800 shadow-sm">
+                    <h3 className="text-lg font-bold text-purple-900 dark:text-purple-100 dark:text-purple-100 mb-4">Storage Resources</h3>
                     <ul className="space-y-3">
                         {[
                             'Tiered storage (hot, cool, archive)',
@@ -215,7 +215,7 @@ const ResourceManagementView = () => {
                             'Backup and snapshot management',
                             'Content delivery network (CDN)'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-purple-800 dark:text-purple-200">
+                            <li key={idx} className="flex items-start gap-3 text-purple-800 dark:text-purple-200 dark:text-purple-200">
                                 <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -272,14 +272,14 @@ const ConfigurationView = () => {
     return (
         <div className="space-y-6">
             {/* Overview */}
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-6 rounded-xl border border-orange-100 dark:border-orange-800 shadow-sm">
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 dark:from-orange-900/20 dark:to-amber-900/20 p-6 rounded-xl border border-orange-100 dark:border-orange-800 dark:border-orange-800 shadow-sm">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-orange-100 dark:bg-orange-800 rounded-lg">
+                    <div className="p-3 bg-orange-100 dark:bg-orange-800 dark:bg-orange-800 rounded-lg">
                         <Settings className="w-6 h-6 text-orange-600 dark:text-orange-300" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-orange-900 dark:text-orange-100 mb-2">Configuration Management</h3>
-                        <p className="text-orange-800 dark:text-orange-200 leading-relaxed">
+                        <h3 className="text-xl font-bold text-orange-900 dark:text-orange-100 dark:text-orange-100 mb-2">Configuration Management</h3>
+                        <p className="text-orange-800 dark:text-orange-200 dark:text-orange-200 leading-relaxed">
                             Automated configuration management ensuring consistency, compliance, and security across all infrastructure components.
                         </p>
                     </div>
@@ -336,7 +336,7 @@ const ConfigurationView = () => {
                 ].map((practice, idx) => (
                     <div key={idx} className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-lg">
                                 <practice.icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{practice.title}</h3>
@@ -361,8 +361,8 @@ const ConfigurationView = () => {
                 <div className="p-6">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {['Terraform', 'Ansible', 'Azure ARM', 'Kubernetes', 'Helm', 'GitOps', 'Azure DevOps', 'Docker'].map((tool, idx) => (
-                            <div key={idx} className="px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg text-center">
-                                <span className="font-semibold text-blue-900 dark:text-blue-200 text-sm">{tool}</span>
+                            <div key={idx} className="px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 dark:border-blue-800 rounded-lg text-center">
+                                <span className="font-semibold text-blue-900 dark:text-blue-100 dark:text-blue-200 text-sm">{tool}</span>
                             </div>
                         ))}
                     </div>
@@ -410,7 +410,7 @@ const MonitoringView = () => {
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
                         <Server className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Application Monitoring</h3>
@@ -431,7 +431,7 @@ const MonitoringView = () => {
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-orange-100 dark:bg-orange-800 dark:bg-orange-900/30 rounded-lg flex items-center justify-center mb-4">
                         <Shield className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Security Monitoring</h3>
@@ -466,7 +466,7 @@ const MonitoringView = () => {
                             { title: 'Incident Management', desc: 'Structured incident response workflows', icon: Shield }
                         ].map((item, idx) => (
                             <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                                <div className="p-2 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-lg">
                                     <item.icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div>
@@ -495,3 +495,4 @@ const MonitoringView = () => {
 };
 
 export default ModernPlatformManagement;
+

@@ -23,9 +23,9 @@ const ModernAccessManagement = () => {
     ];
 
     return (
-        <div className="h-full flex flex-col bg-slate-50 overflow-hidden">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 overflow-hidden">
             {/* Header Tabs */}
-            <div className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm z-10">
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 dark:border-slate-700 px-6 py-4 shadow-sm z-10">
                 <div className="flex space-x-4">
                     {tabs.map((tab) => (
                         <button
@@ -33,7 +33,7 @@ const ModernAccessManagement = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${activeTab === tab.id
                                     ? 'bg-red-600 text-white shadow-md transform scale-105'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
                                 }`}
                         >
                             <tab.icon className="w-4 h-4" />
@@ -71,14 +71,14 @@ const OverviewView = () => {
     return (
         <div className="space-y-6">
             {/* Hero Section */}
-            <div className="bg-gradient-to-br from-red-50 to-rose-50 p-8 rounded-xl border border-red-100 shadow-sm">
+            <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 p-8 rounded-xl border border-red-100 dark:border-red-800 shadow-sm">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-red-100 rounded-lg">
+                    <div className="p-3 bg-red-100 dark:bg-red-800 rounded-lg">
                         <ScanEye className="w-8 h-8 text-red-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-red-900 mb-3">Access Management</h2>
-                        <p className="text-red-800 leading-relaxed">
+                        <h2 className="text-2xl font-bold text-red-900 dark:text-red-100 mb-3">Access Management</h2>
+                        <p className="text-red-800 dark:text-red-200 leading-relaxed">
                             Comprehensive privileged access monitoring and control ensuring secure access to critical systems and data.
                         </p>
                     </div>
@@ -87,41 +87,41 @@ const OverviewView = () => {
 
             {/* Key Principles */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center mb-4">
                         <Lock className="w-6 h-6 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Least Privilege</h3>
-                    <p className="text-sm text-slate-600">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Least Privilege</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
                         Users are granted the minimum level of access required to perform their job functions, reducing the attack surface.
                     </p>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-800 rounded-lg flex items-center justify-center mb-4">
                         <UserCheck className="w-6 h-6 text-purple-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Separation of Duties</h3>
-                    <p className="text-sm text-slate-600">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Separation of Duties</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
                         Critical operations require multiple approvals, preventing any single user from having complete control over sensitive processes.
                     </p>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
                         <Activity className="w-6 h-6 text-green-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Continuous Monitoring</h3>
-                    <p className="text-sm text-slate-600">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Continuous Monitoring</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
                         All privileged access is logged and monitored in real-time, with automated alerts for suspicious activities.
                     </p>
                 </div>
             </div>
 
             {/* Access Control Features */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-bold text-slate-800">Access Control Features</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Access Control Features</h3>
                 </div>
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -137,7 +137,7 @@ const OverviewView = () => {
                         ].map((feature, idx) => (
                             <div key={idx} className="flex items-start gap-3">
                                 <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                <span className="text-sm text-slate-700">{feature}</span>
+                                <span className="text-sm text-slate-700 dark:text-slate-300">{feature}</span>
                             </div>
                         ))}
                     </div>
@@ -151,20 +151,20 @@ const PrivilegedAccessView = () => {
     return (
         <div className="space-y-6">
             {/* Overview */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                     <Key className="w-5 h-5 text-purple-600" />
                     Privileged Access Management (PAM)
                 </h3>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
                     Privileged accounts have elevated permissions and require additional security controls to prevent unauthorized access and misuse.
                 </p>
             </div>
 
             {/* PAM Components */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-6 rounded-xl border border-purple-100 shadow-sm">
-                    <h3 className="text-lg font-bold text-purple-900 mb-4">Credential Vaulting</h3>
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
+                    <h3 className="text-lg font-bold text-purple-900 dark:text-purple-100 mb-4">Credential Vaulting</h3>
                     <ul className="space-y-3">
                         {[
                             'Centralized storage of privileged credentials',
@@ -173,7 +173,7 @@ const PrivilegedAccessView = () => {
                             'Check-out/check-in workflows',
                             'Emergency break-glass access'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-purple-800">
+                            <li key={idx} className="flex items-start gap-3 text-purple-800 dark:text-purple-200">
                                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-purple-500 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -181,8 +181,8 @@ const PrivilegedAccessView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-xl border border-blue-100 shadow-sm">
-                    <h3 className="text-lg font-bold text-blue-900 mb-4">Session Management</h3>
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
+                    <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-4">Session Management</h3>
                     <ul className="space-y-3">
                         {[
                             'Session recording and monitoring',
@@ -191,7 +191,7 @@ const PrivilegedAccessView = () => {
                             'Concurrent session limits',
                             'Session timeout policies'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-blue-800">
+                            <li key={idx} className="flex items-start gap-3 text-blue-800 dark:text-blue-200">
                                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
@@ -201,9 +201,9 @@ const PrivilegedAccessView = () => {
             </div>
 
             {/* Access Workflow */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-bold text-slate-800">Privileged Access Workflow</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Privileged Access Workflow</h3>
                 </div>
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -213,9 +213,9 @@ const PrivilegedAccessView = () => {
                             { step: '3. Access', desc: 'Time-limited access granted', color: 'green' },
                             { step: '4. Audit', desc: 'All actions logged and reviewed', color: 'orange' }
                         ].map((phase, idx) => (
-                            <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                            <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-700 rounded-lg">
                                 <div className="text-lg font-bold text-slate-900 mb-2">{phase.step}</div>
-                                <p className="text-sm text-slate-600">{phase.desc}</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-300">{phase.desc}</p>
                             </div>
                         ))}
                     </div>
@@ -223,8 +223,8 @@ const PrivilegedAccessView = () => {
             </div>
 
             {/* Best Practices */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Best Practices</h3>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Best Practices</h3>
                 <div className="space-y-3">
                     {[
                         'Use service accounts instead of personal accounts for system access',
@@ -234,9 +234,9 @@ const PrivilegedAccessView = () => {
                         'Monitor and alert on privileged account usage',
                         'Maintain detailed audit logs for compliance'
                     ].map((practice, idx) => (
-                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-slate-700">{practice}</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-300">{practice}</span>
                         </div>
                     ))}
                 </div>
@@ -249,14 +249,14 @@ const AccessPoliciesView = () => {
     return (
         <div className="space-y-6">
             {/* Policy Overview */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100 shadow-sm">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-blue-100 rounded-lg">
+                    <div className="p-3 bg-blue-100 dark:bg-blue-800 rounded-lg">
                         <Shield className="w-6 h-6 text-blue-600" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-blue-900 mb-2">Access Control Policies</h3>
-                        <p className="text-blue-800 leading-relaxed">
+                        <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">Access Control Policies</h3>
+                        <p className="text-blue-800 dark:text-blue-200 leading-relaxed">
                             Comprehensive policies governing user access, authentication, and authorization across all systems.
                         </p>
                     </div>
@@ -307,11 +307,11 @@ const AccessPoliciesView = () => {
                         ]
                     }
                 ].map((policy, idx) => (
-                    <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                        <h3 className="text-lg font-bold text-slate-800 mb-4">{policy.title}</h3>
+                    <div key={idx} className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">{policy.title}</h3>
                         <ul className="space-y-2">
                             {policy.items.map((item, itemIdx) => (
-                                <li key={itemIdx} className="flex items-start gap-3 text-slate-600">
+                                <li key={itemIdx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
                                     <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                                     <span className="text-sm leading-relaxed">{item}</span>
                                 </li>
@@ -322,18 +322,18 @@ const AccessPoliciesView = () => {
             </div>
 
             {/* Compliance Requirements */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-bold text-slate-800">Regulatory Compliance</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Regulatory Compliance</h3>
                 </div>
                 <div className="p-6">
-                    <p className="text-slate-600 mb-4">
+                    <p className="text-slate-600 dark:text-slate-300 mb-4">
                         Access policies are designed to meet requirements from multiple regulatory frameworks:
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {['SOC 2', 'ISO 27001', 'GDPR', 'PCI DSS', 'HIPAA', 'NIST', 'DORA', 'SOX'].map((framework, idx) => (
-                            <div key={idx} className="px-4 py-2 bg-blue-50 border border-blue-100 rounded-lg text-center">
-                                <span className="font-semibold text-blue-900 text-sm">{framework}</span>
+                            <div key={idx} className="px-4 py-2 bg-blue-50 border border-blue-100 dark:border-blue-800 rounded-lg text-center">
+                                <span className="font-semibold text-blue-900 dark:text-blue-100 text-sm">{framework}</span>
                             </div>
                         ))}
                     </div>
@@ -347,23 +347,23 @@ const MonitoringView = () => {
     return (
         <div className="space-y-6">
             {/* Overview */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                     <Activity className="w-5 h-5 text-green-600" />
                     Access Monitoring & Auditing
                 </h3>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
                     Comprehensive monitoring and logging of all access activities to detect and respond to security incidents.
                 </p>
             </div>
 
             {/* Monitoring Capabilities */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
                         <Activity className="w-6 h-6 text-green-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Real-Time Monitoring</h3>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Real-Time Monitoring</h3>
                     <ul className="space-y-2">
                         {[
                             'Live session monitoring',
@@ -372,7 +372,7 @@ const MonitoringView = () => {
                             'Privilege escalation',
                             'After-hours access'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                            <li key={idx} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
                                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
                                 {item}
                             </li>
@@ -380,11 +380,11 @@ const MonitoringView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center mb-4">
                         <FileText className="w-6 h-6 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Audit Logging</h3>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Audit Logging</h3>
                     <ul className="space-y-2">
                         {[
                             'Comprehensive audit trails',
@@ -393,7 +393,7 @@ const MonitoringView = () => {
                             'Searchable log data',
                             'Compliance reporting'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                            <li key={idx} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
                                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
                                 {item}
                             </li>
@@ -401,11 +401,11 @@ const MonitoringView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="w-12 h-12 bg-orange-100 dark:bg-orange-800 rounded-lg flex items-center justify-center mb-4">
                         <AlertCircle className="w-6 h-6 text-orange-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3">Alerting</h3>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Alerting</h3>
                     <ul className="space-y-2">
                         {[
                             'Automated alerts',
@@ -414,7 +414,7 @@ const MonitoringView = () => {
                             'Escalation procedures',
                             'Incident response'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                            <li key={idx} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
                                 <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />
                                 {item}
                             </li>
@@ -424,9 +424,9 @@ const MonitoringView = () => {
             </div>
 
             {/* Logged Events */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-bold text-slate-800">Logged Events</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Logged Events</h3>
                 </div>
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -440,9 +440,9 @@ const MonitoringView = () => {
                             'Configuration changes',
                             'Security policy violations'
                         ].map((event, idx) => (
-                            <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                            <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                                 <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                <span className="text-sm text-slate-700">{event}</span>
+                                <span className="text-sm text-slate-700 dark:text-slate-300">{event}</span>
                             </div>
                         ))}
                     </div>
@@ -450,17 +450,17 @@ const MonitoringView = () => {
             </div>
 
             {/* Reporting */}
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl border border-slate-200">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Compliance Reporting</h3>
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Compliance Reporting</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[
                         { title: 'Access Reviews', desc: 'Quarterly user access certification reports' },
                         { title: 'Audit Reports', desc: 'Detailed audit trail reports for compliance' },
                         { title: 'Security Metrics', desc: 'KPIs and security posture dashboards' }
                     ].map((report, idx) => (
-                        <div key={idx} className="bg-white p-4 rounded-lg">
-                            <h4 className="font-semibold text-slate-800 mb-2">{report.title}</h4>
-                            <p className="text-sm text-slate-600">{report.desc}</p>
+                        <div key={idx} className="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                            <h4 className="font-semibold text-slate-800 dark:text-slate-100 mb-2">{report.title}</h4>
+                            <p className="text-sm text-slate-600 dark:text-slate-300">{report.desc}</p>
                         </div>
                     ))}
                 </div>
@@ -470,3 +470,7 @@ const MonitoringView = () => {
 };
 
 export default ModernAccessManagement;
+
+
+
+

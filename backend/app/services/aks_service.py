@@ -16,6 +16,7 @@ import json
 import re
 import tempfile
 import os
+import gzip
 
 # Kubernetes Python client
 try:
@@ -591,7 +592,22 @@ class AKSService:
             )
             
             if credential_response.kubeconfigs and len(credential_response.kubeconfigs) > 0:
-                kubeconfig_data = base64.b64decode(credential_response.kubeconfigs[0].value).decode('utf-8')
+                # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed)
+                decoded_bytes = base64.b64decode(credential_response.kubeconfigs[0].value)
+                
+                # Try to decompress if it's gzip-compressed
+                try:
+                    kubeconfig_data = gzip.decompress(decoded_bytes).decode('utf-8')
+                    logger.debug("Kubeconfig was gzip-compressed, decompressed successfully")
+                except (gzip.BadGzipFile, OSError):
+                    # Not compressed, decode directly as UTF-8
+                    try:
+                        kubeconfig_data = decoded_bytes.decode('utf-8')
+                    except UnicodeDecodeError as e:
+                        logger.error(f"Failed to decode kubeconfig as UTF-8: {e}")
+                        logger.error(f"First 100 bytes (hex): {decoded_bytes[:100].hex()}")
+                        raise
+                
                 temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
                 temp_file.write(kubeconfig_data)
                 temp_file.close()
@@ -618,8 +634,21 @@ class AKSService:
                 logger.error("  - OR 'Azure Kubernetes Service Cluster Admin Role' (fallback)")
                 return None
             
-            # Decode the kubeconfig (it's base64 encoded)
-            kubeconfig_data = base64.b64decode(credential_response.kubeconfigs[0].value).decode('utf-8')
+            # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed)
+            decoded_bytes = base64.b64decode(credential_response.kubeconfigs[0].value)
+            
+            # Try to decompress if it's gzip-compressed
+            try:
+                kubeconfig_data = gzip.decompress(decoded_bytes).decode('utf-8')
+                logger.debug("Kubeconfig was gzip-compressed, decompressed successfully")
+            except (gzip.BadGzipFile, OSError):
+                # Not compressed, decode directly as UTF-8
+                try:
+                    kubeconfig_data = decoded_bytes.decode('utf-8')
+                except UnicodeDecodeError as e:
+                    logger.error(f"Failed to decode kubeconfig as UTF-8: {e}")
+                    logger.error(f"First 100 bytes (hex): {decoded_bytes[:100].hex()}")
+                    raise
             
             # Write to temporary file
             temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
@@ -719,7 +748,7 @@ class AKSService:
             resource_group = id_parts[id_parts.index("resourceGroups") + 1] if "resourceGroups" in id_parts else cluster.resource_group
             cluster_name = cluster.name
             
-            # Test connection first (for diagnostics)
+            # Test connection first (for diagnostics) and auto-refresh credentials if needed
             try:
                 connection_test = await self.test_cluster_connection(resource_group, cluster_name)
                 logger.info(f"Connection test results:")
@@ -728,13 +757,48 @@ class AKSService:
                 logger.info(f"  - Kubernetes client available: {connection_test.get('kubernetes_client_available')}")
                 if connection_test.get('error'):
                     logger.warning(f"  - Connection test error: {connection_test.get('error')}")
+                
+                # Auto-refresh credentials if kubeconfig cannot be obtained (for local development)
+                if not connection_test.get("can_get_kubeconfig") and not self.is_azure_app_service:
+                    logger.info("Attempting to refresh cluster credentials automatically...")
+                    try:
+                        import shutil
+                        az_cmd = shutil.which("az") or shutil.which("az.cmd") or "az"
+                        def _refresh_creds():
+                            return subprocess.run(
+                                [az_cmd, "aks", "get-credentials", "--resource-group", resource_group, "--name", cluster_name, "--overwrite-existing"],
+                                capture_output=True,
+                                text=True,
+                                timeout=30,
+                                shell=False
+                            )
+                        import asyncio
+                        loop = asyncio.get_event_loop()
+                        refresh_result = await loop.run_in_executor(None, _refresh_creds)
+                        if refresh_result.returncode == 0:
+                            logger.info("✓ Credentials refreshed successfully, retesting connection...")
+                            connection_test = await self.test_cluster_connection(resource_group, cluster_name)
+                            if connection_test.get("can_get_kubeconfig"):
+                                logger.info("✓ Connection test passed after credential refresh")
+                            else:
+                                logger.warning("⚠ Connection test still failing after credential refresh")
+                        else:
+                            logger.warning(f"Failed to refresh credentials: {refresh_result.stderr}")
+                    except Exception as refresh_err:
+                        logger.warning(f"Error refreshing credentials (non-fatal): {refresh_err}")
+                
                 if not connection_test.get("can_get_kubeconfig"):
                     logger.error(f"⚠ Cannot get kubeconfig for cluster {cluster_name}")
                     logger.error(f"  Error: {connection_test.get('error', 'Unknown error')}")
-                    logger.error("  This usually means Managed Identity lacks required permissions:")
-                    logger.error("    - 'Azure Kubernetes Service Cluster User Role' (recommended)")
-                    logger.error("    - OR 'Azure Kubernetes Service Cluster Admin Role' (alternative)")
-                    logger.error("  To fix: Assign one of these roles to the App Service Managed Identity on the AKS cluster")
+                    if self.is_azure_app_service:
+                        logger.error("  This usually means Managed Identity lacks required permissions:")
+                        logger.error("    - 'Azure Kubernetes Service Cluster User Role' (recommended)")
+                        logger.error("    - OR 'Azure Kubernetes Service Cluster Admin Role' (alternative)")
+                        logger.error("  To fix: Assign one of these roles to the App Service Managed Identity on the AKS cluster")
+                    else:
+                        logger.error("  For local development, ensure you're logged in to Azure CLI:")
+                        logger.error("    - Run: az login")
+                        logger.error(f"    - Then: az aks get-credentials --resource-group {resource_group} --name {cluster_name}")
             except Exception as e:
                 logger.warning(f"Connection test failed (non-fatal, continuing): {e}")
             
@@ -1077,31 +1141,48 @@ class AKSService:
                         print(f"Stderr: {result.stderr[:500] if result.stderr else 'None'}")
                         logger.error(f"Table format failed - return code: {result.returncode}, stderr: {result.stderr[:500] if result.stderr else 'None'}")
                 
-                # Try alternative: ensure credentials are fresh
-                logger.info(f"Retrying with fresh credentials...")
-                try:
-                    az_cmd = shutil.which("az") or shutil.which("az.cmd") or "az"
-                    def _refresh_creds():
-                        return subprocess.run(
-                            [az_cmd, "aks", "get-credentials", "--resource-group", resource_group, "--name", cluster_name, "--overwrite-existing"],
-                            capture_output=True,
-                            text=True,
-                            timeout=30,
-                            shell=False
-                        )
-                    refresh_result = await loop.run_in_executor(None, _refresh_creds)
-                    if refresh_result.returncode == 0:
-                        logger.info("Credentials refreshed, retrying namespace listing...")
-                        # Retry the kubectl command
-                        result = await loop.run_in_executor(None, _run_kubectl)
-                        if result.returncode != 0:
-                            logger.error(f"Still failed after credential refresh")
+                # Try alternative: ensure credentials are fresh (only for local development)
+                if not self.is_azure_app_service:
+                    logger.info(f"Retrying with fresh credentials...")
+                    try:
+                        az_cmd = shutil.which("az") or shutil.which("az.cmd") or "az"
+                        def _refresh_creds():
+                            logger.info(f"Running: {az_cmd} aks get-credentials --resource-group {resource_group} --name {cluster_name} --overwrite-existing")
+                            return subprocess.run(
+                                [az_cmd, "aks", "get-credentials", "--resource-group", resource_group, "--name", cluster_name, "--overwrite-existing"],
+                                capture_output=True,
+                                text=True,
+                                timeout=30,
+                                shell=False
+                            )
+                        refresh_result = await loop.run_in_executor(None, _refresh_creds)
+                        if refresh_result.returncode == 0:
+                            logger.info("✓ Credentials refreshed successfully, retrying namespace listing...")
+                            # Update kubeconfig path after refresh
+                            creds = await self.get_cluster_credentials(resource_group, cluster_name)
+                            if creds and creds.get("kubeconfig_path") and os.path.exists(creds["kubeconfig_path"]):
+                                kubeconfig_path = creds["kubeconfig_path"]
+                                env["KUBECONFIG"] = kubeconfig_path
+                                logger.info(f"Using refreshed kubeconfig: {kubeconfig_path}")
+                            
+                            # Retry the kubectl command
+                            result = await loop.run_in_executor(None, _run_kubectl)
+                            if result.returncode == 0:
+                                logger.info("✓ Successfully retrieved namespaces after credential refresh")
+                                # Continue with parsing below (don't return here)
+                            else:
+                                logger.error(f"✗ Still failed after credential refresh. Return code: {result.returncode}")
+                                logger.error(f"Stderr: {result.stderr[:500] if result.stderr else 'None'}")
+                                return namespaces
+                        else:
+                            logger.warning(f"Failed to refresh credentials: {refresh_result.stderr}")
+                            logger.warning("You may need to run manually: az aks get-credentials --resource-group <RG> --name <cluster-name> --overwrite-existing")
                             return namespaces
-                    else:
-                        logger.warning(f"Failed to refresh credentials: {refresh_result.stderr}")
+                    except Exception as retry_error:
+                        logger.error(f"Error retrying: {retry_error}", exc_info=True)
                         return namespaces
-                except Exception as retry_error:
-                    logger.error(f"Error retrying: {retry_error}")
+                else:
+                    logger.error("Cannot refresh credentials in Azure App Service - Managed Identity must have proper permissions")
                     return namespaces
             
             result_stdout = result.stdout if result.stdout else "{}"
