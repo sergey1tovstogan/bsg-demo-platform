@@ -136,32 +136,26 @@ jobs:
           echo "Installing dependencies and building in parallel..."
           (
             cd frontend
-            echo "Cleaning node_modules only (keeping package-lock.json)..."
-            rm -rf node_modules 2>/dev/null || true
-            echo "Installing dependencies with npm ci..."
-            npm ci || {
-              echo "npm ci failed, trying npm install..."
-              npm install
-            }
-            echo "Verifying node_modules exists and has content..."
-            ls -la node_modules | head -10
-            echo "Checking for vite package..."
-            ls -la node_modules/vite 2>/dev/null || echo "vite package not found"
-            echo "Checking for vite binary..."
-            ls -la node_modules/.bin/vite 2>/dev/null || {
-              echo "vite binary not found, installing vite..."
-              npm install --save-dev vite@^5.0.8 --force
-            }
-            echo "Verifying vite binary exists after install..."
-            test -f node_modules/.bin/vite && echo "✓ vite binary found" || {
-              echo "ERROR: vite binary still not found"
-              echo "Listing node_modules/.bin contents:"
-              ls -la node_modules/.bin/ || echo "node_modules/.bin does not exist"
-              echo "Installing all dependencies fresh..."
-              npm install --force
-            }
-            echo "Running build with npx vite..."
-            npm run build || npx vite build
+            echo "Removing node_modules for clean install..."
+            rm -rf node_modules
+            echo "Installing dependencies with npm install (production + dev)..."
+            npm install --include=dev
+            echo "Verifying vite package exists..."
+            if [ ! -d "node_modules/vite" ]; then
+              echo "ERROR: vite package directory not found!"
+              echo "Installing vite explicitly..."
+              npm install vite@^5.0.8 --save-dev
+            fi
+            echo "Verifying vite binary exists..."
+            if [ ! -f "node_modules/.bin/vite" ]; then
+              echo "ERROR: vite binary not found!"
+              echo "Contents of node_modules/.bin:"
+              ls -la node_modules/.bin/ 2>/dev/null || echo "node_modules/.bin does not exist"
+              echo "Reinstalling vite..."
+              npm install vite@^5.0.8 --save-dev --force
+            fi
+            echo "Running build..."
+            npm run build
           ) &
           FRONTEND_PID=$!
           (
