@@ -254,7 +254,7 @@ jobs:
       
       - name: Quick Health Check (non-blocking)
         continue-on-error: true
-        timeout-seconds: 10
+        timeout-minutes: 1
         run: |
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 $WEBAPP_URL/api/v1/live 2>/dev/null || echo "000")
