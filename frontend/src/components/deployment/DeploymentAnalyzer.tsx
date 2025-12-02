@@ -271,7 +271,13 @@ export function DeploymentAnalyzer() {
           } else {
             // No namespaces found, but we have AKS clusters - show error
             console.error('[DeploymentAnalyzer] No namespaces returned for AKS clusters')
-            setError('Failed to retrieve namespaces from AKS clusters. Check backend logs for kubectl errors. Ensure cluster credentials are configured (run: az aks get-credentials --resource-group <RG> --name <cluster-name>).')
+            const troubleshootingSteps = [
+              '1. Verify Azure CLI login: `az account show`',
+              '2. Refresh cluster credentials: `az aks get-credentials --resource-group <RG> --name <cluster-name> --overwrite-existing`',
+              '3. Test kubectl connection: `kubectl cluster-info`',
+              '4. Check backend logs for detailed error messages'
+            ]
+            setError(`Failed to retrieve namespaces from AKS clusters.\n\nTroubleshooting Steps:\n${troubleshootingSteps.join('\n')}`)
             setClusterNamespaces([])
             setAnalysisProgress(null)
             setLoading(false)
@@ -1058,9 +1064,38 @@ function NamespaceSelector({
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Cluster: {cluster.cluster_name}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Resource Group: {cluster.resource_group}</p>
               {cluster.error ? (
-                <div className="text-red-600 dark:text-red-400 text-sm">{cluster.error}</div>
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg p-4 space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-red-800 dark:text-red-200 font-semibold mb-2">{cluster.error}</p>
+                      {cluster.error_details && (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-sm font-medium text-red-700 dark:text-red-300">Troubleshooting Steps:</p>
+                          <ul className="list-disc list-inside space-y-1 text-sm text-red-600 dark:text-red-400">
+                            {cluster.error_details.troubleshooting_steps?.map((step: string, stepIdx: number) => (
+                              <li key={stepIdx} className="font-mono text-xs">{step}</li>
+                            ))}
+                          </ul>
+                          {cluster.error_details.for_azure_app_service && (
+                            <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-500/30">
+                              <p className="text-sm font-medium text-red-700 dark:text-red-300 mb-2">For Azure App Service:</p>
+                              <ul className="list-disc list-inside space-y-1 text-sm text-red-600 dark:text-red-400">
+                                {cluster.error_details.for_azure_app_service.map((step: string, stepIdx: number) => (
+                                  <li key={stepIdx} className="font-mono text-xs">{step}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               ) : cluster.namespaces.length === 0 ? (
-                <div className="text-gray-500 text-sm">No namespaces found</div>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 rounded-lg p-3">
+                  <p className="text-yellow-800 dark:text-yellow-200 text-sm">No namespaces found. This cluster may have no non-system namespaces, or there may be a connectivity issue.</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {cluster.namespaces.map((ns) => {
