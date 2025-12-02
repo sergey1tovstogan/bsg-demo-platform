@@ -2936,6 +2936,7 @@ const SecurityEventFeedHTML = `<!DOCTYPE html>
         
         function showTooltip(tooltipId) {
             const tooltip = document.getElementById('tooltip');
+            const tooltipTitle = tooltip ? tooltip.querySelector('.tooltip-title') : null;
             const tooltipDescription = tooltip ? tooltip.querySelector('.tooltip-description') : null;
             
             let config;
@@ -2946,7 +2947,9 @@ const SecurityEventFeedHTML = `<!DOCTYPE html>
                 config = tooltips[1];
             }
             
-            if (config && tooltip && tooltipDescription) {
+            if (config && tooltip && tooltipTitle && tooltipDescription) {
+                // Set both title and description
+                tooltipTitle.textContent = config.title;
                 tooltipDescription.textContent = config.description.replace(/\\\\n/g, '\\n');
                 tooltip.style.display = 'block';
                 tooltip.style.position = 'fixed';
