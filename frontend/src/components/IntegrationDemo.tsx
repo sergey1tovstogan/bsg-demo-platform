@@ -26,22 +26,22 @@ const JsonView = ({ data, rawText }: { data: any, rawText?: string }) => {
     // Detect token type and apply appropriate styling with inline colors
     if (token.match(/^".*":$/)) {
       // Object key
-      return <span key={index} style={{ color: '#BB6F62', fontWeight: 600 }}>{token}</span>
+      return <span key={index} className="text-[#BB6F62] dark:text-[#ff9e8f] font-semibold">{token}</span>
     } else if (token.match(/^".*"$/)) {
       // String value
-      return <span key={index} style={{ color: '#134CA2' }}>{token}</span>
+      return <span key={index} className="text-[#134CA2] dark:text-[#60a5fa]">{token}</span>
     } else if (token.match(/^-?\d+\.?\d*$/)) {
       // Number
-      return <span key={index} style={{ color: '#008456' }}>{token}</span>
+      return <span key={index} className="text-[#008456] dark:text-[#4ade80]">{token}</span>
     } else if (token === 'true' || token === 'false') {
       // Boolean - Purple
-      return <span key={index} style={{ color: '#9333ea', fontWeight: 600 }}>{token}</span>
+      return <span key={index} className="text-purple-600 dark:text-purple-400 font-semibold">{token}</span>
     } else if (token === 'null') {
       // Null - Gray
-      return <span key={index} style={{ color: '#6b7280', fontWeight: 600 }}>{token}</span>
+      return <span key={index} className="text-gray-500 dark:text-gray-400 font-semibold">{token}</span>
     } else {
       // Default (punctuation, whitespace)
-      return <span key={index}>{token}</span>
+      return <span key={index} className="dark:text-slate-300">{token}</span>
     }
   }
 
@@ -377,7 +377,7 @@ export function IntegrationDemo() {
     <div className="space-y-6">
       {/* Page Title and API Key Management */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-[#283054]">Useful APIs</h2>
+        <h2 className="text-xl font-bold text-[#283054] dark:text-white">Useful APIs</h2>
         <button
           onClick={() => setShowApiKeyModal(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
@@ -398,10 +398,10 @@ export function IntegrationDemo() {
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
           <div>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded">POST</span>
-              <h3 className="text-lg font-bold text-[#283054]">Payment Orders</h3>
+              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-100 text-xs font-bold rounded">POST</span>
+              <h3 className="text-lg font-bold text-[#283054] dark:text-white">Payment Orders</h3>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders
             </p>
           </div>
@@ -426,11 +426,11 @@ export function IntegrationDemo() {
 
         {/* POST Request Body */}
         <div className="mb-4">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Request Body:
           </label>
           <div className="relative">
-            <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
+            <div className="w-full h-48 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg overflow-auto bg-white dark:bg-slate-900 pointer-events-none">
               <JsonView
                 data={(() => { try { return JSON.parse(postBody) } catch { return null } })()}
                 rawText={postBody}
@@ -439,7 +439,7 @@ export function IntegrationDemo() {
             <textarea
               value={postBody}
               onChange={(e) => setPostBody(e.target.value)}
-              className="absolute top-0 left-0 w-full h-48 px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent bg-transparent text-transparent caret-black resize-none z-10"
+              className="absolute top-0 left-0 w-full h-48 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#283054] dark:focus:ring-blue-500 focus:border-transparent bg-transparent text-transparent caret-black dark:caret-white resize-none z-10"
               placeholder="Enter JSON request body..."
               spellCheck={false}
             />
@@ -468,7 +468,7 @@ export function IntegrationDemo() {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setPostResultCollapsed(!postResultCollapsed)}
-                  className="flex items-center space-x-1 px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                  className="flex items-center space-x-1 px-2 py-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
                   title={postResultCollapsed ? "Expand result" : "Collapse result"}
                 >
                   <span className="text-xs font-medium">
@@ -486,7 +486,7 @@ export function IntegrationDemo() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* API Response - Takes 2/3 of the width */}
                 <div className="lg:col-span-2">
-                  <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
+                  <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 max-h-96 overflow-auto border border-gray-200 dark:border-slate-700">
                     {postResult.error ? (
                       <pre className="text-xs text-red-700 whitespace-pre-wrap">{postResult.error}</pre>
                     ) : (
@@ -500,13 +500,13 @@ export function IntegrationDemo() {
                   <div className="lg:col-span-1">
                     {/* Extensibility Framework Badge - Show when pythonValidationError is present */}
                     {postResult.data && JSON.stringify(postResult.data).includes('pythonValidationError') && (
-                      <div className="bg-gradient-to-br from-purple-50 to-violet-50 border-2 border-purple-300 rounded-lg p-4 h-full flex flex-col justify-center">
+                      <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-2 border-purple-300 dark:border-purple-700 rounded-lg p-4 h-full flex flex-col justify-center">
                         <div className="text-center mb-3">
                           <svg className="w-10 h-10 text-purple-600 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/>
+                            <path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z" />
                           </svg>
-                          <h3 className="text-sm font-semibold text-purple-700 mb-1">Extensibility Framework</h3>
-                          <p className="text-xs text-purple-600">Python validation script</p>
+                          <h3 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-1">Extensibility Framework</h3>
+                          <p className="text-xs text-purple-600 dark:text-purple-400">Python validation script</p>
                         </div>
                       </div>
                     )}
@@ -515,27 +515,27 @@ export function IntegrationDemo() {
                     {!(postResult.data && JSON.stringify(postResult.data).includes('pythonValidationError')) && (
                       <>
                         {balance.loading && (
-                          <div className="bg-gray-50 rounded-lg p-4 h-full flex items-center justify-center">
+                          <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 h-full flex items-center justify-center border border-gray-200 dark:border-slate-700">
                             <div className="flex flex-col items-center space-y-2">
                               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                              <span className="text-sm text-gray-600">Fetching balance...</span>
+                              <span className="text-sm text-gray-600 dark:text-gray-300">Fetching balance...</span>
                             </div>
                           </div>
                         )}
 
                         {balance.amount !== undefined && !balance.loading && (
-                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 h-full flex flex-col justify-center">
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-700 rounded-lg p-4 h-full flex flex-col justify-center">
                             <div className="text-center mb-3">
                               <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
-                              <h3 className="text-xs font-semibold text-gray-600 mb-1">Account Balance</h3>
-                              <p className="text-xs text-gray-500">(Account: 11215)</p>
+                              <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Account Balance</h3>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">(Account: 11215)</p>
                             </div>
                             <div className="text-center">
-                              <div className="text-2xl font-bold text-green-700 mb-1">
+                              <div className="text-2xl font-bold text-green-700 dark:text-green-400 mb-1">
                                 {balance.currency} {balance.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </div>
                               {balance.lastUpdated && (
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                   Updated: {new Date(balance.lastUpdated).toLocaleTimeString()}
                                 </p>
                               )}
@@ -557,19 +557,19 @@ export function IntegrationDemo() {
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
           <div>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
-              <h3 className="text-lg font-bold text-[#283054]">Security Trades</h3>
+              <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100 text-xs font-bold rounded">GET</span>
+              <h3 className="text-lg font-bold text-[#283054] dark:text-white">Security Trades</h3>
               <a
                 href="https://developer.temenos.com/service/security-trades#tag/WEALTH/operation/getSecurityTrades"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-purple-600 hover:text-purple-800 transition-colors"
+                className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
                 title="View API documentation"
               >
                 <ExternalLink className="w-4 h-4" />
               </a>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               https://api.temenos.com/api/v4.0.0/holdings/securityTrades/trades
             </p>
           </div>
@@ -613,7 +613,7 @@ export function IntegrationDemo() {
               </div>
               <button
                 onClick={() => setGetResultCollapsed(!getResultCollapsed)}
-                className="flex items-center space-x-1 px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                className="flex items-center space-x-1 px-2 py-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
                 title={getResultCollapsed ? "Expand result" : "Collapse result"}
               >
                 <span className="text-xs font-medium">
@@ -627,7 +627,7 @@ export function IntegrationDemo() {
               </button>
             </div>
             {!getResultCollapsed && (
-              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
+              <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 max-h-96 overflow-auto border border-gray-200 dark:border-slate-700">
                 {getResult.error ? (
                   <pre className="text-xs text-red-700 whitespace-pre-wrap">{getResult.error}</pre>
                 ) : (
@@ -648,22 +648,22 @@ export function IntegrationDemo() {
               <select
                 value={portfolioMethod}
                 onChange={(e) => setPortfolioMethod(e.target.value as 'GET' | 'POST')}
-                className={`px-2 py-1 ${portfolioMethod === 'POST' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'} text-xs font-bold rounded cursor-pointer border-none focus:outline-none focus:ring-2 focus:ring-offset-1 ${portfolioMethod === 'POST' ? 'focus:ring-blue-500' : 'focus:ring-green-500'}`}
+                className={`px-2 py-1 ${portfolioMethod === 'POST' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100' : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100'} text-xs font-bold rounded cursor-pointer border-none focus:outline-none focus:ring-2 focus:ring-offset-1 ${portfolioMethod === 'POST' ? 'focus:ring-blue-500' : 'focus:ring-green-500'}`}
               >
                 <option value="POST">POST</option>
                 <option value="GET">GET</option>
               </select>
-              <h3 className="text-lg font-bold text-[#283054]">Portfolio</h3>
+              <h3 className="text-lg font-bold text-[#283054] dark:text-white">Portfolio</h3>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 https://transactwb.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/
               </span>
               <input
                 type="text"
                 value={portfolioId}
                 onChange={(e) => setPortfolioId(e.target.value)}
-                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent font-mono"
+                className="px-2 py-1 text-sm border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-[#283054] dark:focus:ring-blue-500 focus:border-transparent font-mono bg-white dark:bg-slate-900 dark:text-white"
                 placeholder="Portfolio ID"
               />
             </div>
@@ -690,11 +690,11 @@ export function IntegrationDemo() {
         {/* Request Body (only for POST) */}
         {portfolioMethod === 'POST' && (
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Request Body:
             </label>
             <div className="relative">
-              <div className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg overflow-auto bg-white pointer-events-none">
+              <div className="w-full h-48 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg overflow-auto bg-white dark:bg-slate-900 pointer-events-none">
                 <JsonView
                   data={(() => { try { return JSON.parse(portfolioBody) } catch { return null } })()}
                   rawText={portfolioBody}
@@ -703,7 +703,7 @@ export function IntegrationDemo() {
               <textarea
                 value={portfolioBody}
                 onChange={(e) => setPortfolioBody(e.target.value)}
-                className="absolute top-0 left-0 w-full h-48 px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-transparent bg-transparent text-transparent caret-black resize-none z-10"
+                className="absolute top-0 left-0 w-full h-48 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#283054] dark:focus:ring-blue-500 focus:border-transparent bg-transparent text-transparent caret-black dark:caret-white resize-none z-10"
                 placeholder="Enter JSON request body..."
                 spellCheck={false}
               />
@@ -732,7 +732,7 @@ export function IntegrationDemo() {
               </div>
               <button
                 onClick={() => setPortfolioResultCollapsed(!portfolioResultCollapsed)}
-                className="flex items-center space-x-1 px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                className="flex items-center space-x-1 px-2 py-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
                 title={portfolioResultCollapsed ? "Expand result" : "Collapse result"}
               >
                 <span className="text-xs font-medium">
@@ -746,7 +746,7 @@ export function IntegrationDemo() {
               </button>
             </div>
             {!portfolioResultCollapsed && (
-              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
+              <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 max-h-96 overflow-auto border border-gray-200 dark:border-slate-700">
                 {portfolioResult.error ? (
                   <pre className="text-xs text-red-700 whitespace-pre-wrap">{portfolioResult.error}</pre>
                 ) : (
@@ -763,27 +763,27 @@ export function IntegrationDemo() {
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-3">
-              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
-              <h3 className="text-lg font-bold text-[#283054]">Customer</h3>
+              <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100 text-xs font-bold rounded">GET</span>
+              <h3 className="text-lg font-bold text-[#283054] dark:text-white">Customer</h3>
               <a
                 href="https://developer.temenos.com/service/customer-management#tag/RETAIL/operation/getCustomer"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-purple-600 hover:text-purple-800 transition-colors"
+                className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
                 title="View API documentation"
               >
                 <ExternalLink className="w-4 h-4" />
               </a>
             </div>
             <div className="flex items-center space-x-2">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 https://api.temenos.com/api/v5.7.0/party/customers/
               </p>
               <input
                 type="text"
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#097BED] focus:border-transparent"
+                className="px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#097BED] focus:border-transparent bg-white dark:bg-slate-900 dark:text-white"
                 style={{ width: '100px' }}
                 placeholder="100291"
               />
@@ -829,7 +829,7 @@ export function IntegrationDemo() {
               </div>
               <button
                 onClick={() => setCustomerResultCollapsed(!customerResultCollapsed)}
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1"
+                className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center space-x-1"
                 title={customerResultCollapsed ? "Expand result" : "Collapse result"}
               >
                 <span className="font-medium">
@@ -843,7 +843,7 @@ export function IntegrationDemo() {
               </button>
             </div>
             {!customerResultCollapsed && (
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-96 overflow-auto">
+              <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 border border-gray-200 dark:border-slate-700 max-h-96 overflow-auto">
                 {customerResult.error ? (
                   <pre className="text-xs text-red-700 whitespace-pre-wrap">{customerResult.error}</pre>
                 ) : (
@@ -860,18 +860,18 @@ export function IntegrationDemo() {
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-3">
-              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
-              <h3 className="text-lg font-bold text-[#283054]">Accounts</h3>
+              <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100 text-xs font-bold rounded">GET</span>
+              <h3 className="text-lg font-bold text-[#283054] dark:text-white">Accounts</h3>
             </div>
             <div className="flex items-center space-x-2">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 https://transactwb.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=
               </p>
               <input
                 type="text"
                 value={currencyId}
                 onChange={(e) => setCurrencyId(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#097BED] focus:border-transparent"
+                className="px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#097BED] dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-900 dark:text-white"
                 style={{ width: '80px' }}
                 placeholder="EUR"
               />
@@ -917,7 +917,7 @@ export function IntegrationDemo() {
               </div>
               <button
                 onClick={() => setAccountsResultCollapsed(!accountsResultCollapsed)}
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center space-x-1"
+                className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center space-x-1"
                 title={accountsResultCollapsed ? "Expand result" : "Collapse result"}
               >
                 <span className="font-medium">
@@ -931,7 +931,7 @@ export function IntegrationDemo() {
               </button>
             </div>
             {!accountsResultCollapsed && (
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-96 overflow-auto">
+              <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 border border-gray-200 dark:border-slate-700 max-h-96 overflow-auto">
                 {accountsResult.error ? (
                   <pre className="text-xs text-red-700 whitespace-pre-wrap">{accountsResult.error}</pre>
                 ) : (

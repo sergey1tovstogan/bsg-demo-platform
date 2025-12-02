@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Activity, FileText, GitBranch, Server, Database, BarChart3, Box, Lightbulb, Layers, AlertCircle, Wrench, ArrowRight, ArrowDown } from 'lucide-react'
-import axios from 'axios'
-
-const API_BASE = 'http://localhost:8000/api/v1'
+import { apiService } from '../../services/api'
+import type { Content } from '../../types'
 
 interface ContentPage {
   content_id: string
@@ -19,6 +18,7 @@ export function ObservabilityContent() {
   const [selectedPage, setSelectedPage] = useState<PageName>('intro')
   const [content, setContent] = useState<Record<string, ContentPage>>({})
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchContent()
@@ -26,17 +26,27 @@ export function ObservabilityContent() {
 
   const fetchContent = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/components/observability/content`)
-      if (response.data.success) {
+      setLoading(true)
+      setError(null)
+      const response = await apiService.getContent('observability')
+      if (response.success) {
         const contentMap: Record<string, ContentPage> = {}
-        response.data.data.forEach((item: ContentPage) => {
+        // Cast the generic Content type to our specific ContentPage structure if needed, 
+        // or just use the response data as is if it matches. 
+        // The API returns Content[], and we map it by ID.
+        response.data.forEach((item: Content) => {
+          // Extract page name from content_id (e.g. 'obs-intro' -> 'intro')
           const pageName = item.content_id.replace('obs-', '')
-          contentMap[pageName] = item
+          // We assume the body structure matches what we need
+          contentMap[pageName] = item as unknown as ContentPage
         })
         setContent(contentMap)
+      } else {
+        setError('Failed to load content')
       }
     } catch (error) {
       console.error('Error fetching observability content:', error)
+      setError('Failed to load content. Please try again later.')
     } finally {
       setLoading(false)
     }
@@ -56,22 +66,22 @@ export function ObservabilityContent() {
 
     return (
       <div className="px-6 py-8 text-center space-y-8">
-        <h1 className="text-5xl font-bold mb-4 dark:text-slate-100" style={{ color: '#1e293b' }}>
+        <h1 className="text-5xl font-bold mb-4 text-slate-900 dark:text-slate-100">
           Understanding <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600">Observability</span>
         </h1>
-        <p className="text-xl dark:text-slate-300" style={{ color: '#475569' }}>{page.body.subtitle}</p>
+        <p className="text-xl text-slate-600 dark:text-slate-300">{page.body.subtitle}</p>
 
         <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-8 mt-8 text-left shadow-sm">
-          <p className="mb-6 text-3xl font-bold dark:text-slate-100" style={{ color: '#1e293b' }}>
-            <span style={{ color: '#0d9488' }}>Imagine:</span> {page.body.story.scenario.replace('Imagine: ', '')}
+          <p className="mb-6 text-3xl font-bold text-slate-900 dark:text-slate-100">
+            <span className="text-teal-600 dark:text-teal-400">Imagine:</span> {page.body.story.scenario.replace('Imagine: ', '')}
           </p>
-          <div className="border-l-4 border-red-500 pl-6 mb-6 bg-red-50 py-4 transition-all duration-300 ease-in-out hover:scale-110 hover:shadow-lg hover:z-10 cursor-pointer">
-            <p className="text-xl" style={{ color: '#b91c1c' }}><span className="font-semibold">Monitoring</span> {page.body.story.monitoring.replace('Monitoring tells you: ', 'tells you: ')}</p>
+          <div className="border-l-4 border-red-500 pl-6 mb-6 bg-red-50 dark:bg-red-900/20 py-4 transition-all duration-300 ease-in-out hover:scale-110 hover:shadow-lg hover:z-10 cursor-pointer">
+            <p className="text-xl text-red-700 dark:text-red-300"><span className="font-semibold">Monitoring</span> {page.body.story.monitoring.replace('Monitoring tells you: ', 'tells you: ')}</p>
           </div>
-          <div className="border-l-4 border-teal-600 pl-6 mb-6 bg-teal-50 py-4 transition-all duration-300 ease-in-out hover:scale-110 hover:shadow-lg hover:z-10 cursor-pointer">
-            <p className="text-xl" style={{ color: '#0f766e' }}><span className="font-semibold">Observability</span> {page.body.story.observability.replace('Observability tells you: ', 'tells you: ')}</p>
+          <div className="border-l-4 border-teal-600 pl-6 mb-6 bg-teal-50 dark:bg-teal-900/20 py-4 transition-all duration-300 ease-in-out hover:scale-110 hover:shadow-lg hover:z-10 cursor-pointer">
+            <p className="text-xl text-teal-700 dark:text-teal-300"><span className="font-semibold">Observability</span> {page.body.story.observability.replace('Observability tells you: ', 'tells you: ')}</p>
           </div>
-          <p className="italic text-xl dark:text-slate-400" style={{ color: '#64748b' }}>{page.body.story.analogy}</p>
+          <p className="italic text-xl text-slate-500 dark:text-slate-400">{page.body.story.analogy}</p>
         </div>
 
         <button
@@ -95,12 +105,12 @@ export function ObservabilityContent() {
           <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-8 shadow-sm">
             <div className="flex items-center gap-4 mb-4">
               <AlertCircle className="w-12 h-12 text-red-600" />
-              <h3 className="text-3xl font-bold dark:text-slate-100" style={{ color: '#1e293b' }}>Monitoring</h3>
+              <h3 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Monitoring</h3>
             </div>
-            <p className="text-xl italic mb-6 dark:text-slate-300" style={{ color: '#475569' }}>{page.body.monitoring.question}</p>
+            <p className="text-xl italic mb-6 text-slate-600 dark:text-slate-300">{page.body.monitoring.question}</p>
             <ul className="space-y-3">
               {page.body.monitoring.points.map((point: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 dark:text-slate-300" style={{ color: '#475569' }}>
+                <li key={i} className="flex items-start gap-2 text-slate-600 dark:text-slate-300">
                   <span className="text-red-500 mt-1">•</span> {point}
                 </li>
               ))}
@@ -111,12 +121,12 @@ export function ObservabilityContent() {
           <div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border-2 border-teal-200 dark:border-teal-800 rounded-lg p-8 shadow-sm">
             <div className="flex items-center gap-4 mb-4">
               <Wrench className="w-12 h-12 text-teal-600" />
-              <h3 className="text-3xl font-bold dark:text-slate-100" style={{ color: '#1e293b' }}>Observability</h3>
+              <h3 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Observability</h3>
             </div>
-            <p className="text-xl italic mb-6 dark:text-slate-300" style={{ color: '#475569' }}>{page.body.observability.question}</p>
+            <p className="text-xl italic mb-6 text-slate-600 dark:text-slate-300">{page.body.observability.question}</p>
             <ul className="space-y-3">
               {page.body.observability.points.map((point: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 dark:text-slate-300" style={{ color: '#475569' }}>
+                <li key={i} className="flex items-start gap-2 text-slate-600 dark:text-slate-300">
                   <span className="text-teal-500 mt-1">•</span> {point}
                 </li>
               ))}
@@ -126,15 +136,15 @@ export function ObservabilityContent() {
 
         {/* Analogy Section */}
         <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-8 shadow-sm">
-          <h2 className="text-2xl font-bold mb-6 dark:text-slate-100" style={{ color: '#1e293b' }}>{page.body.analogy.heading}</h2>
+          <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-slate-100">{page.body.analogy.heading}</h2>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="flex gap-4">
               <AlertCircle className="w-8 h-8 text-red-500 flex-shrink-0" />
-              <p className="dark:text-slate-300" style={{ color: '#475569' }}>{page.body.analogy.dashboard}</p>
+              <p className="text-slate-600 dark:text-slate-300">{page.body.analogy.dashboard}</p>
             </div>
             <div className="flex gap-4">
               <Wrench className="w-8 h-8 text-teal-500 flex-shrink-0" />
-              <p className="dark:text-slate-300" style={{ color: '#475569' }}>{page.body.analogy.toolkit}</p>
+              <p className="text-slate-600 dark:text-slate-300">{page.body.analogy.toolkit}</p>
             </div>
           </div>
         </div>
@@ -441,6 +451,17 @@ export function ObservabilityContent() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center text-red-600 dark:text-red-400">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4" />
+          <p>{error}</p>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -477,11 +498,10 @@ export function ObservabilityContent() {
                   <button
                     key={page.id}
                     onClick={() => setSelectedPage(page.id)}
-                    className={`px-4 py-2 rounded-md transition-all flex items-center gap-2 font-medium ${
-                      selectedPage === page.id
-                        ? 'bg-teal-500 text-white shadow-lg'
-                        : 'text-white hover:bg-slate-800 border border-slate-600'
-                    }`}
+                    className={`px-4 py-2 rounded-md transition-all flex items-center gap-2 font-medium ${selectedPage === page.id
+                      ? 'bg-teal-500 text-white shadow-lg'
+                      : 'text-white hover:bg-slate-800 border border-slate-600'
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                     <span>{page.title}</span>

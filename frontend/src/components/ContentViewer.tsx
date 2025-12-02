@@ -27,10 +27,10 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
       setCurrentIndex(0)
     } catch (err: unknown) {
       // For integration component, don't show error - just show empty state
-      if (componentId !== 'integration') {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load content'
-        setError(errorMessage)
-      }
+      // if (componentId !== 'integration') {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load content'
+      setError(errorMessage)
+      // }
       setContents([])
     } finally {
       setLoading(false)
@@ -38,8 +38,8 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
   }
 
   useEffect(() => {
-    // Only load contents if not security component
-    if (componentId !== 'security') {
+    // Only load contents if not security or integration component
+    if (componentId !== 'security' && componentId !== 'integration') {
       loadContents()
     }
   }, [componentId, loadContents])
@@ -47,6 +47,11 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
   // Use SecurityContentViewer for security component (after hooks)
   if (componentId === 'security') {
     return <SecurityContentViewer />
+  }
+
+  // Use ApiOverview for integration component
+  if (componentId === 'integration') {
+    return <ApiOverview />
   }
 
   const goToPrevious = () => {
@@ -65,7 +70,7 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
     )
   }
 
-  if (error && componentId !== 'integration') {
+  if (error) {
     return (
       <div className="card">
         <p className="text-red-600">{error}</p>
@@ -74,10 +79,7 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
   }
 
   if (contents.length === 0) {
-    // Show API Overview native HTML component for integration component
-    if (componentId === 'integration') {
-      return <ApiOverview />
-    }
+
 
     return (
       <div className="card">
@@ -107,55 +109,56 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
         {currentContent.type === 'document' && (currentContent.body as { image_url?: string; interactive_areas?: Array<{ position: { top: number; left: number; width: number; height: number }; title: string; description: string; url?: string }> })?.image_url && (
           <>
             {/* Use native HTML component for API Overview, otherwise use image */}
-            {componentId === 'integration' && currentContent.title === 'API Overview' ? (
+            {/* Integration is handled by early return, so this check is simplified or removed if we don't need it for other components */}
+            {/* {componentId === 'integration' && currentContent.title === 'API Overview' ? (
               <ApiOverview />
-            ) : (
-              <div className="relative mb-4">
-                <img
-                  src={(currentContent.body as { image_url: string }).image_url}
-                  alt={currentContent.title}
-                  className="w-full h-auto rounded-lg shadow-md"
-                />
-                {((currentContent.body as { interactive_areas?: Array<{ position: { top: number; left: number; width: number; height: number }; title: string; description: string; url?: string }> }).interactive_areas || []).map((area: { position: { top: number; left: number; width: number; height: number }; title: string; description: string; url?: string }, idx: number) => (
-                  <div
-                    key={idx}
-                    className="absolute cursor-help"
-                    style={{
-                      top: area.position.top,
-                      left: area.position.left,
-                      width: area.position.width,
-                      height: area.position.height,
-                    }}
-                    onMouseEnter={() => setActiveTooltipIndex(idx)}
-                    onMouseLeave={() => setActiveTooltipIndex(null)}
-                  >
-                    <div className="w-full h-full hover:bg-blue-100 hover:bg-opacity-20 rounded transition-colors" />
-                    {activeTooltipIndex === idx && (
-                      <div className="absolute z-50 w-96 p-4 bg-white border-2 border-blue-500 rounded-lg shadow-xl text-sm left-0" style={{ bottom: '100%', marginBottom: '12px' }}>
-                        <div className="flex items-start space-x-2">
-                          <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <h4 className="font-bold mb-1 text-blue-600">{area.title}</h4>
-                            <p className="text-gray-800 leading-relaxed">{area.description}</p>
-                            {area.url && (
-                              <a
-                                href={area.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-block mt-2 text-blue-600 hover:text-blue-800 underline font-medium"
-                              >
-                                Visit Portal →
-                              </a>
-                            )}
-                          </div>
+            ) : ( */}
+            <div className="relative mb-4">
+              <img
+                src={(currentContent.body as { image_url: string }).image_url}
+                alt={currentContent.title}
+                className="w-full h-auto rounded-lg shadow-md"
+              />
+              {((currentContent.body as { interactive_areas?: Array<{ position: { top: number; left: number; width: number; height: number }; title: string; description: string; url?: string }> }).interactive_areas || []).map((area: { position: { top: number; left: number; width: number; height: number }; title: string; description: string; url?: string }, idx: number) => (
+                <div
+                  key={idx}
+                  className="absolute cursor-help"
+                  style={{
+                    top: area.position.top,
+                    left: area.position.left,
+                    width: area.position.width,
+                    height: area.position.height,
+                  }}
+                  onMouseEnter={() => setActiveTooltipIndex(idx)}
+                  onMouseLeave={() => setActiveTooltipIndex(null)}
+                >
+                  <div className="w-full h-full hover:bg-blue-100 hover:bg-opacity-20 rounded transition-colors" />
+                  {activeTooltipIndex === idx && (
+                    <div className="absolute z-50 w-96 p-4 bg-white border-2 border-blue-500 rounded-lg shadow-xl text-sm left-0" style={{ bottom: '100%', marginBottom: '12px' }}>
+                      <div className="flex items-start space-x-2">
+                        <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-bold mb-1 text-blue-600">{area.title}</h4>
+                          <p className="text-gray-800 leading-relaxed">{area.description}</p>
+                          {area.url && (
+                            <a
+                              href={area.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block mt-2 text-blue-600 hover:text-blue-800 underline font-medium"
+                            >
+                              Visit Portal →
+                            </a>
+                          )}
                         </div>
-                        <div className="absolute left-8 w-4 h-4 bg-white border-b-2 border-r-2 border-blue-500 transform rotate-45" style={{ bottom: '-8px' }} />
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                      <div className="absolute left-8 w-4 h-4 bg-white border-b-2 border-r-2 border-blue-500 transform rotate-45" style={{ bottom: '-8px' }} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
           </>
         )}
 

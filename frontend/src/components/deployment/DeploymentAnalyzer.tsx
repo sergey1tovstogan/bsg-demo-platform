@@ -240,18 +240,18 @@ export function DeploymentAnalyzer() {
           console.log('[DeploymentAnalyzer] Response status:', (namespacesResponse.data as any)?.status)
           console.log('[DeploymentAnalyzer] Successful clusters:', (namespacesResponse.data as any)?.successful_clusters)
           console.log('[DeploymentAnalyzer] Failed clusters:', (namespacesResponse.data as any)?.failed_clusters)
-          
+
           // Validate that we got namespaces for the actual clusters in selected RGs
           if (Array.isArray(namespacesData) && namespacesData.length > 0) {
             // Filter to only include clusters from selected resource groups
-            const validNamespaces = namespacesData.filter((cluster: any) => 
+            const validNamespaces = namespacesData.filter((cluster: any) =>
               selected.includes(cluster.resource_group)
             )
-            
+
             // Check if any clusters have errors
             const hasErrors = validNamespaces.some((c: any) => c.error)
             const hasNamespaces = validNamespaces.some((c: any) => c.namespaces && c.namespaces.length > 0)
-            
+
             if (hasErrors && !hasNamespaces) {
               // All clusters failed - show error
               console.error('[DeploymentAnalyzer] All clusters failed to retrieve namespaces')
@@ -264,7 +264,7 @@ export function DeploymentAnalyzer() {
             } else {
               setClusterNamespaces(validNamespaces)
             }
-            
+
             setAnalysisProgress(null)
             setLoading(false)
             setCurrentStep('namespaces')
@@ -447,7 +447,7 @@ export function DeploymentAnalyzer() {
             })
             // Set error state for costs but don't fail the analysis
             const costMap: Record<string, any> = {}
-            
+
             // Check if the response contains cost data with errors (partial success)
             if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
               // API returned data but some RGs may have errors
@@ -702,7 +702,7 @@ function SubscriptionInput({
   }
 
   return (
-    <div className="card max-w-2xl mx-auto">
+    <div className="card max-w-2xl mx-auto bg-white dark:bg-slate-800">
       <div className="flex items-center space-x-3 mb-6">
         <Cloud className="w-8 h-8 text-purple-600" />
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Azure Deployment Analyzer</h2>
@@ -713,25 +713,25 @@ function SubscriptionInput({
       </p>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800 rounded-lg">
           <div className="flex items-start">
-            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 mr-3 flex-shrink-0" />
             <div className="flex-1">
-              <div className="text-red-800 font-semibold mb-2 text-base">Connection Error</div>
-              <div className="text-red-700 whitespace-pre-line text-sm mb-3">
+              <div className="text-red-800 dark:text-red-200 font-semibold mb-2 text-base">Connection Error</div>
+              <div className="text-red-700 dark:text-red-300 whitespace-pre-line text-sm mb-3">
                 {error.includes('\n\nTo fix this:') ? error.split('\n\nTo fix this:')[0] : error}
               </div>
               {error.includes('\n\nTo fix this:') && (
                 <div className="mt-3 pt-3 border-t border-red-200">
                   <div className="text-sm font-semibold text-red-800 mb-2">📋 Steps to Fix:</div>
-                  <ol className="text-sm text-red-700 space-y-2 list-decimal list-inside">
+                  <ol className="text-sm text-red-700 dark:text-red-300 space-y-2 list-decimal list-inside">
                     {error.split('\n\nTo fix this:\n')[1]?.split('\n').filter((line: string) => line.trim() && !line.match(/^\d+\.\s*$/)).map((step: string, idx: number) => (
-                      <li key={idx} className="ml-2 bg-red-100 px-2 py-1 rounded">
-                        <code className="text-xs bg-red-200 px-1 rounded font-mono">{step.replace(/^\d+\.\s*/, '')}</code>
+                      <li key={idx} className="ml-2 bg-red-100 dark:bg-red-900/40 px-2 py-1 rounded">
+                        <code className="text-xs bg-red-200 dark:bg-red-800 px-1 rounded font-mono">{step.replace(/^\d+\.\s*/, '')}</code>
                       </li>
                     ))}
                   </ol>
-                  <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                  <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-800 dark:text-blue-200">
                     <strong>💡 Tip:</strong> After completing these steps, refresh this page and try connecting again.
                   </div>
                 </div>
@@ -854,7 +854,7 @@ function ResourceGroupSelector({
       </div>
 
       {error && (
-        <div className="card bg-red-50 border border-red-200 text-red-700">
+        <div className="card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
           {error}
         </div>
       )}
@@ -883,7 +883,7 @@ function ResourceGroupSelector({
       )}
 
       {/* Search Box */}
-      <div className="card mb-4">
+      <div className="card mb-4 bg-white dark:bg-slate-800">
         <div className="flex items-center space-x-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -912,7 +912,7 @@ function ResourceGroupSelector({
       </div>
 
       {filteredResourceGroups.length === 0 && searchTerm && (
-        <div className="card text-center py-8">
+        <div className="card text-center py-8 bg-white dark:bg-slate-800">
           <FolderOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-300">No resource groups found matching "{searchTerm}"</p>
         </div>
@@ -927,7 +927,7 @@ function ResourceGroupSelector({
               onClick={() => toggleSelection(rg.name)}
               className={`card cursor-pointer transition-all ${isSelected
                 ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                : 'hover:bg-gray-50 dark:hover:bg-slate-800'
+                : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700'
                 }`}
             >
               <div className="flex items-start justify-between">
@@ -1054,11 +1054,11 @@ function NamespaceSelector({
       ) : (
         <>
           {clusterNamespaces.map((cluster, idx) => (
-            <div key={idx} className="card">
+            <div key={idx} className="card bg-white dark:bg-slate-800">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Cluster: {cluster.cluster_name}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Resource Group: {cluster.resource_group}</p>
               {cluster.error ? (
-                <div className="text-red-600 text-sm">{cluster.error}</div>
+                <div className="text-red-600 dark:text-red-400 text-sm">{cluster.error}</div>
               ) : cluster.namespaces.length === 0 ? (
                 <div className="text-gray-500 text-sm">No namespaces found</div>
               ) : (
@@ -1206,12 +1206,12 @@ function ServiceAnalysis({
             </button>
           </div>
         </div>
-        <div className="card bg-red-50 border-2 border-red-300">
+        <div className="card bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800">
           <div className="flex items-start">
-            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 mr-3 flex-shrink-0" />
             <div className="flex-1">
-              <div className="text-red-800 font-semibold mb-2">Analysis Error</div>
-              <div className="text-red-700 whitespace-pre-line">{error}</div>
+              <div className="text-red-800 dark:text-red-200 font-semibold mb-2">Analysis Error</div>
+              <div className="text-red-700 dark:text-red-300 whitespace-pre-line">{error}</div>
             </div>
           </div>
         </div>
@@ -1233,9 +1233,9 @@ function ServiceAnalysis({
             <span>Back</span>
           </button>
         </div>
-        <div className="card text-center py-12">
+        <div className="card text-center py-12 bg-white dark:bg-slate-800">
           <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No services found to analyze</p>
+          <p className="text-gray-600 dark:text-gray-300">No services found to analyze</p>
           <p className="text-sm text-gray-500 mt-2">Please go back and select resource groups again</p>
         </div>
       </div>
@@ -1284,7 +1284,7 @@ function ServiceAnalysis({
       </div>
 
       {loading && (
-        <div className="card text-center py-12">
+        <div className="card text-center py-12 bg-white dark:bg-slate-800">
           <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-700 font-medium mb-2">Analyzing Azure services and identifying Temenos components...</p>
           {analysisProgress && (
@@ -1305,30 +1305,30 @@ function ServiceAnalysis({
 
       {/* Summary Cards */}
       <div className={`grid grid-cols-1 md:grid-cols-3 ${includeCosts ? 'lg:grid-cols-4' : ''} gap-6`}>
-        <div className="card bg-green-50 border-green-200">
+        <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <div className="flex items-center space-x-3">
-            <CheckCircle2 className="w-8 h-8 text-green-600" />
+            <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
             <div>
-              <p className="text-sm text-green-700 font-medium">Temenos Components</p>
-              <p className="text-2xl font-bold text-green-900">{identifiedComponents.length}</p>
+              <p className="text-sm text-green-700 dark:text-green-300 font-medium">Temenos Components</p>
+              <p className="text-2xl font-bold text-green-900 dark:text-green-100">{identifiedComponents.length}</p>
             </div>
           </div>
         </div>
-        <div className="card bg-blue-50 border-blue-200">
+        <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <div className="flex items-center space-x-3">
-            <Cloud className="w-8 h-8 text-blue-600" />
+            <Cloud className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             <div>
-              <p className="text-sm text-blue-700 font-medium">Azure Services</p>
-              <p className="text-2xl font-bold text-blue-900">{services.length}</p>
+              <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Azure Services</p>
+              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{services.length}</p>
             </div>
           </div>
         </div>
-        <div className="card bg-gray-50 border-gray-200">
+        <div className="card bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-3">
-            <AlertCircle className="w-8 h-8 text-gray-600" />
+            <AlertCircle className="w-8 h-8 text-gray-600 dark:text-gray-400" />
             <div>
-              <p className="text-sm text-gray-700 font-medium">Unclassified Services</p>
-              <p className="text-2xl font-bold text-gray-900">{unidentifiedServices.length}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">Unclassified Services</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{unidentifiedServices.length}</p>
             </div>
           </div>
         </div>
@@ -1350,14 +1350,14 @@ function ServiceAnalysis({
                       error: costsLoading ? undefined : 'No cost data available'
                     }
                   })
-                  
+
                   const hasErrors = costEntries.some(c => c.error)
                   const totalCost = costEntries.reduce((sum, cost) => {
                     // Only include costs that don't have errors
                     if (cost.error && !costsLoading) return sum
                     return sum + (cost.total_cost || 0)
                   }, 0)
-                  
+
                   const hasProjections = costEntries.some(c => c.projections && !c.error)
                   const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
                     if (cost.error || !cost.projections) return sum
@@ -1430,7 +1430,7 @@ function ServiceAnalysis({
 
           {/* Quick Overview Sidebar */}
           <div className="lg:col-span-1">
-            <div className="card sticky top-4">
+            <div className="card sticky top-4 bg-white dark:bg-slate-800">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
                 <span>Quick Overview {identifiedComponents.length}</span>
@@ -1474,10 +1474,10 @@ function ServiceAnalysis({
           <h3 className="text-xl font-bold text-gray-900 mb-4">Other Azure Services</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {unidentifiedServices.map((result, index) => (
-              <div key={result.service.id || index} className="card">
-                <h4 className="font-semibold text-gray-900">{result.service.name}</h4>
-                <p className="text-sm text-gray-500 mt-1">{result.service.type}</p>
-                <p className="text-xs text-gray-400 mt-1">{result.service.location}</p>
+              <div key={result.service.id || index} className="card bg-white dark:bg-slate-800">
+                <h4 className="font-semibold text-gray-900 dark:text-white">{result.service.name}</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{result.service.type}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{result.service.location}</p>
               </div>
             ))}
           </div>
