@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, Loader2, Bot, User } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { ComponentId, ChatMessage } from '../types'
-import { SecurityContent } from './security/SecurityContent'
 
 interface ChatbotProps {
   componentId: ComponentId
@@ -48,27 +47,21 @@ export function Chatbot({ componentId }: ChatbotProps) {
     }
   }, [componentId])
 
-  // Initialize chat session only for non-security components
+  // Initialize chat session for all components (RAG connectivity)
   useEffect(() => {
-    if (componentId !== 'security') {
-      initializeSession()
-      return () => {
-        // Cleanup: delete session on unmount
-        const currentSessionId = sessionIdRef.current
-        if (currentSessionId) {
-          apiService.deleteChatSession(componentId, currentSessionId).catch(console.error)
-        }
+    initializeSession()
+    return () => {
+      // Cleanup: delete session on unmount
+      const currentSessionId = sessionIdRef.current
+      if (currentSessionId) {
+        apiService.deleteChatSession(componentId, currentSessionId).catch(console.error)
       }
-    } else {
-      setInitializing(false)
     }
   }, [componentId, initializeSession])
 
   useEffect(() => {
-    if (componentId !== 'security') {
-      scrollToBottom()
-    }
-  }, [messages, componentId])
+    scrollToBottom()
+  }, [messages])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -108,12 +101,7 @@ export function Chatbot({ componentId }: ChatbotProps) {
     }
   }
 
-  // If security component, show SecurityContent component
-  if (componentId === 'security') {
-    return <SecurityContent />
-  }
-
-  // Regular chatbot for other components
+  // RAG chatbot for all components
   if (initializing) {
     return (
       <div className="card flex items-center justify-center h-64">

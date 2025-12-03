@@ -120,7 +120,7 @@ const LogsView = () => {
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                 {logSources.map((log, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50 dark:bg-slate-700/50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-slate-900">{log.source}</td>
+                                        <td className="px-6 py-4 font-medium text-red-600 dark:text-red-500">{log.source}</td>
                                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{log.desc}</td>
                                     </tr>
                                 ))}
@@ -233,7 +233,7 @@ const IncidentsView = () => {
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 flex justify-between items-center">
                     <h3 className="font-bold text-slate-800 dark:text-slate-100">Incident Fix Time SLA</h3>
-                    <span className="text-xs font-medium px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-700 rounded">Support Hours: 24 x 7 x 365</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-100">Support Hours: 24 x 7 x 365</span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
@@ -255,7 +255,7 @@ const IncidentsView = () => {
                                 { label: 'Target Resolution', v1: 'Problem Mgmt', v2: '7 days', v3: '14 days', v4: 'Next Release', v5: 'Next Release' },
                             ].map((row, idx) => (
                                 <tr key={idx} className="hover:bg-slate-50 dark:bg-slate-700/50">
-                                    <td className="px-6 py-4 font-medium text-slate-900">{row.label}</td>
+                                    <td className="px-6 py-4 font-medium text-red-600 dark:text-red-500">{row.label}</td>
                                     <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-red-50/30 dark:bg-red-900/20">{row.v1}</td>
                                     <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-orange-50/30 dark:bg-orange-900/20">{row.v2}</td>
                                     <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-yellow-50/30 dark:bg-yellow-900/20">{row.v3}</td>
@@ -355,7 +355,7 @@ const AuditView = () => {
 
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex-1 flex flex-col">
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Audit Log Example</h3>
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Audit Log of record changes</h3>
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                         <Search className="w-4 h-4" />
                         <span>Record ID: 100336</span>

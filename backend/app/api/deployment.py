@@ -406,24 +406,38 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 logger.info("=" * 80)
                 
                 # Dynamically retrieve namespaces from the actual cluster
-                namespaces = await aks_service.list_cluster_namespaces(cluster)
-                logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name} in RG {cluster.resource_group}")
-                if namespaces:
-                    logger.info(f"Namespaces retrieved from cluster {cluster.name}: {namespaces}")
-                else:
-                    logger.error(f"⚠ CRITICAL: No namespaces returned for cluster {cluster.name} in RG {cluster.resource_group}")
+                try:
+                    namespaces = await aks_service.list_cluster_namespaces(cluster)
+                    logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name} in RG {cluster.resource_group}")
+                    if namespaces:
+                        logger.info(f"Namespaces retrieved from cluster {cluster.name}: {namespaces}")
+                    else:
+                        # Empty list is valid - cluster may just have no application namespaces
+                        # Check backend logs to see if kubectl succeeded or failed
+                        logger.info(f"Cluster {cluster.name} has no non-system namespaces (this is valid - cluster may be empty or only have system namespaces)")
+                        logger.info("Check backend logs above to verify kubectl succeeded - if it did, the cluster simply has no application namespaces")
+                    
+                    # Always return the result, even if empty (empty is valid)
+                    cluster_namespaces[cluster.name] = {
+                        "cluster_name": cluster.name,
+                        "resource_group": cluster.resource_group,
+                        "namespaces": namespaces
+                    }
+                except Exception as ns_error:
+                    # Only treat exceptions as errors (kubectl actually failed)
+                    logger.error(f"⚠ CRITICAL: Failed to retrieve namespaces from cluster {cluster.name} in RG {cluster.resource_group}: {ns_error}")
                     logger.error("This indicates one of the following issues:")
                     logger.error("  1. kubectl command failed (check backend logs for kubectl errors)")
                     logger.error("  2. Cluster credentials not configured or expired")
-                    logger.error("  3. Cluster has no non-system namespaces (unlikely)")
-                    logger.error("  4. Network/connectivity issues to the cluster")
-                    logger.error("  5. Insufficient permissions to list namespaces")
+                    logger.error("  3. Network/connectivity issues to the cluster")
+                    logger.error("  4. Insufficient permissions to list namespaces")
                     
                     # Build detailed error message with actionable steps
                     error_details = {
                         "message": "Failed to retrieve namespaces from cluster",
                         "cluster": cluster.name,
                         "resource_group": cluster.resource_group,
+                        "error": str(ns_error),
                         "troubleshooting_steps": [
                             "1. Check if you're logged in to Azure CLI: `az account show`",
                             f"2. Refresh cluster credentials: `az aks get-credentials --resource-group {cluster.resource_group} --name {cluster.name} --overwrite-existing`",
@@ -499,25 +513,33 @@ async def get_aks_namespaces(request: NamespacesRequest):
         result_data = list(cluster_namespaces.values())
         
         # Check if we have any successful retrievals
-        successful_clusters = [c for c in result_data if c.get("namespaces") and len(c.get("namespaces", [])) > 0]
-        failed_clusters = [c for c in result_data if c.get("error") or not c.get("namespaces") or len(c.get("namespaces", [])) == 0]
+        # Empty namespaces list is valid (cluster just has no application namespaces)
+        # Only clusters with errors are considered failed
+        successful_clusters = [c for c in result_data if not c.get("error")]
+        failed_clusters = [c for c in result_data if c.get("error")]
         
         if failed_clusters:
             logger.error(f"⚠ {len(failed_clusters)} cluster(s) failed to retrieve namespaces:")
             for fc in failed_clusters:
                 logger.error(f"  - Cluster: {fc.get('cluster_name')}, RG: {fc.get('resource_group')}, Error: {fc.get('error', 'No namespaces found')}")
         
-        # Only cache if we successfully retrieved namespaces (don't cache empty/error results)
+        # Cache all successful retrievals (including empty results - they're valid)
         if successful_clusters:
             await cache_service.set_aks_namespaces(
                 subscription_id,
                 resource_group_names,
-                successful_clusters  # Only cache successful retrievals
+                successful_clusters  # Cache successful retrievals (including empty namespaces)
             )
-            logger.info(f"Cached AKS namespaces for {len(successful_clusters)} successful cluster(s)")
+            clusters_with_namespaces = [c for c in successful_clusters if c.get("namespaces") and len(c.get("namespaces", [])) > 0]
+            clusters_without_namespaces = [c for c in successful_clusters if not c.get("namespaces") or len(c.get("namespaces", [])) == 0]
+            logger.info(f"Cached AKS namespaces for {len(successful_clusters)} cluster(s)")
+            if clusters_with_namespaces:
+                logger.info(f"  - {len(clusters_with_namespaces)} cluster(s) with application namespaces")
+            if clusters_without_namespaces:
+                logger.info(f"  - {len(clusters_without_namespaces)} cluster(s) with no application namespaces (valid - only system namespaces)")
         else:
-            logger.error(f"⚠ CRITICAL: No namespaces retrieved from any cluster! Not caching.")
-            logger.error(f"All {len(result_data)} cluster(s) failed. Check backend logs for kubectl errors.")
+            logger.error(f"⚠ CRITICAL: All {len(result_data)} cluster(s) failed to retrieve namespaces! Not caching.")
+            logger.error(f"Check backend logs for kubectl errors.")
         
         # Return all results (including errors) so frontend can show appropriate messages
         return {

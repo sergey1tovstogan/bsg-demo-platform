@@ -9,7 +9,8 @@ import {
     Database,
     HardDrive,
     Network,
-    ArrowRight
+    ArrowRight,
+    Info
 } from 'lucide-react';
 
 export const ModernPrivacyEncryption: React.FC = () => {
@@ -18,11 +19,11 @@ export const ModernPrivacyEncryption: React.FC = () => {
     const tooltips = {
         'transit': {
             title: 'Data in Transit',
-            description: 'All communications are secured using modern Transport Layer Security (TLS) protocols (TLS 1.2+). API communications are encrypted end-to-end. File transfers use SFTP/FTPS with SSH encryption.'
+            description: 'Data in Transit:\n\nFor data in transit, all communications are secured using modern Transport Layer Security (TLS) protocols, specifically TLS 1.2.\n\nAPI communications are encrypted end-to-end, leveraging partner-supported encryption mechanisms to maintain data security during exchanges. File transfers, including SFTP services, use SSH encryption standards and secure key management practices. Connections to web applications and APIs are exclusively over HTTPS.\n\nSecure Access: Access to interfaces that are not classified as public is subject to additional access controls. Public interfaces have to be protected by Web Application Firewalls (WAF) and Denial of Service (DoS) protection (done for Temenos SaaS.\n\nSecure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilised, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\n\nLogging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorised access attempts and ensuring compliance with security policies.'
         },
         'rest': {
             title: 'Data at Rest',
-            description: 'Databases utilize Transparent Data Encryption (TDE) with AES 256-bit algorithms. This covers the entire database, logs, and backups. Storage devices benefit from full disk and block-level encryption.'
+            description: 'Data at Rest:\n\nFor data at rest, encryption is applied comprehensively across storage layers.\n\n1. Databases utilise Transparent Data Encryption (TDE) with AES 256-bit encryption algorithms. TDE performs real-time I/O encryption and decryption of the data at the page level. Each page is decrypted when it\'s read into memory and then encrypted before being written to disk.\n\n2. TDE encrypts the entire database, including logs and backups, protecting data on disks and during backups.\n\n3. Storage devices, including disk volumes and containers, benefit from full disk encryption and block-level encryption.'
         }
     };
 
@@ -149,12 +150,19 @@ export const ModernPrivacyEncryption: React.FC = () => {
                         className="absolute bottom-6 left-6 right-[200px] z-50 pointer-events-none"
                     >
                         <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-700">
-                            <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 dark:text-white mb-2">
-                                {tooltips[activeTooltip as keyof typeof tooltips].title}
-                            </h4>
-                            <p className="text-slate-600 dark:text-slate-300 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-                                {tooltips[activeTooltip as keyof typeof tooltips].description}
-                            </p>
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
+                                    <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div className="flex-1 text-left">
+                                    <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-left">
+                                        {tooltips[activeTooltip as keyof typeof tooltips].title}
+                                    </h4>
+                                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-left whitespace-pre-line">
+                                        {tooltips[activeTooltip as keyof typeof tooltips].description}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </motion.div>
                 )}

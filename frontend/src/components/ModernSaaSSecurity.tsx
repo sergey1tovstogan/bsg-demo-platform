@@ -112,7 +112,7 @@ const OverviewView = () => {
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Continuous Monitoring</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
-                        24/7 security monitoring and threat detection with automated response capabilities.
+                        24/7 security monitoring & observability and threat detection with automated response capabilities.
                     </p>
                 </div>
             </div>
@@ -198,9 +198,9 @@ const ArchitectureView = () => {
                         components: [
                             'DDoS protection (Azure DDoS Protection)',
                             'Web Application Firewall (WAF)',
-                            'Content Delivery Network (CDN)',
-                            'API Gateway and rate limiting',
-                            'TLS 1.2+ encryption'
+                            'RBAC, zero-trust and threat detection',
+                            'Penetration Testing & Vulnarability Management',
+                            'TLS 1.2 encryption'
                         ]
                     },
                     {
@@ -262,14 +262,14 @@ const SecurityServicesView = () => {
     return (
         <div className="space-y-6">
             {/* Overview */}
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-8 rounded-xl border border-indigo-100 dark:border-indigo-800 shadow-sm">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-blue-100 dark:bg-blue-800 rounded-lg">
-                        <Shield className="w-6 h-6 text-blue-600" />
+                    <div className="p-3 bg-indigo-100 dark:bg-indigo-800 rounded-lg">
+                        <Shield className="w-8 h-8 text-indigo-600" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">Managed Security Services</h3>
-                        <p className="text-blue-800 dark:text-blue-200 leading-relaxed">
+                        <h3 className="text-2xl font-bold text-indigo-900 dark:text-indigo-100 mb-3">Managed Security Services</h3>
+                        <p className="text-indigo-800 dark:text-indigo-200 leading-relaxed">
                             Comprehensive suite of managed security services protecting your SaaS environment 24/7.
                         </p>
                     </div>
@@ -360,7 +360,7 @@ const SecurityServicesView = () => {
                             { metric: 'Security Patch Deployment', target: '< 30 days' }
                         ].map((sla, idx) => (
                             <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
-                                <div className="text-2xl font-bold text-indigo-600 mb-1">{sla.target}</div>
+                                <div className="text-2xl font-bold text-red-600 dark:text-red-500 mb-1">{sla.target}</div>
                                 <div className="text-sm text-slate-600 dark:text-slate-300">{sla.metric}</div>
                             </div>
                         ))}
@@ -411,9 +411,7 @@ const IntegrationView = () => {
                         {[
                             'Splunk',
                             'Azure Sentinel',
-                            'IBM QRadar',
-                            'LogRhythm',
-                            'Syslog / CEF format support'
+                            'IBM QRadar'
                         ].map((item, idx) => (
                             <li key={idx} className="flex items-start gap-3 text-purple-800 dark:text-purple-200">
                                 <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
@@ -423,18 +421,18 @@ const IntegrationView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-100 shadow-sm">
-                    <h3 className="text-lg font-bold text-green-900 mb-4">Ticketing & ITSM</h3>
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
+                    <h3 className="text-lg font-bold text-purple-900 dark:text-purple-100 mb-4">Ticketing & ITSM</h3>
                     <ul className="space-y-3">
                         {[
                             'ServiceNow',
                             'Jira Service Management',
                             'BMC Remedy',
                             'REST API integration',
-                            'Webhook notifications'
+                            'Notifications'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-green-800">
-                                <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                            <li key={idx} className="flex items-start gap-3 text-purple-800 dark:text-purple-200">
+                                <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
                         ))}
