@@ -156,8 +156,13 @@ class AKSService:
             import asyncio
             
             # Create temporary kubeconfig file
+            # CRITICAL: Include resource_group in filename to prevent collisions when
+            # multiple clusters with the same name exist in different resource groups
             temp_dir = tempfile.gettempdir()
-            kubeconfig_path = os.path.join(temp_dir, f"{cluster_name}_kubeconfig.yaml")
+            # Sanitize resource group name for use in filename (remove special chars)
+            safe_rg = resource_group.replace("/", "_").replace("\\", "_").replace(" ", "_")
+            safe_cluster = cluster_name.replace("/", "_").replace("\\", "_").replace(" ", "_")
+            kubeconfig_path = os.path.join(temp_dir, f"{safe_rg}_{safe_cluster}_kubeconfig.yaml")
             
             # Run subprocess commands in executor to avoid blocking
             loop = asyncio.get_event_loop()
@@ -182,7 +187,9 @@ class AKSService:
                 # Add subscription if available
                 if self.subscription_id:
                     cmd.extend(["--subscription", self.subscription_id])
-                logger.info(f"Getting credentials with command: {' '.join(cmd)}")
+                logger.info(f"Getting credentials for cluster '{cluster_name}' in resource group '{resource_group}'")
+                logger.info(f"Command: {' '.join(cmd)}")
+                logger.info(f"Target kubeconfig file: {kubeconfig_path}")
                 return subprocess.run(
                     cmd,
                     capture_output=True,
@@ -221,7 +228,9 @@ class AKSService:
             
             # If kubeconfig was created (even with warnings), use it
             if kubeconfig_exists:
-                logger.info(f"Successfully created kubeconfig at {kubeconfig_path}")
+                logger.info(f"✓ Successfully created cluster-specific kubeconfig at {kubeconfig_path}")
+                logger.info(f"  Cluster: {cluster_name}, Resource Group: {resource_group}")
+                logger.info(f"  This kubeconfig is unique to this cluster/RG combination")
             else:
                 # Fallback to default kubeconfig
                 default_kubeconfig = os.path.expanduser("~/.kube/config")
@@ -621,11 +630,20 @@ class AKSService:
                         logger.warning("Kubeconfig data from Azure API cannot be decoded (may be encrypted). Falling back to Azure CLI method.")
                         raise ValueError("Kubeconfig data appears to be encrypted or in unsupported format")
                 
-                temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
-                temp_file.write(kubeconfig_data)
-                temp_file.close()
-                logger.info(f"✓ Cluster user credentials retrieved and saved to {temp_file.name}")
-                return temp_file.name
+                # Create unique kubeconfig file with resource group and cluster name for easier debugging
+                # Sanitize names for use in filename
+                safe_rg = resource_group.replace("/", "_").replace("\\", "_").replace(" ", "_")
+                safe_cluster = cluster_name.replace("/", "_").replace("\\", "_").replace(" ", "_")
+                temp_dir = tempfile.gettempdir()
+                kubeconfig_path = os.path.join(temp_dir, f"{safe_rg}_{safe_cluster}_api_kubeconfig.yaml")
+                
+                # Write kubeconfig data to file
+                with open(kubeconfig_path, 'w') as f:
+                    f.write(kubeconfig_data)
+                
+                logger.info(f"✓ Cluster user credentials retrieved and saved to {kubeconfig_path}")
+                logger.info(f"  Cluster: {cluster_name}, Resource Group: {resource_group}")
+                return kubeconfig_path
             else:
                 logger.warning(f"No user credentials returned for cluster {cluster_name}, trying admin credentials...")
         except Exception as e:
@@ -664,13 +682,20 @@ class AKSService:
                     logger.warning("Admin kubeconfig data from Azure API cannot be decoded (may be encrypted). Falling back to Azure CLI method.")
                     raise ValueError("Kubeconfig data appears to be encrypted or in unsupported format")
             
-            # Write to temporary file
-            temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
-            temp_file.write(kubeconfig_data)
-            temp_file.close()
+            # Create unique kubeconfig file with resource group and cluster name for easier debugging
+            # Sanitize names for use in filename
+            safe_rg = resource_group.replace("/", "_").replace("\\", "_").replace(" ", "_")
+            safe_cluster = cluster_name.replace("/", "_").replace("\\", "_").replace(" ", "_")
+            temp_dir = tempfile.gettempdir()
+            kubeconfig_path = os.path.join(temp_dir, f"{safe_rg}_{safe_cluster}_api_admin_kubeconfig.yaml")
             
-            logger.info(f"✓ Cluster admin credentials retrieved and saved to {temp_file.name}")
-            return temp_file.name
+            # Write kubeconfig data to file
+            with open(kubeconfig_path, 'w') as f:
+                f.write(kubeconfig_data)
+            
+            logger.info(f"✓ Cluster admin credentials retrieved and saved to {kubeconfig_path}")
+            logger.info(f"  Cluster: {cluster_name}, Resource Group: {resource_group}")
+            return kubeconfig_path
             
         except (ValueError, UnicodeDecodeError) as e:
             # If both API methods failed due to encoding issues, fall back to Azure CLI
