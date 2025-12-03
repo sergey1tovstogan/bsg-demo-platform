@@ -418,12 +418,34 @@ async def get_aks_namespaces(request: NamespacesRequest):
                     logger.error("  3. Cluster has no non-system namespaces (unlikely)")
                     logger.error("  4. Network/connectivity issues to the cluster")
                     logger.error("  5. Insufficient permissions to list namespaces")
+                    
+                    # Build detailed error message with actionable steps
+                    error_details = {
+                        "message": "Failed to retrieve namespaces from cluster",
+                        "cluster": cluster.name,
+                        "resource_group": cluster.resource_group,
+                        "troubleshooting_steps": [
+                            "1. Check if you're logged in to Azure CLI: `az account show`",
+                            f"2. Refresh cluster credentials: `az aks get-credentials --resource-group {cluster.resource_group} --name {cluster.name} --overwrite-existing`",
+                            "3. Verify kubectl can connect: `kubectl cluster-info`",
+                            "4. Check backend logs for detailed kubectl error messages",
+                            "5. Ensure you have 'Azure Kubernetes Service Cluster User Role' on the cluster"
+                        ],
+                        "for_azure_app_service": [
+                            "1. Verify Managed Identity has 'Azure Kubernetes Service Cluster User Role' on the AKS cluster",
+                            "2. Check App Service logs for startup.sh execution",
+                            "3. Verify kubectl was installed by startup.sh",
+                            "4. Check if Kubernetes Python client library is available"
+                        ]
+                    }
+                    
                     # Return error so frontend knows retrieval failed
                     cluster_namespaces[cluster.name] = {
                         "cluster_name": cluster.name,
                         "resource_group": cluster.resource_group,
                         "namespaces": [],
-                        "error": "Failed to retrieve namespaces from cluster. Check backend logs for kubectl errors. Ensure cluster credentials are configured (run: az aks get-credentials --resource-group <RG> --name <cluster-name>)."
+                        "error": f"Failed to retrieve namespaces from cluster '{cluster.name}'. Check backend logs for kubectl errors. Ensure cluster credentials are configured (run: az aks get-credentials --resource-group {cluster.resource_group} --name {cluster.name} --overwrite-existing).",
+                        "error_details": error_details
                     }
                     continue
                 
@@ -445,11 +467,33 @@ async def get_aks_namespaces(request: NamespacesRequest):
                     logger.warning("  Also check if Managed Identity has permissions to access AKS cluster")
             except Exception as e:
                 logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}", exc_info=True)
+                import traceback
+                error_trace = traceback.format_exc()
+                logger.error(f"Full traceback: {error_trace}")
+                
+                # Build detailed error message
+                error_message = str(e)
+                if "kubectl" in error_message.lower() or "kubeconfig" in error_message.lower():
+                    error_message = f"kubectl/kubeconfig error: {error_message}"
+                elif "credential" in error_message.lower() or "authentication" in error_message.lower():
+                    error_message = f"Authentication error: {error_message}. Try refreshing credentials: az aks get-credentials --resource-group {cluster.resource_group} --name {cluster.name} --overwrite-existing"
+                
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
                     "resource_group": cluster.resource_group,
                     "namespaces": [],
-                    "error": f"Failed to retrieve namespaces: {str(e)}"
+                    "error": f"Failed to retrieve namespaces: {error_message}",
+                    "error_details": {
+                        "message": error_message,
+                        "cluster": cluster.name,
+                        "resource_group": cluster.resource_group,
+                        "troubleshooting_steps": [
+                            f"1. Refresh credentials: `az aks get-credentials --resource-group {cluster.resource_group} --name {cluster.name} --overwrite-existing`",
+                            "2. Verify Azure CLI login: `az account show`",
+                            "3. Check backend logs for full error details",
+                            "4. Test kubectl manually: `kubectl get namespaces`"
+                        ]
+                    }
                 }
         
         result_data = list(cluster_namespaces.values())

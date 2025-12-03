@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, RefreshCw } from 'lucide-react'
+import { Loader2, Palette, RefreshCw } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 
-const CACHE_KEY = 'deployment_rag_content_cache'
-const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp'
+const CACHE_KEY = 'design_time_rag_content_cache'
+const CACHE_TIMESTAMP_KEY = 'design_time_rag_content_cache_timestamp'
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days (1 month)
 
-export function DeploymentContentViewer() {
+export function DesignTimeContentViewer() {
   const [ragContent, setRagContent] = useState<any>(null)
   const [ragLoading, setRagLoading] = useState(true)
   const [ragError, setRagError] = useState<string | null>(null)
@@ -19,7 +19,7 @@ export function DeploymentContentViewer() {
     if (cached) {
       // Sort cached content for consistent display
       const sorted = [...cached].sort((a, b) => {
-        const categoryOrder = ['Architecture Overview', 'Service Selection', 'Integration & Extensibility']
+        const categoryOrder = ['Design Principles', 'Architecture Patterns', 'Best Practices']
         const aCategoryIndex = categoryOrder.indexOf(a.category) !== -1 ? categoryOrder.indexOf(a.category) : 999
         const bCategoryIndex = categoryOrder.indexOf(b.category) !== -1 ? categoryOrder.indexOf(b.category) : 999
         
@@ -88,39 +88,51 @@ export function DeploymentContentViewer() {
       setRagLoading(true)
       setRagError(null)
 
-      // Query RAG API for cloud-native deployments on Azure and AWS - focus on services and capabilities
+      // Query RAG API for design time topics - software design principles, architecture patterns, and best practices
       // Questions are phrased to ensure positive, informative responses suitable for customer demos
       // Questions are organized with display order and category for better presentation
       const questions = [
         {
           order: 1,
-          category: "Architecture Overview",
-          title: "Azure Cloud Services Architecture",
-          question: "Describe the Azure cloud services architecture for Temenos cloud-native deployments. Detail the specific Azure services used for databases (Azure SQL Database, Azure Database for PostgreSQL, MongoDB), messaging (Azure Event Hub, Apache ActiveMQ), container orchestration (Azure Kubernetes Service AKS, Azure Container Apps ACA), and other infrastructure components, including their roles and purposes."
+          category: "Design Principles",
+          title: "Software Design Principles",
+          question: "Explain the fundamental software design principles used in Temenos solutions. Describe SOLID principles, DRY (Don't Repeat Yourself), separation of concerns, and other key design principles. Provide examples of how these principles are applied in Temenos architecture and development practices."
         },
         {
           order: 2,
-          category: "Architecture Overview",
-          title: "AWS Cloud Services Architecture",
-          question: "Describe the AWS cloud services architecture for Temenos cloud-native deployments. Detail the specific AWS services used for databases (Amazon RDS, DocumentDB, PostgreSQL), messaging (Amazon Kinesis, Apache ActiveMQ), container orchestration (AWS Elastic Kubernetes Service EKS, Amazon ECS), and other infrastructure components, including their roles and purposes."
+          category: "Design Principles",
+          title: "Domain-Driven Design",
+          question: "Describe how Domain-Driven Design (DDD) is applied in Temenos solutions. Explain bounded contexts, aggregates, entities, value objects, and domain services. Provide examples of how DDD patterns are used in Temenos banking solutions."
         },
         {
           order: 3,
-          category: "Service Selection",
-          title: "Azure Service Selection Criteria",
-          question: "Explain the decision criteria and use cases for selecting Azure services in Temenos deployments. When should Azure SQL Database be used versus Azure Database for PostgreSQL? When should Azure Event Hub be used versus Apache ActiveMQ? When should AKS be used versus Azure Container Apps? Provide specific guidance for each service selection."
+          category: "Architecture Patterns",
+          title: "Microservices Architecture",
+          question: "Explain the microservices architecture patterns used in Temenos cloud-native solutions. Describe service decomposition strategies, inter-service communication patterns, API design, service discovery, and how microservices are organized in Temenos deployments."
         },
         {
           order: 4,
-          category: "Service Selection",
-          title: "AWS Service Selection Criteria",
-          question: "Explain the decision criteria and use cases for selecting AWS services in Temenos deployments. When should Amazon RDS be used versus Amazon DocumentDB? When should Amazon RDS be used versus PostgreSQL? When should Amazon Kinesis be used versus Apache ActiveMQ? When should EKS be used versus Amazon ECS? Provide specific guidance for each service selection."
+          category: "Architecture Patterns",
+          title: "Event-Driven Architecture",
+          question: "Describe event-driven architecture patterns in Temenos solutions. Explain event sourcing, CQRS (Command Query Responsibility Segregation), event streaming, message brokers, and how events are used for integration and communication between services."
         },
         {
           order: 5,
-          category: "Integration & Extensibility",
-          title: "Extensibility and Integration Capabilities",
-          question: "Describe Temenos cloud-native deployment capabilities for data-driven enhancements, extensibility, and integration. Explain how the Extensibility Framework supports advanced workflows and what integration patterns are available for connecting with external services and data sources in Azure and AWS environments."
+          category: "Architecture Patterns",
+          title: "API Design Patterns",
+          question: "Explain API design patterns and best practices used in Temenos solutions. Describe RESTful API design, GraphQL usage, API versioning strategies, authentication and authorization patterns, rate limiting, and API documentation standards."
+        },
+        {
+          order: 6,
+          category: "Best Practices",
+          title: "Code Quality and Maintainability",
+          question: "Describe code quality standards and maintainability practices in Temenos development. Explain code review processes, testing strategies (unit, integration, end-to-end), code metrics, refactoring practices, and how technical debt is managed."
+        },
+        {
+          order: 7,
+          category: "Best Practices",
+          title: "Extensibility and Customization",
+          question: "Explain how Temenos solutions support extensibility and customization. Describe the Extensibility Framework, plugin architectures, configuration management, customization points, and best practices for extending Temenos functionality without modifying core code."
         }
       ]
 
@@ -134,7 +146,7 @@ export function DeploymentContentViewer() {
             question: questionItem.question,
             region: 'global',
             RAGmodelId: 'ModularBanking, TechnologyOverview',
-            context: 'This is about Temenos cloud architecture models and deployment strategies for a customer demonstration platform. ' +
+            context: 'This is about Temenos software design principles, architecture patterns, and development best practices for a customer demonstration platform. ' +
                      'CRITICAL INSTRUCTIONS: ' +
                      '1. Always provide informative, professional responses suitable for customer presentations. ' +
                      '2. If specific details are not available in the knowledge base, provide general best practices, standard approaches, or related information that would be helpful. ' +
@@ -221,7 +233,7 @@ export function DeploymentContentViewer() {
         // Sort results by category and order for coherent presentation
         ragResults.sort((a, b) => {
           // First sort by category for logical grouping
-          const categoryOrder = ['Architecture Overview', 'Service Selection', 'Integration & Extensibility']
+          const categoryOrder = ['Design Principles', 'Architecture Patterns', 'Best Practices']
           const aCategoryIndex = categoryOrder.indexOf(a.category) !== -1 ? categoryOrder.indexOf(a.category) : 999
           const bCategoryIndex = categoryOrder.indexOf(b.category) !== -1 ? categoryOrder.indexOf(b.category) : 999
           
@@ -286,10 +298,10 @@ export function DeploymentContentViewer() {
         <div className="flex flex-col items-center justify-center py-12">
           <Loader2 className="w-12 h-12 animate-spin text-[#283054] dark:text-blue-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Retrieving Cloud Architecture Information
+            Retrieving Design Time Information
           </h3>
           <p className="text-gray-600 dark:text-gray-300 text-center max-w-md">
-            Querying Temenos RAG Knowledge Base for cloud architecture models and deployment strategies. This may take a few moments...
+            Querying Temenos RAG Knowledge Base for software design principles, architecture patterns, and best practices. This may take a few moments...
           </p>
           <div className="mt-6 w-full max-w-md">
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -303,14 +315,14 @@ export function DeploymentContentViewer() {
 
   return (
     <div className="space-y-6">
-      {/* RAG Content - Temenos Cloud Architecture */}
+      {/* RAG Content - Design Time Topics */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Cloud className="w-8 h-8 text-[#283054] dark:text-blue-400" />
+            <Palette className="w-8 h-8 text-[#283054] dark:text-purple-400" />
             <div>
               <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">
-                Temenos Cloud Architecture Models
+                Design Time Principles & Patterns
               </h2>
               <p className="text-lg text-gray-700 dark:text-gray-300">
                 Information from Temenos RAG Knowledge Base
@@ -325,13 +337,12 @@ export function DeploymentContentViewer() {
           <button
             onClick={() => loadRAGContent(true)}
             disabled={ragLoading}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw className={`w-5 h-5 ${ragLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
         </div>
-
 
         {ragError && (
           <div className={`mb-4 p-4 rounded ${ragError.includes('Showing cached data')
@@ -360,7 +371,7 @@ export function DeploymentContentViewer() {
 
               return Object.entries(grouped).map(([category, items]) => (
                 <div key={category} className="space-y-6">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white border-b-2 border-blue-600 dark:border-blue-400 pb-2">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white border-b-2 border-purple-600 dark:border-purple-400 pb-2">
                     {category}
                   </h2>
                   {items.map((item: any, idx: number) => (
@@ -368,35 +379,35 @@ export function DeploymentContentViewer() {
                       key={`${category}-${idx}`}
                       className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-300 dark:border-gray-700 shadow-sm"
                     >
-                      <h3 className="text-xl font-bold mb-4 border-b-2 border-blue-500 dark:border-blue-400 pb-3 text-gray-900 dark:text-white">
+                      <h3 className="text-xl font-bold mb-4 border-b-2 border-purple-500 dark:border-purple-400 pb-3 text-gray-900 dark:text-white">
                         {item.title || item.question}
                       </h3>
                       <div className="text-gray-800 dark:text-gray-200">
                         <ReactMarkdown
                           components={{
-                            h1: ({ ...props }) => <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-400 mt-6 mb-4" {...props} />,
-                            h2: ({ ...props }) => <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-5 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2" {...props} />,
-                            h3: ({ ...props }) => <h3 className="text-lg font-bold text-blue-700 dark:text-blue-300 mt-4 mb-2" {...props} />,
-                            h4: ({ ...props }) => <h4 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1" {...props} />,
-                            ul: ({ ...props }) => <ul className="list-disc list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
-                            ol: ({ ...props }) => <ol className="list-decimal list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
-                            li: ({ ...props }) => <li className="leading-relaxed pl-1" {...props} />,
-                            p: ({ ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
-                            strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
-                            blockquote: ({ ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
-                            code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
-                            table: ({ ...props }) => (
+                            h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-purple-900 dark:text-purple-400 mt-6 mb-4" {...props} />,
+                            h2: ({ node, ...props }) => <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-5 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2" {...props} />,
+                            h3: ({ node, ...props }) => <h3 className="text-lg font-bold text-purple-700 dark:text-purple-300 mt-4 mb-2" {...props} />,
+                            h4: ({ node, ...props }) => <h4 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1" {...props} />,
+                            ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
+                            ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
+                            li: ({ node, ...props }) => <li className="leading-relaxed pl-1" {...props} />,
+                            p: ({ node, ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
+                            strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                            blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-purple-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
+                            code: ({ node, ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
+                            table: ({ node, ...props }) => (
                               <div className="overflow-x-auto my-6">
                                 <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg shadow-md" {...props} />
                               </div>
                             ),
-                            thead: ({ ...props }) => <thead className="bg-blue-50 dark:bg-blue-900/30" {...props} />,
-                            tbody: ({ ...props }) => <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props} />,
-                            tr: ({ ...props }) => <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" {...props} />,
-                            th: ({ ...props }) => (
-                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left text-sm font-bold text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-900/50 first:rounded-tl-lg last:rounded-tr-lg" {...props} />
+                            thead: ({ node, ...props }) => <thead className="bg-purple-50 dark:bg-purple-900/30" {...props} />,
+                            tbody: ({ node, ...props }) => <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props} />,
+                            tr: ({ node, ...props }) => <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" {...props} />,
+                            th: ({ node, ...props }) => (
+                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left text-sm font-bold text-gray-900 dark:text-white bg-purple-100 dark:bg-purple-900/50 first:rounded-tl-lg last:rounded-tr-lg" {...props} />
                             ),
-                            td: ({ ...props }) => (
+                            td: ({ node, ...props }) => (
                               <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 align-top" {...props} />
                             ),
                           }}
@@ -424,10 +435,11 @@ export function DeploymentContentViewer() {
 
         {!ragLoading && !ragError && (!ragContent || ragContent.length === 0) && (
           <div className="text-center py-8 text-gray-700 dark:text-gray-300">
-            <p>No cloud architecture information available at this time.</p>
+            <p>No design time information available at this time.</p>
           </div>
         )}
       </div>
     </div>
   )
 }
+

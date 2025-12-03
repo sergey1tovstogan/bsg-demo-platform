@@ -181,7 +181,7 @@ const PrivilegedAccessView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
                     <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-4">Session Management</h3>
                     <ul className="space-y-3">
                         {[

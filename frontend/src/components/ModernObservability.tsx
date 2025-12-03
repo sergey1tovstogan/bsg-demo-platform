@@ -25,7 +25,7 @@ const ModernObservability = () => {
     ];
 
     return (
-        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-700/50 overflow-hidden">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
             {/* Header Tabs */}
             <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 shadow-sm z-10">
                 <div className="flex space-x-4">
@@ -34,8 +34,8 @@ const ModernObservability = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${activeTab === tab.id
-                                    ? 'bg-blue-600 text-white shadow-md transform scale-105'
-                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
+                                ? 'bg-blue-600 text-white shadow-md transform scale-105'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
                                 }`}
                         >
                             <tab.icon className="w-4 h-4" />
@@ -117,7 +117,7 @@ const LogsView = () => {
                                     <th className="px-6 py-3 font-semibold">Description</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                 {logSources.map((log, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50 dark:bg-slate-700/50 transition-colors">
                                         <td className="px-6 py-4 font-medium text-slate-900">{log.source}</td>
@@ -247,7 +247,7 @@ const IncidentsView = () => {
                                 <th className="px-4 py-4 font-bold text-slate-600 dark:text-slate-300 text-center bg-slate-100">5<br /><span className="text-xs font-normal text-slate-500">Low</span></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                             {[
                                 { label: 'Initial Response', v1: '15 mins', v2: '1 hour', v3: '1 day', v4: '2 days', v5: '5 days' },
                                 { label: 'Update Frequency', v1: '30 mins', v2: '2 hours', v3: 'On progress', v4: 'On progress', v5: 'On progress' },
@@ -256,11 +256,11 @@ const IncidentsView = () => {
                             ].map((row, idx) => (
                                 <tr key={idx} className="hover:bg-slate-50 dark:bg-slate-700/50">
                                     <td className="px-6 py-4 font-medium text-slate-900">{row.label}</td>
-                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-red-50/30">{row.v1}</td>
-                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-orange-50/30">{row.v2}</td>
-                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-yellow-50/30">{row.v3}</td>
-                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-blue-50/30">{row.v4}</td>
-                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-slate-50/50">{row.v5}</td>
+                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-red-50/30 dark:bg-red-900/20">{row.v1}</td>
+                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-orange-50/30 dark:bg-orange-900/20">{row.v2}</td>
+                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-yellow-50/30 dark:bg-yellow-900/20">{row.v3}</td>
+                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-blue-50/30 dark:bg-blue-900/20">{row.v4}</td>
+                                    <td className="px-4 py-4 text-center text-slate-600 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-700/30">{row.v5}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -343,7 +343,7 @@ const BackupView = () => {
 const AuditView = () => {
     return (
         <div className="flex flex-col h-full space-y-6">
-            <div className="bg-blue-50 border border-blue-100 dark:border-blue-800 rounded-lg p-4 flex items-start gap-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
                 <div>
                     <h4 className="font-bold text-blue-900 dark:text-blue-100">Full History Audit Trail</h4>
@@ -374,9 +374,9 @@ const AuditView = () => {
                                 <th className="px-6 py-3">New Value</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                             {/* Change 3 */}
-                            <tr className="bg-slate-50/50">
+                            <tr className="bg-slate-50/50 dark:bg-slate-700/30">
                                 <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-100">3</td>
                                 <td className="px-6 py-4">OFFICER</td>
                                 <td className="px-6 py-4">23 MAY 23 09:35</td>
@@ -398,7 +398,7 @@ const AuditView = () => {
                             </tr>
 
                             {/* Change 2 */}
-                            <tr className="bg-slate-50/50 border-t-2 border-slate-100 dark:border-slate-700">
+                            <tr className="bg-slate-50/50 dark:bg-slate-700/30 border-t-2 border-slate-100 dark:border-slate-700">
                                 <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-100">2</td>
                                 <td className="px-6 py-4">OFFICER</td>
                                 <td className="px-6 py-4">23 MAY 23 08:57</td>
