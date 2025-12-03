@@ -381,7 +381,7 @@ export function ApiOverview() {
     <div className="card">
       {/* Title */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#283054]">API Overview</h2>
+        <h2 className="text-2xl font-bold dark:text-white text-[#283054]">API Overview</h2>
       </div>
 
       {/* API Framework Diagram */}

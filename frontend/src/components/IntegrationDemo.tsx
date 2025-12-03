@@ -394,8 +394,8 @@ export function IntegrationDemo() {
       />
 
       {/* POST Request - Payment Orders */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+      <div className="card bg-purple-50 dark:bg-purple-950/30 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-300 dark:border-gray-600">
           <div>
             <div className="flex items-center space-x-2">
               <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded">POST</span>
@@ -561,8 +561,8 @@ export function IntegrationDemo() {
       </div>
 
       {/* GET Request - Security Trades */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+      <div className="card bg-purple-50 dark:bg-purple-950/30 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-300 dark:border-gray-600">
           <div>
             <div className="flex items-center space-x-2">
               <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
@@ -648,8 +648,8 @@ export function IntegrationDemo() {
       </div>
 
       {/* Portfolio API - POST and GET */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+      <div className="card bg-purple-50 dark:bg-purple-950/30 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-300 dark:border-gray-600">
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-2">
               {/* Method selector styled as badge */}
@@ -767,8 +767,8 @@ export function IntegrationDemo() {
       </div>
 
       {/* Customer API - GET */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+      <div className="card bg-purple-50 dark:bg-purple-950/30 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-300 dark:border-gray-600">
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-3">
               <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>
@@ -864,8 +864,8 @@ export function IntegrationDemo() {
       </div>
 
       {/* Accounts API - GET */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+      <div className="card bg-purple-50 dark:bg-purple-950/30 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b-2 border-gray-300 dark:border-gray-600">
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-3">
               <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">GET</span>

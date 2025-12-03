@@ -42,7 +42,8 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
     if (componentId !== 'security') {
       loadContents()
     }
-  }, [componentId, loadContents])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [componentId])
 
   // Use SecurityContentViewer for security component (after hooks)
   if (componentId === 'security') {
