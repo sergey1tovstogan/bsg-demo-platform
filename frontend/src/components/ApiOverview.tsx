@@ -48,6 +48,12 @@ export function ApiOverview() {
   const [kafkaPrompt, setKafkaPrompt] = useState('What are the Kafka capabilities in Temenos platform for event-driven architecture and messaging, including CloudEvents support?')
   const [publicCatalogPrompt, setPublicCatalogPrompt] = useState('What is the Temenos public API catalog and what are its key capabilities for banks and developers?')
   const [openStandardsPrompt, setOpenStandardsPrompt] = useState('Elaborate about API and related open standards such as Berlin Group, OpenAPI and PSD2')
+  const [showBusinessLogicTooltip, setShowBusinessLogicTooltip] = useState(false)
+  const [businessLogicTooltipPinned, setBusinessLogicTooltipPinned] = useState(false)
+  const [showBusinessMicroservicesTooltip, setShowBusinessMicroservicesTooltip] = useState(false)
+  const [businessMicroservicesTooltipPinned, setBusinessMicroservicesTooltipPinned] = useState(false)
+  const [showBankSystemTooltip, setShowBankSystemTooltip] = useState(false)
+  const [bankSystemTooltipPinned, setBankSystemTooltipPinned] = useState(false)
 
   const tooltips: TooltipConfig[] = [
     {
@@ -96,17 +102,26 @@ export function ApiOverview() {
       setTooltipTimeout(null)
     }
     // Don't change tooltip if something is pinned
-    if (pinnedTooltip || kafkaTooltipPinned) {
+    if (pinnedTooltip || kafkaTooltipPinned || businessLogicTooltipPinned || businessMicroservicesTooltipPinned || bankSystemTooltipPinned) {
       return
     }
-    setActiveTooltip(tooltipId)
-    setShowKafkaTooltip(false)
+
+    // Add a delay before showing the tooltip to prevent flickering
+    const timeout = setTimeout(() => {
+      setActiveTooltip(tooltipId)
+      setShowKafkaTooltip(false)
+      setShowBusinessLogicTooltip(false)
+      setShowBusinessMicroservicesTooltip(false)
+      setShowBankSystemTooltip(false)
+      setTooltipTimeout(null)
+    }, 400)
+    setTooltipTimeout(timeout)
   }
 
   // Helper function to handle feature card leave with delay
   const handleFeatureCardLeave = () => {
     // Don't clear tooltip if something is pinned
-    if (pinnedTooltip || kafkaTooltipPinned) {
+    if (pinnedTooltip || kafkaTooltipPinned || businessLogicTooltipPinned || businessMicroservicesTooltipPinned || bankSystemTooltipPinned) {
       return
     }
     // Clear any existing timeout
@@ -114,8 +129,12 @@ export function ApiOverview() {
       clearTimeout(tooltipTimeout)
       setTooltipTimeout(null)
     }
-    // Don't clear tooltip immediately - let the next hover handle it
-    // This prevents flickering when moving between boxes
+    // Add a delay before hiding to prevent flickering when moving between boxes
+    const timeout = setTimeout(() => {
+      setActiveTooltip(null)
+      setTooltipTimeout(null)
+    }, 300)
+    setTooltipTimeout(timeout)
   }
 
   // Helper function to handle feature card click (pin/unpin)
@@ -130,6 +149,12 @@ export function ApiOverview() {
       setActiveTooltip(tooltipId)
       setKafkaTooltipPinned(false)
       setShowKafkaTooltip(false)
+      setBusinessLogicTooltipPinned(false)
+      setShowBusinessLogicTooltip(false)
+      setBusinessMicroservicesTooltipPinned(false)
+      setShowBusinessMicroservicesTooltip(false)
+      setBankSystemTooltipPinned(false)
+      setShowBankSystemTooltip(false)
     }
   }
 
@@ -438,7 +463,7 @@ export function ApiOverview() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">Expose data & business</h3>
-                <p className="text-base font-bold text-purple-700 dark:text-purple-400 leading-tight">capabilities as REST APIs</p>
+                <p className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">capabilities as REST APIs</p>
               </div>
             </div>
           </div>
@@ -469,7 +494,7 @@ export function ApiOverview() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">Public API Catalog</h3>
-                <p className="text-base font-bold text-purple-700 dark:text-purple-400 leading-tight">and documentation</p>
+                <p className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">and documentation</p>
               </div>
             </div>
           </div>
@@ -522,7 +547,63 @@ export function ApiOverview() {
           {/* API Schema Diagram - Two boxes with U-shaped connection */}
           <div className="relative flex flex-col items-center justify-center" style={{ minHeight: '200px', gap: '38px' }}>
             {/* Bank's System Box - spans width of both columns */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md border-2 border-[#097BED]" style={{ width: '320px', padding: '11px 16px' }}>
+            <div
+              className={`bg-white dark:bg-slate-800 rounded-lg shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${bankSystemTooltipPinned ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+              style={{ width: '320px', padding: '11px 16px' }}
+              onMouseEnter={() => {
+                if (!bankSystemTooltipPinned && !pinnedTooltip && !kafkaTooltipPinned && !businessLogicTooltipPinned && !businessMicroservicesTooltipPinned) {
+                  // Clear any existing timeout
+                  if (tooltipTimeout) {
+                    clearTimeout(tooltipTimeout)
+                    setTooltipTimeout(null)
+                  }
+                  // Add delay before showing
+                  const timeout = setTimeout(() => {
+                    setShowBankSystemTooltip(true)
+                    setShowKafkaTooltip(false)
+                    setShowBusinessLogicTooltip(false)
+                    setShowBusinessMicroservicesTooltip(false)
+                    setActiveTooltip(null)
+                    setTooltipTimeout(null)
+                  }, 400)
+                  setTooltipTimeout(timeout)
+                }
+              }}
+              onMouseLeave={() => {
+                if (!bankSystemTooltipPinned) {
+                  // Clear any existing timeout
+                  if (tooltipTimeout) {
+                    clearTimeout(tooltipTimeout)
+                    setTooltipTimeout(null)
+                  }
+                  // Add delay before hiding
+                  const timeout = setTimeout(() => {
+                    setShowBankSystemTooltip(false)
+                    setTooltipTimeout(null)
+                  }, 300)
+                  setTooltipTimeout(timeout)
+                }
+              }}
+              onClick={() => {
+                if (bankSystemTooltipPinned) {
+                  // Unpin
+                  setBankSystemTooltipPinned(false)
+                  setShowBankSystemTooltip(false)
+                } else {
+                  // Pin
+                  setBankSystemTooltipPinned(true)
+                  setShowBankSystemTooltip(true)
+                  setActiveTooltip(null)
+                  setPinnedTooltip(null)
+                  setKafkaTooltipPinned(false)
+                  setShowKafkaTooltip(false)
+                  setBusinessLogicTooltipPinned(false)
+                  setShowBusinessLogicTooltip(false)
+                  setBusinessMicroservicesTooltipPinned(false)
+                  setShowBusinessMicroservicesTooltip(false)
+                }
+              }}
+            >
               <div className="text-center text-base font-semibold text-[#283054] dark:text-slate-200 leading-tight">
                 Bank's system<br />
                 <span className="text-xs">(channel, real-time interface, etc.)</span>
@@ -583,7 +664,59 @@ export function ApiOverview() {
                 </div>
 
                 {/* Temenos Business Logic Box */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED]" style={{ minWidth: '150px' }}>
+                <div
+                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${businessLogicTooltipPinned ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+                  style={{ minWidth: '150px' }}
+                  onMouseEnter={() => {
+                    if (!businessLogicTooltipPinned && !pinnedTooltip && !kafkaTooltipPinned) {
+                      // Clear any existing timeout
+                      if (tooltipTimeout) {
+                        clearTimeout(tooltipTimeout)
+                        setTooltipTimeout(null)
+                      }
+                      // Add delay before showing
+                      const timeout = setTimeout(() => {
+                        setShowBusinessLogicTooltip(true)
+                        setShowKafkaTooltip(false)
+                        setShowBusinessMicroservicesTooltip(false)
+                        setShowBankSystemTooltip(false)
+                        setActiveTooltip(null)
+                        setTooltipTimeout(null)
+                      }, 400)
+                      setTooltipTimeout(timeout)
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (!businessLogicTooltipPinned) {
+                      // Clear any existing timeout
+                      if (tooltipTimeout) {
+                        clearTimeout(tooltipTimeout)
+                        setTooltipTimeout(null)
+                      }
+                      // Add delay before hiding
+                      const timeout = setTimeout(() => {
+                        setShowBusinessLogicTooltip(false)
+                        setTooltipTimeout(null)
+                      }, 300)
+                      setTooltipTimeout(timeout)
+                    }
+                  }}
+                  onClick={() => {
+                    if (businessLogicTooltipPinned) {
+                      // Unpin
+                      setBusinessLogicTooltipPinned(false)
+                      setShowBusinessLogicTooltip(false)
+                    } else {
+                      // Pin
+                      setBusinessLogicTooltipPinned(true)
+                      setShowBusinessLogicTooltip(true)
+                      setActiveTooltip(null)
+                      setPinnedTooltip(null)
+                      setKafkaTooltipPinned(false)
+                      setShowKafkaTooltip(false)
+                    }
+                  }}
+                >
                   <div className="text-center">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#097BED] to-[#0868CC] rounded-lg flex items-center justify-center mx-auto mb-1 shadow-sm">
                       <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -623,12 +756,36 @@ export function ApiOverview() {
                 style={{ bottom: '-48px', left: '50%', transform: 'translateX(-50%)' }}
                 onMouseEnter={() => {
                   if (!kafkaTooltipPinned && !pinnedTooltip) {
-                    setShowKafkaTooltip(true)
+                    // Clear any existing timeout
+                    if (tooltipTimeout) {
+                      clearTimeout(tooltipTimeout)
+                      setTooltipTimeout(null)
+                    }
+                    // Add delay before showing
+                    const timeout = setTimeout(() => {
+                      setShowKafkaTooltip(true)
+                      setShowBusinessLogicTooltip(false)
+                      setShowBusinessMicroservicesTooltip(false)
+                      setShowBankSystemTooltip(false)
+                      setActiveTooltip(null)
+                      setTooltipTimeout(null)
+                    }, 400)
+                    setTooltipTimeout(timeout)
                   }
                 }}
                 onMouseLeave={() => {
                   if (!kafkaTooltipPinned) {
-                    setShowKafkaTooltip(false)
+                    // Clear any existing timeout
+                    if (tooltipTimeout) {
+                      clearTimeout(tooltipTimeout)
+                      setTooltipTimeout(null)
+                    }
+                    // Add delay before hiding
+                    const timeout = setTimeout(() => {
+                      setShowKafkaTooltip(false)
+                      setTooltipTimeout(null)
+                    }, 300)
+                    setTooltipTimeout(timeout)
                   }
                 }}
                 onClick={() => {
@@ -661,7 +818,61 @@ export function ApiOverview() {
                 </div>
 
                 {/* Business Microservices Box */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED]" style={{ minWidth: '150px' }}>
+                <div
+                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${businessMicroservicesTooltipPinned ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+                  style={{ minWidth: '150px' }}
+                  onMouseEnter={() => {
+                    if (!businessMicroservicesTooltipPinned && !pinnedTooltip && !kafkaTooltipPinned && !businessLogicTooltipPinned) {
+                      // Clear any existing timeout
+                      if (tooltipTimeout) {
+                        clearTimeout(tooltipTimeout)
+                        setTooltipTimeout(null)
+                      }
+                      // Add delay before showing
+                      const timeout = setTimeout(() => {
+                        setShowBusinessMicroservicesTooltip(true)
+                        setShowKafkaTooltip(false)
+                        setShowBusinessLogicTooltip(false)
+                        setShowBankSystemTooltip(false)
+                        setActiveTooltip(null)
+                        setTooltipTimeout(null)
+                      }, 400)
+                      setTooltipTimeout(timeout)
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (!businessMicroservicesTooltipPinned) {
+                      // Clear any existing timeout
+                      if (tooltipTimeout) {
+                        clearTimeout(tooltipTimeout)
+                        setTooltipTimeout(null)
+                      }
+                      // Add delay before hiding
+                      const timeout = setTimeout(() => {
+                        setShowBusinessMicroservicesTooltip(false)
+                        setTooltipTimeout(null)
+                      }, 300)
+                      setTooltipTimeout(timeout)
+                    }
+                  }}
+                  onClick={() => {
+                    if (businessMicroservicesTooltipPinned) {
+                      // Unpin
+                      setBusinessMicroservicesTooltipPinned(false)
+                      setShowBusinessMicroservicesTooltip(false)
+                    } else {
+                      // Pin
+                      setBusinessMicroservicesTooltipPinned(true)
+                      setShowBusinessMicroservicesTooltip(true)
+                      setActiveTooltip(null)
+                      setPinnedTooltip(null)
+                      setKafkaTooltipPinned(false)
+                      setShowKafkaTooltip(false)
+                      setBusinessLogicTooltipPinned(false)
+                      setShowBusinessLogicTooltip(false)
+                    }
+                  }}
+                >
                   <div className="text-center">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#097BED] to-[#0868CC] rounded-lg flex items-center justify-center mx-auto mb-1 shadow-sm">
                       <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -698,7 +909,7 @@ export function ApiOverview() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">Graphical wizards for better</h3>
-                <p className="text-base font-bold text-purple-700 dark:text-purple-400 leading-tight">productivity</p>
+                <p className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">productivity</p>
               </div>
             </div>
           </div>
@@ -721,7 +932,7 @@ export function ApiOverview() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">Security standards for data</h3>
-                <p className="text-base font-bold text-purple-700 dark:text-purple-400 leading-tight">privacy and authentication</p>
+                <p className="text-base font-bold text-[#1a1f3a] dark:text-white leading-tight">privacy and authentication</p>
               </div>
             </div>
           </div>
@@ -762,24 +973,18 @@ export function ApiOverview() {
       </div>
 
       {/* Tooltip Display - Below the purple background */}
-      <div
-        className={`mt-4 transition-opacity duration-200 ${(activeTooltip || showKafkaTooltip) ? 'opacity-100' : 'opacity-0'}`}
-        onMouseEnter={() => {
-          // Clear any existing timeout when hovering over tooltip
-          if (tooltipTimeout) {
-            clearTimeout(tooltipTimeout)
-            setTooltipTimeout(null)
-          }
-          // Keep the tooltip visible when hovering over it
-          if (activeTooltip) {
-            setActiveTooltip(activeTooltip)
-          }
-          if (showKafkaTooltip && !kafkaTooltipPinned) {
-            setShowKafkaTooltip(true)
-          }
-        }}
-      >
-        <div className="p-4 bg-white dark:bg-slate-800 border-2 border-purple-500 rounded-lg shadow-lg text-sm">
+      <div className="mt-4 relative" style={{ height: '250px' }}>
+        <div
+          className={`absolute top-0 left-0 right-0 p-4 bg-white dark:bg-slate-800 border-2 border-purple-500 rounded-lg shadow-lg text-sm transition-opacity duration-300 ${(activeTooltip || showKafkaTooltip || showBusinessLogicTooltip || showBusinessMicroservicesTooltip || showBankSystemTooltip) ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          style={{ maxHeight: '250px', overflowY: 'auto' }}
+          onMouseEnter={() => {
+            // Clear any existing timeout when hovering over tooltip to keep it visible
+            if (tooltipTimeout) {
+              clearTimeout(tooltipTimeout)
+              setTooltipTimeout(null)
+            }
+          }}
+        >
           <div className="flex items-start space-x-2">
             <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -800,7 +1005,51 @@ export function ApiOverview() {
                   )}
                 </div>
               )}
-              {activeTooltip && !showKafkaTooltip && (
+              {showBusinessLogicTooltip && !showKafkaTooltip && (
+                <div>
+                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
+                    Temenos Business Logic
+                  </h3>
+                  <div className="text-gray-800 dark:text-slate-200 leading-relaxed space-y-3">
+                    <p>Temenos Business Logic is a core component of the Temenos platform, designed to implement and manage the complex rules and processes that govern banking operations. It is organized into distinct modules that separate technical and business functionalities, enabling clear structure and maintainability. The business logic is fully parameter-driven, allowing banks to configure products and processes without extensive coding, which supports rapid adaptation to changing market or regulatory requirements.</p>
+
+                    <p>A key architectural principle is the separation of business logic from data storage. The database acts purely as a repository without embedded business logic or stored procedures, which enhances scalability and simplifies maintenance. Business logic is implemented primarily in Java and containerized, supporting modular deployment and extensibility.</p>
+                  </div>
+                </div>
+              )}
+              {showBusinessMicroservicesTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && (
+                <div>
+                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
+                    Business Microservices
+                  </h3>
+                  <div className="text-gray-800 dark:text-slate-200 leading-relaxed space-y-3">
+                    <p>In the Temenos architecture, business microservices are designed to provide modular, scalable, and loosely coupled components that handle specific business functions independently. This approach enhances flexibility, fault isolation, and ease of maintenance, allowing banks to develop and deploy functionalities separately while ensuring seamless integration within the overall system.</p>
+
+                    <p>A key example of business microservices in Temenos is the implementation of CQRS (Command Query Responsibility Segregation) microservices. The core database in Temenos Transact is optimized for transaction processing with strong consistency, focusing on write operations. However, this optimization can make querying inefficient, especially for large banks with high-volume read demands.</p>
+
+                    <p>To address this, Temenos employs CQRS microservices that synchronize data from the core system using an event-driven mechanism. These microservices maintain an eventually consistent copy of the data optimized for read operations. This means that while the data may have a slight delay in reflecting the latest state, it provides low-latency, high-performance access for read-only purposes.</p>
+
+                    <p>For example, when the Payment Cockpit dashboards need to search across million of payments, they query these CQRS microservices instead of the core database. This separation ensures that the core transaction processing remains efficient and consistent, while the CQRS microservices deliver fast, scalable read access tailored for user interfaces and reporting.</p>
+
+                    <p>Developers working with Temenos should be aware of these CQRS microservices in their deployment and utilize their APIs for scenarios requiring high-volume, read-optimized data access with relaxed consistency requirements.</p>
+
+                    <p>This microservices approach, including CQRS, supports Temenos' commitment to scalability, responsiveness, and operational efficiency in complex banking environments.</p>
+
+                    <p>By separating command (write) and query (read) responsibilities, Temenos enables banks to optimize performance and user experience without compromising transactional integrity.</p>
+                  </div>
+                </div>
+              )}
+              {showBankSystemTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && !showBusinessMicroservicesTooltip && (
+                <div>
+                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
+                    Bank's System
+                  </h3>
+                  <div className="text-gray-800 dark:text-slate-200 leading-relaxed space-y-3">
+                    <p>Temenos APIs are designed to be comprehensive and flexible, enabling integration with a wide range of banking systems and third-party applications. They provide RESTful interfaces with JSON payloads, adhering to modern web standards and semantic versioning, which ensures backward compatibility. These APIs cover most functionalities required by financial institutions, making them suitable for core banking systems, payment gateways, analytics platforms, and other banking-related systems.</p>
+                  </div>
+                </div>
+              )}
+              {activeTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && !showBusinessMicroservicesTooltip && !showBankSystemTooltip && (
                 <div>
                   <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
                     {tooltips.find(t => t.id === activeTooltip)?.title}
@@ -810,8 +1059,8 @@ export function ApiOverview() {
                   </div>
                 </div>
               )}
-              {!activeTooltip && !showKafkaTooltip && (
-                <p className="text-gray-600 dark:text-slate-400 italic">Hover over a feature card or the kafka box to see details</p>
+              {!activeTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && !showBusinessMicroservicesTooltip && !showBankSystemTooltip && (
+                <p className="text-gray-600 dark:text-slate-400 italic">Hover over a feature card or any component box to see details</p>
               )}
             </div>
           </div>
@@ -820,7 +1069,7 @@ export function ApiOverview() {
 
       <p className="text-sm text-[#4A5568] dark:text-slate-400 mt-4">
         Integration architecture and API endpoints overview
-        <span className="ml-2 text-purple-600 text-xs font-medium">(Hover over feature cards or the kafka box for more details)</span>
+        <span className="ml-2 text-purple-600 text-xs font-medium">(Hover over feature cards or component boxes for more details)</span>
       </p>
 
       {/* Demo Settings Button */}
