@@ -4087,8 +4087,20 @@ const SaaSComplianceOverviewHTML = `<!DOCTYPE html>
 </html>`
 
 // Log History HTML Content
-export function SecurityContentViewer() {
-    const [selectedCard, setSelectedCard] = useState<number | null>(null)
+interface SecurityContentViewerProps {
+    initialSelectedCard?: number
+}
+
+export function SecurityContentViewer({ initialSelectedCard }: SecurityContentViewerProps = {}) {
+    const [selectedCard, setSelectedCard] = useState<number | null>(initialSelectedCard || null)
+    
+    // Update selectedCard when initialSelectedCard prop changes
+    useEffect(() => {
+        if (initialSelectedCard !== undefined) {
+            setSelectedCard(initialSelectedCard)
+        }
+    }, [initialSelectedCard])
+    
     const [showDetailedExplanation, setShowDetailedExplanation] = useState(false)
     const [showUserManagement, setShowUserManagement] = useState(false)
     const [showExate, setShowExate] = useState(false)

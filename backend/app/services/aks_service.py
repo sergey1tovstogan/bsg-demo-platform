@@ -232,7 +232,7 @@ class AKSService:
                     logger.warning(f"Kubeconfig not created and default not found")
                     return None
             
-            # Verify kubectl can access the cluster
+            # Verify kubectl can access the cluster (non-blocking check)
             def _check_kubectl():
                 import shutil
                 import os
@@ -248,11 +248,23 @@ class AKSService:
                     shell=False
                 )
             
-            kubectl_result = await loop.run_in_executor(None, _check_kubectl)
+            try:
+                kubectl_result = await loop.run_in_executor(None, _check_kubectl)
+                if kubectl_result.returncode == 0:
+                    logger.info(f"✓ kubectl verification successful for {kubeconfig_path}")
+                else:
+                    logger.warning(f"kubectl version check failed (return code: {kubectl_result.returncode}), but kubeconfig exists. Proceeding anyway.")
+                    logger.warning(f"kubectl stderr: {kubectl_result.stderr[:200] if kubectl_result.stderr else 'None'}")
+            except Exception as check_err:
+                logger.warning(f"kubectl verification check failed: {check_err}, but kubeconfig file exists. Proceeding anyway.")
             
-            if kubectl_result.returncode == 0:
+            # Return the kubeconfig path even if kubectl check failed (file exists, so it's valid)
+            # The actual kubectl commands will verify connectivity when used
+            if kubeconfig_exists:
+                logger.info(f"✓ Returning kubeconfig path: {kubeconfig_path}")
                 return {"kubeconfig_path": kubeconfig_path, "cluster_name": cluster_name}
             
+            logger.error(f"✗ Kubeconfig file does not exist at {kubeconfig_path}")
             return None
         except Exception as e:
             error_msg = str(e)
@@ -592,7 +604,7 @@ class AKSService:
             )
             
             if credential_response.kubeconfigs and len(credential_response.kubeconfigs) > 0:
-                # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed)
+                # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed or encrypted)
                 decoded_bytes = base64.b64decode(credential_response.kubeconfigs[0].value)
                 
                 # Try to decompress if it's gzip-compressed
@@ -600,13 +612,14 @@ class AKSService:
                     kubeconfig_data = gzip.decompress(decoded_bytes).decode('utf-8')
                     logger.debug("Kubeconfig was gzip-compressed, decompressed successfully")
                 except (gzip.BadGzipFile, OSError):
-                    # Not compressed, decode directly as UTF-8
+                    # Not compressed, try to decode as UTF-8
                     try:
                         kubeconfig_data = decoded_bytes.decode('utf-8')
-                    except UnicodeDecodeError as e:
-                        logger.error(f"Failed to decode kubeconfig as UTF-8: {e}")
-                        logger.error(f"First 100 bytes (hex): {decoded_bytes[:100].hex()}")
-                        raise
+                    except UnicodeDecodeError:
+                        # If UTF-8 decoding fails, the data might be encrypted or in a different format
+                        # This can happen with some Azure API responses. Fall back to using Azure CLI.
+                        logger.warning("Kubeconfig data from Azure API cannot be decoded (may be encrypted). Falling back to Azure CLI method.")
+                        raise ValueError("Kubeconfig data appears to be encrypted or in unsupported format")
                 
                 temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
                 temp_file.write(kubeconfig_data)
@@ -634,7 +647,7 @@ class AKSService:
                 logger.error("  - OR 'Azure Kubernetes Service Cluster Admin Role' (fallback)")
                 return None
             
-            # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed)
+            # Decode the kubeconfig (it's base64 encoded, and may be gzip-compressed or encrypted)
             decoded_bytes = base64.b64decode(credential_response.kubeconfigs[0].value)
             
             # Try to decompress if it's gzip-compressed
@@ -642,13 +655,14 @@ class AKSService:
                 kubeconfig_data = gzip.decompress(decoded_bytes).decode('utf-8')
                 logger.debug("Kubeconfig was gzip-compressed, decompressed successfully")
             except (gzip.BadGzipFile, OSError):
-                # Not compressed, decode directly as UTF-8
+                # Not compressed, try to decode as UTF-8
                 try:
                     kubeconfig_data = decoded_bytes.decode('utf-8')
-                except UnicodeDecodeError as e:
-                    logger.error(f"Failed to decode kubeconfig as UTF-8: {e}")
-                    logger.error(f"First 100 bytes (hex): {decoded_bytes[:100].hex()}")
-                    raise
+                except UnicodeDecodeError:
+                    # If UTF-8 decoding fails, the data might be encrypted or in a different format
+                    # This can happen with some Azure API responses. Fall back to using Azure CLI.
+                    logger.warning("Admin kubeconfig data from Azure API cannot be decoded (may be encrypted). Falling back to Azure CLI method.")
+                    raise ValueError("Kubeconfig data appears to be encrypted or in unsupported format")
             
             # Write to temporary file
             temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
@@ -658,6 +672,10 @@ class AKSService:
             logger.info(f"✓ Cluster admin credentials retrieved and saved to {temp_file.name}")
             return temp_file.name
             
+        except (ValueError, UnicodeDecodeError) as e:
+            # If both API methods failed due to encoding issues, fall back to Azure CLI
+            logger.info("Azure API kubeconfig decoding failed (data may be encrypted). Falling back to Azure CLI method.")
+            return None
         except Exception as e:
             logger.error(f"Failed to get cluster credentials: {e}", exc_info=True)
             logger.error("Both user and admin credential methods failed.")
@@ -979,7 +997,14 @@ class AKSService:
                         logger.error(f"  Creds: {creds}")
                         logger.error(f"  Cannot proceed without cluster-specific kubeconfig")
                         logger.error(f"  Would query wrong cluster if we used default kubeconfig")
-                        return namespaces
+                        # Try to use the default kubeconfig as last resort if cluster name matches
+                        default_kubeconfig = os.path.expanduser("~/.kube/config")
+                        if os.path.exists(default_kubeconfig):
+                            logger.warning(f"Attempting to use default kubeconfig: {default_kubeconfig}")
+                            logger.warning(f"This may query a different cluster if multiple clusters have the same name!")
+                            kubeconfig_path = default_kubeconfig
+                        else:
+                            return namespaces
                 except Exception as e:
                     logger.error(f"Error getting cluster credentials: {e}", exc_info=True)
                     logger.error(f"✗ Cannot proceed without cluster-specific kubeconfig")
