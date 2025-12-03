@@ -1,12 +1,7 @@
 import { useState } from 'react'
 import {
     Shield,
-    Key,
     Users,
-    Server,
-    Database,
-    Lock,
-    CheckCircle,
     Info,
     X
 } from 'lucide-react'

@@ -1,10 +1,6 @@
 import { useState } from 'react'
 import {
-    User,
     Calendar,
-    Clock,
-    Shield,
-    Settings,
     Check,
     Plus,
     Info
