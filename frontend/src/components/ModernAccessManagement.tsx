@@ -181,8 +181,8 @@ const PrivilegedAccessView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
-                    <h3 className="text-lg font-bold text-purple-900 dark:text-purple-100 mb-4">Session Management</h3>
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
+                    <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-4">Session Management</h3>
                     <ul className="space-y-3">
                         {[
                             'Session recording and monitoring',
@@ -191,8 +191,8 @@ const PrivilegedAccessView = () => {
                             'Concurrent session limits',
                             'Session timeout policies'
                         ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-purple-800 dark:text-purple-200">
-                                <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-purple-500 flex-shrink-0" />
+                            <li key={idx} className="flex items-start gap-3 text-blue-800 dark:text-blue-200">
+                                <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
                                 <span className="text-sm leading-relaxed">{item}</span>
                             </li>
                         ))}
