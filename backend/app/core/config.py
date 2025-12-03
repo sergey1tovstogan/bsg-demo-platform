@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=False, description="Debug mode")
 
     # API Settings
-    API_V1_PREFIX: str = "/api/v1"
+    API_V1_PREFIX: str = "api/v1"
     HOST: str = Field(default="0.0.0.0", description="API host")
     PORT: int = Field(
         default_factory=lambda: int(os.getenv("PORT", "8000")),

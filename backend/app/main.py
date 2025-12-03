@@ -66,7 +66,7 @@ app = FastAPI(
     docs_url="/docs" if not settings.is_production else None,  # Disable in production
     redoc_url="/redoc" if not settings.is_production else None,
     lifespan=lifespan,
-    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
+    openapi_url=f"/{settings.API_V1_PREFIX}/openapi.json"
 )
 
 # Configure CORS - MUST be the outermost middleware to handle preflight OPTIONS requests
@@ -91,17 +91,17 @@ app.add_middleware(RequestLoggingMiddleware)
 register_error_handlers(app)
 
 # Include routers
-app.include_router(health.router, prefix=settings.API_V1_PREFIX)
-app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
-app.include_router(database.router, prefix=settings.API_V1_PREFIX)
-app.include_router(components.router, prefix=settings.API_V1_PREFIX)
-app.include_router(integration.router, prefix=settings.API_V1_PREFIX)
-app.include_router(grafana_proxy.router, prefix=settings.API_V1_PREFIX)
-app.include_router(grafana_auth.router, prefix=settings.API_V1_PREFIX)
-app.include_router(security.router, prefix=settings.API_V1_PREFIX)
-app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
-app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
-app.include_router(cache.router, prefix=settings.API_V1_PREFIX)
+app.include_router(health.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(auth.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(database.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(components.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(integration.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(grafana_proxy.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(grafana_auth.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(security.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(deployment.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(chatbot.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(cache.router, prefix=f"/{settings.API_V1_PREFIX}")
 
 # Serve static files (frontend) if directory exists
 static_dir = os.path.join(os.path.dirname(__file__), "static")
@@ -146,9 +146,9 @@ else:
             "version": settings.APP_VERSION,
             "environment": settings.ENVIRONMENT,
             "api_version": "v1",
-            "docs": f"{settings.API_V1_PREFIX}/docs" if not settings.is_production else None,
-            "health": f"{settings.API_V1_PREFIX}/health",
-            "live": f"{settings.API_V1_PREFIX}/live",
+            "docs": f"/{settings.API_V1_PREFIX}/docs" if not settings.is_production else None,
+            "health": f"/{settings.API_V1_PREFIX}/health",
+            "live": f"/{settings.API_V1_PREFIX}/live",
             "frontend_available": os.path.exists(static_dir) if static_dir else False,
             "static_dir": str(static_dir) if static_dir else None,
             "message": "BSG Demo Platform API is running. Use /api/v1/health for health check."
