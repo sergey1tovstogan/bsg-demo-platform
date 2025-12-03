@@ -6,9 +6,12 @@ import { ComingSoonModal } from './components/ComingSoonModal'
 import { HomePage } from './pages/HomePage'
 import { ComponentPage } from './pages/ComponentPage'
 import type { ComponentId } from './types'
+import type { SearchResult } from './utils/searchMapping'
 
 function App() {
   const [currentComponent, setCurrentComponent] = useState<ComponentId | null>(null)
+  const [selectedCard, setSelectedCard] = useState<number | undefined>(undefined)
+  const [activeTab, setActiveTab] = useState<'content' | 'video' | 'demo' | 'chatbot' | undefined>(undefined)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pendingFeature, setPendingFeature] = useState<string | null>(null)
@@ -44,10 +47,24 @@ function App() {
 
   const handleComponentChange = (componentId: ComponentId) => {
     setCurrentComponent(componentId)
+    setSelectedCard(undefined) // Reset selected card when changing components
+    setActiveTab(undefined) // Reset active tab when changing components
   }
 
   const handleHomeClick = () => {
     setCurrentComponent(null)
+    setSelectedCard(undefined)
+    setActiveTab(undefined)
+  }
+
+  const handleSearch = (result: SearchResult) => {
+    setCurrentComponent(result.componentId)
+    setSelectedCard(result.selectedCard)
+    setActiveTab(result.tab)
+    // Collapse sidebar when navigating via search
+    if (collapseSidebarRef.current) {
+      collapseSidebarRef.current()
+    }
   }
 
   return (
@@ -107,11 +124,15 @@ function App() {
         {/* Content Container */}
         <div className="relative z-10 px-8 py-8 h-full overflow-y-auto custom-scrollbar">
           <div className="max-w-7xl mx-auto">
-            <Header />
+            <Header onSearch={handleSearch} />
 
             <div className="mt-8 animate-fade-in">
               {currentComponent ? (
-                <ComponentPage componentId={currentComponent} />
+                <ComponentPage 
+                  componentId={currentComponent} 
+                  initialSelectedCard={selectedCard}
+                  initialTab={activeTab}
+                />
               ) : (
                 <HomePage onSelectComponent={handleComponentChange} />
               )}

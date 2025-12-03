@@ -7,9 +7,10 @@ import { SecurityContentViewer } from './SecurityContentViewer'
 
 interface ContentViewerProps {
   componentId: ComponentId
+  initialSelectedCard?: number // For security component sub-sections
 }
 
-export function ContentViewer({ componentId }: ContentViewerProps) {
+export function ContentViewer({ componentId, initialSelectedCard }: ContentViewerProps) {
   // All hooks must be called before any conditional returns (React Rules of Hooks)
   const [contents, setContents] = useState<Content[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -46,7 +47,7 @@ export function ContentViewer({ componentId }: ContentViewerProps) {
 
   // Use SecurityContentViewer for security component (after hooks)
   if (componentId === 'security') {
-    return <SecurityContentViewer />
+    return <SecurityContentViewer initialSelectedCard={initialSelectedCard} />
   }
 
   // Use ApiOverview for integration component
