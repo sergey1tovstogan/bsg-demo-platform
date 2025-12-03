@@ -35,7 +35,7 @@ if not exist "%BACKEND_DIR%" (
     pause
     exit /b 1
 )
-start "BSG Backend" cmd /k "cd /d %BACKEND_DIR% && echo Starting backend at %CD% && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+start "BSG Backend" cmd /k "cd /d %BACKEND_DIR% && echo Starting backend at %CD% && py -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
 timeout /t 3 /nobreak >nul
 echo   Backend starting in new window...
 echo.
