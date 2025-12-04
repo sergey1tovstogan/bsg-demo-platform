@@ -1067,11 +1067,6 @@ export function ApiOverview() {
         </div>
       </div>
 
-      <p className="text-sm text-[#4A5568] dark:text-slate-400 mt-4">
-        Integration architecture and API endpoints overview
-        <span className="ml-2 text-purple-600 text-xs font-medium">(Hover over feature cards or component boxes for more details)</span>
-      </p>
-
       {/* Demo Settings Button */}
       <div className="mt-6 flex justify-end">
         <button

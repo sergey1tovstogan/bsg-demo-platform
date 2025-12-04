@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Loader2, Info } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { Content, ComponentId } from '../types'
 import { ApiOverview } from './ApiOverview'
+import { EventOverview } from './EventOverview'
 import { SecurityContentViewer } from './SecurityContentViewer'
 
 interface ContentViewerProps {
@@ -51,9 +52,14 @@ export function ContentViewer({ componentId, initialSelectedCard }: ContentViewe
     return <SecurityContentViewer initialSelectedCard={initialSelectedCard} />
   }
 
-  // Use ApiOverview for integration component
+  // Use ApiOverview and EventOverview for integration component
   if (componentId === 'integration') {
-    return <ApiOverview />
+    return (
+      <>
+        <ApiOverview />
+        <EventOverview />
+      </>
+    )
   }
 
   const goToPrevious = () => {
