@@ -15,7 +15,7 @@ interface TooltipConfig {
   }
 }
 
-export function ApiOverview() {
+export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyDemoSettings = false }: { hideTitle?: boolean, hideDemoSettings?: boolean, onlyDemoSettings?: boolean }) {
   const [showApiVersioning, setShowApiVersioning] = useState(false)
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const [kafkaTooltipContent, setKafkaTooltipContent] = useState<string>('')
@@ -402,12 +402,291 @@ export function ApiOverview() {
     return <ApiVersioning onBack={() => setShowApiVersioning(false)} />
   }
 
-  return (
-    <div className="card">
-      {/* Title */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#283054] dark:text-white">API Overview</h2>
+  // Only render Demo Settings if requested
+  if (onlyDemoSettings) {
+    return (
+      <div className="card">
+        {/* Demo Settings Button */}
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={() => setShowDemoSettings(!showDemoSettings)}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 1v6m0 6v6M1 12h6m6 0h6" strokeLinecap="round" />
+              <path d="M4.22 4.22l4.24 4.24m7.08 0l4.24-4.24M4.22 19.78l4.24-4.24m7.08 0l4.24 4.24" strokeLinecap="round" strokeWidth="1.5" />
+            </svg>
+            <span className="text-sm font-medium">Demo Settings</span>
+          </button>
+        </div>
+
+        {/* Demo Settings Panel */}
+        {showDemoSettings && (
+          <div className="mt-4 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-lg">
+            <h3 className="text-lg font-bold text-purple-900 mb-3">Demo Settings</h3>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Refresh Kafka Tooltip</p>
+                  <p className="text-xs text-gray-600 mt-1">Fetch latest content from RAG API and update cache</p>
+                </div>
+                <button
+                  onClick={refreshKafkaTooltip}
+                  disabled={isRefreshing}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow-md transition-all flex items-center space-x-2"
+                >
+                  {isRefreshing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Refreshing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M21 12a9 9 0 11-6.219-8.56" strokeLinecap="round" />
+                        <path d="M15 3v6h6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span className="text-sm">Refresh</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Refresh Public API Catalog Tooltip</p>
+                  <p className="text-xs text-gray-600 mt-1">Fetch latest content from RAG API and update cache</p>
+                </div>
+                <button
+                  onClick={refreshPublicCatalogTooltip}
+                  disabled={isRefreshingCatalog}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow-md transition-all flex items-center space-x-2"
+                >
+                  {isRefreshingCatalog ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Refreshing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M21 12a9 9 0 11-6.219-8.56" strokeLinecap="round" />
+                        <path d="M15 3v6h6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span className="text-sm">Refresh</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Refresh Open Standards Tooltip</p>
+                  <p className="text-xs text-gray-600 mt-1">Fetch latest content from RAG API and update cache</p>
+                </div>
+                <button
+                  onClick={refreshOpenStandardsTooltip}
+                  disabled={isRefreshingOpenStandards}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow-md transition-all flex items-center space-x-2"
+                >
+                  {isRefreshingOpenStandards ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Refreshing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M21 12a9 9 0 11-6.219-8.56" strokeLinecap="round" />
+                        <path d="M15 3v6h6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span className="text-sm">Refresh</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* JWT Token Information - at the end with purple background */}
+            <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+              <h4 className="text-sm font-bold text-purple-900 mb-3">RAG API JWT Token Status</h4>
+              {jwtLoading ? (
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-xs">Loading JWT info...</span>
+                </div>
+              ) : jwtInfo ? (
+                <div className="space-y-1">
+                  {jwtInfo.email && (
+                    <p className="text-xs text-gray-700">
+                      <span className="font-semibold">User:</span> {jwtInfo.email}
+                    </p>
+                  )}
+                  {jwtInfo.expires_at && (
+                    <p className="text-xs text-gray-700">
+                      <span className="font-semibold">Expires:</span> {new Date(jwtInfo.expires_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  )}
+                  {jwtInfo.is_expired !== undefined && (
+                    <div className={`flex items-center space-x-2 mt-2 ${jwtInfo.is_expired ? 'text-red-600' : 'text-green-600'}`}>
+                      {jwtInfo.is_expired ? (
+                        <>
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-sm font-bold">Token Expired - A new JWT token needs to be used</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-sm font-bold">
+                            Token Valid ({jwtInfo.days_remaining !== undefined ? `${jwtInfo.days_remaining} days remaining` : 'active'})
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-600">JWT token information not available</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Approval Modals */}
+        {showApprovalModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900">Review RAG API Response - Kafka</h2>
+                <p className="text-sm text-gray-600 mt-1">Please review the content below before approving the update</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
+                  <textarea
+                    value={kafkaPrompt}
+                    onChange={(e) => setKafkaPrompt(e.target.value)}
+                    className="w-full p-3 border border-blue-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Enter your RAG query prompt..."
+                  />
+                  <p className="text-xs text-blue-700 mt-2">
+                    <span className="font-semibold">Tip:</span> You can edit this prompt and click "Refresh" again to get a new response
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">New Kafka Tooltip Content:</h3>
+                  <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">{newKafkaContent}</div>
+                </div>
+              </div>
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onClick={cancelKafkaRefresh} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg shadow-md transition-all font-medium">Cancel</button>
+                <button onClick={approveKafkaContent} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all font-medium flex items-center space-x-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <span>Approve & Update Cache</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showPublicCatalogApproval && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900">Review RAG API Response - Public API Catalog</h2>
+                <p className="text-sm text-gray-600 mt-1">Please review the content below before approving the update</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
+                  <textarea
+                    value={publicCatalogPrompt}
+                    onChange={(e) => setPublicCatalogPrompt(e.target.value)}
+                    className="w-full p-3 border border-blue-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Enter your RAG query prompt..."
+                  />
+                  <p className="text-xs text-blue-700 mt-2">
+                    <span className="font-semibold">Tip:</span> You can edit this prompt and click "Refresh" again to get a new response
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">New Public API Catalog Tooltip Content:</h3>
+                  <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">{newPublicCatalogContent}</div>
+                </div>
+              </div>
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onClick={cancelPublicCatalogRefresh} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg shadow-md transition-all font-medium">Cancel</button>
+                <button onClick={approvePublicCatalogContent} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all font-medium flex items-center space-x-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <span>Approve & Update Cache</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showOpenStandardsApproval && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900">Review RAG API Response - Open Standards</h2>
+                <p className="text-sm text-gray-600 mt-1">Please review the content below before approving the update</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
+                  <textarea
+                    value={openStandardsPrompt}
+                    onChange={(e) => setOpenStandardsPrompt(e.target.value)}
+                    className="w-full p-3 border border-blue-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Enter your RAG query prompt..."
+                  />
+                  <p className="text-xs text-blue-700 mt-2">
+                    <span className="font-semibold">Tip:</span> You can edit this prompt and click "Refresh" again to get a new response
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">New Open Standards Tooltip Content:</h3>
+                  <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">{newOpenStandardsContent}</div>
+                </div>
+              </div>
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onClick={cancelOpenStandardsRefresh} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg shadow-md transition-all font-medium">Cancel</button>
+                <button onClick={approveOpenStandardsContent} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all font-medium flex items-center space-x-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <span>Approve & Update Cache</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+    )
+  }
+
+  return (
+    <div className={hideTitle ? "" : "card"}>
+      {/* Title */}
+      {!hideTitle && (
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-[#283054] dark:text-white">API Overview</h2>
+        </div>
+      )}
 
       {/* API Framework Diagram */}
       <div
@@ -1067,8 +1346,10 @@ export function ApiOverview() {
         </div>
       </div>
 
-      {/* Demo Settings Button */}
-      <div className="mt-6 flex justify-end">
+      {!hideDemoSettings && (
+        <>
+          {/* Demo Settings Button */}
+          <div className="mt-6 flex justify-end">
         <button
           onClick={() => setShowDemoSettings(!showDemoSettings)}
           className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
@@ -1394,6 +1675,8 @@ export function ApiOverview() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

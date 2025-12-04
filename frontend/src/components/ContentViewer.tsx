@@ -18,6 +18,7 @@ export function ContentViewer({ componentId, initialSelectedCard }: ContentViewe
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<'api' | 'event'>('api')
 
   const loadContents = useCallback(async () => {
     try {
@@ -52,13 +53,43 @@ export function ContentViewer({ componentId, initialSelectedCard }: ContentViewe
     return <SecurityContentViewer initialSelectedCard={initialSelectedCard} />
   }
 
-  // Use ApiOverview and EventOverview for integration component
+  // Use ApiOverview and EventOverview for integration component with tabs
   if (componentId === 'integration') {
     return (
-      <>
-        <ApiOverview />
-        <EventOverview />
-      </>
+      <div className="card">
+        {/* Tab Navigation as Title */}
+        <div className="mb-6">
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab('api')}
+              className={`px-4 py-3 font-bold text-2xl transition-all ${
+                activeTab === 'api'
+                  ? 'border-b-2 border-purple-600 text-[#283054] dark:text-white'
+                  : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
+              }`}
+            >
+              API Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('event')}
+              className={`px-4 py-3 font-bold text-2xl transition-all ${
+                activeTab === 'event'
+                  ? 'border-b-2 border-teal-600 text-[#283054] dark:text-white'
+                  : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
+              }`}
+            >
+              Event Overview
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'api' && <ApiOverview hideTitle={true} hideDemoSettings={true} />}
+        {activeTab === 'event' && <EventOverview hideTitle={true} />}
+
+        {/* Demo Settings at the bottom (always visible) */}
+        <ApiOverview onlyDemoSettings={true} />
+      </div>
     )
   }
 

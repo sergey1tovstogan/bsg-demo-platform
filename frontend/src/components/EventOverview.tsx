@@ -7,7 +7,7 @@ interface TooltipConfig {
   description: string
 }
 
-export function EventOverview() {
+export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const [tooltipTimeout, setTooltipTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
   const [pinnedTooltip, setPinnedTooltip] = useState<string | null>(null)
@@ -98,11 +98,13 @@ export function EventOverview() {
   }
 
   return (
-    <div className="card mt-8">
+    <div className={hideTitle ? "" : "card mt-8"}>
       {/* Title */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#283054] dark:text-white">Event Overview</h2>
-      </div>
+      {!hideTitle && (
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-[#283054] dark:text-white">Event Overview</h2>
+        </div>
+      )}
 
       {/* Event Framework Diagram */}
       <div
@@ -219,12 +221,12 @@ export function EventOverview() {
           {/* Middle Panel - Event Diagram */}
           <div className="flex-1 p-6 z-10 flex flex-col items-center justify-center">
             <div className="relative flex flex-col items-center justify-center" style={{ minHeight: '200px' }}>
-              {/* Temenos Business Logic Box */}
+              {/* Temenos Business Logic Box with Event label */}
               <div className="flex flex-col items-center relative" style={{ gap: '5px', marginRight: 'auto', marginLeft: '-200px' }}>
                 {/* Temenos Business Logic Box */}
                 <div
                   className="bg-white dark:bg-slate-800 rounded-lg p-3.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all"
-                  style={{ minWidth: '120px', minHeight: '170px' }}
+                  style={{ minWidth: '120px', minHeight: '204px' }}
                 >
                   <div className="text-center flex flex-col justify-center h-full">
                     <div className="w-14 h-14 bg-gradient-to-br from-[#097BED] to-[#0868CC] rounded-lg flex items-center justify-center mx-auto mb-2 shadow-sm">
@@ -236,50 +238,79 @@ export function EventOverview() {
                   </div>
                 </div>
 
+                {/* Thin Event Box - Rotated and positioned to the right */}
+                <div
+                  className="absolute bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded shadow-sm flex items-center justify-center"
+                  style={{
+                    width: '30px',
+                    height: '122px',
+                    left: '100%',
+                    marginLeft: '10px',
+                    top: '41px',
+                    writingMode: 'vertical-rl',
+                    textOrientation: 'mixed'
+                  }}
+                >
+                  <div className="text-sm font-bold text-white" style={{ color: '#FFFFFF', transform: 'rotate(180deg)' }}>Event</div>
+                </div>
+
                 {/* Arrow 1 - Top */}
-                <div className="absolute" style={{ top: '35px', left: '100%', marginLeft: '0px' }}>
-                  <svg width="80" height="5" style={{ overflow: 'visible' }}>
+                <div className="absolute" style={{ top: '41px', left: '100%', marginLeft: '50px' }}>
+                  <svg width="100" height="5" style={{ overflow: 'visible' }}>
                     <defs>
                       <marker id="arrowEvent1" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
                         <polygon points="0,0 6,3 0,6" fill="#FFFFFF" />
                       </marker>
                     </defs>
-                    <line x1="0" y1="2.5" x2="78" y2="2.5" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowEvent1)" strokeDasharray="6,3">
+                    <line x1="0" y1="2.5" x2="98" y2="2.5" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowEvent1)" strokeDasharray="6,3">
                       <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
                     </line>
                   </svg>
+                  <div className="absolute text-[11px] font-semibold whitespace-nowrap" style={{ left: '10px', top: '-16px', color: '#FFFFFF' }}>data event</div>
+                </div>
+
+                {/* CloudEvents Logo - Between Arrow 1 and Arrow 2 */}
+                <div className="absolute" style={{ top: '52px', left: '100%', marginLeft: '80px' }}>
+                  <div className="rounded-lg p-1 flex items-center justify-center" style={{ width: '40px', height: '40px' }}>
+                    <img
+                      src="https://cloudevents.io/img/logos/cloudevents-icon-color.png"
+                      alt="CloudEvents"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
                 </div>
 
                 {/* Arrow 2 - Middle */}
-                <div className="absolute" style={{ top: '85px', left: '100%', marginLeft: '0px' }}>
-                  <svg width="80" height="5" style={{ overflow: 'visible' }}>
+                <div className="absolute" style={{ top: '102px', left: '100%', marginLeft: '50px' }}>
+                  <svg width="100" height="5" style={{ overflow: 'visible' }}>
                     <defs>
                       <marker id="arrowEvent2" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
                         <polygon points="0,0 6,3 0,6" fill="#FFFFFF" />
                       </marker>
                     </defs>
-                    <line x1="0" y1="2.5" x2="78" y2="2.5" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowEvent2)" strokeDasharray="6,3">
+                    <line x1="0" y1="2.5" x2="98" y2="2.5" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowEvent2)" strokeDasharray="6,3">
                       <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
                     </line>
                   </svg>
+                  <div className="absolute text-[11px] font-semibold whitespace-nowrap" style={{ left: '10px', top: '8px', color: '#FFFFFF' }}>business event</div>
                 </div>
 
                 {/* Arrow 3 - Bottom */}
-                <div className="absolute" style={{ top: '135px', left: '100%', marginLeft: '0px' }}>
-                  <svg width="80" height="5" style={{ overflow: 'visible' }}>
+                <div className="absolute" style={{ top: '163px', left: '100%', marginLeft: '50px' }}>
+                  <svg width="100" height="5" style={{ overflow: 'visible' }}>
                     <defs>
                       <marker id="arrowEvent3" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
                         <polygon points="0,0 6,3 0,6" fill="#FFFFFF" />
                       </marker>
                     </defs>
-                    <line x1="0" y1="2.5" x2="78" y2="2.5" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowEvent3)" strokeDasharray="6,3">
+                    <line x1="0" y1="2.5" x2="98" y2="2.5" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowEvent3)" strokeDasharray="6,3">
                       <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
                     </line>
                   </svg>
                 </div>
 
                 {/* Pub/Sub - Kafka Box */}
-                <div className="absolute" style={{ top: '35px', left: '100%', marginLeft: '80px' }}>
+                <div className="absolute" style={{ top: '41px', left: '100%', marginLeft: '150px' }}>
                   <div
                     className="bg-white dark:bg-slate-800 rounded-lg p-2 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all"
                     style={{ width: '72px', height: '50px' }}
