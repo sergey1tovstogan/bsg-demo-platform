@@ -10,9 +10,11 @@ import {
     FileText,
     Activity,
     ArrowRight,
+    ArrowLeft,
     Info
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ModernAuthentication } from './ModernAuthentication'
 
 interface TooltipConfig {
     id: string
@@ -22,6 +24,7 @@ interface TooltipConfig {
 
 export function ModernSecurityArchitecture() {
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
+    const [showAuthentication, setShowAuthentication] = useState(false)
 
     const tooltips: Record<string, TooltipConfig> = {
         'key-management': {
@@ -32,53 +35,69 @@ export function ModernSecurityArchitecture() {
         'secrets-management': {
             id: 'secrets-management',
             title: 'Secrets Management',
-            description: 'Secrets management depends on stack deployment and requirements. Runtime secrets can be held within Hashicorp Vault, and minimum privilege should be used around key issuance, with audit logging of issued secrets. Good practice dictates that all runtime secrets are rotated at each deploy, and Cryptographic keys are rotated every 3 months, or whenever required by the organization. For Azure deployment, Temenos recommend using Azure Key Vault.'
+            description: 'Secrets management depends on stack deployment and requirements. Runtime secrets can be held within Hashicorp Vault, and minimum privilege should be used around key issuance, with audit logging of issued secrets. Good practice dictates that all runtime secrets are rotated at each deploy, and Cryptographic keys are rotated every 3 months, or whenever required by the organization. For Azure deployment, Temenos recommend using Azure Key Vault - Azure Key Vault: Azure Key Vault is a secure and centralized key management service that helps you safeguard cryptographic keys, certificates, and secrets used by cloud applications and services. Azure Key Vault is a cloud service that provides secure storage of keys for encrypting data. Multiple keys, and multiple versions of the same key, can be kept in the Azure Key Vault. Cryptographic keys in Azure Key Vault are represented as JSON Web Key [JWK] objects.'
         },
         'temenos-vault': {
             id: 'temenos-vault',
             title: 'Temenos Vault',
-            description: 'Users should be able to create and store the application Certificates into the Vault (Azure Key vault). Applications should be able to retrieve the Certificates from the vault and use it on the fly without any storing mechanism. Temenos Vault provides a facade that can be used by products and can be configured to point to the relevant Vault implementation based on the deployment environment.'
+            description: 'Users should be able to create and store the application Certificates into the Vault (Azure Key vault). Applications should be able to retrieve the Certificates from the vault (Azure Key vault) and use it on the fly without any storing mechanism. Temenos Vault APIs should be created to support the above requirements to interact with the Vault (Azure Key vault). Temenos Vault – provides common framework for our products to integrate with underlaying platform Secrets services. Temenos Vault provides a facade that can be used by products and can be configured to point to the relevant Vault implementation based on the deployment environment. As well as this it can be used by the SaaS platform for provisioning the secrets, keys, and certificates for product or for the platform. We will support Azure Key Vault, AWS Secret, Key and Certificate Manager as well as Hashicorp Vault for On Premise solutions.'
         },
         'externalized-auth': {
             id: 'externalized-auth',
             title: 'Externalized Authorization',
-            description: 'Temenos solution supports the externalized mechanism based on SAML 2.0, OIDC/ JSON Web Token (JWT) for authentication. OAuth is an open standard authorization protocol. It enables your account information to be obtained by third-party services without exposing user credentials.'
+            description: 'Temenos solution supports the externalized mechanism based on SAML 2.0, OIDC/ JSON Web Token (JWT) for authentication.  OAuth is an open standard authorization protocol. It enables your account information to be obtained by third-party services. Without exposing user credentials, OAuth provides an access token and a refresh token for third-party services.'
         },
         'data-encryption': {
             id: 'data-encryption',
             title: 'Data Encryption',
-            description: 'Temenos uses a range of security controls to protect data at rest, at use and in transit. One of these mechanisms is Transparent Data Encryption (TDE) which provides real-time encryption and decryption of the database, associated backups, and transaction log files at rest using AES 256-bit encryption.'
+            description: 'Temenos uses a range of security controls to protect data at rest, at use and in transit.  One of these mechanisms is Transparent Data Encryption (TDE) which provides real-time encryption and decryption of the database, associated backups, and transaction log files at rest. TDE protects data and log files, using AES (256-bit encryption) encryption algorithms. Temenos can offer encryption today via eXate as part of the Temenos Exchange ecosystem.  (requiring a dedicated discussion and license with eXate company).'
         },
         'certificate-management': {
             id: 'certificate-management',
             title: 'Certificate Management',
-            description: 'Certificates management (DigiCert used) procedures for Temenos SaaS. Temenos renews the certificates annually for the Temenos cloud hosted environments for clients. During deployment of application, we leverage Temenos managed domain for App deployment and secure it with our SSL certificates.'
+            description: 'Certificates management (DigiCert used) procedures for Temenos SaaS\n\nTemenos renews the certificates annually for the Temenos cloud hosted environments for clients. During deployment of application, we leverage Temenos managed domain for App deployment and secure it with our SSL certificates for Application endpoint. These certificates are renewed every year.'
         },
         'bank-iam': {
             id: 'bank-iam',
             title: "Bank's Identity Access Management",
-            description: "For authentication, Temenos solution makes use of Bank's Identity and Access Management (IaM) solution like Active Directory. The bank's individual employees are authenticated at Active Directory. Temenos comes pre-integrated with KeyCloak which acts as the identity broker."
+            description: "For authentication, Temenos solution makes use of Bank's Identity and Access Management (IaM) solution like Active Directory. The bank's individual employees are authenticated at Active Directory. Temenos comes pre-integrated with KeyCloak. KeyCloak will become the defacto IaM system for Temenos applications. It acts as the identity broker for redirecting authentication requests to the Bank managed IaM solution."
         },
         'authentication-box': {
             id: 'authentication-box',
             title: 'Authentication',
-            description: "The external authentication mechanism for Temenos solution leverages Keycloak solution. Temenos SaaS leverages Keycloak as authentication and authorization. Keycloak can be federated to another Bank's identity management system."
+            description: 'In Temenos solution, authentication is primarily managed through Keycloak, an open-source identity and access management system. The process involves several key steps:\n\n1. Integration with Identity Management: Temenos applications are integrated with the bank\'s Identity and Access Management (IAM) solutions, such as Active Directory. Keycloak acts as an identity broker, redirecting authentication requests to the bank\'s IAM system.\n\n2. User Authentication: When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization.\n\n3. Token Exchange: The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.'
         },
         'authorization-box': {
             id: 'authorization-box',
             title: 'Authorization',
-            description: 'Temenos has embedded internal mechanism, native to the solution. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. The Temenos Security Management System (SMS) provides role-based access limits and full transaction and user activity audit.'
+            description: 'Temenos has embedded internal mechanism, native to the solution. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. The Temenos Security Management System (SMS) provides role-based access limits and full transaction and user activity audit. Each user has their own profile within the SMS which contains full user details and security settings to control the user\'s access within the system. SMS managing the access control, executing the following steps: Checks each user activity against the profile to determine validity; unacceptable actions are prevented and recorded (User Profile), Validates each contract against conditions, such as limits and exchange rate tolerance bands, before it is accepted (User Authority), Make specific data inaccessible to specified users or user groups based on conditions (Data Security).'
         },
         'audit-box': {
             id: 'audit-box',
             title: 'Audit',
-            description: 'Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when.'
+            description: 'Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.\n\nAuditing includes: User activity auditing includes details of; Applications accessed, ID of transactions executed, Time connected, No. of operations executed etc. Application activity auditing includes details of; ID of new transactions, Inputter and Authorizer,  Security violation reports store details of unauthorised access attempts including who accessed the system, when and the target application'
         },
         'tls-entry': {
             id: 'tls-entry',
             title: 'TLS 1.2 Entry Points',
-            description: 'All access to web applications and API endpoints is over HTTPS, using modern TLS ciphers (TLS 1.2).'
+            description: 'Within Temenos solution, data in transit security is implemented through a structured approach that includes the following steps:\n\n1. Encryption Protocols: All data transmitted over networks is secured using TLS 1.2, ensuring that data is encrypted during transmission to protect against interception.\n\n2. Secure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilized, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\n\n3. Logging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorized access attempts and ensuring compliance with security policies.'
         }
+    }
+
+    // If showing authentication view, render ModernAuthentication component
+    if (showAuthentication) {
+        return (
+            <div className="relative">
+                <button
+                    onClick={() => setShowAuthentication(false)}
+                    className="absolute top-6 left-6 z-30 flex items-center gap-2 px-4 py-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-all font-semibold text-slate-700 dark:text-slate-300"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back to Security Architecture</span>
+                </button>
+                <ModernAuthentication />
+            </div>
+        )
     }
 
     return (
@@ -292,11 +311,11 @@ export function ModernSecurityArchitecture() {
                                 <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
                                     <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
-                                <div>
-                                    <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                                <div className="flex-1 text-left">
+                                    <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-left">
                                         {tooltips[activeTooltip].title}
                                     </h4>
-                                    <p className="text-slate-600 dark:text-slate-300 dark:text-slate-300 leading-relaxed">
+                                    <p className="text-slate-600 dark:text-slate-300 dark:text-slate-300 leading-relaxed text-left whitespace-pre-line">
                                         {tooltips[activeTooltip].description}
                                     </p>
                                 </div>
@@ -309,7 +328,7 @@ export function ModernSecurityArchitecture() {
             {/* Details Button */}
             <div className="absolute bottom-6 right-6 z-20">
                 <button
-                    onClick={() => {}}
+                    onClick={() => setShowAuthentication(true)}
                     className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full hover:shadow-lg hover:scale-105 transition-all font-semibold shadow-blue-500/20"
                 >
                     <span>View Authentication Details</span>

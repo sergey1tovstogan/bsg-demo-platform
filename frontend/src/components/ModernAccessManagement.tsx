@@ -214,7 +214,7 @@ const PrivilegedAccessView = () => {
                             { step: '4. Audit', desc: 'All actions logged and reviewed', color: 'orange' }
                         ].map((phase, idx) => (
                             <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-700 rounded-lg">
-                                <div className="text-lg font-bold text-slate-900 mb-2">{phase.step}</div>
+                                <div className="text-lg font-bold text-red-600 dark:text-red-500 mb-2">{phase.step}</div>
                                 <p className="text-sm text-slate-600 dark:text-slate-300">{phase.desc}</p>
                             </div>
                         ))}
@@ -331,9 +331,9 @@ const AccessPoliciesView = () => {
                         Access policies are designed to meet requirements from multiple regulatory frameworks:
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {['SOC 2', 'ISO 27001', 'GDPR', 'PCI DSS', 'HIPAA', 'NIST', 'DORA', 'SOX'].map((framework, idx) => (
+                        {['SOC 1 & SOC 2 & SOC 3', 'ISO 27001 27017 27018', 'GDPR', 'CSA', 'HIPAA', 'NIST', 'DORA', 'SOX'].map((framework, idx) => (
                             <div key={idx} className="px-4 py-2 bg-blue-50 border border-blue-100 dark:border-blue-800 rounded-lg text-center">
-                                <span className="font-semibold text-blue-900 dark:text-blue-100 text-sm">{framework}</span>
+                                <span className="font-bold text-red-600 dark:text-red-500 text-sm">{framework}</span>
                             </div>
                         ))}
                     </div>
