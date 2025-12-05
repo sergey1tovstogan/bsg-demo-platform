@@ -84,11 +84,14 @@ export function ContentViewer({ componentId, initialSelectedCard }: ContentViewe
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'api' && <ApiOverview hideTitle={true} hideDemoSettings={true} />}
+        {activeTab === 'api' && (
+          <>
+            <ApiOverview hideTitle={true} hideDemoSettings={true} />
+            {/* Demo Settings at the bottom (only visible in API tab) */}
+            <ApiOverview onlyDemoSettings={true} />
+          </>
+        )}
         {activeTab === 'event' && <EventOverview hideTitle={true} />}
-
-        {/* Demo Settings at the bottom (always visible) */}
-        <ApiOverview onlyDemoSettings={true} />
       </div>
     )
   }

@@ -57,6 +57,18 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
   const tooltips: TooltipConfig[] = [
     {
+      id: 'api-framework',
+      title: 'Temenos API Framework',
+      description: 'Temenos offers a comprehensive API framework designed to facilitate seamless integration and extensibility within the core banking ecosystem. The API framework is built on Apache Camel, an open-source integration engine, which translates RESTful API calls into the internal language of the core, providing a consistent and intuitive interface for developers. This framework supports 100% of the business areas within the system, enabling extensive coverage of banking functionalities.\n\nOut-of-the-box, Temenos provides a rich catalogue of REST APIs that adhere to REST principles, excluding HATEOAS, and use JSON payloads for data exchange. These APIs are semantically versioned to ensure backward compatibility and are documented using OpenAPI specifications, making them accessible and easy to consume. Developers can explore and test these APIs via the Temenos developer portal, which also offers a shared sandbox environment and developer keys for experimentation without contractual obligations.',
+      position: { top: '0%', left: '0%', width: '0%', height: '0%' }
+    },
+    {
+      id: 'microservices-api',
+      title: 'Microservices API Integration',
+      description: 'Temenos uses a modern integration architecture built on microservices and API-based communication, ensuring flexibility, scalability, and seamless integration. Within this framework, microservices such as Holdings play a vital role. The Holdings microservice leverages a NoSQL database to store all holdings-related data, including balances, transactions, contracts, and payment details. It is optimized for high scalability and efficient query processing, delivering responsiveness and an excellent user experience. Through its exposed APIs, Holdings enables other components and external systems to interact with holdings data quickly and reliably.',
+      position: { top: '0%', left: '0%', width: '0%', height: '0%' }
+    },
+    {
       id: 'expose-data',
       title: 'Expose data & business capabilities as REST APIs',
       description: 'Temenos exposes its business and data capabilities through a comprehensive set of RESTful APIs that use JSON payloads and adhere to semantic versioning and OpenAPI specifications, enabling seamless and standardized integration with external systems. These APIs cover most core banking functionalities and can be customized or extended using the Workbench low-code tool to meet specific business requirements.',
@@ -684,9 +696,32 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
       {/* Title */}
       {!hideTitle && (
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-[#283054] dark:text-white">API Overview</h2>
+          <h2 className="text-2xl font-bold text-[#283054] dark:text-white mb-4">API Overview</h2>
         </div>
       )}
+
+      {/* Highlight Section - Always visible */}
+      <div className="mb-6">
+        <div className="relative overflow-hidden rounded-lg py-3 px-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)' }}>
+          <div className="relative z-10 flex items-center space-x-4">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  {/* Information icon */}
+                  <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M12 16v-4M12 8h.01" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-lg font-medium text-white leading-snug text-center">
+                APIs empower Banks to connect effortlessly with external platforms, accelerating innovation and enhancing customer experiences
+              </p>
+            </div>
+          </div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+        </div>
+      </div>
 
       {/* API Framework Diagram */}
       <div
@@ -938,7 +973,13 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               {/* Temenos Business Logic Box with API label */}
               <div className="flex flex-col items-center relative" style={{ gap: '5px' }}>
                 {/* Thin API Box */}
-                <div className="bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm" style={{ minWidth: '150px' }}>
+                <div
+                  className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'api-framework' ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+                  style={{ minWidth: '150px' }}
+                  onMouseEnter={() => handleFeatureCardHover('api-framework')}
+                  onMouseLeave={handleFeatureCardLeave}
+                  onClick={() => handleFeatureCardClick('api-framework')}
+                >
                   <div className="text-center text-sm font-bold text-white" style={{ color: '#FFFFFF' }}>API</div>
                 </div>
 
@@ -1032,7 +1073,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               {/* Kafka Box in the middle of U-arrow */}
               <div
                 className="absolute cursor-pointer"
-                style={{ bottom: '-48px', left: '50%', transform: 'translateX(-50%)' }}
+                style={{ bottom: '-50px', left: '50%', transform: 'translateX(-50%)' }}
                 onMouseEnter={() => {
                   if (!kafkaTooltipPinned && !pinnedTooltip) {
                     // Clear any existing timeout
@@ -1081,10 +1122,15 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                   }
                 }}
               >
-                <div className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-4 py-1 shadow-sm hover:shadow-lg transition-all ${kafkaTooltipPinned ? 'ring-2 ring-white ring-opacity-50' : ''}`}>
-                  <div className="text-center text-xs font-bold text-white" style={{ color: '#FFFFFF' }}>
-                    kafka
-                    {kafkaTooltipLoading && <Loader2 className="w-3 h-3 animate-spin inline-block ml-1" />}
+                <div
+                  className={`bg-white dark:bg-slate-800 rounded-lg p-2 shadow-md border-2 border-[#097BED] hover:shadow-lg transition-all ${kafkaTooltipPinned ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+                  style={{ width: '60px', height: '30px' }}
+                >
+                  <div className="text-center flex flex-col justify-center h-full">
+                    <div className="text-xs font-semibold text-[#283054] dark:text-slate-200 leading-tight">
+                      Kafka
+                      {kafkaTooltipLoading && <Loader2 className="w-3 h-3 animate-spin inline-block ml-1" />}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1092,7 +1138,13 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               {/* Business Microservices Box with API label */}
               <div className="flex flex-col items-center relative" style={{ gap: '5px' }}>
                 {/* Thin API Box */}
-                <div className="bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm" style={{ minWidth: '150px' }}>
+                <div
+                  className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'microservices-api' ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+                  style={{ minWidth: '150px' }}
+                  onMouseEnter={() => handleFeatureCardHover('microservices-api')}
+                  onMouseLeave={handleFeatureCardLeave}
+                  onClick={() => handleFeatureCardClick('microservices-api')}
+                >
                   <div className="text-center text-sm font-bold text-white" style={{ color: '#FFFFFF' }}>API</div>
                 </div>
 
