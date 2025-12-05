@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Activity, FileText, GitBranch, Server, Database, BarChart3, Box, Lightbulb, Layers, AlertCircle, Wrench, ArrowRight, ArrowDown } from 'lucide-react'
+import { Activity, FileText, GitBranch, Server, Database, BarChart3, Box, Lightbulb, Layers, AlertCircle, Wrench, ArrowRight, ArrowDown, Workflow } from 'lucide-react'
 import { apiService } from '../../services/api'
 import type { Content } from '../../types'
+import { TemenosMonitoringFlow } from './TemenosMonitoringFlow'
 
 interface ContentPage {
   content_id: string
@@ -12,7 +13,7 @@ interface ContentPage {
   metadata: any
 }
 
-type PageName = 'intro' | 'big-picture' | 'pillars' | 'stack' | 'temenos-stack'
+type PageName = 'intro' | 'big-picture' | 'pillars' | 'stack' | 'temenos-stack' | 'monitoring-flow'
 
 export function ObservabilityContent() {
   const [selectedPage, setSelectedPage] = useState<PageName>('intro')
@@ -57,7 +58,8 @@ export function ObservabilityContent() {
     { id: 'big-picture' as PageName, title: 'Big Picture', icon: Lightbulb },
     { id: 'pillars' as PageName, title: 'Core Pillars', icon: Layers },
     { id: 'stack' as PageName, title: 'The Stack', icon: Server },
-    { id: 'temenos-stack' as PageName, title: 'Temenos Stack', icon: Box }
+    { id: 'temenos-stack' as PageName, title: 'Temenos Stack', icon: Box },
+    { id: 'monitoring-flow' as PageName, title: 'Temenos Monitoring Flow', icon: Workflow }
   ]
 
   const renderIntroduction = () => {
@@ -480,6 +482,7 @@ export function ObservabilityContent() {
       case 'pillars': return renderPillars()
       case 'stack': return renderStack()
       case 'temenos-stack': return renderTemenosStack()
+      case 'monitoring-flow': return <TemenosMonitoringFlow />
       default: return <div className="text-slate-600 dark:text-slate-300">Select a page</div>
     }
   }
