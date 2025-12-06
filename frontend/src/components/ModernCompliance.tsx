@@ -193,25 +193,25 @@ const RegulatoryAlignmentView = () => {
             {/* Certifications Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* ISO 27001 */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
+                <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 p-6 rounded-xl border border-red-100 dark:border-red-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
-                            <Shield className="w-6 h-6 text-blue-600" />
+                        <div className="p-2 bg-red-100 dark:bg-red-800 rounded-lg">
+                            <Shield className="w-6 h-6 text-red-600" />
                         </div>
-                        <h4 className="font-bold text-blue-900 dark:text-blue-100">ISO 27001</h4>
+                        <h4 className="font-bold text-red-900 dark:text-red-100">ISO 27001</h4>
                     </div>
-                    <p className="text-sm text-blue-800 dark:text-blue-200">Information Security Management System certification ensuring comprehensive security controls.</p>
+                    <p className="text-sm text-red-800 dark:text-red-200">Information Security Management System certification ensuring comprehensive security controls.</p>
                 </div>
 
                 {/* ISO 22301 */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-100 shadow-sm">
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                            <Database className="w-6 h-6 text-green-600" />
+                        <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-lg">
+                            <Database className="w-6 h-6 text-purple-600" />
                         </div>
-                        <h4 className="font-bold text-green-900">ISO 22301</h4>
+                        <h4 className="font-bold text-purple-900 dark:text-purple-100">ISO 22301</h4>
                     </div>
-                    <p className="text-sm text-green-800">Business Continuity Management certification for operational resilience.</p>
+                    <p className="text-sm text-purple-800 dark:text-purple-200">Business Continuity Management certification for operational resilience.</p>
                 </div>
 
                 {/* ISO 20000 */}
@@ -248,14 +248,14 @@ const RegulatoryAlignmentView = () => {
                 </div>
 
                 {/* GDPR */}
-                <div className="bg-gradient-to-br from-cyan-50 to-sky-50 p-6 rounded-xl border border-cyan-100 dark:border-cyan-800 shadow-sm">
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-cyan-100 dark:bg-cyan-800 rounded-lg">
-                            <Lock className="w-6 h-6 text-cyan-600" />
+                        <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-lg">
+                            <Lock className="w-6 h-6 text-purple-600" />
                         </div>
-                        <h4 className="font-bold text-cyan-900 dark:text-cyan-100">GDPR</h4>
+                        <h4 className="font-bold text-purple-900 dark:text-purple-100">GDPR</h4>
                     </div>
-                    <p className="text-sm text-cyan-800 dark:text-cyan-200">General Data Protection Regulation compliance for data privacy and protection.</p>
+                    <p className="text-sm text-purple-800 dark:text-purple-200">General Data Protection Regulation compliance for data privacy and protection.</p>
                 </div>
             </div>
 
@@ -413,6 +413,24 @@ const TrustCenterView = () => {
                         </p>
                     </div>
                 </div>
+            </div>
+
+            {/* Trust Center Link */}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                        <FileCheck className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Trust Center Link</h3>
+                </div>
+                <a
+                    href="https://tcsp.temenos.com/trustcenter"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-300 font-semibold hover:underline"
+                >
+                    Link to trust center
+                </a>
             </div>
 
             {/* Trust Pillars */}
