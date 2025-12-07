@@ -8,7 +8,8 @@ import {
     Activity,
     CheckCircle2,
     Layers,
-    Key
+    Key,
+    Network
 } from 'lucide-react';
 
 const ModernSaaSSecurity = () => {
@@ -18,6 +19,7 @@ const ModernSaaSSecurity = () => {
         { id: 'overview', label: 'Overview', icon: CloudCog },
         { id: 'architecture', label: 'Architecture', icon: Layers },
         { id: 'services', label: 'Security Services', icon: Shield },
+        { id: 'network', label: 'Network Security', icon: Network },
         { id: 'integration', label: 'Integration', icon: Server },
     ];
 
@@ -56,6 +58,7 @@ const ModernSaaSSecurity = () => {
                         {activeTab === 'overview' && <OverviewView />}
                         {activeTab === 'architecture' && <ArchitectureView />}
                         {activeTab === 'services' && <SecurityServicesView />}
+                        {activeTab === 'network' && <NetworkSecurityView />}
                         {activeTab === 'integration' && <IntegrationView />}
                     </motion.div>
                 </AnimatePresence>
@@ -481,6 +484,67 @@ const IntegrationView = () => {
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const NetworkSecurityView = () => {
+    return (
+        <div className="space-y-6">
+            {/* Network Security Overview */}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                    <Network className="w-5 h-5 text-blue-600" />
+                    Network Security
+                </h3>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Core Azure network protections for the SaaS platform: firewall control, web application firewall, and anti-DDoS safeguards.
+                </p>
+            </div>
+
+            {/* Azure Network Protections */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Azure Firewall */}
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-6 rounded-xl border border-indigo-100 dark:border-indigo-800 shadow-sm">
+                    <h3 className="text-xl font-bold text-indigo-900 dark:text-indigo-100 mb-2">Azure Firewall</h3>
+                    <ul className="space-y-3 text-indigo-800 dark:text-indigo-200">
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Create fine-grained firewall rules to control network traffic across multiple VNets.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Automatically scales to cover cloud infrastructure growth.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                {/* Azure WAF */}
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/40 dark:to-slate-700/60 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Azure WAF</h3>
+                    <ul className="space-y-3 text-slate-700 dark:text-slate-200">
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Managed WAF protecting against common web exploits and bots.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Prevents attacks that impact availability, security, or resource consumption.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                {/* Azure Basic Anti-DDoS */}
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-xl border border-amber-100 dark:border-amber-800 shadow-sm">
+                    <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-2">Azure Basic Anti DDoS</h3>
+                    <ul className="space-y-3 text-amber-800 dark:text-amber-200">
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Provides protection against Distributed Denial of Service (DDoS) attacks on Azure infrastructure.</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
