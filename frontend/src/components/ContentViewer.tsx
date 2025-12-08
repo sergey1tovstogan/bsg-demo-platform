@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Loader2, Info } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { Content, ComponentId } from '../types'
 import { ApiOverview } from './ApiOverview'
+import { EventOverview } from './EventOverview'
 import { SecurityContentViewer } from './SecurityContentViewer'
 
 interface ContentViewerProps {
@@ -17,6 +18,7 @@ export function ContentViewer({ componentId, initialSelectedCard }: ContentViewe
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<'api' | 'event'>('api')
 
   const loadContents = useCallback(async () => {
     try {
@@ -43,16 +45,55 @@ export function ContentViewer({ componentId, initialSelectedCard }: ContentViewe
     if (componentId !== 'security' && componentId !== 'integration') {
       loadContents()
     }
-  }, [componentId, loadContents])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [componentId])
 
   // Use SecurityContentViewer for security component (after hooks)
   if (componentId === 'security') {
     return <SecurityContentViewer initialSelectedCard={initialSelectedCard} />
   }
 
-  // Use ApiOverview for integration component
+  // Use ApiOverview and EventOverview for integration component with tabs
   if (componentId === 'integration') {
-    return <ApiOverview />
+    return (
+      <div className="card">
+        {/* Tab Navigation as Title */}
+        <div className="mb-6">
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab('api')}
+              className={`px-4 py-3 font-bold text-2xl transition-all ${
+                activeTab === 'api'
+                  ? 'border-b-2 border-purple-600 text-[#283054] dark:text-white'
+                  : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
+              }`}
+            >
+              API Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('event')}
+              className={`px-4 py-3 font-bold text-2xl transition-all ${
+                activeTab === 'event'
+                  ? 'border-b-2 border-teal-600 text-[#283054] dark:text-white'
+                  : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
+              }`}
+            >
+              Event Overview
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'api' && (
+          <>
+            <ApiOverview hideTitle={true} hideDemoSettings={true} />
+            {/* Demo Settings at the bottom (only visible in API tab) */}
+            <ApiOverview onlyDemoSettings={true} />
+          </>
+        )}
+        {activeTab === 'event' && <EventOverview hideTitle={true} />}
+      </div>
+    )
   }
 
   const goToPrevious = () => {
