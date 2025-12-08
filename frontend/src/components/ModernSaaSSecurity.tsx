@@ -24,9 +24,9 @@ const ModernSaaSSecurity = () => {
     ];
 
     return (
-        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 overflow-hidden">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
             {/* Header Tabs */}
-            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 dark:border-slate-700 px-6 py-4 shadow-sm z-10">
+            <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 shadow-sm z-10">
                 <div className="flex space-x-4">
                     {tabs.map((tab) => (
                         <button
@@ -34,7 +34,7 @@ const ModernSaaSSecurity = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${activeTab === tab.id
                                     ? 'bg-indigo-600 text-white shadow-md transform scale-105'
-                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
                                 }`}
                         >
                             <tab.icon className="w-4 h-4" />
@@ -493,56 +493,68 @@ const IntegrationView = () => {
 const NetworkSecurityView = () => {
     return (
         <div className="space-y-6">
-            {/* Network Security Overview */}
+            {/* Overview */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                     <Network className="w-5 h-5 text-blue-600" />
                     Network Security
                 </h3>
                 <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Core Azure network protections for the SaaS platform: firewall control, web application firewall, and anti-DDoS safeguards.
+                    Comprehensive network security controls protecting infrastructure, data flows, and communication channels.
                 </p>
             </div>
 
-            {/* Azure Network Protections */}
+            {/* Network Protections */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Azure Firewall */}
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-6 rounded-xl border border-indigo-100 dark:border-indigo-800 shadow-sm">
-                    <h3 className="text-xl font-bold text-indigo-900 dark:text-indigo-100 mb-2">Azure Firewall</h3>
-                    <ul className="space-y-3 text-indigo-800 dark:text-indigo-200">
-                        <li className="flex items-start gap-3">
-                            <CheckCircle2 className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm leading-relaxed">Create fine-grained firewall rules to control network traffic across multiple VNets.</span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                            <CheckCircle2 className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm leading-relaxed">Automatically scales to cover cloud infrastructure growth.</span>
-                        </li>
-                    </ul>
-                </div>
-
-                {/* Azure WAF */}
-                <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/40 dark:to-slate-700/60 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Azure WAF</h3>
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
+                    <p className="text-sm font-semibold text-purple-700 dark:text-purple-200 mb-2">Network Firewall</p>
+                    <h3 className="text-xl font-bold text-purple-900 dark:text-purple-100 mb-3 text-center">Azure Firewall</h3>
                     <ul className="space-y-3 text-slate-700 dark:text-slate-200">
                         <li className="flex items-start gap-3">
-                            <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm leading-relaxed">Managed WAF protecting against common web exploits and bots.</span>
+                            <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Create firewall rules that provide fine-grained control over network traffic and easily deploy firewall security across multiple VNets.</span>
                         </li>
                         <li className="flex items-start gap-3">
-                            <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm leading-relaxed">Prevents attacks that impact availability, security, or resource consumption.</span>
+                            <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Automatically scales to cover cloud infrastructure.</span>
                         </li>
                     </ul>
                 </div>
 
-                {/* Azure Basic Anti-DDoS */}
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-xl border border-amber-100 dark:border-amber-800 shadow-sm">
-                    <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-2">Azure Basic Anti DDoS</h3>
-                    <ul className="space-y-3 text-amber-800 dark:text-amber-200">
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
+                    <p className="text-sm font-semibold text-purple-700 dark:text-purple-200 mb-2">WAF</p>
+                    <h3 className="text-xl font-bold text-purple-900 dark:text-purple-100 mb-3 text-center">Azure WAF</h3>
+                    <ul className="space-y-3 text-slate-700 dark:text-slate-200">
                         <li className="flex items-start gap-3">
-                            <CheckCircle2 className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Managed WAF solution which protects against common web exploits and bots that can affect availability, compromise security, or consume excessive resources.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Temenos SaaS production environments are tested with WAF enabled in preventive mode.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">In Temenos SaaS applied to Production environment. Use OWASP Core Rule Set 3.1.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
+                    <p className="text-sm font-semibold text-purple-700 dark:text-purple-200 mb-2">Anti DDoS</p>
+                    <h3 className="text-xl font-bold text-purple-900 dark:text-purple-100 mb-3 text-center">Azure Basic Anti DDoS</h3>
+                    <ul className="space-y-3 text-slate-700 dark:text-slate-200">
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                             <span className="text-sm leading-relaxed">Provides protection against Distributed Denial of Service (DDoS) attacks on Azure infrastructure.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Dynamic detection and mitigation based on real-time threat intelligence. Constantly updated DDoS attack patterns and techniques.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Allows customization of DDoS protection policies. Utilises global network infrastructure to mitigate DDoS attacks.</span>
                         </li>
                     </ul>
                 </div>
