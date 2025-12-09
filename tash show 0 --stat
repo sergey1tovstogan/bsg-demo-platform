@@ -1,0 +1,113 @@
+[1mdiff --git a/backend/app/api/deployment.py b/backend/app/api/deployment.py[m
+[1mindex 6e2d4f4..a8ad3c6 100644[m
+[1m--- a/backend/app/api/deployment.py[m
+[1m+++ b/backend/app/api/deployment.py[m
+[36m@@ -331,16 +331,36 @@[m [masync def get_aks_namespaces(request: NamespacesRequest):[m
+         resources = await azure_service.get_resources_by_resource_groups(resource_group_names)[m
+         [m
+         # Find AKS clusters[m
+[31m-        logger.info(f"Searching for AKS clusters in {len(resources)} resources...")[m
+[32m+[m[32m        logger.info(f"Searching for AKS clusters in {len(resources)} resources from {len(resource_group_names)} resource groups...")[m
+[32m+[m[32m        logger.info(f"Selected resource groups: {resource_group_names}")[m
+[32m+[m[41m        [m
+         aks_clusters = [[m
+             r for r in resources [m
+             if "microsoft.containerservice/managedclusters" in r.type.lower()[m
+         ][m
+         [m
+[31m-        logger.info(f"Found {len(aks_clusters)} AKS cluster(s)")[m
+[32m+[m[32m        logger.info(f"Found {len(aks_clusters)} AKS cluster(s) across all selected resource groups")[m
+         for cluster in aks_clusters:[m
+             logger.info(f"  - Cluster: {cluster.name}, Type: {cluster.type}, RG: {cluster.resource_group}")[m
+         [m
+[32m+[m[32m        # Group clusters by resource group for better visibility[m
+[32m+[m[32m        clusters_by_rg = {}[m
+[32m+[m[32m        for cluster in aks_clusters:[m
+[32m+[m[32m            rg = cluster.resource_group[m
+[32m+[m[32m            if rg not in clusters_by_rg:[m
+[32m+[m[32m                clusters_by_rg[rg] = [][m
+[32m+[m[32m            clusters_by_rg[rg].append(cluster.name)[m
+[32m+[m[41m        [m
+[32m+[m[32m        logger.info(f"Clusters by resource group:")[m
+[32m+[m[32m        for rg, cluster_names in clusters_by_rg.items():[m
+[32m+[m[32m            logger.info(f"  - {rg}: {len(cluster_names)} cluster(s) - {cluster_names}")[m
+[32m+[m[41m        [m
+[32m+[m[32m        # Verify all clusters are from selected resource groups[m
+[32m+[m[32m        for cluster in aks_clusters:[m
+[32m+[m[32m            if cluster.resource_group not in resource_group_names:[m
+[32m+[m[32m                logger.warning(f"⚠ WARNING: Cluster {cluster.name} is in RG '{cluster.resource_group}' which is not in selected RGs: {resource_group_names}")[m
+[32m+[m[32m                logger.warning(f"  This should not happen - get_resources_by_resource_groups should have filtered this out")[m
+[32m+[m[41m        [m
+         if not aks_clusters:[m
+             logger.warning("No AKS clusters found in selected resource groups")[m
+             return {[m
+[36m@@ -390,11 +410,8 @@[m [masync def get_aks_namespaces(request: NamespacesRequest):[m
+         logger.info(f"AKS clusters found: {[c.name for c in aks_clusters]}")[m
+         [m
+         for idx, cluster in enumerate(aks_clusters, 1):[m
+[31m-            # CRITICAL: Only process clusters that are in the selected resource groups[m
+[31m-            if cluster.resource_group not in resource_group_names:[m
+[31m-                logger.warning(f"Skipping cluster {cluster.name} - not in selected resource groups. Cluster RG: {cluster.resource_group}, Selected RGs: {resource_group_names}")[m
+[31m-                continue[m
+[31m-                [m
+[32m+[m[32m            # Process all clusters - get_resources_by_resource_groups already filtered by resource group[m
+[32m+[m[32m            # All clusters here should be from the selected resource groups[m
+             try:[m
+                 logger.info("=" * 80)[m
+                 logger.info(f"=== CLUSTER {idx}/{len(aks_clusters)}: {cluster.name} ===")[m
+[1mdiff --git a/backend/app/services/aks_service.py b/backend/app/services/aks_service.py[m
+[1mindex 57d0118..75ef651 100644[m
+[1m--- a/backend/app/services/aks_service.py[m
+[1m+++ b/backend/app/services/aks_service.py[m
+[36m@@ -80,7 +80,9 @@[m [mclass AKSPod:[m
+                 "status": self.status,[m
+                 "containers": self.containers,[m
+                 "pod_name": self.name,[m
+[31m-                "namespace_name": self.namespace  # Redundant but ensures it's always available[m
+[32m+[m[32m                "namespace_name": self.namespace,  # Redundant but ensures it's always available[m
+[32m+[m[32m                "container_images": self.labels.get("container_images", "").split(",") if self.labels.get("container_images") else [],[m
+[32m+[m[32m                "base_image_names": self.labels.get("base_image_names", "").split(",") if self.labels.get("base_image_names") else [][m
+             }[m
+         )[m
+         [m
+[36m@@ -424,29 +426,39 @@[m [mclass AKSService:[m
+                             r"stmtgen", r"notification", r"audit", r"file", r"workflow",[m
+                             r"deposits", r"lending", r"webingress", r"ingress", r"payment",[m
+                             r"card", r"account", r"transaction", r"core", r"banking",[m
+[31m-                            r"integration", r"api", r"gateway", r"service", r"microservice"[m
+[32m+[m[32m                            r"integration", r"api", r"gateway", r"service", r"microservice",[m
+[32m+[m[32m                            r"tde", r"tdh"  # Temenos TDE (Transaction Data Exchange) and TDH (Transaction Data Hub)[m
+                         ][m
+                         # Also check if namespace starts with or contains these patterns[m
+                         # This handles cases like "deposits202507", "ingress-nginx-transact", etc.[m
+                         # Be more permissive - include if it matches any pattern[m
+[31m-                        if any(re.search(pattern, ns_name, re.IGNORECASE) for pattern in temenos_patterns):[m
+[32m+[m[32m                        matched_pattern = None[m
+[32m+[m[32m                        for pattern in temenos_patterns:[m
+[32m+[m[32m                            if re.search(pattern, ns_name, re.IGNORECASE):[m
+[32m+[m[32m                                matched_pattern = pattern[m
+[32m+[m[32m                                break[m
+[32m+[m[41m                        [m
+[32m+[m[32m                        if matched_pattern:[m
+                             namespaces.append(ns_name)[m
+[31m-                            logger.info(f"Including namespace '{ns_name}' (matched Temenos pattern)")[m
+[32m+[m[32m                            logger.info(f"Including namespace '{ns_name}' (matched Temenos pattern: {matched_pattern})")[m
+                         else:[m
+                             # If no explicit filter and namespace doesn't match patterns, still include it[m
+                             # This ensures we don't miss any potential Temenos namespaces[m
+                             # Only skip if it's clearly a system namespace[m
+                             if not ns_name.startswith(("kube-", "system-", "default")):[m
+                                 namespaces.append(ns_name)[m
+[31m-                                logger.info(f"Including namespace '{ns_name}' (non-system namespace)")[m
+[32m+[m[32m                                logger.info(f"Including namespace '{ns_name}' (non-system namespace - will be analyzed)")[m
+                             else:[m
+                                 logger.debug(f"Skipping namespace '{ns_name}' (system namespace)")[m
+                 [m
+                 logger.info(f"Found {len(namespaces)} Temenos-related namespaces in {cluster_name}: {namespaces}")[m
+                 [m
+                 # Get pods from each namespace - use subprocess.run via executor[m
+[32m+[m[32m                logger.info(f"Will query pods from {len(namespaces)} namespaces: {namespaces}")[m
+                 for namespace in namespaces:[m
+                     logger.info(f"Querying pods from namespace '{namespace}' in cluster '{cluster_name}'")[m
+[32m+[m[32m                    if "tde" in namespace.lower() or "tdh" in namespace.lower():[m
+[32m+[m[32m                        logger.info(f" 
