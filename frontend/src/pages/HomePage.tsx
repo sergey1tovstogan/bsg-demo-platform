@@ -194,6 +194,7 @@ export function HomePage({ onSelectComponent, onSettingsClick }: HomePageProps) 
           )
         })}
       </div>
+      )}
     </div>
   )
 }

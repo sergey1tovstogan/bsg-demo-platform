@@ -38,37 +38,37 @@ export function TemenosMonitoringFlow() {
       id: 'temenos',
       label: 'Temenos Solution',
       color: '#283275',
-      position: { x: 50, y: 200, width: 180, height: 120 }
+      position: { x: 40, y: 260, width: 200, height: 140 }
     },
     {
       id: 'otel',
       label: 'OpenTelemetry Collector',
       logo: '/images/logos/opentelemetry.svg',
-      position: { x: 320, y: 200, width: 180, height: 120 }
+      position: { x: 320, y: 260, width: 200, height: 140 }
     },
     {
       id: 'jaeger',
       label: 'Jaeger',
       logo: '/images/logos/jaeger.svg',
-      position: { x: 320, y: 40, width: 180, height: 120 }
+      position: { x: 320, y: 40, width: 200, height: 140 }
     },
     {
       id: 'prometheus',
       label: 'Prometheus',
       logo: '/images/logos/prometheus.svg',
-      position: { x: 600, y: 100, width: 160, height: 100 }
+      position: { x: 620, y: 100, width: 180, height: 120 }
     },
     {
       id: 'elasticsearch',
       label: 'Elasticsearch',
       logo: '/images/logos/elasticsearch.svg',
-      position: { x: 600, y: 280, width: 160, height: 100 }
+      position: { x: 620, y: 360, width: 180, height: 120 }
     },
     {
       id: 'grafana',
       label: 'Grafana',
       logo: '/images/logos/grafana.svg',
-      position: { x: 850, y: 190, width: 160, height: 120 },
+      position: { x: 900, y: 240, width: 180, height: 140 },
       subLabels: ['Metrics Dashboards', 'Log Dashboards']
     }
   ]
@@ -76,22 +76,22 @@ export function TemenosMonitoringFlow() {
   // Define arrows with SVG paths
   const arrows: Arrow[] = [
     // Temenos to OTEL
-    { id: 'temenos-otel', from: 'temenos', to: 'otel', points: 'M 230 260 L 320 260', label: 'Telemetry', color: '#3B82F6' },
+    { id: 'temenos-otel', from: 'temenos', to: 'otel', points: 'M 240 330 L 320 330', label: 'Telemetry', color: '#3B82F6' },
 
     // OTEL to Jaeger (upward)
-    { id: 'otel-jaeger', from: 'otel', to: 'jaeger', points: 'M 410 200 L 410 160', label: '', color: '#F59E0B' },
+    { id: 'otel-jaeger', from: 'otel', to: 'jaeger', points: 'M 420 260 L 420 180', label: '', color: '#F59E0B' },
 
     // OTEL fork to Prometheus (right-up)
-    { id: 'otel-prometheus', from: 'otel', to: 'prometheus', points: 'M 500 230 L 600 150', label: '', color: '#EF4444' },
+    { id: 'otel-prometheus', from: 'otel', to: 'prometheus', points: 'M 520 290 L 620 160', label: '', color: '#EF4444' },
 
     // OTEL fork to Elasticsearch (right-down)
-    { id: 'otel-elasticsearch', from: 'otel', to: 'elasticsearch', points: 'M 500 290 L 600 330', label: '', color: '#10B981' },
+    { id: 'otel-elasticsearch', from: 'otel', to: 'elasticsearch', points: 'M 520 370 L 620 420', label: '', color: '#10B981' },
 
     // Prometheus to Grafana
-    { id: 'prometheus-grafana', from: 'prometheus', to: 'grafana', points: 'M 760 150 L 850 230', label: '', color: '#EF4444' },
+    { id: 'prometheus-grafana', from: 'prometheus', to: 'grafana', points: 'M 800 160 L 900 280', label: '', color: '#EF4444' },
 
     // Elasticsearch to Grafana
-    { id: 'elasticsearch-grafana', from: 'elasticsearch', to: 'grafana', points: 'M 760 330 L 850 270', label: '', color: '#10B981' }
+    { id: 'elasticsearch-grafana', from: 'elasticsearch', to: 'grafana', points: 'M 800 420 L 900 340', label: '', color: '#10B981' }
   ]
 
   // Dot configurations
@@ -295,8 +295,8 @@ export function TemenosMonitoringFlow() {
       </div>
 
       {/* Diagram Container */}
-      <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-8 shadow-sm overflow-x-auto">
-        <div className="relative" style={{ width: '1100px', height: '450px', margin: '0 auto' }}>
+      <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-8 shadow-sm">
+        <div className="relative" style={{ width: '1120px', height: '540px', margin: '0 auto', maxWidth: '100%' }}>
           {/* SVG Layer for arrows and dots */}
           <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }}>
             <defs>
