@@ -134,7 +134,10 @@ function App() {
                   initialTab={activeTab}
                 />
               ) : (
-                <HomePage onSelectComponent={handleComponentChange} />
+                <HomePage 
+                  onSelectComponent={handleComponentChange}
+                  onSettingsClick={() => setSettingsOpen(true)}
+                />
               )}
             </div>
           </div>
