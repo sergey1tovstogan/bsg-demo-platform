@@ -12,9 +12,11 @@ import {
     ArrowRight,
     Info
 } from 'lucide-react';
+import { Exate } from './eXate';
 
 export const ModernPrivacyEncryption: React.FC = () => {
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+    const [showExate, setShowExate] = useState<boolean>(false);
 
     const tooltips = {
         'transit': {
@@ -28,11 +30,11 @@ export const ModernPrivacyEncryption: React.FC = () => {
     };
 
     const handleExateClick = () => {
-        window.parent.postMessage({ type: 'showExate' }, '*');
+        setShowExate(true);
     };
 
     return (
-        <div className="w-full h-full bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800 p-8">
+        <div className="w-full h-full bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800 p-8 pb-32">
             {/* Background Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
                 style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
@@ -144,12 +146,12 @@ export const ModernPrivacyEncryption: React.FC = () => {
             <AnimatePresence>
                 {activeTooltip && tooltips[activeTooltip as keyof typeof tooltips] && (
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        className="absolute bottom-6 left-6 right-[200px] z-50 pointer-events-none"
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-none"
                     >
-                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-700">
+                        <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-700">
                             <div className="flex items-start gap-4">
                                 <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
                                     <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -164,6 +166,30 @@ export const ModernPrivacyEncryption: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* eXate modal */}
+            <AnimatePresence>
+                {showExate && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowExate(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                            className="w-full max-w-6xl h-[85vh]"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <Exate onClose={() => setShowExate(false)} />
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

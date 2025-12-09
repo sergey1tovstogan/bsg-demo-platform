@@ -20,6 +20,7 @@ const ModernPlatformManagement = () => {
         { id: 'resources', label: 'Resource Management', icon: Cpu },
         { id: 'configuration', label: 'Configuration', icon: Settings },
         { id: 'monitoring', label: 'Monitoring', icon: Activity },
+        { id: 'assurance', label: 'Product Assurance', icon: Shield },
     ];
 
     return (
@@ -58,6 +59,7 @@ const ModernPlatformManagement = () => {
                         {activeTab === 'resources' && <ResourceManagementView />}
                         {activeTab === 'configuration' && <ConfigurationView />}
                         {activeTab === 'monitoring' && <MonitoringView />}
+                        {activeTab === 'assurance' && <AssuranceView />}
                     </motion.div>
                 </AnimatePresence>
             </div>
@@ -488,6 +490,84 @@ const MonitoringView = () => {
                             <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{tool}</span>
                         </div>
                     ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const AssuranceView = () => {
+    return (
+        <div className="space-y-6">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    Product Assurance
+                </h3>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Assurance practices that validate platform integrity, security, and reliability across environments.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl border border-green-100 dark:border-green-800 shadow-sm">
+                    <h4 className="text-lg font-bold text-green-900 dark:text-green-100 mb-3">Security Assurance</h4>
+                    <ul className="space-y-3 text-slate-700 dark:text-slate-200">
+                        {[
+                            'Regular penetration testing and vulnerability assessments',
+                            'Secure SDLC with code reviews and SAST/DAST',
+                            'Supply chain and dependency scanning',
+                            'Secrets management and key rotation',
+                        ].map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-3">
+                                <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                <span className="text-sm leading-relaxed">{item}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
+                    <h4 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-3">Quality & Reliability</h4>
+                    <ul className="space-y-3 text-slate-700 dark:text-slate-200">
+                        {[
+                            'Automated testing: unit, integration, end-to-end',
+                            'Performance and load testing for critical services',
+                            'Blue/green and canary deployment strategies',
+                            'Error budgets and SLO/SLI tracking',
+                        ].map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-3">
+                                <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                <span className="text-sm leading-relaxed">{item}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-xl border border-amber-100 dark:border-amber-800 shadow-sm">
+                    <h4 className="text-lg font-bold text-amber-900 dark:text-amber-100 mb-3">Vulnerabilities Management</h4>
+                    <ul className="space-y-3 text-slate-700 dark:text-slate-200">
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Any vulnerabilities identified are raised as a defect in the Defect Management System of Temenos.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">Defect severities: Critical, High, Medium, Low, Informational.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">
+                                Remediation timelines for PT vulnerabilities: <strong>Critical – 15 days</strong>, <strong>High – 30 days</strong>, <strong>Medium – 60 days</strong>, <strong>Low – 120 days</strong>.
+                            </span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm leading-relaxed">
+                                For Critical or High vulnerabilities in an existing release, clients are proactively contacted via email/Account Manager to ensure the fix (as issued on the client support portal) is applied ASAP.
+                            </span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>

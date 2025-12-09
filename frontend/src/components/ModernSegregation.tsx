@@ -45,7 +45,7 @@ export const ModernSegregation: React.FC = () => {
                         Different cloud subscriptions within the Temenos Cloud EA are used to segregate data effectively.
                     </p>
 
-                    <div className="space-y-3 mt-auto">
+                    <div className="space-y-3 mt-auto" style={{ transform: 'translateY(-200px)' }}>
                         <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 dark:text-slate-200">
                             <div className="flex items-start gap-3">
                                 <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -77,7 +77,7 @@ export const ModernSegregation: React.FC = () => {
                         Virtual networks and subnets segregate data with NSG defining access controls between subnets.
                     </p>
 
-                    <div className="space-y-3 mt-auto">
+                    <div className="space-y-3 mt-auto" style={{ transform: 'translateY(-200px)' }}>
                         <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 dark:text-slate-200">
                             <div className="flex items-start gap-3">
                                 <Globe className="w-5 h-5 text-cyan-500 shrink-0 mt-0.5" />
@@ -115,7 +115,7 @@ export const ModernSegregation: React.FC = () => {
                         Database segregation ensures data is stored in isolated environments based on requirements.
                     </p>
 
-                    <div className="space-y-3 mt-auto">
+                    <div className="space-y-3 mt-auto" style={{ transform: 'translateY(-200px)' }}>
                         <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 dark:text-slate-200">
                             <div className="flex items-start gap-3">
                                 <Database className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
