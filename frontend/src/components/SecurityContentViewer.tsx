@@ -75,7 +75,7 @@ const cards: SecurityCard[] = [
     },
     {
         id: 6,
-        title: 'Platform Management',
+        title: 'SaaS Platform Management',
         icon: Cpu,
         color: '#22D3EE', // Cyan-400
         bgColor: 'rgba(6, 182, 212, 0.1)',
@@ -99,7 +99,7 @@ const cards: SecurityCard[] = [
     },
     {
         id: 9,
-        title: 'Compliance and Risk Management',
+        title: 'SaaS Compliance and Risk Managemet',
         icon: Scale,
         color: '#FB923C', // Orange-400
         bgColor: 'rgba(249, 115, 22, 0.1)',

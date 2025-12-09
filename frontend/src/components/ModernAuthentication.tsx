@@ -45,7 +45,7 @@ export function ModernAuthentication() {
     }
 
     return (
-        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800">
+        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800 pb-32">
             {/* Background Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
                 style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
@@ -102,8 +102,12 @@ export function ModernAuthentication() {
                 </div>
 
                 {/* Diagram Container */}
-                <div className="relative w-full h-[500px] bg-white/50 dark:bg-slate-800/30 rounded-2xl border-2 border-slate-200 dark:border-slate-700 p-6 overflow-hidden">
-                    <svg viewBox="0 0 1400 600" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                <div className="relative w-full h-[672px] bg-white/50 dark:bg-slate-800/30 rounded-2xl border-2 border-slate-200 dark:border-slate-700 p-6 overflow-visible">
+                    <div
+                        className="w-full h-full"
+                        style={{ transform: 'scale(1.2)', transformOrigin: 'top left', marginLeft: '-50px', marginTop: '-100px' }}
+                    >
+                        <svg viewBox="0 0 1430 630" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
                         {/* Arrow marker definition */}
                         <defs>
                             <marker id="arrowhead-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
@@ -116,15 +120,15 @@ export function ModernAuthentication() {
                             id="ui-configuration"
                             x="50" y="100" width="200" height="80" rx="5"
                             className="cursor-pointer transition-all duration-300 hover:opacity-80"
-                            fill="#ADD8E6"
+                            fill="#9333ea"
                             stroke="#1e293b"
                             strokeWidth="2"
                             onClick={() => setActiveTooltip(activeTooltip === 'ui-configuration' ? null : 'ui-configuration')}
                         />
-                        <text x="150" y="130" textAnchor="middle" className="text-sm font-bold fill-slate-900 dark:fill-slate-100">
+                        <text x="150" y="130" textAnchor="middle" className="text-sm font-bold fill-white">
                             UI Configuration of
                         </text>
-                        <text x="150" y="150" textAnchor="middle" className="text-sm font-bold fill-slate-900 dark:fill-slate-100">
+                        <text x="150" y="150" textAnchor="middle" className="text-sm font-bold fill-white">
                             Users, Roles, SSO etc.
                         </text>
 
@@ -228,15 +232,16 @@ export function ModernAuthentication() {
 
                         {/* Temenos Application to Auth Filter */}
                         <line x1="850" y1="270" x2="950" y2="255" stroke="#ef4444" strokeWidth="2.5" fill="none" markerEnd="url(#arrowhead-red)" />
-                        <text x="900" y="260" textAnchor="middle" className="text-xs fill-slate-900 dark:fill-slate-100">Security Token</text>
+                        <text x="900" y="240" textAnchor="middle" className="text-xs fill-slate-900 dark:fill-slate-100">Security Token</text>
 
                         {/* Auth Filter to Security Token Validation */}
                         <line x1="1100" y1="280" x2="1100" y2="300" stroke="#ef4444" strokeWidth="2.5" fill="none" markerEnd="url(#arrowhead-red)" />
 
                         {/* Security Token Validation back to Temenos Application */}
                         <line x1="950" y1="325" x2="850" y2="270" stroke="#ef4444" strokeWidth="2.5" fill="none" markerEnd="url(#arrowhead-red)" />
-                        <text x="900" y="300" textAnchor="middle" className="text-xs fill-slate-900 dark:fill-slate-100">Identity & Attributes</text>
+                        <text x="900" y="330" textAnchor="middle" className="text-xs fill-slate-900 dark:fill-slate-100">Identity & Attributes</text>
                     </svg>
+                    </div>
                 </div>
             </div>
 
@@ -244,12 +249,12 @@ export function ModernAuthentication() {
             <AnimatePresence>
                 {activeTooltip && tooltips[activeTooltip] && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute bottom-8 left-8 right-8 z-50 pointer-events-auto"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-auto"
                     >
-                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-3xl mx-auto">
+                        <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
                             <div className="flex items-start gap-4">
                                 <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
                                     <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
