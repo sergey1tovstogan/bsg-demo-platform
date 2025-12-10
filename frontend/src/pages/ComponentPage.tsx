@@ -8,6 +8,7 @@ import { ObservabilityContent } from '../components/observability/ObservabilityC
 import { DeploymentAnalyzer } from '../components/deployment/DeploymentAnalyzer'
 import { DeploymentContentViewer } from '../components/deployment/DeploymentContentViewer'
 import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
+import { ChatbotWithQuestions } from '../components/data-architecture/ChatbotWithQuestions'
 import { DesignTimeContentViewer } from '../components/design-time/DesignTimeContentViewer'
 import type { ComponentId } from '../types'
 
@@ -89,7 +90,13 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
             <DemoFrame componentId={componentId} />
           )
         )}
-        {activeTab === 'chatbot' && <Chatbot componentId={componentId} />}
+        {activeTab === 'chatbot' && (
+          componentId === 'data-architecture' ? (
+            <ChatbotWithQuestions componentId={componentId} />
+          ) : (
+            <Chatbot componentId={componentId} />
+          )
+        )}
       </div>
     </div>
   )

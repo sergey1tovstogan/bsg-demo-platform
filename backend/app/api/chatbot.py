@@ -150,6 +150,69 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
                 "status": "success",
                 "data": assistant_message
             }
+
+        # For data-architecture component, use RAG API
+        elif component_id == "data-architecture":
+            temenos_service = TemenosService()
+
+            # Build context from conversation history
+            context_parts = []
+            if session.get("messages"):
+                recent_messages = session["messages"][-3:]  # Last 3 messages for context
+                context_parts.append("Previous conversation:")
+                for msg in recent_messages:
+                    if msg.get("role") == "user":
+                        context_parts.append(f"User: {msg.get('content', '')}")
+                    elif msg.get("role") == "assistant":
+                        context_parts.append(f"Assistant: {msg.get('content', '')[:100]}...")
+
+            context_parts.append("This is about Temenos data architecture, data flow patterns, Data Hub, Analytics, and data integration strategies.")
+            context = "\n".join(context_parts)
+
+            # Query RAG API with data architecture topics
+            result = await temenos_service.query_rag(
+                question=message,
+                region="global",
+                rag_model_id="DataHub, Analytics, TechnologyOverview",
+                context=context
+            )
+
+            # Extract answer from response
+            # RAG API response format: {"data": {"answer": "...", "sources": [...]}}
+            answer_data = result.get("data", {})
+            if isinstance(answer_data, dict):
+                answer = answer_data.get("answer", "")
+                sources = answer_data.get("sources", [])
+            else:
+                # Fallback if data is not a dict
+                answer = str(answer_data) if answer_data else "No answer available"
+                sources = []
+
+            # Create assistant message
+            import uuid
+            from datetime import datetime
+            assistant_message = {
+                "message_id": str(uuid.uuid4()),
+                "role": "assistant",
+                "content": answer,
+                "timestamp": datetime.utcnow().isoformat(),
+                "sources": sources
+            }
+
+            # Add messages to session
+            session["messages"].append({
+                "message_id": f"user-{uuid.uuid4()}",
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            session["messages"].append(assistant_message)
+
+            return {
+                "status": "success",
+                "data": assistant_message
+            }
+
         else:
             # For other components, return a placeholder (or use existing chatbot logic)
             raise HTTPException(

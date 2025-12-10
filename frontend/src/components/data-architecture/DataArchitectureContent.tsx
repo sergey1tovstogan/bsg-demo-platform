@@ -674,8 +674,9 @@ export function DataArchitectureContent() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col space-y-3">
-      {/* Merged Controls Panel with Description */}
+    <div className="space-y-6">
+      <div className="h-[calc(100vh-8rem)] flex flex-col space-y-3">
+          {/* Merged Controls Panel with Description */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 md:p-4 space-y-3 flex-shrink-0">
         {/* Description at top */}
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-center text-sm md:text-base">
@@ -1242,6 +1243,7 @@ export function DataArchitectureContent() {
 
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
