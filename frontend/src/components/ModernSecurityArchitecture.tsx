@@ -348,10 +348,10 @@ export function ModernSecurityArchitecture() {
             </AnimatePresence>
 
             {/* Details Button */}
-            <div className="absolute bottom-6 right-6 z-20">
+            <div className="absolute top-6 left-6 z-20">
                 <button
                     onClick={() => setShowAuthentication(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full hover:shadow-lg hover:scale-105 transition-all font-semibold shadow-blue-500/20"
+                    className="flex items-center gap-2 px-6 py-3 bg-black text-white rounded-full hover:shadow-lg hover:scale-105 transition-all font-semibold shadow-black/30"
                 >
                     <span>View Authentication Details</span>
                     <ArrowRight className="w-4 h-4" />

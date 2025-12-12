@@ -81,11 +81,50 @@ const ComplianceByDesignView = () => {
                         <Scale className="w-8 h-8 text-orange-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-orange-900 dark:text-orange-100 mb-3">Temenos SaaS Compliance by Design</h2>
+                        <h2 className="text-2xl font-bold text-orange-900 dark:text-orange-100 mb-3">Temenos SaaS Compliance by Design and Temenos Security and Privacy Committee</h2>
                         <p className="text-orange-800 dark:text-orange-200 leading-relaxed mb-4">
                             Continuous regulatory updates built into the platform. Certified to industry standards and aligned with global compliance frameworks.
                         </p>
                     </div>
+                </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-8 rounded-xl border border-orange-100 dark:border-orange-800 shadow-sm">
+                <div className="space-y-4">
+                    {[
+                        {
+                            title: 'Security and Privacy Committee',
+                            desc: 'Comprises of executive members representing risk, security, privacy, information technology, governance, operation function'
+                        },
+                        {
+                            title: 'Primarily role',
+                            desc: 'Committee oversees management effort in implementing and maintaining effective global information security and privacy compliance programs within the Group'
+                        },
+                        {
+                            title: 'Further responsibility',
+                            desc: 'An assessment of all security risks including status of remedial plans, incidents including those that may result in the breach of personal data contain them and take immediate actions to address reoccurrence.'
+                        },
+                        {
+                            title: 'Temenos Information Security',
+                            desc: 'InfoSec Team works along side the Security and Privacy Committee to develop and oversee the implementation of information security controls'
+                        },
+                        {
+                            title: 'Security and Privacy',
+                            desc: 'Quarterly Committee meetings'
+                        }
+                    ].map((item) => (
+                        <div
+                            key={item.title}
+                            className="flex flex-col md:flex-row md:items-stretch gap-4 md:gap-6 bg-white/80 dark:bg-slate-900/60 border border-orange-100 dark:border-orange-700 rounded-xl overflow-hidden shadow-sm"
+                        >
+                            <div className="md:w-72 bg-violet-500 text-white font-bold text-lg leading-snug px-4 py-4 flex items-center justify-center text-center">
+                                {item.title}
+                            </div>
+                            <div className="flex-1 px-5 py-4 flex items-center">
+                                <p className="text-slate-700 dark:text-slate-200 text-sm md:text-base leading-relaxed">{item.desc}</p>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -328,30 +367,30 @@ const RiskManagementView = () => {
 
                     {/* Roles and Responsibilities */}
                     <div className="flex-1 space-y-3">
-                        <h3 className="text-xl font-bold text-red-600 dark:text-red-300">Roles and Responsibilities</h3>
-                        <div className="space-y-4 text-slate-700 dark:text-slate-200 text-sm">
+                        <h3 className="text-xl font-bold text-violet-600 dark:text-violet-300">Roles and Responsibilities</h3>
+                        <div className="space-y-4 text-violet-700 dark:text-violet-200 text-sm">
                             <div>
-                                <div className="font-bold text-red-600 dark:text-red-300">Board of Directors / Audit Committee</div>
+                                <div className="font-bold text-violet-600 dark:text-violet-300">Board of Directors / Audit Committee</div>
                                 <ul className="list-disc pl-5 space-y-1">
                                     <li>Direction on risk appetite in cooperation with Senior Management.</li>
                                     <li>Appraised of significant risks and whether Senior Management is responding appropriately.</li>
                                 </ul>
                             </div>
                             <div>
-                                <div className="font-bold text-red-600 dark:text-red-300">CEO and Senior Management</div>
+                                <div className="font-bold text-violet-600 dark:text-violet-300">CEO and Senior Management</div>
                                 <ul className="list-disc pl-5 space-y-1">
                                     <li>Ultimate ownership of the risk management and control framework.</li>
                                     <li>Assigns responsibilities for risk management procedures to managers in specific processes, functions, or departments.</li>
                                 </ul>
                             </div>
                             <div>
-                                <div className="font-bold text-red-600 dark:text-red-300">Operational Management</div>
+                                <div className="font-bold text-violet-600 dark:text-violet-300">Operational Management</div>
                                 <ul className="list-disc pl-5 space-y-1">
                                     <li>Ownership, responsibility, and accountability for managing risks; develop and self-assess controls to address risk.</li>
                                 </ul>
                             </div>
                             <div>
-                                <div className="font-bold text-red-600 dark:text-red-300">Risk Management function</div>
+                                <div className="font-bold text-violet-600 dark:text-violet-300">Risk Management function</div>
                                 <ul className="list-disc pl-5 space-y-1">
                                     <li>Maintains an effective risk management framework and integrated view of risk exposure across the enterprise.</li>
                                     <li>Reports to stakeholders; conducts independent review and challenges the 1LoD.</li>
