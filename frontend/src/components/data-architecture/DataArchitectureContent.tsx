@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Pause, SkipForward, SkipBack, ArrowRight, Circle, Square } from 'lucide-react'
+import { useCrossTabSync } from './hooks/useCrossTabSync'
+import type { AnimationTrigger } from './demo/types'
 
 type AnimationPath = 'path-c' | 'path-a' | 'path-b'
 type PlaybackState = 'idle' | 'playing' | 'paused' | 'completed'
@@ -58,6 +60,29 @@ export function DataArchitectureContent() {
   const [clientName, setClientName] = useState<string>(() => {
     const saved = localStorage.getItem('dataArchitecture_clientName')
     return saved || 'Client Name'
+  })
+
+  // Cross-tab sync - listen for animation triggers from Demo tab
+  const handleAnimationTrigger = useCallback((trigger: AnimationTrigger) => {
+    console.log('[CrossTabSync] Received trigger in DataArchitectureContent:', trigger)
+
+    // Spawn a new dot based on the trigger type
+    const now = Date.now()
+    const newDot: DataFlowDot = {
+      id: `${trigger.type}-${trigger.id}-${now}`,
+      type: trigger.type,
+      pathId: 'arrow-events-pubsub',
+      startTime: now,
+      segment: 'events-pubsub'
+    }
+
+    setActiveDataFlows((prev) => [...prev, newDot])
+    console.log('[CrossTabSync] Spawned new dot:', newDot)
+  }, [])
+
+  useCrossTabSync({
+    onTrigger: handleAnimationTrigger,
+    enabled: true
   })
 
   // Static components that are always visible (common starting point for all paths)
@@ -674,8 +699,9 @@ export function DataArchitectureContent() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col space-y-3">
-      {/* Merged Controls Panel with Description */}
+    <div className="space-y-6">
+      <div className="h-[calc(100vh-8rem)] flex flex-col space-y-3">
+          {/* Merged Controls Panel with Description */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 md:p-4 space-y-3 flex-shrink-0">
         {/* Description at top */}
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-center text-sm md:text-base">
@@ -1242,6 +1268,7 @@ export function DataArchitectureContent() {
 
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
