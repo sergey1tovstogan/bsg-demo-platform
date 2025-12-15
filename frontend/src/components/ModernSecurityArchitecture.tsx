@@ -101,7 +101,7 @@ export function ModernSecurityArchitecture() {
     }
 
     return (
-        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800">
+        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800 pb-32">
             {/* Background Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
                 style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
@@ -118,13 +118,13 @@ export function ModernSecurityArchitecture() {
             </div>
 
             {/* Main Content Container */}
-            <div className="relative w-full h-full p-8">
+            <div className="relative w-full h-full p-8 pt-[100px]">
 
                 {/* Layout Grid - Original 3-column structure */}
-                <div className="w-full h-full grid grid-cols-12 gap-4 relative z-10">
+                <div className="w-full h-full grid grid-cols-12 gap-4 relative z-10 items-start">
 
                     {/* Column 1: TLS Entry Points (Left) */}
-                    <div className="col-span-2 flex items-center">
+                    <div className="col-span-4 flex items-start">
                         <div
                             className="w-full h-[70%] bg-gradient-to-br from-blue-900 to-blue-950 dark:from-blue-950 dark:to-slate-950 rounded-2xl p-4 flex flex-col items-center justify-between border-2 border-blue-700/50 shadow-xl cursor-help transition-all duration-300 hover:border-blue-500"
                             onMouseEnter={() => setActiveTooltip('tls-entry')}
@@ -143,7 +143,7 @@ export function ModernSecurityArchitecture() {
                     </div>
 
                     {/* Column 2: Temenos Software (Center) */}
-                    <div className="col-span-6 flex flex-col">
+                    <div className="col-span-4 flex flex-col">
                         <div className="bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-3xl p-6 border-2 border-slate-300 dark:border-slate-600 relative h-full">
                             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 px-6 py-2 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700 z-10">
                                 <h3 className="font-bold text-slate-800 dark:text-slate-100 dark:text-white whitespace-nowrap">Temenos Software</h3>
@@ -239,59 +239,81 @@ export function ModernSecurityArchitecture() {
                                     </div>
                                 </div>
 
+                                {/* Row 4: Temenos Vault */}
+                                <div className="grid grid-cols-1 gap-4 h-[110px]">
+                                    <div
+                                        className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-help group h-full flex items-center justify-between"
+                                        onMouseEnter={() => setActiveTooltip('temenos-vault')}
+                                        onMouseLeave={() => setActiveTooltip(null)}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
+                                                <Database className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 dark:text-white">Temenos Vault</h4>
+                                                <p className="text-xs text-slate-600 dark:text-slate-300 dark:text-slate-400">Azure, Hashi Corp Key Vault and AWS Secrets Manager</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs rounded">Secrets</span>
+                                            <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs rounded">Keys</span>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
-                </div>
-
-                {/* Column 3: External Services (Right) */}
-                <div className="col-span-4 flex flex-col gap-3" style={{ paddingTop: '3.5rem' }}>
-                    {/* Bank IAM */}
-                    <div
-                        className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
-                        onMouseEnter={() => setActiveTooltip('bank-iam')}
-                        onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                        <div className="flex items-center gap-3 mb-1">
-                            <Server className="w-5 h-5" />
-                            <h4 className="font-bold text-sm">Bank's IAM</h4>
+                    {/* Column 3: External Services (Right) */}
+                    <div className="col-span-4 flex flex-col gap-3">
+                        {/* Bank IAM */}
+                        <div
+                            className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
+                            onMouseEnter={() => setActiveTooltip('bank-iam')}
+                            onMouseLeave={() => setActiveTooltip(null)}
+                        >
+                            <div className="flex items-center gap-3 mb-1">
+                                <Server className="w-5 h-5" />
+                                <h4 className="font-bold text-sm">Bank's IAM</h4>
+                            </div>
+                            <p className="text-purple-100 text-xs">Identity Access Management</p>
                         </div>
-                        <p className="text-purple-100 text-xs">Identity Access Management</p>
-                    </div>
 
-                    {/* Secrets Management */}
-                    <div
-                        className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                        onMouseEnter={() => setActiveTooltip('secrets-management')}
-                        onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                        <div className="flex items-center gap-3">
-                            <Key className="w-5 h-5" />
-                            <h4 className="font-bold text-sm">Secrets Mgmt</h4>
+                        {/* Secrets Management */}
+                        <div
+                            className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                            onMouseEnter={() => setActiveTooltip('secrets-management')}
+                            onMouseLeave={() => setActiveTooltip(null)}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Key className="w-5 h-5" />
+                                <h4 className="font-bold text-sm">Secrets Mgmt</h4>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Key Management */}
-                    <div
-                        className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                        onMouseEnter={() => setActiveTooltip('key-management')}
-                        onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                        <div className="flex items-center gap-3">
-                            <FileKey className="w-5 h-5" />
-                            <h4 className="font-bold text-sm">Key Mgmt</h4>
+                        {/* Key Management */}
+                        <div
+                            className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                            onMouseEnter={() => setActiveTooltip('key-management')}
+                            onMouseLeave={() => setActiveTooltip(null)}
+                        >
+                            <div className="flex items-center gap-3">
+                                <FileKey className="w-5 h-5" />
+                                <h4 className="font-bold text-sm">Key Mgmt</h4>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Certificate Management */}
-                    <div
-                        className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                        onMouseEnter={() => setActiveTooltip('certificate-management')}
-                        onMouseLeave={() => setActiveTooltip(null)}
-                    >
-                        <div className="flex items-center gap-3">
-                            <FileText className="w-5 h-5" />
-                            <h4 className="font-bold text-sm">Cert Mgmt</h4>
+                        {/* Certificate Management */}
+                        <div
+                            className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                            onMouseEnter={() => setActiveTooltip('certificate-management')}
+                            onMouseLeave={() => setActiveTooltip(null)}
+                        >
+                            <div className="flex items-center gap-3">
+                                <FileText className="w-5 h-5" />
+                                <h4 className="font-bold text-sm">Cert Mgmt</h4>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -301,12 +323,12 @@ export function ModernSecurityArchitecture() {
             <AnimatePresence>
                 {activeTooltip && tooltips[activeTooltip] && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute bottom-8 left-8 right-8 z-50 pointer-events-none"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-none"
                     >
-                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-700 max-w-3xl mx-auto">
+                        <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
                             <div className="flex items-start gap-4">
                                 <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
                                     <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />

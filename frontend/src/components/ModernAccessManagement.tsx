@@ -23,9 +23,9 @@ const ModernAccessManagement = () => {
     ];
 
     return (
-        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 overflow-hidden">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
             {/* Header Tabs */}
-            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 dark:border-slate-700 px-6 py-4 shadow-sm z-10">
+            <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 shadow-sm z-10">
                 <div className="flex space-x-4">
                     {tabs.map((tab) => (
                         <button
@@ -33,7 +33,7 @@ const ModernAccessManagement = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${activeTab === tab.id
                                     ? 'bg-red-600 text-white shadow-md transform scale-105'
-                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
                                 }`}
                         >
                             <tab.icon className="w-4 h-4" />
@@ -108,7 +108,7 @@ const OverviewView = () => {
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-800 rounded-lg flex items-center justify-center mb-4">
                         <Activity className="w-6 h-6 text-green-600" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Continuous Monitoring</h3>
@@ -360,7 +360,7 @@ const MonitoringView = () => {
             {/* Monitoring Capabilities */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-800 rounded-lg flex items-center justify-center mb-4">
                         <Activity className="w-6 h-6 text-green-600" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Real-Time Monitoring</h3>
@@ -450,7 +450,7 @@ const MonitoringView = () => {
             </div>
 
             {/* Reporting */}
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Compliance Reporting</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[

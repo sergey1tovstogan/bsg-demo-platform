@@ -22,6 +22,7 @@ const ModernObservability = () => {
         { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
         { id: 'backup', label: 'Backup & Restore', icon: Database },
         { id: 'audit', label: 'Audit Trail', icon: History },
+        { id: 'bcp', label: 'BCP Overview', icon: Shield },
     ];
 
     return (
@@ -60,6 +61,7 @@ const ModernObservability = () => {
                         {activeTab === 'incidents' && <IncidentsView />}
                         {activeTab === 'backup' && <BackupView />}
                         {activeTab === 'audit' && <AuditView />}
+                        {activeTab === 'bcp' && <BCPView />}
                     </motion.div>
                 </AnimatePresence>
             </div>
@@ -415,6 +417,56 @@ const AuditView = () => {
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+const BCPView = () => {
+    return (
+        <div className="space-y-6">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
+                <div className="flex items-start gap-4">
+                    <div className="p-3 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                        <Shield className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">Business Continuity Overview</h3>
+                        <p className="text-blue-800 dark:text-blue-200 leading-relaxed">
+                            Temenos SaaS maintains business continuity through proactive planning, resilient architecture, and tested recovery procedures to ensure service availability.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">BCP Highlights</h4>
+                <ul className="space-y-4 text-slate-700 dark:text-slate-200">
+                    <li className="flex items-start gap-3">
+                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm leading-relaxed">
+                            Business Impact Analysis along with business continuity and disaster recovery (DR) plans are <strong>updated & tested annually</strong>.
+                        </span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm leading-relaxed">
+                            Oversight by the <strong>Temenos</strong> Operational Review Board (ORB).
+                        </span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm leading-relaxed">
+                            Business Continuity Policies are aligned with <strong>ISO 22301</strong>, and are audited and reflected in the <strong>SOC 2</strong> report.
+                        </span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm leading-relaxed">
+                            Group Business Continuity Management Policy (<strong>Temenos</strong> corporate Business Continuity provision, Temenos Cloud Services Business Continuity, Client Obligations, Limitations).
+                        </span>
+                    </li>
+                </ul>
             </div>
         </div>
     );

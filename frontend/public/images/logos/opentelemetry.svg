@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- OpenTelemetry logo representation -->
+  <circle cx="100" cy="100" r="80" fill="#425CC7" stroke="#F5A623" stroke-width="8"/>
+  <path d="M 100 40 L 140 80 L 140 120 L 100 160 L 60 120 L 60 80 Z" fill="white" stroke="#425CC7" stroke-width="4"/>
+  <circle cx="100" cy="100" r="15" fill="#F5A623"/>
+  <text x="100" y="190" font-family="Arial, sans-serif" font-size="16" fill="#425CC7" text-anchor="middle" font-weight="bold">OpenTelemetry</text>
+</svg>
