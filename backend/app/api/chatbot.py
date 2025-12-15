@@ -1,7 +1,7 @@
 """
 Chatbot API Endpoints
 
-Provides chatbot endpoints that use RAG API for deployment component.
+Provides chatbot endpoints that use RAG API for all components.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -68,94 +68,101 @@ async def create_chat_session(component_id: str, request: ChatSessionRequest):
 async def send_chat_message(component_id: str, request: ChatMessageRequest):
     """
     Send a chat message and get RAG-based response.
-    
-    For deployment component, uses RAG API directly.
-    For other components, uses existing chatbot logic.
-    
+
+    Uses RAG API for all components with component-specific context.
+
     Args:
         component_id: Component identifier
         request: Chat message request
-        
+
     Returns:
         Assistant response
     """
     try:
         session_id = request.session_id
         message = request.message
-        
+
         # Get or create session
         if session_id not in chat_sessions:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         session = chat_sessions[session_id]
-        
-        # For deployment component, use RAG API directly
-        if component_id == "deployment":
-            temenos_service = TemenosService()
-            
-            # Build context from conversation history
-            context_parts = []
-            if session.get("messages"):
-                recent_messages = session["messages"][-3:]  # Last 3 messages for context
-                context_parts.append("Previous conversation:")
-                for msg in recent_messages:
-                    if msg.get("role") == "user":
-                        context_parts.append(f"User: {msg.get('content', '')}")
-                    elif msg.get("role") == "assistant":
-                        context_parts.append(f"Assistant: {msg.get('content', '')[:100]}...")
-            
-            context_parts.append("This is about Temenos cloud deployment, Azure infrastructure, and deployment best practices.")
-            context = "\n".join(context_parts)
-            
-            # Query RAG API with deployment and architecture topics
-            result = await temenos_service.query_rag(
-                question=message,
-                region="global",
-                rag_model_id="ModularBanking, TechnologyOverview, Platform",
-                context=context
-            )
-            
-            # Extract answer from response
-            # RAG API response format: {"data": {"answer": "...", "sources": [...]}}
-            answer_data = result.get("data", {})
-            if isinstance(answer_data, dict):
-                answer = answer_data.get("answer", "")
-                sources = answer_data.get("sources", [])
-            else:
-                # Fallback if data is not a dict
-                answer = str(answer_data) if answer_data else "No answer available"
-                sources = []
-            
-            # Create assistant message
-            import uuid
-            from datetime import datetime
-            assistant_message = {
-                "message_id": str(uuid.uuid4()),
-                "role": "assistant",
-                "content": answer,
-                "timestamp": datetime.utcnow().isoformat(),
-                "sources": sources
-            }
-            
-            # Add messages to session
-            session["messages"].append({
-                "message_id": f"user-{uuid.uuid4()}",
-                "role": "user",
-                "content": message,
-                "timestamp": datetime.utcnow().isoformat()
-            })
-            session["messages"].append(assistant_message)
-            
-            return {
-                "status": "success",
-                "data": assistant_message
-            }
+
+        # Initialize Temenos service for RAG API access
+        temenos_service = TemenosService()
+
+        # Build context from conversation history
+        context_parts = []
+        if session.get("messages"):
+            recent_messages = session["messages"][-3:]  # Last 3 messages for context
+            context_parts.append("Previous conversation:")
+            for msg in recent_messages:
+                if msg.get("role") == "user":
+                    context_parts.append(f"User: {msg.get('content', '')}")
+                elif msg.get("role") == "assistant":
+                    context_parts.append(f"Assistant: {msg.get('content', '')[:100]}...")
+
+        # Add component-specific context
+        component_contexts = {
+            "deployment": "This is about Temenos cloud deployment, Azure infrastructure, and deployment best practices.",
+            "security": "This is about Temenos security features, authentication, authorization, encryption, and security best practices.",
+            "connectivity": "This is about Temenos connectivity, API integrations, microservices communication, and integration patterns.",
+            "payment": "This is about Temenos payment processing, payment gateway integrations, transaction handling, and payment workflows.",
+            "observability": "This is about Temenos observability, monitoring, logging, metrics, tracing, and operational insights.",
+            "api": "This is about Temenos APIs, API design, endpoints, API management, and API best practices."
+        }
+
+        # Use component-specific context or generic Temenos context
+        component_context = component_contexts.get(
+            component_id,
+            f"This is about Temenos {component_id} component, its features, capabilities, and best practices."
+        )
+        context_parts.append(component_context)
+        context = "\n".join(context_parts)
+
+        # Query RAG API with the same model IDs for all components
+        result = await temenos_service.query_rag(
+            question=message,
+            region="global",
+            rag_model_id="TechnologyOverview",
+            context=context
+        )
+
+        # Extract answer from response
+        # RAG API response format: {"data": {"answer": "...", "sources": [...]}}
+        answer_data = result.get("data", {})
+        if isinstance(answer_data, dict):
+            answer = answer_data.get("answer", "")
+            sources = answer_data.get("sources", [])
         else:
-            # For other components, return a placeholder (or use existing chatbot logic)
-            raise HTTPException(
-                status_code=501,
-                detail=f"Chatbot not yet implemented for component: {component_id}"
-            )
+            # Fallback if data is not a dict
+            answer = str(answer_data) if answer_data else "No answer available"
+            sources = []
+
+        # Create assistant message
+        import uuid
+        from datetime import datetime
+        assistant_message = {
+            "message_id": str(uuid.uuid4()),
+            "role": "assistant",
+            "content": answer,
+            "timestamp": datetime.utcnow().isoformat(),
+            "sources": sources
+        }
+
+        # Add messages to session
+        session["messages"].append({
+            "message_id": f"user-{uuid.uuid4()}",
+            "role": "user",
+            "content": message,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        session["messages"].append(assistant_message)
+
+        return {
+            "status": "success",
+            "data": assistant_message
+        }
     except HTTPException:
         raise
     except Exception as e:
