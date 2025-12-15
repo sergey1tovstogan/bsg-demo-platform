@@ -1,0 +1,98 @@
+{
+  "metadata": {
+    "id": "deployment",
+    "name": "Deployment",
+    "category": "infrastructure",
+    "icon": "deployment-icon.svg",
+    "color": "#1976d2",
+    "tags": ["azure", "cloud", "infrastructure"]
+  },
+  "overview": {
+    "title": "Cloud Deployment",
+    "description": "Comprehensive guide to deploying Temenos applications on Azure cloud infrastructure.",
+    "highlights": [
+      "Automated deployment pipelines",
+      "Infrastructure as Code",
+      "Multi-region support"
+    ]
+  },
+  "sections": [
+    {
+      "id": "features",
+      "title": "Key Features",
+      "type": "cards",
+      "items": [
+        {
+          "title": "Auto-Scaling",
+          "description": "Automatically scale resources based on demand",
+          "icon": "scale-icon.svg"
+        },
+        {
+          "title": "High Availability",
+          "description": "99.9% uptime with multi-zone deployment",
+          "icon": "availability-icon.svg"
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "Architecture",
+      "type": "diagram",
+      "diagram": "../assets/diagrams/deployment-architecture.png",
+      "components": [
+        {
+          "name": "Load Balancer",
+          "description": "Distributes traffic across instances"
+        },
+        {
+          "name": "Application Tier",
+          "description": "Hosts Temenos application services"
+        }
+      ]
+    },
+    {
+      "id": "getting-started",
+      "title": "Getting Started",
+      "type": "steps",
+      "steps": [
+        {
+          "title": "Prerequisites",
+          "content": "Ensure you have Azure CLI installed and configured"
+        },
+        {
+          "title": "Deploy Infrastructure",
+          "content": "Run the deployment script",
+          "code": {
+            "language": "bash",
+            "content": "az deployment group create --resource-group myRG --template-file main.bicep"
+          }
+        }
+      ]
+    },
+    {
+      "id": "best-practices",
+      "title": "Best Practices",
+      "type": "list",
+      "items": [
+        {
+          "title": "Use Infrastructure as Code",
+          "description": "Define all infrastructure in version-controlled templates"
+        },
+        {
+          "title": "Implement Blue-Green Deployments",
+          "description": "Minimize downtime with parallel environments"
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "title": "Documentation",
+      "url": "https://docs.temenos.com/deployment"
+    },
+    {
+      "title": "GitHub Repository",
+      "url": "https://github.com/temenos/deployment"
+    }
+  ]
+}
