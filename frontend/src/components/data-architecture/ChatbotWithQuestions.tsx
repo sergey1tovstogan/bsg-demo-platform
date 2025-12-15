@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import { FlipCard } from '../shared/FlipCard'
 import { Chatbot } from '../Chatbot'
 import { apiService } from '../../services/api'
+import type { ComponentId } from '../../types'
 
 const CACHE_KEY = 'data_architecture_chatbot_questions_cache_v2'
 const CACHE_TIMESTAMP_KEY = 'data_architecture_chatbot_questions_cache_timestamp_v2'
@@ -19,7 +20,7 @@ interface QuestionItem {
 }
 
 interface ChatbotWithQuestionsProps {
-  componentId: string
+  componentId: ComponentId
 }
 
 export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps) {

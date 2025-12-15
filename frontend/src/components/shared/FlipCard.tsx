@@ -4,8 +4,6 @@ import { motion } from 'framer-motion'
 interface FlipCardProps {
   frontContent: React.ReactNode
   backContent: React.ReactNode
-  frontGradient?: string
-  backGradient?: string
   height?: string
   width?: string
 }
@@ -13,8 +11,6 @@ interface FlipCardProps {
 export function FlipCard({
   frontContent,
   backContent,
-  frontGradient,
-  backGradient,
   height = '400px',
   width = '320px',
 }: FlipCardProps) {
