@@ -463,12 +463,8 @@ async def get_aks_namespaces(request: NamespacesRequest):
                     }
                     continue
                 
-                cluster_namespaces[cluster.name] = {
-                    "cluster_name": cluster.name,
-                    "resource_group": cluster.resource_group,
-                    "namespaces": namespaces
-                }
-                
+                # Note: Successful case is already handled at lines 421-425
+                # This code only executes if no exception occurred
                 if len(namespaces) == 0:
                     logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
                     logger.warning("  1. kubectl is not installed or not in PATH")
@@ -549,25 +545,19 @@ async def get_aks_namespaces(request: NamespacesRequest):
             "successful_clusters": len(successful_clusters),
             "failed_clusters": len(failed_clusters)
         }
-        
-        return {
-            "status": "success",
-            "data": result_data,
-            "count": len(cluster_namespaces)
-        }
     except Exception as e:
-            logger.error(f"Error getting AKS namespaces: {e}", exc_info=True)
-            import traceback
-            error_detail = {
-                "status": "error",
-                "error": str(e),
-                "traceback": traceback.format_exc()
-            }
-            logger.error(f"Full traceback: {traceback.format_exc()}")
-            raise HTTPException(
-                status_code=500,
-                detail=error_detail
-            )
+        logger.error(f"Error getting AKS namespaces: {e}", exc_info=True)
+        import traceback
+        error_detail = {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=error_detail
+        )
 
 
 @router.post("/aks/diagnostics")
