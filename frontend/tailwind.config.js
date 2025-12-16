@@ -49,6 +49,9 @@ export default {
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'hero-pattern': "url('/assets/grid.svg')",
+      },
+      borderWidth: {
+        '3': '3px',
       }
     },
   },

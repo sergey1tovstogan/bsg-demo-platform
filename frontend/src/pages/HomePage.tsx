@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Network, Database, Cloud, Shield, Eye, Palette, Settings } from 'lucide-react'
+import { Network, Database, Cloud, Shield, Eye, Palette, Settings, Layout } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ComponentId } from '../types'
 
@@ -72,6 +72,15 @@ const ALL_COMPONENTS: ComponentCard[] = [
     color: 'text-indigo-500',
     gradient: 'from-indigo-500/20 to-blue-400/20',
     delay: 'animation-delay-500',
+  },
+  {
+    id: 'layout-showcase',
+    name: 'Design System Showcase',
+    description: 'Comprehensive unified layout and component demonstrations',
+    icon: Layout,
+    color: 'text-purple-500',
+    gradient: 'from-purple-500/20 to-pink-400/20',
+    delay: 'animation-delay-600',
   },
 ]
 

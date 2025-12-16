@@ -4,37 +4,73 @@
 
 @layer base {
   :root {
-    /* Modern Color Palette - Deep Blue & Vibrant Accents */
-    --color-primary: #3B82F6; /* Blue 500 */
-    --color-primary-dark: #1D4ED8; /* Blue 700 */
-    --color-secondary: #10B981; /* Emerald 500 */
-    --color-accent: #8B5CF6; /* Violet 500 */
-    
+    /* Temenos Brand Colors - Unified Layout Specification */
+    --color-temenos-navy: #003366;
+    --color-temenos-blue: #0066CC;
+    --color-temenos-cyan: #00A3E0;
+
+    /* Primary Interactive Colors */
+    --color-primary: #003366; /* Temenos Navy */
+    --color-primary-hover: #004080; /* Lighter navy */
+    --color-primary-active: #002244; /* Darker navy */
+
+    /* Secondary Interactive Colors */
+    --color-secondary: #0066CC; /* Temenos Blue */
+    --color-secondary-hover: #0052A3;
+    --color-secondary-active: #003D7A;
+
+    /* Accent Color */
+    --color-accent: #00A3E0; /* Temenos Cyan */
+    --color-accent-hover: #008FC7;
+    --color-accent-active: #007BAE;
+
+    /* Functional Colors */
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+    --color-info: #60A5FA;
+
+    /* Neutral Colors - Light Mode */
     --color-background: #F8FAFC; /* Slate 50 */
-    --color-surface: #FFFFFF;
+    --color-surface: #FFFFFF; /* White */
     --color-surface-hover: #F1F5F9; /* Slate 100 */
-    
+    --color-surface-raised: #FFFFFF; /* White with shadow */
+
+    --color-border-light: #E2E8F0; /* Slate 200 */
+    --color-border-medium: #CBD5E1; /* Slate 300 */
+    --color-border-strong: #94A3B8; /* Slate 400 */
+
     --color-text-primary: #0F172A; /* Slate 900 */
     --color-text-secondary: #64748B; /* Slate 500 */
-    --color-text-inverted: #FFFFFF;
+    --color-text-disabled: #94A3B8; /* Slate 400 */
+    --color-text-on-primary: #FFFFFF; /* White on brand colors */
 
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-glow: 0 0 15px rgba(59, 130, 246, 0.5);
+    --shadow-glow: 0 0 15px rgba(0, 51, 102, 0.5);
   }
 
   .dark {
+    /* Neutral Colors - Dark Mode */
     --color-background: #0F172A; /* Slate 900 */
     --color-surface: #1E293B; /* Slate 800 */
     --color-surface-hover: #334155; /* Slate 700 */
-    
+    --color-surface-raised: #1E293B; /* Slate 800 with shadow */
+
+    --color-border-light: #334155; /* Slate 700 */
+    --color-border-medium: #475569; /* Slate 600 */
+    --color-border-strong: #64748B; /* Slate 500 */
+
     --color-text-primary: #F8FAFC; /* Slate 50 */
     --color-text-secondary: #94A3B8; /* Slate 400 */
-    
+    --color-text-disabled: #64748B; /* Slate 500 */
+    --color-text-on-primary: #FFFFFF; /* White on brand colors */
+
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+    --shadow-glow: 0 0 15px rgba(0, 163, 224, 0.3);
   }
 
   html {
@@ -79,9 +115,10 @@
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700
-           text-white font-medium px-6 py-2.5 rounded-xl shadow-lg shadow-blue-500/20
-           transition-all duration-300 hover:shadow-blue-500/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-[#003366] hover:bg-[#004080] active:bg-[#002244]
+           text-white font-semibold px-6 py-3 rounded-lg shadow-md
+           transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:shadow-sm
+           disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700;
   }
 
   .btn-secondary {
