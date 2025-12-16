@@ -31,6 +31,14 @@ export interface CustomerPayload {
   email: string
   phone: string
   address: string
+  // Extended fields for comprehensive Temenos API integration
+  nationality?: string // ISO country code (e.g., 'DE', 'FR', 'IT')
+  gender?: 'MALE' | 'FEMALE' | 'OTHER'
+  sectorId?: number // Customer segment (1=Retail, 2=Corporate, 3=SME, etc.)
+  street?: string // Separate street for better structure
+  city?: string // Separate city for better structure
+  country?: string // Separate country for better structure
+  postalCode?: string // Postal/ZIP code
 }
 
 /**
@@ -45,6 +53,71 @@ export interface Customer {
   status: 'ACTIVE' | 'INACTIVE'
   createdAt: string
   lastModified: string
+}
+
+/**
+ * Temenos API Request Format (v5.7.0)
+ * Nested {header, body} structure - all fields optional but customerNames is essential
+ */
+export interface TemenosCustomerPayload {
+  header?: {
+    audit?: {
+      versionNumber?: string
+    }
+  }
+  body: {
+    // Essential - customer name
+    customerNames: Array<{
+      customerName: string // Max 70 chars
+      customerNameAdditional?: string // Max 70 chars
+    }>
+
+    // Communication (recommended)
+    communicationDevices?: Array<{
+      email?: string // Max 50 chars
+      phoneNumber?: string // Max 17 chars
+      smsNumber?: string // Max 17 chars
+      preferredChannel?: string // Max 20 chars
+    }>
+
+    // Address (optional)
+    streets?: Array<{ street?: string }> // Max 70 chars
+    addresses?: Array<{ address?: string }> // Max 35 chars
+    addressCities?: Array<{ addressCity?: string }> // Max 35 chars
+    countries?: Array<{ country?: string }> // Max 35 chars
+
+    // Personal details (optional)
+    gender?: string // Max 35 chars
+    sectorId?: number // Customer type
+  }
+}
+
+/**
+ * Temenos API Response Format (v5.7.0)
+ * System-generated customer ID is in header.id
+ */
+export interface TemenosCustomerResponse {
+  header: {
+    id: string // System-generated customer ID
+    status: string
+    audit?: {
+      parseTime?: number
+    }
+  }
+  body: {
+    // Mirror of request fields plus system fields
+    customerNames?: Array<{
+      customerName?: string
+      customerNameAdditional?: string
+    }>
+    communicationDevices?: Array<{
+      email?: string
+      phoneNumber?: string
+    }>
+    customerStatus?: number // System status
+    sectorId?: number
+    gender?: string
+  }
 }
 
 /**

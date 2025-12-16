@@ -9,8 +9,11 @@ export const API_CONFIG = {
   USE_MOCK_API: true,
 
   // Real API settings
-  REAL_API_BASE_URL: 'http://transactingress.northeurope.cloudapp.azure.com/irf-provider-container/api',
+  REAL_API_BASE_URL: 'http://transactingress.northeurope.cloudapp.azure.com:80/irf-provider-container/api',
   REAL_API_TIMEOUT: 30000, // 30 seconds
+
+  // UI toggle visibility
+  SHOW_API_TOGGLE: true, // Show mock/real toggle in UI
 
   // Mock API settings
   MOCK_API_CONFIG: {
@@ -18,6 +21,34 @@ export const API_CONFIG = {
     failureRate: 0.05, // 5% chance of random errors
     kafkaEventDelay: 200 // 200ms delay for Kafka event emission
   }
+}
+
+/**
+ * Event Store API Configuration (Azure Event Hub via Event Store API)
+ */
+export const EVENT_STORE_CONFIG = {
+  // Backend proxy URL for Event Store API
+  BACKEND_PROXY_URL: '/api/v1', // Proxied through backend
+
+  // Polling settings
+  POLLING_INTERVAL: 3000, // Poll every 3 seconds
+  MAX_EVENTS_PER_REQUEST: 50, // Maximum events to fetch per request
+  DEFAULT_TIME_RANGE_MINUTES: 30, // Default time range for fetching events
+
+  // Enable real events from Event Store when in "real" API mode
+  ENABLE_REAL_EVENTS: true, // When true, fetch real events from Event Store API in real mode
+
+  // Event display settings
+  AUTO_SCROLL_EVENTS: true, // Auto-scroll event list on new events
+  MAX_DISPLAYED_EVENTS: 100, // Maximum events to display in UI
+
+  // Connection settings
+  CONNECTION_TIMEOUT: 10000, // 10 seconds timeout for connections
+  RETRY_ATTEMPTS: 3, // Number of retry attempts on failure
+  RETRY_DELAY: 1000, // Delay between retries in ms
+
+  // Topic filters (optional - leave empty to show all)
+  TOPIC_FILTERS: [] as string[] // e.g., ['temenos.party', 'temenos.order']
 }
 
 /**
@@ -101,7 +132,7 @@ export const KAFKA_TOPICS = {
  * API Endpoint Configuration
  */
 export const API_ENDPOINTS = {
-  CREATE_CUSTOMER: '/v1.0.0/party/customers',
+  CREATE_CUSTOMER: '/v5.7.0/party/customers', // Updated to v5.7.0
   OPEN_ACCOUNT: '/v1.2.0/holdings/accounts',
   SEND_PAYMENT: '/v1.0.0/order/paymentOrders'
 } as const

@@ -74,7 +74,7 @@ const StatusBadge: React.FC<{ status: 'success' | 'error'; statusCode: number }>
 /**
  * Individual API log entry
  */
-const ApiLogEntry: React.FC<{ log: ApiLog }> = ({ log }) => {
+const ApiLogEntry = React.forwardRef<HTMLDivElement, { log: ApiLog }>(({ log }, ref) => {
   const [isExpanded, setIsExpanded] = useState(true)
 
   const formatTimestamp = (timestamp: number) => {
@@ -89,6 +89,7 @@ const ApiLogEntry: React.FC<{ log: ApiLog }> = ({ log }) => {
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
@@ -170,7 +171,9 @@ const ApiLogEntry: React.FC<{ log: ApiLog }> = ({ log }) => {
       </AnimatePresence>
     </motion.div>
   )
-}
+})
+
+ApiLogEntry.displayName = 'ApiLogEntry'
 
 /**
  * ApiInspector Component - Main terminal-style API log viewer

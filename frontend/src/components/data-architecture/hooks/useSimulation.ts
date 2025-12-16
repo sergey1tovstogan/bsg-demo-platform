@@ -1,8 +1,9 @@
 // useSimulation - Main transaction orchestration hook
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useSimulationState } from './useSimulationState'
 import { apiService } from '../services/apiServiceAdapter'
 import { mockDataGenerator } from '../services/mockDataGenerator'
+import { eventStoreService, type EventStoreConnectionStatus } from '../services/eventStoreService'
 import {
   SimulationStage,
   type TransactionType,
@@ -10,13 +11,73 @@ import {
   type AccountPayload,
   type PaymentPayload,
   type ApiLog,
-  type AnimationTrigger
+  type AnimationTrigger,
+  type KafkaEvent
 } from '../demo/types'
 import {
   API_ENDPOINTS,
   ANIMATION_CONFIG,
-  DEBUG_CONFIG
+  DEBUG_CONFIG,
+  EVENT_STORE_CONFIG
 } from '../config/simulation.config'
+
+/**
+ * Poll for real events from Event Store API after a transaction
+ */
+async function pollRealEventsAfterTransaction(
+  transactionStartTime: number,
+  customerId?: string,
+  accountId?: string
+): Promise<KafkaEvent[]> {
+  if (!EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
+    return []
+  }
+
+  try {
+    // Wait a bit for events to propagate to Event Hub
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Fetch recent events from backend (last 2 minutes)
+    const result = await eventStoreService.fetchRecentEvents(2, 50)
+
+    if (!result.success || result.events.length === 0) {
+      return []
+    }
+
+    // Filter events that occurred after transaction started
+    const transactionTime = transactionStartTime
+    const filteredEvents = result.events.filter((event) => {
+      // Event must be after transaction started
+      if (event.timestamp < transactionTime) {
+        return false
+      }
+
+      // If we have a customerId, try to match it in the event payload
+      if (customerId) {
+        const payloadStr = JSON.stringify(event.payload || {})
+        if (payloadStr.includes(customerId)) {
+          return true
+        }
+      }
+
+      // If we have an accountId, try to match it
+      if (accountId) {
+        const payloadStr = JSON.stringify(event.payload || {})
+        if (payloadStr.includes(accountId)) {
+          return true
+        }
+      }
+
+      // If no specific ID, include all events after transaction (might be related)
+      return true
+    })
+
+    return filteredEvents
+  } catch (error) {
+    console.error('[useSimulation] Error polling real events:', error)
+    return []
+  }
+}
 
 /**
  * Generate unique API log ID
@@ -31,6 +92,10 @@ const generateLogId = (): string => {
  */
 export const useSimulation = () => {
   const simulationState = useSimulationState()
+  
+  // Event Store state
+  const eventStoreEnabled = useRef(false)
+  const eventStoreUnsubscribe = useRef<(() => void) | null>(null)
 
   /**
    * Log debug messages if enabled
@@ -81,6 +146,15 @@ export const useSimulation = () => {
       const response = await apiService.createCustomer(payload)
       const duration = Date.now() - startTime
 
+      // Extract status code from error message if available (format: "API Error (400): ...")
+      let statusCode = response.success ? 201 : 400
+      if (!response.success && response.error) {
+        const statusMatch = response.error.match(/API Error \((\d+)\)/)
+        if (statusMatch) {
+          statusCode = parseInt(statusMatch[1], 10)
+        }
+      }
+
       // Create API log
       const apiLog: ApiLog = {
         id: generateLogId(),
@@ -89,10 +163,16 @@ export const useSimulation = () => {
         endpoint: API_ENDPOINTS.CREATE_CUSTOMER,
         method: 'POST',
         request: payload,
-        response: response.data,
+        response: response.success
+          ? response.data
+          : {
+              data: response.data,
+              error: response.error,
+              fullResponse: response
+            },
         duration,
         status: response.success ? 'success' : 'error',
-        statusCode: response.success ? 201 : 400
+        statusCode
       }
 
       simulationState.addApiLog(apiLog)
@@ -101,7 +181,11 @@ export const useSimulation = () => {
         debugLog('CREATE_CUSTOMER succeeded', response.data)
 
         // Store customer ID
-        simulationState.setTransactionId('customerId', response.data.customerId)
+        const customerId = response.data.customerId
+        simulationState.setTransactionId('customerId', customerId)
+
+        // Check if we're in real API mode
+        const isRealMode = apiService.getServiceType() === 'real'
 
         // Add Kafka events
         if (response.events && response.events.length > 0) {
@@ -118,6 +202,31 @@ export const useSimulation = () => {
           })
 
           await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
+        }
+
+        // If in real mode, poll for actual events from Event Store API
+        if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
+          debugLog('Polling for real events from Event Store API')
+          const realEvents = await pollRealEventsAfterTransaction(startTime, customerId)
+          
+          if (realEvents.length > 0) {
+            debugLog(`Found ${realEvents.length} real events from Event Store`)
+            simulationState.setStage(SimulationStage.API_TO_KAFKA)
+            await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.API_TO_KAFKA_DURATION))
+
+            simulationState.setStage(SimulationStage.EMITTING)
+            simulationState.addKafkaEvents(realEvents)
+
+            // Create animation triggers for real events
+            realEvents.forEach((event) => {
+              const trigger = createAnimationTrigger(event.type, 'CREATE_CUSTOMER', event.id)
+              simulationState.addAnimationTrigger(trigger)
+            })
+
+            await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
+          } else {
+            debugLog('No real events found from Event Store API')
+          }
         }
 
         // Set success state
@@ -137,6 +246,14 @@ export const useSimulation = () => {
       debugLog('CREATE_CUSTOMER error', error)
       const duration = Date.now() - startTime
 
+      // Extract status code from error message if available (format: "API Error (400): ...")
+      let statusCode = 500
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const statusMatch = errorMessage.match(/API Error \((\d+)\)/)
+      if (statusMatch) {
+        statusCode = parseInt(statusMatch[1], 10)
+      }
+
       // Create error log
       const apiLog: ApiLog = {
         id: generateLogId(),
@@ -145,10 +262,10 @@ export const useSimulation = () => {
         endpoint: API_ENDPOINTS.CREATE_CUSTOMER,
         method: 'POST',
         request: payload,
-        response: { error: error instanceof Error ? error.message : 'Unknown error' },
+        response: { error: errorMessage },
         duration,
         status: 'error',
-        statusCode: 500
+        statusCode
       }
 
       simulationState.addApiLog(apiLog)
@@ -203,7 +320,13 @@ export const useSimulation = () => {
         endpoint: API_ENDPOINTS.OPEN_ACCOUNT,
         method: 'POST',
         request: payload,
-        response: response.data,
+        response: response.success
+          ? response.data
+          : {
+              data: response.data,
+              error: response.error,
+              fullResponse: response
+            },
         duration,
         status: response.success ? 'success' : 'error',
         statusCode: response.success ? 201 : 400
@@ -215,7 +338,12 @@ export const useSimulation = () => {
         debugLog('OPEN_ACCOUNT succeeded', response.data)
 
         // Store account ID
-        simulationState.setTransactionId('accountId', response.data.accountId)
+        const accountId = response.data.accountId
+        const customerId = simulationState.getTransactionId('customerId')
+        simulationState.setTransactionId('accountId', accountId)
+
+        // Check if we're in real API mode
+        const isRealMode = apiService.getServiceType() === 'real'
 
         // Add Kafka events
         if (response.events && response.events.length > 0) {
@@ -232,6 +360,31 @@ export const useSimulation = () => {
           })
 
           await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
+        }
+
+        // If in real mode, poll for actual events from Event Store API
+        if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
+          debugLog('Polling for real events from Event Store API')
+          const realEvents = await pollRealEventsAfterTransaction(startTime, customerId, accountId)
+          
+          if (realEvents.length > 0) {
+            debugLog(`Found ${realEvents.length} real events from Event Store`)
+            simulationState.setStage(SimulationStage.API_TO_KAFKA)
+            await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.API_TO_KAFKA_DURATION))
+
+            simulationState.setStage(SimulationStage.EMITTING)
+            simulationState.addKafkaEvents(realEvents)
+
+            // Create animation triggers for real events
+            realEvents.forEach((event) => {
+              const trigger = createAnimationTrigger(event.type, 'OPEN_ACCOUNT', event.id)
+              simulationState.addAnimationTrigger(trigger)
+            })
+
+            await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
+          } else {
+            debugLog('No real events found from Event Store API')
+          }
         }
 
         // Set success state
@@ -317,7 +470,13 @@ export const useSimulation = () => {
         endpoint: API_ENDPOINTS.SEND_PAYMENT,
         method: 'POST',
         request: payload,
-        response: response.data,
+        response: response.success
+          ? response.data
+          : {
+              data: response.data,
+              error: response.error,
+              fullResponse: response
+            },
         duration,
         status: response.success ? 'success' : 'error',
         statusCode: response.success ? 201 : 400
@@ -329,7 +488,13 @@ export const useSimulation = () => {
         debugLog('SEND_PAYMENT succeeded', response.data)
 
         // Store payment ID
-        simulationState.setTransactionId('paymentId', response.data.paymentId)
+        const paymentId = response.data.paymentId
+        const accountId = simulationState.getTransactionId('accountId')
+        const customerId = simulationState.getTransactionId('customerId')
+        simulationState.setTransactionId('paymentId', paymentId)
+
+        // Check if we're in real API mode
+        const isRealMode = apiService.getServiceType() === 'real'
 
         // Add Kafka events
         if (response.events && response.events.length > 0) {
@@ -346,6 +511,31 @@ export const useSimulation = () => {
           })
 
           await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
+        }
+
+        // If in real mode, poll for actual events from Event Store API
+        if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
+          debugLog('Polling for real events from Event Store API')
+          const realEvents = await pollRealEventsAfterTransaction(startTime, customerId, accountId)
+          
+          if (realEvents.length > 0) {
+            debugLog(`Found ${realEvents.length} real events from Event Store`)
+            simulationState.setStage(SimulationStage.API_TO_KAFKA)
+            await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.API_TO_KAFKA_DURATION))
+
+            simulationState.setStage(SimulationStage.EMITTING)
+            simulationState.addKafkaEvents(realEvents)
+
+            // Create animation triggers for real events
+            realEvents.forEach((event) => {
+              const trigger = createAnimationTrigger(event.type, 'SEND_PAYMENT', event.id)
+              simulationState.addAnimationTrigger(trigger)
+            })
+
+            await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
+          } else {
+            debugLog('No real events found from Event Store API')
+          }
         }
 
         // Set success state
@@ -407,12 +597,106 @@ export const useSimulation = () => {
     [executeCreateCustomer, executeOpenAccount, executeSendPayment]
   )
 
+  /**
+   * Enable Event Store integration (for real API mode)
+   * Starts polling for real events from Azure Event Hub
+   */
+  const enableEventStore = useCallback(() => {
+    if (eventStoreEnabled.current) {
+      debugLog('Event Store already enabled')
+      return
+    }
+
+    debugLog('Enabling Event Store integration')
+    eventStoreEnabled.current = true
+
+    // Subscribe to events from Event Store
+    eventStoreUnsubscribe.current = eventStoreService.onEvents((newEvents: KafkaEvent[]) => {
+      debugLog(`Received ${newEvents.length} events from Event Store`)
+      // Add events to simulation state
+      simulationState.addKafkaEvents(newEvents)
+    })
+
+    // Start polling
+    eventStoreService.startPolling(EVENT_STORE_CONFIG.POLLING_INTERVAL)
+  }, [simulationState, debugLog])
+
+  /**
+   * Disable Event Store integration
+   * Stops polling and cleans up subscriptions
+   */
+  const disableEventStore = useCallback(() => {
+    if (!eventStoreEnabled.current) {
+      debugLog('Event Store already disabled')
+      return
+    }
+
+    debugLog('Disabling Event Store integration')
+    eventStoreEnabled.current = false
+
+    // Stop polling
+    eventStoreService.stopPolling()
+
+    // Unsubscribe from events
+    if (eventStoreUnsubscribe.current) {
+      eventStoreUnsubscribe.current()
+      eventStoreUnsubscribe.current = null
+    }
+  }, [debugLog])
+
+  /**
+   * Check if Event Store is enabled
+   */
+  const isEventStoreEnabled = useCallback(() => {
+    return eventStoreEnabled.current
+  }, [])
+
+  /**
+   * Fetch events manually from Event Store
+   */
+  const fetchRealEvents = useCallback(async () => {
+    debugLog('Fetching real events from Event Store')
+    const result = await eventStoreService.fetchRecentEvents(
+      EVENT_STORE_CONFIG.DEFAULT_TIME_RANGE_MINUTES,
+      EVENT_STORE_CONFIG.MAX_EVENTS_PER_REQUEST
+    )
+    if (result.success && result.events.length > 0) {
+      simulationState.addKafkaEvents(result.events)
+    }
+    return result
+  }, [simulationState, debugLog])
+
+  /**
+   * Get Event Store connection status
+   */
+  const getEventStoreStatus = useCallback((): EventStoreConnectionStatus => {
+    return eventStoreService.getState().connectionStatus
+  }, [])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (eventStoreEnabled.current) {
+        eventStoreService.stopPolling()
+        if (eventStoreUnsubscribe.current) {
+          eventStoreUnsubscribe.current()
+        }
+      }
+    }
+  }, [])
+
   return {
     ...simulationState,
     executeTransaction,
     executeCreateCustomer,
     executeOpenAccount,
-    executeSendPayment
+    executeSendPayment,
+    // Event Store integration
+    enableEventStore,
+    disableEventStore,
+    isEventStoreEnabled,
+    fetchRealEvents,
+    getEventStoreStatus
   }
 }
 

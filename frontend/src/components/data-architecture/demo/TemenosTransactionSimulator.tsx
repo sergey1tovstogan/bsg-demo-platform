@@ -1,13 +1,14 @@
 // TemenosTransactionSimulator - Main transaction simulator container
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, TrendingUp, User, CreditCard, Send, CheckCircle2 } from 'lucide-react'
+import { RefreshCw, TrendingUp, User, CreditCard, Send, CheckCircle2, Wrench, Globe, Cloud } from 'lucide-react'
 import { useSimulation } from '../hooks/useSimulation'
 import { useCrossTabSync } from '../hooks/useCrossTabSync'
 import { StepCard } from './StepCard'
 import { ApiInspector } from './ApiInspector'
 import { KafkaEventStream } from './KafkaEventStream'
-import { TRANSACTION_STEPS } from '../config/simulation.config'
+import { TRANSACTION_STEPS, API_CONFIG } from '../config/simulation.config'
+import { apiService } from '../services/apiServiceAdapter'
 
 /**
  * Progress bar component
@@ -21,6 +22,57 @@ const ProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
         animate={{ width: `${progress}%` }}
         transition={{ duration: 0.5 }}
       />
+    </div>
+  )
+}
+
+/**
+ * Event Source Indicator component
+ * Shows whether events are from Mock or Real API source
+ */
+const EventSourceIndicator: React.FC<{
+  mode: 'mock' | 'real'
+  eventCount: number
+}> = ({ mode, eventCount }) => {
+  const isMock = mode === 'mock'
+
+  return (
+    <div className="flex items-center gap-3">
+      {/* Event Source Badge */}
+      <div
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border ${
+          isMock
+            ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+            : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+        }`}
+      >
+        {isMock ? (
+          <>
+            <Wrench className="w-3.5 h-3.5" />
+            <span>Mock Events</span>
+          </>
+        ) : (
+          <>
+            <Cloud className="w-3.5 h-3.5" />
+            <span>Real API Events</span>
+          </>
+        )}
+      </div>
+
+      {/* Live indicator for real mode */}
+      {!isMock && (
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
+          <span className="text-xs text-gray-400">Live</span>
+        </div>
+      )}
+
+      {/* Event Count */}
+      {eventCount > 0 && (
+        <span className="text-xs text-gray-500">
+          {eventCount} {eventCount === 1 ? 'event' : 'events'}
+        </span>
+      )}
     </div>
   )
 }
@@ -71,6 +123,7 @@ const StatsDisplay: React.FC<{ stats: any }> = ({ stats }) => {
 export const TemenosTransactionSimulator: React.FC = () => {
   const simulation = useSimulation()
   const [kafkaPaused, setKafkaPaused] = useState(false)
+  const [apiMode, setApiMode] = useState<'mock' | 'real'>('mock')
   const { sendTriggers } = useCrossTabSync()
 
   const stats = simulation.getStats()
@@ -107,6 +160,16 @@ export const TemenosTransactionSimulator: React.FC = () => {
     setKafkaPaused(false)
   }
 
+  // Handle API mode toggle
+  const handleApiModeToggle = useCallback(() => {
+    const newMode = apiMode === 'mock' ? 'real' : 'mock'
+    setApiMode(newMode)
+    apiService.switchMode(newMode === 'mock')
+    
+    // Clear events when switching modes for a clean slate
+    simulation.clearKafkaEvents()
+  }, [apiMode, simulation])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -121,16 +184,48 @@ export const TemenosTransactionSimulator: React.FC = () => {
             </p>
           </div>
 
-          {/* Reset button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleReset}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Reset Simulation
-          </motion.button>
+          {/* Control buttons */}
+          <div className="flex items-center gap-3">
+            {/* API Mode Toggle (shown if configured) */}
+            {API_CONFIG.SHOW_API_TOGGLE && (
+              <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2 border border-gray-700">
+                <span className="text-sm text-gray-400">API Mode:</span>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleApiModeToggle}
+                  className={`flex items-center gap-2 px-3 py-1 rounded-md font-medium text-sm transition-all ${
+                    apiMode === 'mock'
+                      ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                      : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                  }`}
+                >
+                  {apiMode === 'mock' ? (
+                    <>
+                      <Wrench className="w-4 h-4" />
+                      Mock
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="w-4 h-4" />
+                      Real
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            )}
+
+            {/* Reset button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleReset}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Reset Simulation
+            </motion.button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -233,6 +328,13 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
             {/* Kafka Event Stream */}
             <div className="h-[500px]">
+              {/* Event Source Indicator */}
+              <div className="mb-2">
+                <EventSourceIndicator
+                  mode={apiMode}
+                  eventCount={simulation.state.kafkaEvents.length}
+                />
+              </div>
               <KafkaEventStream
                 events={simulation.state.kafkaEvents}
                 onClear={simulation.clearKafkaEvents}
