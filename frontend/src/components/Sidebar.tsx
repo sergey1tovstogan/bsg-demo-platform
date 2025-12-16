@@ -1,7 +1,6 @@
 import {
   Home,
   Settings,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   Network,
@@ -283,20 +282,6 @@ export function Sidebar({
         >
           <Settings className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="text-sm font-medium">Settings</span>}
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            handleInteraction()
-          }}
-          className={clsx(
-            "w-full flex items-center rounded-xl transition-all duration-200 text-slate-400 hover:bg-white/5 hover:text-red-400",
-            isExpanded ? "px-4 py-3 space-x-3" : "justify-center p-3"
-          )}
-          title="Logout"
-        >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
-          {isExpanded && <span className="text-sm font-medium">Logout</span>}
         </button>
       </div>
     </aside>
