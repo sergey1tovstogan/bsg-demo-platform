@@ -20,13 +20,14 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 }
 
 // Component Types
-export type ComponentId = 
-  | 'integration' 
-  | 'data-architecture' 
-  | 'deployment' 
-  | 'security' 
-  | 'observability' 
+export type ComponentId =
+  | 'integration'
+  | 'data-architecture'
+  | 'deployment'
+  | 'security'
+  | 'observability'
   | 'design-time'
+  | 'layout-showcase'
 
 export interface Component {
   component_id: ComponentId
