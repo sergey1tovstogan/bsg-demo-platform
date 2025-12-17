@@ -37,39 +37,39 @@ async function pollRealEventsAfterTransaction(
     // Wait a bit for events to propagate to Event Hub
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    // Fetch recent events from backend (last 2 minutes)
-    const result = await eventStoreService.fetchRecentEvents(2, 50)
+    // TEMPORARILY DISABLED FILTERING: Fetch ALL recent events (last 2 minutes) - no customer/account filtering
+    console.log('[DEBUG] Fetching events from Event Store (no filtering)')
+    const result = await eventStoreService.fetchRecentEvents(2, 50) // No customerId parameter
 
-    if (!result.success || result.events.length === 0) {
+    console.log('[DEBUG] Event Store response:', {
+      success: result.success,
+      total: result.total,
+      eventsCount: result.events?.length || 0,
+      error: result.error,
+      source: result.source
+    })
+
+    if (!result.success) {
+      console.error('[DEBUG] Event Store API error:', result.error)
       return []
     }
 
-    // Filter events that occurred after transaction started
+    if (result.events.length === 0) {
+      console.warn('[DEBUG] Event Store returned 0 events. Check backend Event Hub consumer status.')
+      return []
+    }
+
+    // TEMPORARILY DISABLED: Only filter by timestamp, include ALL events after transaction started
     const transactionTime = transactionStartTime
     const filteredEvents = result.events.filter((event) => {
       // Event must be after transaction started
-      if (event.timestamp < transactionTime) {
-        return false
-      }
+      return event.timestamp >= transactionTime
+    })
 
-      // If we have a customerId, try to match it in the event payload
-      if (customerId) {
-        const payloadStr = JSON.stringify(event.payload || {})
-        if (payloadStr.includes(customerId)) {
-          return true
-        }
-      }
-
-      // If we have an accountId, try to match it
-      if (accountId) {
-        const payloadStr = JSON.stringify(event.payload || {})
-        if (payloadStr.includes(accountId)) {
-          return true
-        }
-      }
-
-      // If no specific ID, include all events after transaction (might be related)
-      return true
+    console.log('[DEBUG] Filtered events (by timestamp only):', {
+      totalReceived: result.events.length,
+      afterTransaction: filteredEvents.length,
+      transactionTime: new Date(transactionTime).toISOString()
     })
 
     return filteredEvents
@@ -206,8 +206,11 @@ export const useSimulation = () => {
 
         // If in real mode, poll for actual events from Event Store API
         if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
-          debugLog('Polling for real events from Event Store API')
-          const realEvents = await pollRealEventsAfterTransaction(startTime, customerId)
+          debugLog('Polling for real events from Event Store API (FILTERING DISABLED FOR DEBUGGING)')
+          const realEvents = await pollRealEventsAfterTransaction(startTime) // Removed customerId parameter
+          
+          debugLog(`Event Store API returned ${realEvents.length} events`)
+          console.log('[DEBUG] Real events from Event Store:', realEvents)
           
           if (realEvents.length > 0) {
             debugLog(`Found ${realEvents.length} real events from Event Store`)
@@ -225,7 +228,12 @@ export const useSimulation = () => {
 
             await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
           } else {
-            debugLog('No real events found from Event Store API')
+            debugLog('No real events found from Event Store API - check backend logs and Event Hub consumer status')
+            console.warn('[DEBUG] No events received. Check:', {
+              backendHealth: 'http://localhost:8000/api/v1/events/health',
+              allEvents: 'http://localhost:8000/api/v1/events?limit=10',
+              recentEvents: 'http://localhost:8000/api/v1/events/recent?minutes=5&limit=10'
+            })
           }
         }
 

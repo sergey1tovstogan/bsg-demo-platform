@@ -119,6 +119,24 @@ class Settings(BaseSettings):
         description="Default Azure subscription ID (used if not provided by user)"
     )
 
+    # Azure Event Hub
+    EVENTHUB_CONNECTION_STRING: Optional[str] = Field(
+        default=None,
+        description="Azure Event Hub connection string with SAS key"
+    )
+    EVENTHUB_NAME: str = Field(
+        default="modelbank-event-topic",
+        description="Azure Event Hub topic/event hub name"
+    )
+    EVENTHUB_CONSUMER_GROUP: str = Field(
+        default="$Default",
+        description="Azure Event Hub consumer group name"
+    )
+    EVENTHUB_BUFFER_SIZE: int = Field(
+        default=1000,
+        description="Maximum number of events to buffer in memory"
+    )
+
     model_config = SettingsConfigDict(
         env_file=[".env", "../.env"],  # Check current dir and parent dir
         env_file_encoding="utf-8",

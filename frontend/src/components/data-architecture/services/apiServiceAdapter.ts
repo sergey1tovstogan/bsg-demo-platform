@@ -374,7 +374,8 @@ export class ApiServiceAdapter implements ITransactionApiService {
   private service: ITransactionApiService
 
   constructor(config?: { useMock?: boolean; baseUrl?: string; mockConfig?: any }) {
-    const useMock = config?.useMock ?? true // Default to mock mode
+    // Always use real API - mock mode disabled
+    const useMock = false // Force real mode
 
     if (useMock) {
       this.service = new MockApiService(config?.mockConfig)
@@ -385,13 +386,11 @@ export class ApiServiceAdapter implements ITransactionApiService {
 
   /**
    * Switch between mock and real API at runtime
+   * DISABLED: Always uses real API
    */
   switchMode(useMock: boolean, config?: { baseUrl?: string; mockConfig?: any }): void {
-    if (useMock) {
-      this.service = new MockApiService(config?.mockConfig)
-    } else {
-      this.service = new RealApiService(config?.baseUrl)
-    }
+    // Always use real API - mock mode disabled
+    this.service = new RealApiService(config?.baseUrl)
   }
 
   /**
@@ -446,5 +445,5 @@ export class ApiServiceAdapter implements ITransactionApiService {
   }
 }
 
-// Export default instance (starts in mock mode)
-export const apiService = new ApiServiceAdapter({ useMock: true })
+// Export default instance (always uses real API - mock mode disabled)
+export const apiService = new ApiServiceAdapter({ useMock: false })

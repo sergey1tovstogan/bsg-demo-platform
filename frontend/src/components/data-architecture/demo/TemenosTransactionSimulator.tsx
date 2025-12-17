@@ -123,7 +123,8 @@ const StatsDisplay: React.FC<{ stats: any }> = ({ stats }) => {
 export const TemenosTransactionSimulator: React.FC = () => {
   const simulation = useSimulation()
   const [kafkaPaused, setKafkaPaused] = useState(false)
-  const [apiMode, setApiMode] = useState<'mock' | 'real'>('mock')
+  // Always use real mode - mock mode disabled
+  const [apiMode, setApiMode] = useState<'mock' | 'real'>('real')
   const { sendTriggers } = useCrossTabSync()
 
   const stats = simulation.getStats()
@@ -160,15 +161,11 @@ export const TemenosTransactionSimulator: React.FC = () => {
     setKafkaPaused(false)
   }
 
-  // Handle API mode toggle
+  // API mode toggle disabled - always use real mode
   const handleApiModeToggle = useCallback(() => {
-    const newMode = apiMode === 'mock' ? 'real' : 'mock'
-    setApiMode(newMode)
-    apiService.switchMode(newMode === 'mock')
-    
-    // Clear events when switching modes for a clean slate
-    simulation.clearKafkaEvents()
-  }, [apiMode, simulation])
+    // Disabled - always uses real mode
+    console.warn('Mock mode is disabled - always using real API')
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
@@ -187,30 +184,18 @@ export const TemenosTransactionSimulator: React.FC = () => {
           {/* Control buttons */}
           <div className="flex items-center gap-3">
             {/* API Mode Toggle (shown if configured) */}
-            {API_CONFIG.SHOW_API_TOGGLE && (
+            {/* API Mode Toggle - DISABLED: Always uses real mode */}
+            {false && API_CONFIG.SHOW_API_TOGGLE && (
               <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2 border border-gray-700">
                 <span className="text-sm text-gray-400">API Mode:</span>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleApiModeToggle}
-                  className={`flex items-center gap-2 px-3 py-1 rounded-md font-medium text-sm transition-all ${
-                    apiMode === 'mock'
-                      ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                      : 'bg-green-500/20 text-green-400 border border-green-500/30'
-                  }`}
+                  className="flex items-center gap-2 px-3 py-1 rounded-md font-medium text-sm transition-all bg-green-500/20 text-green-400 border border-green-500/30"
                 >
-                  {apiMode === 'mock' ? (
-                    <>
-                      <Wrench className="w-4 h-4" />
-                      Mock
-                    </>
-                  ) : (
-                    <>
-                      <Globe className="w-4 h-4" />
-                      Real
-                    </>
-                  )}
+                  <Globe className="w-4 h-4" />
+                  Real
                 </motion.button>
               </div>
             )}

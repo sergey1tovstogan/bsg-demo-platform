@@ -33,7 +33,7 @@ export interface EventStoreResponse {
   events: KafkaEvent[]
   total: number
   error?: string
-  source: 'event_store' | 'mock'
+  source: 'event_store' | 'mock' | 'eventhub' | string  // Added 'eventhub' to support new backend
 }
 
 export interface EventStoreHealth {
@@ -181,11 +181,19 @@ class EventStoreService {
   /**
    * Fetch recent events from last N minutes
    */
-  async fetchRecentEvents(minutes: number = 30, limit: number = 50): Promise<EventStoreResponse> {
+  async fetchRecentEvents(minutes: number = 30, limit: number = 50, customerId?: string): Promise<EventStoreResponse> {
     this.setConnectionStatus('connecting')
 
     try {
-      const url = `${this.baseUrl}/events/recent?minutes=${minutes}&limit=${limit}`
+      const params = new URLSearchParams()
+      params.set('minutes', minutes.toString())
+      params.set('limit', limit.toString())
+      if (customerId) {
+        params.set('customer_id', customerId)
+      }
+      const url = `${this.baseUrl}/events/recent?${params.toString()}`
+
+      console.log('[EventStoreService] Fetching from:', url)
 
       const response = await fetch(url, {
         method: 'GET',
@@ -194,29 +202,75 @@ class EventStoreService {
         },
       })
 
+      console.log('[EventStoreService] Response status:', response.status, response.statusText)
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        const errorText = await response.text()
+        console.error('[EventStoreService] HTTP Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        })
+        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`)
       }
 
-      const data: EventStoreResponse = await response.json()
+      // Check content type
+      const contentType = response.headers.get('content-type')
+      console.log('[EventStoreService] Response content-type:', contentType)
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        console.error('[EventStoreService] Non-JSON response:', text)
+        throw new Error(`Expected JSON but got ${contentType}: ${text.substring(0, 200)}`)
+      }
+
+      const responseText = await response.text()
+      console.log('[EventStoreService] Raw response text:', responseText.substring(0, 500))
+      
+      let data: EventStoreResponse
+      try {
+        data = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error('[EventStoreService] JSON parse error:', parseError, 'Response:', responseText)
+        throw new Error(`Failed to parse JSON response: ${parseError}`)
+      }
+
+      // Debug logging
+      console.log('[EventStoreService] API Response:', {
+        url,
+        status: response.status,
+        data,
+        hasEvents: data.events?.length > 0,
+        success: data.success
+      })
+
+      // Validate response structure
+      if (!data || typeof data.success === 'undefined') {
+        console.error('[EventStoreService] Invalid response structure:', data)
+        throw new Error('Invalid response from Event Store API - missing success field')
+      }
 
       if (data.success) {
         this.setConnectionStatus('connected')
         this.state.lastFetchTime = Date.now()
-        this.state.totalEventsFetched += data.events.length
+        this.state.totalEventsFetched += (data.events?.length || 0)
         this.state.lastError = undefined
 
-        if (data.events.length > 0) {
+        if (data.events && data.events.length > 0) {
           this.notifyEvents(data.events)
         }
       } else {
-        this.state.lastError = data.error
+        this.state.lastError = data.error || 'Unknown error'
         this.setConnectionStatus('error')
       }
 
       return data
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error('[EventStoreService] Error fetching recent events:', {
+        error: errorMessage,
+        errorObject: error
+      })
       this.state.lastError = errorMessage
       this.setConnectionStatus('error')
 
@@ -225,7 +279,7 @@ class EventStoreService {
         events: [],
         total: 0,
         error: errorMessage,
-        source: 'event_store',
+        source: 'eventhub',
       }
     }
   }

@@ -1,7 +1,8 @@
 """
-Events API - Proxy endpoints for Event Store API
+Events API - Direct Azure Event Hub Integration
 
-Provides access to Azure Event Hub events via the Event Store API.
+Provides access to Azure Event Hub events via direct consumer connection.
+Events are streamed in real-time and can be filtered by customerId.
 Transforms CloudEvents to KafkaEvent format for frontend consumption.
 """
 
@@ -11,11 +12,11 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 
 from app.core.logging import get_logger
-from app.services.event_store_service import (
-    EventStoreService,
-    EventStoreResponse,
+from app.services.eventhub_service import (
+    EventHubService,
+    EventHubResponse,
     KafkaEvent,
-    get_event_store_service
+    get_eventhub_service
 )
 
 logger = get_logger(__name__)
@@ -33,7 +34,7 @@ class EventsResponse(BaseModel):
     events: List[KafkaEvent] = []
     total: int = 0
     error: Optional[str] = None
-    source: str = "event_store"
+    source: str = "eventhub"
 
 
 class TopicsResponse(BaseModel):
@@ -53,41 +54,43 @@ class ExploreResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """Response model for Event Store health check."""
+    """Response model for Event Hub health check."""
     status: str
     endpoint: Optional[str] = None
     response_time_ms: Optional[float] = None
     error: Optional[str] = None
+    running: Optional[bool] = None
+    buffer_size: Optional[int] = None
 
 
 # =============================================================================
-# Event Store API Endpoints
+# Event Hub API Endpoints
 # =============================================================================
 
 @router.get("", response_model=EventsResponse)
 async def get_events(
+    customer_id: Optional[str] = Query(None, description="Filter by customer ID (entityid)"),
     topic: Optional[str] = Query(None, description="Filter by topic name"),
     since: Optional[str] = Query(None, description="ISO datetime to fetch events since"),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of events"),
-    offset: Optional[int] = Query(None, ge=0, description="Starting offset"),
-    event_store: EventStoreService = Depends(get_event_store_service)
+    eventhub: EventHubService = Depends(get_eventhub_service)
 ) -> EventsResponse:
     """
-    Fetch events from Azure Event Hub via Event Store API.
+    Fetch events from Azure Event Hub.
     
-    Events are transformed from CloudEvents format to internal KafkaEvent format
-    for display in the Kafka Event Stream component.
+    Events are streamed in real-time from the Event Hub consumer and transformed
+    to internal KafkaEvent format for display in the Kafka Event Stream component.
     
     Args:
+        customer_id: Filter events by customer ID (entityid field in event payload)
         topic: Optional topic filter (e.g., "temenos.party.customers.created")
-        since: ISO datetime string to fetch events since (default: last 24 hours)
+        since: ISO datetime string to fetch events since
         limit: Maximum number of events to return (1-500, default: 100)
-        offset: Starting offset for pagination
     
     Returns:
-        EventsResponse with list of KafkaEvents
+        EventsResponse with list of KafkaEvents filtered by customer_id if provided
     """
-    logger.info(f"Fetching events: topic={topic}, since={since}, limit={limit}")
+    logger.info(f"Fetching events: customer_id={customer_id}, topic={topic}, since={since}, limit={limit}")
     
     # Parse since datetime
     since_dt = None
@@ -101,54 +104,9 @@ async def get_events(
             )
     
     try:
-        result = await event_store.fetch_events(
+        result = await eventhub.get_events(
+            customer_id=customer_id,
             topic=topic,
-            since=since_dt,
-            limit=limit,
-            offset=offset
-        )
-        
-        return EventsResponse(
-            success=result.success,
-            events=result.events,
-            total=result.total,
-            error=result.error,
-            source="event_store"
-        )
-        
-    except Exception as e:
-        logger.error(f"Error fetching events: {e}")
-        return EventsResponse(
-            success=False,
-            error=f"Failed to fetch events: {str(e)}",
-            source="event_store"
-        )
-
-
-@router.get("/recent", response_model=EventsResponse)
-async def get_recent_events(
-    minutes: int = Query(30, ge=1, le=1440, description="Fetch events from last N minutes"),
-    limit: int = Query(50, ge=1, le=200, description="Maximum number of events"),
-    event_store: EventStoreService = Depends(get_event_store_service)
-) -> EventsResponse:
-    """
-    Fetch recent events from the last N minutes.
-    
-    Convenience endpoint for polling recent events for live updates.
-    
-    Args:
-        minutes: Number of minutes to look back (1-1440, default: 30)
-        limit: Maximum events to return (1-200, default: 50)
-    
-    Returns:
-        EventsResponse with recent KafkaEvents
-    """
-    logger.debug(f"Fetching recent events: last {minutes} minutes, limit={limit}")
-    
-    since_dt = datetime.utcnow() - timedelta(minutes=minutes)
-    
-    try:
-        result = await event_store.fetch_events(
             since=since_dt,
             limit=limit
         )
@@ -158,7 +116,55 @@ async def get_recent_events(
             events=result.events,
             total=result.total,
             error=result.error,
-            source="event_store"
+            source="eventhub"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error fetching events: {e}")
+        return EventsResponse(
+            success=False,
+            error=f"Failed to fetch events: {str(e)}",
+            source="eventhub"
+        )
+
+
+@router.get("/recent", response_model=EventsResponse)
+async def get_recent_events(
+    customer_id: Optional[str] = Query(None, description="Filter by customer ID (entityid)"),
+    minutes: int = Query(30, ge=1, le=1440, description="Fetch events from last N minutes"),
+    limit: int = Query(50, ge=1, le=200, description="Maximum number of events"),
+    eventhub: EventHubService = Depends(get_eventhub_service)
+) -> EventsResponse:
+    """
+    Fetch recent events from the last N minutes.
+    
+    Convenience endpoint for polling recent events for live updates.
+    
+    Args:
+        customer_id: Filter events by customer ID (entityid field in event payload)
+        minutes: Number of minutes to look back (1-1440, default: 30)
+        limit: Maximum events to return (1-200, default: 50)
+    
+    Returns:
+        EventsResponse with recent KafkaEvents filtered by customer_id if provided
+    """
+    logger.debug(f"Fetching recent events: customer_id={customer_id}, last {minutes} minutes, limit={limit}")
+    
+    since_dt = datetime.utcnow() - timedelta(minutes=minutes)
+    
+    try:
+        result = await eventhub.get_events(
+            customer_id=customer_id,
+            since=since_dt,
+            limit=limit
+        )
+        
+        return EventsResponse(
+            success=result.success,
+            events=result.events,
+            total=result.total,
+            error=result.error,
+            source="eventhub"
         )
         
     except Exception as e:
@@ -166,16 +172,16 @@ async def get_recent_events(
         return EventsResponse(
             success=False,
             error=f"Failed to fetch recent events: {str(e)}",
-            source="event_store"
+            source="eventhub"
         )
 
 
 @router.get("/topics", response_model=TopicsResponse)
 async def get_topics(
-    event_store: EventStoreService = Depends(get_event_store_service)
+    eventhub: EventHubService = Depends(get_eventhub_service)
 ) -> TopicsResponse:
     """
-    Get list of available topics from Event Store.
+    Get list of available topics from buffered events.
     
     Returns:
         TopicsResponse with available topic names
@@ -183,7 +189,7 @@ async def get_topics(
     logger.info("Fetching available topics")
     
     try:
-        result = await event_store.get_topics()
+        result = await eventhub.get_topics()
         
         topics = []
         if result.get("success"):
@@ -209,32 +215,34 @@ async def get_topics(
 
 @router.get("/explore", response_model=ExploreResponse)
 async def explore_api(
-    event_store: EventStoreService = Depends(get_event_store_service)
+    eventhub: EventHubService = Depends(get_eventhub_service)
 ) -> ExploreResponse:
     """
-    Explore the Event Store API to discover available endpoints.
+    Explore Event Hub connection status.
     
-    Use this endpoint during development to understand the Event Store API
-    structure, available endpoints, and authentication requirements.
+    Returns information about the Event Hub consumer status and configuration.
     
     Returns:
-        ExploreResponse with API exploration results
+        ExploreResponse with Event Hub connection information
     """
-    logger.info("Exploring Event Store API")
+    logger.info("Exploring Event Hub connection")
     
     try:
-        result = await event_store.explore_api()
+        health = await eventhub.health_check()
         
         return ExploreResponse(
-            status=result.get("status", "unknown"),
-            endpoints=result.get("endpoints", []),
-            base_response=result.get("base_response"),
-            api_response=result.get("api_response"),
-            error=result.get("error")
+            status=health.get("status", "unknown"),
+            endpoints=[{
+                "path": "/events",
+                "description": "Get events filtered by customer_id, topic, or time"
+            }],
+            base_response=None,
+            api_response=health,
+            error=health.get("error")
         )
         
     except Exception as e:
-        logger.error(f"Error exploring API: {e}")
+        logger.error(f"Error exploring Event Hub: {e}")
         return ExploreResponse(
             status="error",
             error=f"Exploration failed: {str(e)}"
@@ -242,27 +250,29 @@ async def explore_api(
 
 
 @router.get("/health", response_model=HealthResponse)
-async def event_store_health(
-    event_store: EventStoreService = Depends(get_event_store_service)
+async def eventhub_health(
+    eventhub: EventHubService = Depends(get_eventhub_service)
 ) -> HealthResponse:
     """
-    Check Event Store API health status.
+    Check Event Hub consumer health status.
     
     Returns:
-        HealthResponse with connection status
+        HealthResponse with consumer status and buffer information
     """
     try:
-        result = await event_store.health_check()
+        result = await eventhub.health_check()
         
         return HealthResponse(
             status=result.get("status", "unknown"),
-            endpoint=result.get("endpoint"),
-            response_time_ms=result.get("response_time_ms"),
-            error=result.get("error")
+            endpoint=None,
+            response_time_ms=None,
+            error=result.get("error"),
+            running=result.get("running"),
+            buffer_size=result.get("buffer_size")
         )
         
     except Exception as e:
-        logger.error(f"Event store health check failed: {e}")
+        logger.error(f"Event Hub health check failed: {e}")
         return HealthResponse(
             status="error",
             error=str(e)
@@ -280,7 +290,7 @@ async def get_mock_events(
     """
     Generate mock events for testing the frontend.
     
-    Useful when Event Store API is not available or during development.
+    Useful when Event Hub is not available or during development.
     
     Args:
         count: Number of mock events to generate (1-50)

@@ -18,6 +18,7 @@ from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
 from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events
+from app.services.eventhub_service import eventhub_service
 
 # Setup logging
 setup_logging()
@@ -50,10 +51,29 @@ async def lifespan(app: FastAPI):
     logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
     logger.info(f"Rate limiting: {'enabled' if settings.RATE_LIMIT_ENABLED else 'disabled'}")
 
+    # Start Event Hub consumer
+    try:
+        await eventhub_service.start()
+        logger.info("Event Hub consumer started")
+    except Exception as e:
+        logger.error(f"Failed to start Event Hub consumer: {e}")
+        logger.warning("Application will start but Event Hub features may not work")
+
     yield
 
     # Shutdown
+
+    # Shutdown
     logger.info("Shutting down application")
+    
+    # Stop Event Hub consumer
+    try:
+        await eventhub_service.stop()
+        logger.info("Event Hub consumer stopped")
+    except Exception as e:
+        logger.error(f"Error stopping Event Hub consumer: {e}")
+    
+    # Close database connections
     await close_db()
     logger.info("Database connections closed")
 
