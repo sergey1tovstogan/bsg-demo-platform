@@ -186,9 +186,10 @@ export const useSimulation = () => {
       if (response.success) {
         debugLog('CREATE_CUSTOMER succeeded', response.data)
 
-        // Store customer ID
+        // Store customer ID and full customer data
         const customerId = response.data.customerId
         simulationState.setTransactionId('customerId', customerId)
+        simulationState.setCustomerData(response.data)
 
         // Check if we're in real API mode
         const isRealMode = apiService.getServiceType() === 'real'
@@ -302,6 +303,8 @@ export const useSimulation = () => {
 
     // Check prerequisites
     const customerId = simulationState.getTransactionId('customerId')
+    const customerData = simulationState.getCustomerData()
+
     if (!customerId) {
       debugLog('OPEN_ACCOUNT failed: No customer ID available')
       return {
@@ -311,12 +314,24 @@ export const useSimulation = () => {
       }
     }
 
+    if (!customerData) {
+      debugLog('OPEN_ACCOUNT failed: No customer data available')
+      return {
+        success: false,
+        data: {} as any,
+        error: 'Customer data not found. Please create a customer first.'
+      }
+    }
+
     // Set loading state
     simulationState.setStepStatus('OPEN_ACCOUNT', 'loading')
     simulationState.setStage(SimulationStage.USER_TO_API)
 
-    // Generate account payload
-    const payload: AccountPayload = mockDataGenerator.generateSampleAccountPayload(customerId)
+    // Generate account payload with customer data
+    const payload: AccountPayload = {
+      ...mockDataGenerator.generateSampleAccountPayload(customerId),
+      customerData: customerData
+    }
 
     const startTime = Date.now()
 

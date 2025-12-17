@@ -46,6 +46,7 @@ export interface CustomerPayload {
  */
 export interface Customer {
   customerId: string
+  customerMnemonic?: string // Short customer code (e.g., "ELENFERN")
   name: string
   email: string
   phone: string
@@ -128,6 +129,8 @@ export interface AccountPayload {
   accountType: 'SAVINGS' | 'CHECKING' | 'CURRENT'
   initialDeposit: number
   currency: string
+  // Optional: Full customer data for APIs that require it (e.g., Temenos holdings/origination)
+  customerData?: Customer
 }
 
 /**
@@ -222,6 +225,8 @@ export interface SimulationState {
     customerId?: string
     accountId?: string
     paymentId?: string
+    // Store full customer response for reuse in subsequent API calls
+    customerData?: Customer
   }
   stepStatuses: {
     createCustomer: StepStatus

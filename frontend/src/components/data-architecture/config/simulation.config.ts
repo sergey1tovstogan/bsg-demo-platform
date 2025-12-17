@@ -136,7 +136,7 @@ export const KAFKA_TOPICS = {
  */
 export const API_ENDPOINTS = {
   CREATE_CUSTOMER: '/v5.7.0/party/customers', // Updated to v5.7.0
-  OPEN_ACCOUNT: '/v1.2.0/holdings/accounts',
+  OPEN_ACCOUNT: '/v9.4.0/holdings/accounts/currentAccounts', // Using v9.4.0 holdings API for current account opening
   SEND_PAYMENT: '/v1.0.0/order/paymentOrders'
 } as const
 
