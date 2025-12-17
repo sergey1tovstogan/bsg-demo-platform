@@ -33,7 +33,9 @@ const ProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
 const EventSourceIndicator: React.FC<{
   mode: 'mock' | 'real'
   eventCount: number
-}> = ({ mode, eventCount }) => {
+  connectionStatus?: 'connected' | 'connecting' | 'disconnected' | 'error'
+  eventHubHealth?: { status: string; buffer_size?: number }
+}> = ({ mode, eventCount, connectionStatus, eventHubHealth }) => {
   const isMock = mode === 'mock'
 
   return (
@@ -59,8 +61,29 @@ const EventSourceIndicator: React.FC<{
         )}
       </div>
 
+      {/* Event Hub Connection Status */}
+      {!isMock && connectionStatus && (
+        <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-gray-800 border border-gray-700">
+          <div
+            className={`w-2 h-2 rounded-full ${
+              connectionStatus === 'connected'
+                ? 'bg-green-500'
+                : connectionStatus === 'connecting'
+                ? 'bg-yellow-500 animate-pulse'
+                : connectionStatus === 'error'
+                ? 'bg-red-500'
+                : 'bg-gray-500'
+            }`}
+          />
+          <span className="text-xs text-gray-400 capitalize">{connectionStatus}</span>
+          {eventHubHealth?.buffer_size !== undefined && (
+            <span className="text-xs text-gray-500">| Buffer: {eventHubHealth.buffer_size}</span>
+          )}
+        </div>
+      )}
+
       {/* Live indicator for real mode */}
-      {!isMock && (
+      {!isMock && connectionStatus === 'connected' && (
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
           <span className="text-xs text-gray-400">Live</span>
@@ -127,6 +150,10 @@ export const TemenosTransactionSimulator: React.FC = () => {
   const [apiMode, setApiMode] = useState<'mock' | 'real'>('real')
   const { sendTriggers } = useCrossTabSync()
 
+  // Event Hub health state
+  const [eventHubHealth, setEventHubHealth] = useState<{ status: string; running?: boolean; buffer_size?: number } | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected' | 'error'>('connecting')
+
   const stats = simulation.getStats()
   const isComplete = simulation.isSimulationComplete()
 
@@ -139,6 +166,32 @@ export const TemenosTransactionSimulator: React.FC = () => {
       sendTriggers([latestTrigger])
     }
   }, [simulation.state.animationTriggers, sendTriggers])
+
+  // Check Event Hub health periodically
+  useEffect(() => {
+    const checkEventHubHealth = async () => {
+      try {
+        const response = await fetch('/api/v1/events/health')
+        if (response.ok) {
+          const health = await response.json()
+          setEventHubHealth(health)
+          setConnectionStatus(health.running ? 'connected' : 'disconnected')
+        } else {
+          setConnectionStatus('error')
+        }
+      } catch (error) {
+        setConnectionStatus('error')
+      }
+    }
+
+    // Check immediately on mount
+    checkEventHubHealth()
+
+    // Then check every 10 seconds
+    const interval = setInterval(checkEventHubHealth, 10000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Handle step execution
   const handleExecuteStep = async (stepNumber: number) => {
@@ -318,6 +371,8 @@ export const TemenosTransactionSimulator: React.FC = () => {
                 <EventSourceIndicator
                   mode={apiMode}
                   eventCount={simulation.state.kafkaEvents.length}
+                  connectionStatus={connectionStatus}
+                  eventHubHealth={eventHubHealth || undefined}
                 />
               </div>
               <KafkaEventStream

@@ -37,9 +37,9 @@ async function pollRealEventsAfterTransaction(
     // Wait a bit for events to propagate to Event Hub
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    // TEMPORARILY DISABLED FILTERING: Fetch ALL recent events (last 2 minutes) - no customer/account filtering
-    console.log('[DEBUG] Fetching events from Event Store (no filtering)')
-    const result = await eventStoreService.fetchRecentEvents(2, 50) // No customerId parameter
+    // Fetch recent events filtered by customer ID
+    console.log('[DEBUG] Fetching events from Event Store for customer:', customerId)
+    const result = await eventStoreService.fetchRecentEvents(2, 50, customerId)
 
     console.log('[DEBUG] Event Store response:', {
       success: result.success,
@@ -59,16 +59,22 @@ async function pollRealEventsAfterTransaction(
       return []
     }
 
-    // TEMPORARILY DISABLED: Only filter by timestamp, include ALL events after transaction started
+    // Filter by customer ID and timestamp
     const transactionTime = transactionStartTime
     const filteredEvents = result.events.filter((event) => {
-      // Event must be after transaction started
-      return event.timestamp >= transactionTime
+      // Filter by customer ID - match entityid field in payload
+      const eventCustomerId = event.payload?.entityid
+      const matchesCustomer = customerId
+        ? eventCustomerId && String(eventCustomerId) === String(customerId)
+        : true
+      // Event must be after transaction started and match customer ID
+      return matchesCustomer && event.timestamp >= transactionTime
     })
 
-    console.log('[DEBUG] Filtered events (by timestamp only):', {
+    console.log('[DEBUG] Filtered events (by customer ID and timestamp):', {
       totalReceived: result.events.length,
       afterTransaction: filteredEvents.length,
+      customerId: customerId,
       transactionTime: new Date(transactionTime).toISOString()
     })
 

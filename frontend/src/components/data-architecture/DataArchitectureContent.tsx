@@ -120,6 +120,10 @@ export function DataArchitectureContent() {
 
     // Right tier - Microservices panel - ALIGNED WITH PUB_SUB CENTER
     { id: 'microservices', label: 'Business Microservices (optional)', image: 'Microservices.png', position: { x: 872, y: 39, width: 240, height: 136 }, tooltip: 'Optional microservices with dedicated databases (Holdings, Party)' },
+
+    // Roadmap components - Future features (Coming Soon)
+    { id: 'spark_process', label: 'Spark Process', image: 'Spark.png', position: { x: 950, y: 340, width: 150, height: 80 }, tooltip: 'Real-time data processing with Apache Spark (Roadmap)' },
+    { id: 'azure_sql', label: 'Azure SQL DB', image: 'Azure_SQL.png', position: { x: 950, y: 440, width: 150, height: 80 }, tooltip: 'Processed data output to Azure SQL Database (Roadmap)' },
   ]
 
   // Define arrows/connections - updated for new layout (8px grid aligned)
@@ -142,6 +146,10 @@ export function DataArchitectureContent() {
 
     // Path 3 arrows - EOD Process (Flat Files) path
     { id: 'arrow-file-etl', from: 'file_left', to: 'etl', points: 'M 288 248 L 408 278', dashArray: '5,5', color: '#00B0F0' },
+
+    // Roadmap arrows - Data Hub to Spark to Azure SQL (greyed dashed to indicate future)
+    { id: 'arrow-datahub-spark', from: 'data_hub', to: 'spark_process', points: 'M 808 278 L 950 380', dashArray: '8,8', color: '#9CA3AF' },
+    { id: 'arrow-spark-sql', from: 'spark_process', to: 'azure_sql', points: 'M 1025 420 L 1025 440', dashArray: '8,8', color: '#9CA3AF' },
   ]
 
   // Define animation sequences for each path (static components are always visible, so not included)
@@ -179,6 +187,11 @@ export function DataArchitectureContent() {
       // Intermittent arrows to DWH appear shortly after
       { componentId: 'arrow-etl-dwh', delay: 3000, type: 'arrow' },
       { componentId: 'arrow-sds-dwh', delay: 3000, type: 'arrow' },
+      // Roadmap components - Spark Process and Azure SQL DB (future features)
+      { componentId: 'spark_process', delay: 3500, type: 'component' },
+      { componentId: 'azure_sql', delay: 3500, type: 'component' },
+      { componentId: 'arrow-datahub-spark', delay: 4000, type: 'arrow' },
+      { componentId: 'arrow-spark-sql', delay: 4000, type: 'arrow' },
     ],
     'path-b': [
       // Path 3 (path-b): EOD Process - File → ETL → Data Warehouse
@@ -1080,6 +1093,15 @@ export function DataArchitectureContent() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+
+                  {/* Roadmap Badge for future features */}
+                  {(component.id === 'spark_process' || component.id === 'azure_sql') && isVisible && (
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                      <div className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-lg border-2 border-yellow-600">
+                        ROADMAP
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -1152,6 +1174,15 @@ export function DataArchitectureContent() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+
+                  {/* Roadmap Badge for future features */}
+                  {(component.id === 'spark_process' || component.id === 'azure_sql') && isVisible && (
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                      <div className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-lg border-2 border-yellow-600">
+                        ROADMAP
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )

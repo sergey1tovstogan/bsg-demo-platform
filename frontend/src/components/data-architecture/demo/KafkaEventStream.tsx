@@ -58,14 +58,15 @@ const EventMetadata: React.FC<{ event: KafkaEvent }> = ({ event }) => {
 }
 
 /**
- * Event payload preview
+ * Event payload preview with CloudEvents field highlighting
  */
-const PayloadPreview: React.FC<{ payload: any }> = ({ payload }) => {
-  const [isExpanded, setIsExpanded] = useState(false)
+const PayloadPreview: React.FC<{ payload: any; isFirst?: boolean }> = ({ payload, isFirst = false }) => {
+  const [isExpanded, setIsExpanded] = useState(isFirst)
 
-  // Get first few keys for preview
-  const previewKeys = Object.keys(payload).slice(0, 3)
-  const hasMore = Object.keys(payload).length > 3
+  // CloudEvents standard fields to highlight
+  const cloudEventFields = ['specversion', 'type', 'entityid', 'entityname', 'businesskey', 'time', 'source', 'id', 'correlationid']
+  const highlightedFields = Object.keys(payload).filter(key => cloudEventFields.includes(key.toLowerCase()))
+  const otherFields = Object.keys(payload).filter(key => !cloudEventFields.includes(key.toLowerCase()))
 
   return (
     <div className="mt-2">
@@ -76,7 +77,7 @@ const PayloadPreview: React.FC<{ payload: any }> = ({ payload }) => {
         <ArrowRight
           className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
         />
-        Payload
+        CloudEvents Payload {highlightedFields.length > 0 && `(${highlightedFields.length} key fields)`}
       </button>
 
       {isExpanded ? (
@@ -84,20 +85,43 @@ const PayloadPreview: React.FC<{ payload: any }> = ({ payload }) => {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="bg-gray-900 rounded p-2 border border-gray-700"
+          className="bg-gray-900 rounded p-3 border border-gray-700"
         >
-          <pre className="text-xs text-green-400 font-mono overflow-x-auto max-h-32 overflow-y-auto">
-            {JSON.stringify(payload, null, 2)}
-          </pre>
+          {/* CloudEvents Fields - Highlighted */}
+          {highlightedFields.length > 0 && (
+            <div className="mb-2 pb-2 border-b border-gray-700">
+              <div className="text-yellow-400 text-xs font-semibold mb-1">CloudEvents Fields:</div>
+              {highlightedFields.map((key) => (
+                <div key={key} className="text-xs font-mono ml-2">
+                  <span className="text-cyan-400">{key}:</span>{' '}
+                  <span className="text-green-400">{JSON.stringify(payload[key])}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Other Fields */}
+          {otherFields.length > 0 && (
+            <div>
+              <div className="text-gray-400 text-xs font-semibold mb-1">Additional Data:</div>
+              <pre className="text-xs text-green-400 font-mono overflow-x-auto max-h-48 overflow-y-auto">
+                {JSON.stringify(
+                  otherFields.reduce((acc, key) => ({ ...acc, [key]: payload[key] }), {}),
+                  null,
+                  2
+                )}
+              </pre>
+            </div>
+          )}
         </motion.div>
       ) : (
+        // Show compact preview with key fields only
         <div className="text-xs text-gray-500 font-mono pl-4">
-          {previewKeys.map((key, idx) => (
-            <div key={idx}>
-              {key}: {JSON.stringify(payload[key])}
+          {highlightedFields.slice(0, 3).map((key, idx) => (
+            <div key={idx} className="truncate">
+              <span className="text-cyan-400">{key}:</span> {JSON.stringify(payload[key])}
             </div>
           ))}
-          {hasMore && <div className="text-gray-600">...</div>}
+          {highlightedFields.length > 3 && <div className="text-gray-600">... +{highlightedFields.length - 3} more fields</div>}
         </div>
       )}
     </div>
@@ -135,6 +159,13 @@ const KafkaEventEntry: React.FC<{ event: KafkaEvent; index: number }> = ({ event
           {/* Topic name */}
           <span className="text-sm text-green-400 font-mono">{event.topic}</span>
 
+          {/* Customer ID Badge (if available) */}
+          {event.payload?.entityid && (
+            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono border border-blue-500/30">
+              Customer: {event.payload.entityid}
+            </span>
+          )}
+
           {/* Event ID */}
           <span className="text-xs text-gray-500 font-mono">ID: {event.id}</span>
         </div>
@@ -147,7 +178,7 @@ const KafkaEventEntry: React.FC<{ event: KafkaEvent; index: number }> = ({ event
       <EventMetadata event={event} />
 
       {/* Payload preview */}
-      <PayloadPreview payload={event.payload} />
+      <PayloadPreview payload={event.payload} isFirst={index === 0} />
     </motion.div>
   )
 }
