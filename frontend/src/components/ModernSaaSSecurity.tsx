@@ -13,12 +13,13 @@ import {
 } from 'lucide-react';
 
 const ModernSaaSSecurity = () => {
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState('api');
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: CloudCog },
         { id: 'architecture', label: 'Architecture', icon: Layers },
         { id: 'services', label: 'Security Services', icon: Shield },
+        { id: 'api', label: 'API Security', icon: Lock },
         { id: 'network', label: 'Network Security', icon: Network },
         { id: 'integration', label: 'Integration', icon: Server },
     ];
@@ -58,6 +59,7 @@ const ModernSaaSSecurity = () => {
                         {activeTab === 'overview' && <OverviewView />}
                         {activeTab === 'architecture' && <ArchitectureView />}
                         {activeTab === 'services' && <SecurityServicesView />}
+                        {activeTab === 'api' && <ApiSecurityView />}
                         {activeTab === 'network' && <NetworkSecurityView />}
                         {activeTab === 'integration' && <IntegrationView />}
                     </motion.div>
@@ -461,7 +463,34 @@ const IntegrationView = () => {
                 </div>
             </div>
 
-            {/* API Security */}
+        </div>
+    );
+};
+
+const ApiSecurityView = () => {
+    const [highlighted, setHighlighted] = useState<string | null>(null);
+
+    const flowNodes = [
+        { id: 'users', label: 'Users', x: 30, y: 10, w: 160, h: 50, color: 'bg-teal-400', text: 'text-white' },
+        { id: 'frontend', label: 'Bank user Front end channel application', x: 20, y: 90, w: 180, h: 90, color: 'bg-purple-600', text: 'text-white' },
+        { id: 'token', label: 'Token validation', x: 20, y: 210, w: 180, h: 40, color: 'bg-indigo-900', text: 'text-white' },
+        { id: 'api', label: 'API layer (IRIS app)', x: 20, y: 290, w: 180, h: 50, color: 'bg-indigo-900', text: 'text-white' },
+        { id: 'transact', label: 'Transact application', x: 20, y: 380, w: 180, h: 70, color: 'bg-indigo-900', text: 'text-white' },
+        { id: 'iam', label: 'Keycloak / IAM Server', x: 310, y: 70, w: 180, h: 90, color: 'bg-purple-600', text: 'text-white' }
+    ];
+
+    const flowArrows = [
+        { id: '1', from: 'users', to: 'frontend', label: '1', type: 'down' },
+        { id: '2', from: 'users', to: 'iam', label: '2', type: 'across' },
+        { id: '3', from: 'frontend', to: 'iam', label: '3', type: 'across' },
+        { id: '4', from: 'frontend', to: 'token', label: '4', type: 'down' },
+        { id: '5', from: 'token', to: 'api', label: '5', type: 'down' },
+        { id: '6', from: 'api', to: 'transact', label: '6', type: 'down' },
+        { id: '7', from: 'transact', to: 'transact', label: '7', type: 'self' }
+    ];
+
+    return (
+        <div className="space-y-6">
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
                     <h3 className="font-bold text-slate-800 dark:text-slate-100">API Security</h3>
@@ -471,7 +500,6 @@ const IntegrationView = () => {
                         {[
                             'OAuth 2.0 / OpenID Connect',
                             'API key management',
-                            'Rate limiting and throttling',
                             'API gateway security',
                             'Request/response validation',
                             'API versioning and deprecation',
@@ -483,6 +511,146 @@ const IntegrationView = () => {
                                 <span className="text-sm text-slate-700 dark:text-slate-300">{feature}</span>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-6">
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800 shadow-sm">
+                    <div className="px-6 py-4 border-b border-indigo-100 dark:border-indigo-800/80">
+                        <h4 className="font-bold text-indigo-900 dark:text-indigo-100">JWT-based Authorization Flow</h4>
+                    </div>
+                    <div className="p-6 space-y-4">
+                        <p className="text-sm text-slate-700 dark:text-slate-200">
+                            JSON Web Tokens provide an industry-standard way to carry claims between the front-end, IAM server, IRIS API layer, and Temenos Transact.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                {[
+                                    'User requests authorization from the front-end channel app.',
+                                    'Authorization is obtained from the Keycloak/IAM server, returning a token.',
+                                    'The token is validated with the authorization server.',
+                                    'The Temenos Transact business request is submitted with the JWT access token.',
+                                    'The JWT token is validated by the API layer.',
+                                    'Business request is sent to Temenos Transact with the username present in the web token.',
+                                    'The user is validated against user profiles.'
+                                ].map((step, idx) => (
+                                    <div key={idx} className="flex items-start gap-3">
+                                        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200 font-semibold">
+                                            {idx + 1}
+                                        </div>
+                                        <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">{step}</p>
+                                    </div>
+                                ))}
+
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+                                    <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Interactive Flow</p>
+                                            <h6 className="text-sm font-semibold text-slate-800 dark:text-slate-100">JWT Authorization Path</h6>
+                                        </div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">HTML5 + TypeScript</div>
+                                    </div>
+                                    <div className="relative">
+                                        <svg viewBox="0 0 460 430" className="w-full h-[340px] md:h-[380px] bg-slate-50 dark:bg-slate-800">
+                                            {/* Arrows */}
+                                            {flowArrows.map((arrow) => {
+                                                const from = flowNodes.find((n) => n.id === arrow.from);
+                                                const to = flowNodes.find((n) => n.id === arrow.to);
+                                                if (!from || !to) return null;
+
+                                                const startX = from.x + from.w / 2;
+                                                const startY = arrow.type === 'across' ? from.y + from.h / 2 : from.y + from.h;
+                                                const endX = arrow.type === 'across' ? to.x : to.x + to.w / 2;
+                                                const endY = arrow.type === 'across' ? to.y + to.h / 2 : to.y;
+                                                const isAcross = arrow.type === 'across';
+                                                const pathD = isAcross
+                                                    ? `M ${startX} ${startY} L ${endX} ${endY}`
+                                                    : `M ${startX} ${startY} L ${endX} ${endY}`;
+
+                                                return (
+                                                    <g key={arrow.id}>
+                                                        <path
+                                                            d={pathD}
+                                                            stroke="#ef4444"
+                                                            strokeWidth={2}
+                                                            fill="none"
+                                                            markerEnd="url(#arrowhead)"
+                                                            opacity={highlighted === arrow.id ? 1 : 0.7}
+                                                        />
+                                                        <text
+                                                            x={(startX + endX) / 2}
+                                                            y={(startY + endY) / 2 - 6}
+                                                            textAnchor="middle"
+                                                            className="fill-slate-700 dark:fill-slate-200 text-[12px] font-semibold"
+                                                        >
+                                                            {arrow.label}
+                                                        </text>
+                                                    </g>
+                                                );
+                                            })}
+
+                                            {/* Arrowhead definition */}
+                                            <defs>
+                                                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+                                                    <path d="M0,0 L0,6 L9,3 z" fill="#ef4444" />
+                                                </marker>
+                                            </defs>
+
+                                            {/* Nodes */}
+                                            {flowNodes.map((node) => (
+                                                <g
+                                                    key={node.id}
+                                                    onMouseEnter={() => setHighlighted(node.id)}
+                                                    onMouseLeave={() => setHighlighted(null)}
+                                                >
+                                                    <rect
+                                                        x={node.x}
+                                                        y={node.y}
+                                                        rx={6}
+                                                        ry={6}
+                                                        width={node.w}
+                                                        height={node.h}
+                                                        className={`${node.color} ${highlighted === node.id ? 'opacity-100' : 'opacity-90'} transition-opacity`}
+                                                        stroke="#0f172a"
+                                                        strokeWidth="0.5"
+                                                    />
+                                                    <foreignObject x={node.x + 8} y={node.y + 8} width={node.w - 16} height={node.h - 16}>
+                                                        <div className={`w-full h-full flex items-center justify-center text-center px-2 text-sm font-semibold ${node.text}`}>
+                                                            {node.label}
+                                                        </div>
+                                                    </foreignObject>
+                                                </g>
+                                            ))}
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+                                <h5 className="font-semibold text-slate-800 dark:text-slate-100">Key Components</h5>
+                                <ul className="space-y-2 text-sm text-slate-700 dark:text-slate-200">
+                                    <li className="flex items-start gap-[50px]">
+                                        <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                        Bank user front-end channel app (auth request & token receipt)
+                                    </li>
+                                    <li className="flex items-start gap-[50px]">
+                                        <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                        Keycloak / IAM server (token issuance & validation)
+                                    </li>
+                                    <li className="flex items-start gap-[50px]">
+                                        <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                        API layer (IRIS app) for token validation
+                                    </li>
+                                    <li className="flex items-start gap-[50px]">
+                                        <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                        Temenos Transact application for business processing
+                                    </li>
+                                </ul>
+                                <div className="rounded-md bg-purple-100 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-700 px-3 py-2 text-xs text-purple-900 dark:text-purple-100">
+                                    Temenos Transact does not perform authentication; it validates tokens to authorize requests.
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

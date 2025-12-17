@@ -514,10 +514,11 @@ const AssuranceView = () => {
                     <h4 className="text-lg font-bold text-green-900 dark:text-green-100 mb-3">Security Assurance</h4>
                     <ul className="space-y-3 text-slate-700 dark:text-slate-200">
                         {[
-                            'Regular penetration testing and vulnerability assessments',
-                            'Secure SDLC with code reviews and SAST/DAST',
-                            'Supply chain and dependency scanning',
-                            'Secrets management and key rotation',
+                            'Scans are performed on the dev stream every day and reports are shared with CTS team.',
+                            'SAST reviews are carried out manually partially (20%) as well as automated using Fortify tool (80%).',
+                            'All products are passing SAST reviews prior to release.',
+                            'The purpose of DAST & PT is to ensure that deployed applications are reasonably vulnerability free at run time.',
+                            'Open-Source Library (OSL) analysis finds and remediates known vulnerabilities in third-party components used in the application.',
                         ].map((item, idx) => (
                             <li key={idx} className="flex items-start gap-3">
                                 <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -531,10 +532,10 @@ const AssuranceView = () => {
                     <h4 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-3">Quality & Reliability</h4>
                     <ul className="space-y-3 text-slate-700 dark:text-slate-200">
                         {[
-                            'Automated testing: unit, integration, end-to-end',
-                            'Performance and load testing for critical services',
-                            'Blue/green and canary deployment strategies',
-                            'Error budgets and SLO/SLI tracking',
+                            'SOC1 attestation of application development, testing, maintenance, quality assurance, production support and related IT general controls.',
+                            'Path to live is a set of environments used for QA so any change unit is thoroughly tested before promotion to live, utilising CI/CD methodologies.',
+                            'Temenos utilises Fortify for static code analysis and SonarQube for quality checking as part of the software QA and release process.',
+                            'Temenos has ISO 9001:2015 Quality Management.',
                         ].map((item, idx) => (
                             <li key={idx} className="flex items-start gap-3">
                                 <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
