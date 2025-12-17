@@ -1,30 +1,10 @@
 import { ArrowLeft, Check } from 'lucide-react'
-import { useEffect, useState } from 'react'
 
 interface ApiVersioningProps {
   onBack: () => void
 }
 
 export function ApiVersioning({ onBack }: ApiVersioningProps) {
-  const [isDarkMode, setIsDarkMode] = useState(false)
-
-  useEffect(() => {
-    // Check if dark mode is active
-    const checkDarkMode = () => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'))
-    }
-
-    checkDarkMode()
-
-    // Listen for theme changes
-    const observer = new MutationObserver(checkDarkMode)
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    })
-
-    return () => observer.disconnect()
-  }, [])
 
   return (
     <div className="card">

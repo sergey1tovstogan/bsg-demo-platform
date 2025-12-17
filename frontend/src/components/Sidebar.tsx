@@ -1,7 +1,6 @@
 import {
   Home,
   Settings,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   Network,
@@ -10,6 +9,7 @@ import {
   Shield,
   Eye,
   Palette,
+  Layout,
   type LucideIcon
 } from 'lucide-react'
 import { ComponentId } from '../types'
@@ -81,6 +81,14 @@ const components: ComponentCard[] = [
     icon: Palette,
     color: 'text-indigo-500',
     gradient: 'from-indigo-500 to-blue-400',
+  },
+  {
+    id: 'layout-showcase',
+    name: 'Design System',
+    description: 'Unified Layout',
+    icon: Layout,
+    color: 'text-purple-500',
+    gradient: 'from-purple-500 to-pink-400',
   },
 ]
 
@@ -283,20 +291,6 @@ export function Sidebar({
         >
           <Settings className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="text-sm font-medium">Settings</span>}
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            handleInteraction()
-          }}
-          className={clsx(
-            "w-full flex items-center rounded-xl transition-all duration-200 text-slate-400 hover:bg-white/5 hover:text-red-400",
-            isExpanded ? "px-4 py-3 space-x-3" : "justify-center p-3"
-          )}
-          title="Logout"
-        >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
-          {isExpanded && <span className="text-sm font-medium">Logout</span>}
         </button>
       </div>
     </aside>

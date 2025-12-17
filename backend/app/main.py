@@ -91,11 +91,12 @@ app.add_middleware(RequestLoggingMiddleware)
 # Register error handlers
 register_error_handlers(app)
 
-# Include routers
+# Include routers (settings.API_V1_PREFIX already has leading slash)
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(database.router, prefix=settings.API_V1_PREFIX)
 app.include_router(components.router, prefix=settings.API_V1_PREFIX)
+
 # Import for proxy workaround
 import httpx
 from typing import Dict, Any, Optional
@@ -185,19 +186,20 @@ if os.path.exists(static_dir) and os.path.isdir(static_dir):
         return {"detail": "Frontend not found", "static_dir": str(static_dir), "exists": os.path.exists(static_dir)}
     
     # Serve index.html for all non-API routes (SPA routing)
-    # This catch-all must be AFTER the root route
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        """Serve frontend SPA or API routes."""
-        # Don't interfere with API routes
-        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
-            return {"detail": "Not Found"}
-        
-        # Serve index.html for frontend routes (SPA routing)
-        if index_path and os.path.exists(index_path):
-            return FileResponse(index_path)
-        logger.warning(f"index.html not found at {index_path}, static_dir exists: {os.path.exists(static_dir)}")
-        return {"detail": "Frontend not found", "static_dir": str(static_dir), "exists": os.path.exists(static_dir)}
+    # NOTE: This catch-all should NOT interfere with API routes
+    # API routes are registered with routers and should be matched first
+    # We only reach here for paths that don't match any registered routes
+    # For now, commenting out to avoid interfering with API routes
+    # The frontend development server (Vite) will handle SPA routing in dev mode
+
+    # @app.get("/{full_path:path}")
+    # async def serve_spa(full_path: str):
+    #     """Serve frontend SPA for non-API routes."""
+    #     # Serve index.html for frontend routes (SPA routing)
+    #     if index_path and os.path.exists(index_path):
+    #         return FileResponse(index_path)
+    #     logger.warning(f"index.html not found at {index_path}, static_dir exists: {os.path.exists(static_dir)}")
+    #     return {"detail": "Frontend not found", "static_dir": str(static_dir), "exists": os.path.exists(static_dir)}
 else:
     # Root endpoint (only if static files not mounted)
     @app.get("/")

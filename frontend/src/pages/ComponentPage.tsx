@@ -8,7 +8,9 @@ import { ObservabilityContent } from '../components/observability/ObservabilityC
 import { DeploymentAnalyzer } from '../components/deployment/DeploymentAnalyzer'
 import { DeploymentContentViewer } from '../components/deployment/DeploymentContentViewer'
 import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
+import { ChatbotWithQuestions } from '../components/data-architecture/ChatbotWithQuestions'
 import { DesignTimeContentViewer } from '../components/design-time/DesignTimeContentViewer'
+import { LayoutShowcaseContent } from '../components/layout-showcase/LayoutShowcaseContent'
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
@@ -29,8 +31,13 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
     }
   }, [initialTab])
 
+  // For layout-showcase, only show content tab
   // For deployment component, exclude video tab and rename chatbot
-  const tabs = componentId === 'deployment' 
+  const tabs = componentId === 'layout-showcase'
+    ? [
+        { id: 'content' as Tab, label: 'Design System', icon: BookOpen },
+      ]
+    : componentId === 'deployment'
     ? [
         { id: 'content' as Tab, label: 'Content', icon: BookOpen },
         { id: 'demo' as Tab, label: 'Demo', icon: Play },
@@ -69,7 +76,9 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
       {/* Tab Content */}
       <div>
         {activeTab === 'content' && (
-          componentId === 'observability' ? (
+          componentId === 'layout-showcase' ? (
+            <LayoutShowcaseContent />
+          ) : componentId === 'observability' ? (
             <ObservabilityContent />
           ) : componentId === 'deployment' ? (
             <DeploymentContentViewer />
@@ -89,7 +98,13 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
             <DemoFrame componentId={componentId} />
           )
         )}
-        {activeTab === 'chatbot' && <Chatbot componentId={componentId} />}
+        {activeTab === 'chatbot' && (
+          componentId === 'data-architecture' ? (
+            <ChatbotWithQuestions componentId={componentId} />
+          ) : (
+            <Chatbot componentId={componentId} />
+          )
+        )}
       </div>
     </div>
   )

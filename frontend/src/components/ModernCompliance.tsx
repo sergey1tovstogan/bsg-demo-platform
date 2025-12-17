@@ -81,11 +81,50 @@ const ComplianceByDesignView = () => {
                         <Scale className="w-8 h-8 text-orange-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-orange-900 dark:text-orange-100 mb-3">Temenos SaaS Compliance by Design</h2>
+                        <h2 className="text-2xl font-bold text-orange-900 dark:text-orange-100 mb-3">Temenos SaaS Compliance by Design and Temenos Security and Privacy Committee</h2>
                         <p className="text-orange-800 dark:text-orange-200 leading-relaxed mb-4">
                             Continuous regulatory updates built into the platform. Certified to industry standards and aligned with global compliance frameworks.
                         </p>
                     </div>
+                </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-8 rounded-xl border border-orange-100 dark:border-orange-800 shadow-sm">
+                <div className="space-y-4">
+                    {[
+                        {
+                            title: 'Security and Privacy Committee',
+                            desc: 'Comprises of executive members representing risk, security, privacy, information technology, governance, operation function'
+                        },
+                        {
+                            title: 'Primarily role',
+                            desc: 'Committee oversees management effort in implementing and maintaining effective global information security and privacy compliance programs within the Group'
+                        },
+                        {
+                            title: 'Further responsibility',
+                            desc: 'An assessment of all security risks including status of remedial plans, incidents including those that may result in the breach of personal data contain them and take immediate actions to address reoccurrence.'
+                        },
+                        {
+                            title: 'Temenos Information Security',
+                            desc: 'InfoSec Team works along side the Security and Privacy Committee to develop and oversee the implementation of information security controls'
+                        },
+                        {
+                            title: 'Security and Privacy',
+                            desc: 'Quarterly Committee meetings'
+                        }
+                    ].map((item) => (
+                        <div
+                            key={item.title}
+                            className="flex flex-col md:flex-row md:items-stretch gap-4 md:gap-6 bg-white/80 dark:bg-slate-900/60 border border-orange-100 dark:border-orange-700 rounded-xl overflow-hidden shadow-sm"
+                        >
+                            <div className="md:w-72 bg-violet-500 text-white font-bold text-lg leading-snug px-4 py-4 flex items-center justify-center text-center">
+                                {item.title}
+                            </div>
+                            <div className="flex-1 px-5 py-4 flex items-center">
+                                <p className="text-slate-700 dark:text-slate-200 text-sm md:text-base leading-relaxed">{item.desc}</p>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -193,25 +232,25 @@ const RegulatoryAlignmentView = () => {
             {/* Certifications Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* ISO 27001 */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm">
+                <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 p-6 rounded-xl border border-red-100 dark:border-red-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
-                            <Shield className="w-6 h-6 text-blue-600" />
+                        <div className="p-2 bg-red-100 dark:bg-red-800 rounded-lg">
+                            <Shield className="w-6 h-6 text-red-600" />
                         </div>
-                        <h4 className="font-bold text-blue-900 dark:text-blue-100">ISO 27001</h4>
+                        <h4 className="font-bold text-red-900 dark:text-red-100">ISO 27001</h4>
                     </div>
-                    <p className="text-sm text-blue-800 dark:text-blue-200">Information Security Management System certification ensuring comprehensive security controls.</p>
+                    <p className="text-sm text-red-800 dark:text-red-200">Information Security Management System certification ensuring comprehensive security controls.</p>
                 </div>
 
                 {/* ISO 22301 */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-100 shadow-sm">
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                            <Database className="w-6 h-6 text-green-600" />
+                        <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-lg">
+                            <Database className="w-6 h-6 text-purple-600" />
                         </div>
-                        <h4 className="font-bold text-green-900">ISO 22301</h4>
+                        <h4 className="font-bold text-purple-900 dark:text-purple-100">ISO 22301</h4>
                     </div>
-                    <p className="text-sm text-green-800">Business Continuity Management certification for operational resilience.</p>
+                    <p className="text-sm text-purple-800 dark:text-purple-200">Business Continuity Management certification for operational resilience.</p>
                 </div>
 
                 {/* ISO 20000 */}
@@ -244,18 +283,22 @@ const RegulatoryAlignmentView = () => {
                         </div>
                         <h4 className="font-bold text-red-900 dark:text-red-100">DORA</h4>
                     </div>
-                    <p className="text-sm text-red-800 dark:text-red-200">Digital Operational Resilience Act aligned with BC/DR and incident management.</p>
+                    <p className="text-sm text-red-800 dark:text-red-200">
+                        DORA alignment is supported through BC/DR features, incident response tracking, and operational risk monitoring tools integrated into the Temenos SaaS Ops Center. BC/DR designed with active-active and active-passive options, with configurable RTO/RPO parameters based on SLA tier.
+                    </p>
                 </div>
 
                 {/* GDPR */}
-                <div className="bg-gradient-to-br from-cyan-50 to-sky-50 p-6 rounded-xl border border-cyan-100 dark:border-cyan-800 shadow-sm">
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-800 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-cyan-100 dark:bg-cyan-800 rounded-lg">
-                            <Lock className="w-6 h-6 text-cyan-600" />
+                        <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-lg">
+                            <Lock className="w-6 h-6 text-purple-600" />
                         </div>
-                        <h4 className="font-bold text-cyan-900 dark:text-cyan-100">GDPR</h4>
+                        <h4 className="font-bold text-purple-900 dark:text-purple-100">GDPR</h4>
                     </div>
-                    <p className="text-sm text-cyan-800 dark:text-cyan-200">General Data Protection Regulation compliance for data privacy and protection.</p>
+                    <p className="text-sm text-purple-800 dark:text-purple-200">
+                        General Data Protection Regulation compliance for data privacy and protection. Temenos supports regional deployments to maintain data residency in compliance with GDPR, MAS TRM, PRA, and other local frameworks.
+                    </p>
                 </div>
             </div>
 
@@ -291,106 +334,70 @@ const RegulatoryAlignmentView = () => {
 const RiskManagementView = () => {
     return (
         <div className="space-y-6">
-            {/* Overview */}
-            <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-6 rounded-xl border border-red-100 dark:border-red-800 shadow-sm">
-                <div className="flex items-start gap-4">
-                    <div className="p-3 bg-red-100 dark:bg-red-800 rounded-lg">
-                        <AlertTriangle className="w-8 h-8 text-red-600" />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-bold text-red-900 dark:text-red-100 mb-2">Risk Management Framework</h2>
-                        <p className="text-red-800 dark:text-red-200 leading-relaxed">
-                            Comprehensive risk management approach covering identification, assessment, mitigation, and monitoring of security and operational risks.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Risk Categories */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Security Risks */}
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-blue-600" />
-                        Security Risk Management
-                    </h3>
-                    <ul className="space-y-3">
-                        {[
-                            'Threat modeling and vulnerability assessments',
-                            'Regular penetration testing and security audits',
-                            'Security incident and event management (SIEM)',
-                            'Threat intelligence and monitoring',
-                            'Zero-trust architecture implementation'
-                        ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
-                                <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                                <span className="text-sm leading-relaxed">{item}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-
-                {/* Operational Risks */}
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-                        <Database className="w-5 h-5 text-purple-600" />
-                        Operational Risk Management
-                    </h3>
-                    <ul className="space-y-3">
-                        {[
-                            'Business continuity and disaster recovery planning',
-                            'Change management and release controls',
-                            'Capacity planning and performance monitoring',
-                            'Incident management and root cause analysis',
-                            'Service level agreement (SLA) monitoring'
-                        ].map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300">
-                                <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                                <span className="text-sm leading-relaxed">{item}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
-
-            {/* Risk Assessment Matrix */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                    <h3 className="font-bold text-slate-800 dark:text-slate-100">Risk Assessment Process</h3>
-                </div>
-                <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {[
-                            { step: '1. Identify', desc: 'Identify potential risks and threats', color: 'blue' },
-                            { step: '2. Assess', desc: 'Evaluate likelihood and impact', color: 'purple' },
-                            { step: '3. Mitigate', desc: 'Implement controls and safeguards', color: 'green' },
-                            { step: '4. Monitor', desc: 'Continuous monitoring and review', color: 'orange' }
-                        ].map((phase, idx) => (
-                            <div key={idx} className={`p-4 bg-${phase.color}-50 border border-${phase.color}-100 rounded-lg`}>
-                                <div className={`text-lg font-bold text-${phase.color}-900 mb-2`}>{phase.step}</div>
-                                <p className={`text-sm text-${phase.color}-800`}>{phase.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Third-Party Risk */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Third-Party Risk Management</h3>
-                <div className="space-y-3">
-                    {[
-                        'Vendor due diligence and assessment',
-                        'Contractual security requirements',
-                        'Ongoing vendor monitoring and audits',
-                        'Supply chain security controls',
-                        'Exit and transition planning'
-                    ].map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-slate-700 dark:text-slate-300">{item}</span>
+                <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Framework Overview */}
+                    <div className="flex-1 space-y-4">
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Framework Overview</h3>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-4">
+                            <div className="bg-slate-800 text-white text-center py-2 rounded font-semibold">Board of Directors / Audit Committee</div>
+                            <div className="bg-slate-700 text-white text-center py-2 rounded font-semibold">CEO / Executive Management</div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {[
+                                    { title: '1st Line of Defense', body: 'Operational Management Functions' },
+                                    { title: '2nd Line of Defense', body: 'Risk Management Functions' },
+                                    { title: '3rd Line of Defense', body: 'Internal Audit' },
+                                ].map((item, idx) => (
+                                    <div key={idx} className="bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 text-center space-y-2">
+                                        <div className="text-emerald-800 dark:text-emerald-100 font-bold text-sm">{item.title}</div>
+                                        <div className="bg-slate-100 dark:bg-slate-800 rounded p-4 text-slate-700 dark:text-slate-200 text-sm font-semibold">
+                                            {item.body}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="bg-slate-100 dark:bg-slate-800 rounded p-3 text-sm text-slate-700 dark:text-slate-200">
+                                Internal Audit provides assurance to the Board of Directors and Senior Management on how effectively the organization assesses and manages its risks, including how the 1st and 2nd lines of defense operate.
+                            </div>
                         </div>
-                    ))}
+                        <div className="bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 text-center text-emerald-900 dark:text-emerald-100 font-bold">
+                            Temenos adheres to the ISO 31000 Risk management principle and guidelines
+                        </div>
+                    </div>
+
+                    {/* Roles and Responsibilities */}
+                    <div className="flex-1 space-y-3">
+                        <h3 className="text-xl font-bold text-violet-600 dark:text-violet-300">Roles and Responsibilities</h3>
+                        <div className="space-y-4 text-violet-700 dark:text-violet-200 text-sm">
+                            <div>
+                                <div className="font-bold text-violet-600 dark:text-violet-300">Board of Directors / Audit Committee</div>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li>Direction on risk appetite in cooperation with Senior Management.</li>
+                                    <li>Appraised of significant risks and whether Senior Management is responding appropriately.</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div className="font-bold text-violet-600 dark:text-violet-300">CEO and Senior Management</div>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li>Ultimate ownership of the risk management and control framework.</li>
+                                    <li>Assigns responsibilities for risk management procedures to managers in specific processes, functions, or departments.</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div className="font-bold text-violet-600 dark:text-violet-300">Operational Management</div>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li>Ownership, responsibility, and accountability for managing risks; develop and self-assess controls to address risk.</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div className="font-bold text-violet-600 dark:text-violet-300">Risk Management function</div>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li>Maintains an effective risk management framework and integrated view of risk exposure across the enterprise.</li>
+                                    <li>Reports to stakeholders; conducts independent review and challenges the 1LoD.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -415,60 +422,69 @@ const TrustCenterView = () => {
                 </div>
             </div>
 
-            {/* Trust Pillars */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center mb-4">
+            {/* Trust Center Link */}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
                         <FileCheck className="w-6 h-6 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Certifications</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-                        Industry-leading certifications and attestations demonstrating our commitment to security and compliance.
-                    </p>
-                    <ul className="space-y-2">
-                        {['ISO 27001', 'ISO 22301', 'ISO 20000', 'SOC 1, 2 & 3'].map((cert, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                {cert}
-                            </li>
-                        ))}
-                    </ul>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Trust Center Link</h3>
                 </div>
+                <a
+                    href="https://tcsp.temenos.com/trustcenter"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-300 font-semibold hover:underline"
+                >
+                    Link to trust center
+                </a>
+            </div>
 
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-800 rounded-lg flex items-center justify-center mb-4">
-                        <Lock className="w-6 h-6 text-purple-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Security Practices</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-                        Comprehensive security controls and best practices protecting your data and operations.
-                    </p>
-                    <ul className="space-y-2">
-                        {['Encryption at rest & in transit', 'Multi-factor authentication', 'Regular security testing', 'Incident response'].map((practice, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                                <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                                {practice}
-                            </li>
-                        ))}
-                    </ul>
+            {/* Trust Pillars / Collateral */}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Trust Centre Collateral</h3>
+                    <a
+                        href="https://tcsp.temenos.com/trustcenter"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-700 dark:text-blue-300 font-semibold hover:underline"
+                    >
+                        tcsp.temenos.com/trustcenter
+                    </a>
                 </div>
-
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                        <Building2 className="w-6 h-6 text-green-600" />
+                <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                    <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Available Collateral</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-slate-700 dark:text-slate-200 text-sm">
+                        <ul className="space-y-2">
+                            {[
+                                'Incident Management Framework',
+                                'Product Security Standard',
+                                'Procurement and Vendor Management',
+                                'GRM Framework',
+                                'Responsible Risk Management',
+                            ].map((item, idx) => (
+                                <li key={idx} className="flex items-start gap-2">
+                                    <div className="mt-1 w-2 h-2 rounded-full bg-slate-500 flex-shrink-0" />
+                                    <span>{item}</span>
+                                </li>
+                            ))}
+                        </ul>
+                        <ul className="space-y-2">
+                            {[
+                                'Business Continuity Management Framework',
+                                'Ethical Conduct',
+                                'People & Development Standard',
+                                'Client Audit Request',
+                                'Cloud and Physical security framework',
+                            ].map((item, idx) => (
+                                <li key={idx} className="flex items-start gap-2">
+                                    <div className="mt-1 w-2 h-2 rounded-full bg-slate-500 flex-shrink-0" />
+                                    <span>{item}</span>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Transparency</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-                        Open communication about our security posture, incidents, and continuous improvements.
-                    </p>
-                    <ul className="space-y-2">
-                        {['Security documentation', 'Compliance reports', 'Audit results', 'Status updates'].map((item, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                {item}
-                            </li>
-                        ))}
-                    </ul>
                 </div>
             </div>
 
