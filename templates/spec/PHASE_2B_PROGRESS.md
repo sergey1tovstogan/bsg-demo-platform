@@ -49,7 +49,7 @@
 - **Duration:** 5 min
 - **Tests:** N/A
 - **Checkpoint:** ✅
-- **Commit:** Pending
+- **Commit:** ed5819d
 - **Notes:** Installed react-markdown@10.1.0, rehype-sanitize@6.0.0, lucide-react@0.303.0, @testing-library/react@16.3.1, vitest@4.0.16, jsdom@27.3.0
 
 #### ✅ STEP 2: Create Directory Structure (5 min)
