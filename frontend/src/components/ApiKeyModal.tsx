@@ -68,7 +68,10 @@ export function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProps) {
     setMessage(null)
 
     try {
-      // Save to localStorage immediately
+      // Clear old invalid key from localStorage first
+      localStorage.removeItem('temenos_api_key')
+
+      // Save new API key to localStorage
       localStorage.setItem('temenos_api_key', apiKey)
 
       // Try to save to backend (with short timeout, fail silently)

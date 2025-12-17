@@ -118,7 +118,7 @@ export function IntegrationDemo() {
         'http://localhost:8000/api/v1/integration/proxy',
         {
           params: {
-            url: 'https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/accounts/11215/balances'
+            url: 'https://mdsworkbench.temenos.com/irf-extension-api/api/v1.0.0/order/accounts/11215/balances'
           },
           headers: {
             'X-User-Id': 'demo_user'
@@ -214,7 +214,7 @@ export function IntegrationDemo() {
         parsedBody,
         {
           params: {
-            url: 'https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders'
+            url: 'https://mdsworkbench.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders'
           },
           headers: {
             'X-User-Id': 'demo_user',
@@ -250,7 +250,7 @@ export function IntegrationDemo() {
   const executePortfolioRequest = async () => {
     setPortfolioResult({ loading: true })
     try {
-      const portfolioUrl = `https://transactwb.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/${portfolioId}`
+      const portfolioUrl = `https://mdsworkbench.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/${portfolioId}`
 
       if (portfolioMethod === 'POST') {
         // Validate JSON
@@ -349,7 +349,7 @@ export function IntegrationDemo() {
   const executeAccountsRequest = async () => {
     setAccountsResult({ loading: true })
     try {
-      const accountsUrl = `https://transactwb.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=${currencyId}`
+      const accountsUrl = `https://mdsworkbench.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=${currencyId}`
 
       const response = await axios.get(
         'http://localhost:8000/api/v1/integration/proxy',
@@ -408,7 +408,7 @@ export function IntegrationDemo() {
               <h3 className="text-lg font-bold text-[#283054] dark:text-white">Payment Orders</h3>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders
+              https://mdsworkbench.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders
             </p>
           </div>
           <button
@@ -671,7 +671,7 @@ export function IntegrationDemo() {
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                https://transactwb.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/
+                https://mdsworkbench.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/
               </span>
               <input
                 type="text"
@@ -879,7 +879,7 @@ export function IntegrationDemo() {
             </div>
             <div className="flex items-center space-x-2">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                https://transactwb.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=
+                https://mdsworkbench.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=
               </p>
               <input
                 type="text"

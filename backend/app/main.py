@@ -4,7 +4,7 @@ BSG Demo Platform - Backend Application
 Main FastAPI application with middleware, routing, and configuration.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -13,11 +13,12 @@ import os
 
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
-from app.core.database import init_db, close_db
+from app.core.database import init_db, close_db, get_database
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
 from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 # Setup logging
 setup_logging()
@@ -91,17 +92,79 @@ app.add_middleware(RequestLoggingMiddleware)
 register_error_handlers(app)
 
 # Include routers
-app.include_router(health.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(auth.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(database.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(components.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(integration.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(grafana_proxy.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(grafana_auth.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(security.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(deployment.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(chatbot.router, prefix=f"/{settings.API_V1_PREFIX}")
-app.include_router(cache.router, prefix=f"/{settings.API_V1_PREFIX}")
+app.include_router(health.router, prefix=settings.API_V1_PREFIX)
+app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
+app.include_router(database.router, prefix=settings.API_V1_PREFIX)
+app.include_router(components.router, prefix=settings.API_V1_PREFIX)
+# Import for proxy workaround
+import httpx
+from typing import Dict, Any, Optional
+from fastapi import HTTPException, APIRouter
+
+# Create a dedicated router for proxy endpoint
+proxy_router = APIRouter()
+
+async def _handle_proxy(request: Request, url: str, user_id: Optional[str], db: AsyncIOMotorDatabase) -> Dict[str, Any]:
+    """Handle proxy requests for all HTTP methods."""
+    try:
+        body = None
+        if request.method in ["POST", "PUT", "PATCH"]:
+            body = await request.body()
+
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
+
+        if not user_id:
+            user_id = "demo_user"
+        api_key_doc = await db.integration.find_one({"user_id": user_id})
+        if api_key_doc and api_key_doc.get("api_key"):
+            headers["apikey"] = api_key_doc.get("api_key")
+        elif settings.TEMENOS_DEV_PORTAL_APIKEY:
+            headers["apikey"] = settings.TEMENOS_DEV_PORTAL_APIKEY
+
+        logger.info(f"Proxying {request.method} request to {url}")
+
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.request(method=request.method, url=url, headers=headers, content=body)
+
+        try:
+            data = response.json()
+        except:
+            data = {"text": response.text}
+
+        return {"success": response.is_success, "status": response.status_code, "data": data, "headers": dict(response.headers)}
+    except Exception as e:
+        logger.error(f"Proxy error: {str(e)}")
+        raise HTTPException(status_code=502, detail=f"Bad gateway: {str(e)}")
+
+# Register proxy endpoint with all HTTP methods on dedicated router
+@proxy_router.api_route("/proxy", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def proxy_all_methods(
+    request: Request,
+    url: str,
+    user_id: Optional[str] = Header(None, alias="X-User-Id"),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+) -> Dict[str, Any]:
+    """Proxy requests to external APIs with all HTTP methods."""
+    return await _handle_proxy(request, url, user_id, db)
+
+# DIAGNOSTIC: Simple test POST endpoint
+@app.post("/test-post")
+async def test_post_endpoint():
+    return {"message": "POST works!", "test": True}
+
+# Include integration router (includes api-key endpoints)
+app.include_router(integration.router, prefix=settings.API_V1_PREFIX)
+
+# Include proxy router with full path
+app.include_router(proxy_router, prefix=f"{settings.API_V1_PREFIX}/integration", tags=["integration"])
+
+# Now include remaining routers
+app.include_router(grafana_proxy.router, prefix=settings.API_V1_PREFIX)
+app.include_router(grafana_auth.router, prefix=settings.API_V1_PREFIX)
+app.include_router(security.router, prefix=settings.API_V1_PREFIX)
+app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
+app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
+app.include_router(cache.router, prefix=settings.API_V1_PREFIX)
 
 # Serve static files (frontend) if directory exists
 static_dir = os.path.join(os.path.dirname(__file__), "static")
