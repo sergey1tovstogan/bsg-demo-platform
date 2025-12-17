@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Info, Loader2, ExternalLink, Link } from 'lucide-react'
 import { apiService } from '../services/api'
 import { ApiVersioning } from './integration/ApiVersioning'
+import { ApiWizardsGallery } from './ApiWizardsGallery'
 
 interface TooltipConfig {
   id: string
@@ -54,6 +55,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
   const [businessMicroservicesTooltipPinned, setBusinessMicroservicesTooltipPinned] = useState(false)
   const [showBankSystemTooltip, setShowBankSystemTooltip] = useState(false)
   const [bankSystemTooltipPinned, setBankSystemTooltipPinned] = useState(false)
+  const [showApiWizardsGallery, setShowApiWizardsGallery] = useState(false)
 
   const tooltips: TooltipConfig[] = [
     {
@@ -1222,20 +1224,27 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         <div className="w-[30%] p-6 space-y-4 z-10 flex flex-col justify-center">
           {/* Desktop/Wizard Icon & Text */}
           <div
-            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'graphical-wizards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative group ${pinnedTooltip === 'graphical-wizards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('graphical-wizards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('graphical-wizards')}
           >
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
+                <div
+                  className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center relative cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowApiWizardsGallery(true)
+                  }}
+                >
                   <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <rect x="2" y="3" width="20" height="14" rx="2" />
                     <path d="M8 21h8M12 17v4" />
                     <path d="M7 8h4M7 11h2M7 14h3" strokeWidth="1.5" />
                     <path d="M17 10l-2 2 2 2" strokeWidth="2.5" />
                   </svg>
+                  <ExternalLink className="w-4 h-4 text-white absolute -top-1 -right-1 bg-purple-700 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
               <div className="flex-1 min-w-0">
@@ -1729,6 +1738,11 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         </div>
       )}
         </>
+      )}
+
+      {/* API Wizards Gallery Modal */}
+      {showApiWizardsGallery && (
+        <ApiWizardsGallery onClose={() => setShowApiWizardsGallery(false)} />
       )}
     </div>
   )
