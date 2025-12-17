@@ -7,8 +7,8 @@ import type {
   Customer,
   Account,
   Payment,
-  ApiResponse,
-  KafkaEvent
+  ApiResponse
+  // KafkaEvent // Unused type import
 } from '../demo/types'
 import { MockApiService } from './mockApiService'
 

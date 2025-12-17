@@ -1093,15 +1093,6 @@ export function DataArchitectureContent() {
                       </motion.div>
                     )}
                   </AnimatePresence>
-
-                  {/* Roadmap Badge for future features */}
-                  {(component.id === 'spark_process' || component.id === 'azure_sql') && isVisible && (
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                      <div className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-lg border-2 border-yellow-600">
-                        ROADMAP
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             )

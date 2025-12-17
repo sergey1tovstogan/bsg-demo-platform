@@ -8,7 +8,7 @@ import { StepCard } from './StepCard'
 import { ApiInspector } from './ApiInspector'
 import { KafkaEventStream } from './KafkaEventStream'
 import { TRANSACTION_STEPS, API_CONFIG } from '../config/simulation.config'
-import { apiService } from '../services/apiServiceAdapter'
+// import { apiService } from '../services/apiServiceAdapter' // Unused import
 
 /**
  * Progress bar component
@@ -147,7 +147,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
   const simulation = useSimulation()
   const [kafkaPaused, setKafkaPaused] = useState(false)
   // Always use real mode - mock mode disabled
-  const [apiMode, setApiMode] = useState<'mock' | 'real'>('real')
+  const [apiMode] = useState<'mock' | 'real'>('real')
   const { sendTriggers } = useCrossTabSync()
 
   // Event Hub health state

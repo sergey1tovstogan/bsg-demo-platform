@@ -27,7 +27,7 @@ import {
 async function pollRealEventsAfterTransaction(
   transactionStartTime: number,
   customerId?: string,
-  accountId?: string
+  _accountId?: string // Prefixed with _ to indicate intentionally unused
 ): Promise<KafkaEvent[]> {
   if (!EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
     return []
