@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BookOpen, Video, MessageSquare, Play } from 'lucide-react'
 import { ContentViewer } from '../components/ContentViewer'
-import { VideoPlayer } from '../components/VideoPlayer'
 import { Chatbot } from '../components/Chatbot'
 import { DemoFrame } from '../components/DemoFrame'
 import { ObservabilityContent } from '../components/observability/ObservabilityContent'
@@ -90,12 +89,18 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
             <ContentViewer componentId={componentId} initialSelectedCard={initialSelectedCard} />
           )
         )}
-        {activeTab === 'video' && <VideoPlayer componentId={componentId} />}
+        {activeTab === 'video' && (
+          componentId === 'deployment' ? (
+            <DeploymentAnalyzer />
+          ) : (
+            <DemoFrame componentId={componentId} view="video" />
+          )
+        )}
         {activeTab === 'demo' && (
           componentId === 'deployment' ? (
             <DeploymentAnalyzer />
           ) : (
-            <DemoFrame componentId={componentId} />
+            <DemoFrame componentId={componentId} view="demo" />
           )
         )}
         {activeTab === 'chatbot' && (
