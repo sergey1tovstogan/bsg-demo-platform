@@ -17,6 +17,7 @@ import type {
 interface RuntimeConfig {
   apiUrl: string
   environment?: string
+  grafanaBaseUrl?: string
 }
 
 // Load runtime configuration from config.json
@@ -761,7 +762,76 @@ class ApiService {
     }>>('/deployment/temenos/jwt-info')
     return response.data
   }
+
+  // Integration Proxy APIs
+  async proxyRequest(targetUrl: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'GET', body?: any, userId?: string) {
+    const config: any = {
+      params: { url: targetUrl },
+      headers: {
+        'X-User-Id': userId || 'demo_user',
+        'Content-Type': 'application/json'
+      }
+    }
+
+    if (body && method !== 'GET') {
+      config.data = body
+    }
+
+    const response = await this.client.request({
+      method,
+      url: '/integration/proxy',
+      ...config,
+      timeout: 30000
+    })
+
+    return response.data
+  }
+
+  async getIntegrationConfig() {
+    const response = await this.client.get<ApiResponse<{ temenos_api_key: string }>>('/integration/config')
+    return response.data
+  }
+
+  async getUserApiKey(userId?: string) {
+    const response = await this.client.get<ApiResponse<{
+      success: boolean
+      has_key: boolean
+      api_key: string
+      updated_at: string | null
+    }>>('/integration/api-key', {
+      headers: {
+        'X-User-Id': userId || 'demo_user'
+      }
+    })
+    return response.data
+  }
+
+  async saveUserApiKey(apiKey: string, userId?: string) {
+    const response = await this.client.post<ApiResponse<{
+      success: boolean
+      message: string
+      updated: boolean
+    }>>('/integration/api-key',
+    { api_key: apiKey },
+    {
+      headers: {
+        'X-User-Id': userId || 'demo_user'
+      }
+    })
+    return response.data
+  }
 }
 
 export const apiService = new ApiService()
+
+// Export function to get runtime config for use in other components
+export const getRuntimeConfig = async (): Promise<RuntimeConfig> => {
+  return loadRuntimeConfig()
+}
+
+// Export function to get Grafana base URL
+export const getGrafanaBaseUrl = async (): Promise<string> => {
+  const config = await loadRuntimeConfig()
+  return config.grafanaBaseUrl || 'https://mdsworkbench.temenos.com'
+}
 

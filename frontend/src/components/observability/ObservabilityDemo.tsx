@@ -1,20 +1,29 @@
+import { useState, useEffect } from 'react'
 import { BarChart3, Activity, ExternalLink } from 'lucide-react'
-
-const GRAFANA_DASHBOARDS_URL = 'https://transactwb.temenos.com/grafana/dashboards'
-const DASHBOARD_1_URL = 'https://transactwb.temenos.com/grafana/d/mrtS77BGz/channel-transaction-summary?orgId=1'
-const DASHBOARD_2_URL = 'https://transactwb.temenos.com/grafana/d/dwgixTnnzj/iris-monitor?orgId=1'
+import { getGrafanaBaseUrl } from '../../services/api'
 
 export function ObservabilityDemo() {
+  const [grafanaBaseUrl, setGrafanaBaseUrl] = useState('https://mdsworkbench.temenos.com')
+
+  useEffect(() => {
+    // Load Grafana base URL from config
+    getGrafanaBaseUrl().then(setGrafanaBaseUrl).catch(err => {
+      console.error('Failed to load Grafana config, using default:', err)
+    })
+  }, [])
+
   const openGrafanaDashboards = () => {
-    window.open(GRAFANA_DASHBOARDS_URL, '_blank', 'noopener,noreferrer')
+    window.open(`${grafanaBaseUrl}/grafana/dashboards`, '_blank', 'noopener,noreferrer')
   }
 
   const openDashboard1 = () => {
-    window.open(DASHBOARD_1_URL, '_blank', 'noopener,noreferrer,width=1400,height=900')
+    // Channel Transaction Summary
+    window.open(`${grafanaBaseUrl}/grafana/d/mrtS77BGz/channel-transaction-summary?orgId=1`, '_blank', 'noopener,noreferrer,width=1400,height=900')
   }
 
   const openDashboard2 = () => {
-    window.open(DASHBOARD_2_URL, '_blank', 'noopener,noreferrer,width=1400,height=900')
+    // IRIS Monitor
+    window.open(`${grafanaBaseUrl}/grafana/d/dwgixTnnzj/iris-monitor?orgId=1`, '_blank', 'noopener,noreferrer,width=1400,height=900')
   }
 
   return (

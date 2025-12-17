@@ -16,6 +16,7 @@ interface ComponentCard {
 interface HomePageProps {
   onSelectComponent: (componentId: ComponentId) => void
   onSettingsClick?: () => void
+  searchBar?: React.ReactNode
 }
 
 const ALL_COMPONENTS: ComponentCard[] = [
@@ -86,7 +87,7 @@ const ALL_COMPONENTS: ComponentCard[] = [
 
 const STORAGE_KEY = 'bsg_selected_categories'
 
-export function HomePage({ onSelectComponent, onSettingsClick }: HomePageProps) {
+export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: HomePageProps) {
   const [selectedCategories, setSelectedCategories] = useState<Set<ComponentId>>(new Set())
 
   // Load selected categories from localStorage on mount and when storage changes
@@ -129,29 +130,28 @@ export function HomePage({ onSelectComponent, onSettingsClick }: HomePageProps) 
 
   return (
     <div className="space-y-8">
-      <div className="text-center md:text-left space-y-4 mb-12 animate-fade-in">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 dark:from-blue-400 dark:to-violet-400">
-                BSG Demo Platform
-              </span>
-            </h1>
-            <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed mt-4">
-              Explore interactive demonstrations across multiple technical domains.
-              Select a module below to get started.
-            </p>
-          </div>
+      <div className="space-y-6 mb-12 animate-fade-in">
+        <div className="flex items-center justify-between gap-6">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight whitespace-nowrap">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 dark:from-blue-400 dark:to-violet-400">
+              BSG Demo Platform
+            </span>
+          </h1>
+          {searchBar}
           {onSettingsClick && (
             <button
               onClick={onSettingsClick}
-              className="ml-4 p-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              className="ml-auto p-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
               title="Customize Categories"
             >
               <Settings className="w-6 h-6 text-slate-600 dark:text-slate-400" />
             </button>
           )}
         </div>
+        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
+          Explore interactive demonstrations across multiple technical domains.
+          Select a module below to get started.
+        </p>
       </div>
 
       {visibleComponents.length === 0 ? (
