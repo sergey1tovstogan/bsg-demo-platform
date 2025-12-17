@@ -9,7 +9,7 @@ import {
     Info,
     X,
     ArrowDown,
-    ArrowLeft
+    Shield
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserManagement } from './UserManagement'
@@ -22,7 +22,12 @@ interface TooltipConfig {
 
 export function ModernAuthorization() {
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
-    const [showUserManagement, setShowUserManagement] = useState(false)
+    const [activeTab, setActiveTab] = useState<'authorization' | 'userManagement'>('authorization')
+
+    const tabs = [
+        { id: 'authorization' as const, label: 'Authorization Model', icon: Lock },
+        { id: 'userManagement' as const, label: 'User Management Details', icon: Shield }
+    ]
 
     const tooltips: Record<string, TooltipConfig> = {
         'right-section': {
@@ -42,28 +47,74 @@ export function ModernAuthorization() {
         }
     }
 
-    // If showing user management view, render UserManagement component
-    if (showUserManagement) {
-        return (
-            <div className="relative">
-                <button
-                    onClick={() => setShowUserManagement(false)}
-                    className="absolute top-6 left-6 z-30 flex items-center gap-2 px-4 py-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-all font-semibold text-slate-700 dark:text-slate-300"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back to Authorization</span>
-                </button>
-                <UserManagement />
+    return (
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
+            {/* Header Tabs */}
+            <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 shadow-sm z-10">
+                <div className="flex space-x-4">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => {
+                                setActiveTooltip(null)
+                                setActiveTab(tab.id)
+                            }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${activeTab === tab.id
+                                    ? 'bg-cyan-600 text-white shadow-md transform scale-105'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
+                                }`}
+                        >
+                            <tab.icon className="w-4 h-4" />
+                            <span className="font-medium">{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
-        )
-    }
 
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto p-6">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="h-full"
+                    >
+                        {activeTab === 'authorization' && (
+                            <AuthorizationView
+                                activeTooltip={activeTooltip}
+                                setActiveTooltip={setActiveTooltip}
+                                tooltips={tooltips}
+                            />
+                        )}
+                        {activeTab === 'userManagement' && <UserManagement />}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+        </div>
+    )
+}
+
+interface AuthorizationViewProps {
+    activeTooltip: string | null
+    setActiveTooltip: (value: string | null) => void
+    tooltips: Record<string, TooltipConfig>
+}
+
+function AuthorizationView({
+    activeTooltip,
+    setActiveTooltip,
+    tooltips
+}: AuthorizationViewProps) {
     return (
         <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800">
             {/* Background Grid Pattern */}
-            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
-                style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
-            </div>
+            <div
+                className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
+                style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+            ></div>
 
             {/* Header */}
             <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
@@ -300,9 +351,9 @@ export function ModernAuthorization() {
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute bottom-8 left-8 right-8 z-50 pointer-events-auto"
+                        className="absolute bottom-4 left-4 right-4 z-50 pointer-events-auto"
                     >
-                        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-3xl mx-auto">
+                        <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
                             <div className="flex items-start gap-4">
                                 <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
                                     <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -319,7 +370,7 @@ export function ModernAuthorization() {
                                             <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                                         </button>
                                     </div>
-                                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-left whitespace-pre-line">
+                                    <p className="text-slate-600 dark:text-slate-300 leading-loose text-left whitespace-pre-line">
                                         {tooltips[activeTooltip].description}
                                     </p>
                                 </div>
@@ -328,16 +379,6 @@ export function ModernAuthorization() {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Action Button */}
-            <div className="absolute bottom-6 right-6 z-20">
-                <button
-                    onClick={() => setShowUserManagement(true)}
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all font-semibold text-sm"
-                >
-                    Move to User Management Explanation
-                </button>
-            </div>
         </div>
     )
 }

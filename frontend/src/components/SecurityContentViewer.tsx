@@ -4884,10 +4884,7 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
 
                                                 {/* Title */}
                                                 <h3
-                                                    className="text-xl font-bold mb-2 text-gray-800 dark:text-white group-hover:text-transparent group-hover:bg-clip-text transition-all duration-300"
-                                                    style={{
-                                                        backgroundImage: `linear-gradient(135deg, ${card.color}, ${card.color})` // Fallback for non-hover
-                                                    }}
+                                                    className="text-xl font-bold mb-2 text-gray-800 dark:text-white transition-colors duration-300"
                                                 >
                                                     {card.title}
                                                 </h3>
