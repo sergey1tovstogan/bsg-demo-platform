@@ -115,7 +115,7 @@ export function IntegrationDemo() {
     setBalance({ loading: true })
     try {
       const proxyData = await apiService.proxyRequest(
-        'https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/accounts/11215/balances',
+        'https://mdsworkbench.temenos.com/irf-extension-api/api/v1.0.0/order/accounts/11215/balances',
         'GET',
         undefined,
         'demo_user'
@@ -193,7 +193,7 @@ export function IntegrationDemo() {
 
       // Use backend proxy to avoid CORS issues
       const proxyData = await apiService.proxyRequest(
-        'https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders',
+        'https://mdsworkbench.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders',
         'POST',
         parsedBody,
         'demo_user'
