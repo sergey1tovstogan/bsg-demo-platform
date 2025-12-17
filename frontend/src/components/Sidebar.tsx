@@ -9,6 +9,7 @@ import {
   Shield,
   Eye,
   Palette,
+  Layout,
   type LucideIcon
 } from 'lucide-react'
 import { ComponentId } from '../types'
@@ -80,6 +81,14 @@ const components: ComponentCard[] = [
     icon: Palette,
     color: 'text-indigo-500',
     gradient: 'from-indigo-500 to-blue-400',
+  },
+  {
+    id: 'layout-showcase',
+    name: 'Design System',
+    description: 'Unified Layout',
+    icon: Layout,
+    color: 'text-purple-500',
+    gradient: 'from-purple-500 to-pink-400',
   },
 ]
 
