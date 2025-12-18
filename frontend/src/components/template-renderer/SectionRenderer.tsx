@@ -26,6 +26,9 @@ import { GallerySection } from '@/components/template-sections/special/GallerySe
 import { DownloadSection } from '@/components/template-sections/special/DownloadSection';
 import { CardListSection } from '@/components/template-sections/special/CardListSection';
 import { EmbedSection } from '@/components/template-sections/content/EmbedSection';
+import { ExpandableSection } from '@/components/template-sections/ExpandableSection';
+import { ExpandableCardSection } from '@/components/template-sections/ExpandableCardSection';
+import { InteractiveDiagramSection } from '@/components/template-sections/InteractiveDiagramSection';
 
 interface SectionRendererProps {
   section: Section;
@@ -113,6 +116,15 @@ export function SectionRenderer({ section }: SectionRendererProps) {
 
     case 'embed':
       return <EmbedSection {...section} />;
+
+    case 'expandable':
+      return <ExpandableSection section={section as any} />;
+
+    case 'expandable_card':
+      return <ExpandableCardSection section={section as any} />;
+
+    case 'interactive_diagram':
+      return <InteractiveDiagramSection section={section as any} />;
 
     // More section types will be added here as we implement them
 
