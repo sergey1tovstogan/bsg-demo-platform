@@ -237,9 +237,9 @@ export const useSimulation = () => {
           } else {
             debugLog('No real events found from Event Store API - check backend logs and Event Hub consumer status')
             console.warn('[DEBUG] No events received. Check:', {
-              backendHealth: 'http://localhost:8000/api/v1/events/health',
-              allEvents: 'http://localhost:8000/api/v1/events?limit=10',
-              recentEvents: 'http://localhost:8000/api/v1/events/recent?minutes=5&limit=10'
+              backendHealth: 'http://localhost:8000/api/v1/components/data-architecture/events/health',
+              allEvents: 'http://localhost:8000/api/v1/components/data-architecture/events?limit=10',
+              recentEvents: 'http://localhost:8000/api/v1/components/data-architecture/events/recent?minutes=5&limit=10'
             })
           }
         }

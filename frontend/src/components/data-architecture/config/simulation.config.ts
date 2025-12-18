@@ -27,11 +27,11 @@ export const API_CONFIG = {
  * Event Store API Configuration (Azure Event Hub via Event Store API)
  */
 export const EVENT_STORE_CONFIG = {
-  // Backend proxy URL for Event Store API
+  // Backend proxy URL for Event Store API (component-specific endpoints)
   // Use full URL for local development, or relative URL if backend is proxied
-  BACKEND_PROXY_URL: typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-    ? 'http://localhost:8000/api/v1'  // Full URL for local dev
-    : '/api/v1',  // Relative URL for production (proxied)
+  BACKEND_PROXY_URL: typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:8000/api/v1/components/data-architecture'  // Full URL for local dev
+    : '/api/v1/components/data-architecture',  // Relative URL for production (proxied)
 
   // Polling settings
   POLLING_INTERVAL: 3000, // Poll every 3 seconds

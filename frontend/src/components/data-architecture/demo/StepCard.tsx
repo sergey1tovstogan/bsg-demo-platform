@@ -27,13 +27,13 @@ const StatusBadge: React.FC<{ status: StepCardProps['status'] }> = ({ status }) 
   const getStatusColor = () => {
     switch (status) {
       case 'idle':
-        return 'bg-gray-100 text-gray-700'
+        return 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
       case 'loading':
-        return 'bg-blue-100 text-blue-700'
+        return 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
       case 'success':
-        return 'bg-green-100 text-green-700'
+        return 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
       case 'error':
-        return 'bg-red-100 text-red-700'
+        return 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
     }
   }
 
@@ -51,7 +51,7 @@ const StatusBadge: React.FC<{ status: StepCardProps['status'] }> = ({ status }) 
   }
 
   return (
-    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor()}`}>
+    <span className={`px-2 py-1.5 rounded text-xs font-medium ${getStatusColor()}`}>
       {getStatusText()}
     </span>
   )
@@ -68,10 +68,10 @@ const ResultData: React.FC<{ data: any }> = ({ data }) => {
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className="mt-4 p-3 bg-gray-900 rounded-lg border border-gray-700"
+      className="mt-4 p-3 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-700"
     >
-      <div className="text-xs text-gray-400 mb-2 font-mono">Response Data:</div>
-      <pre className="text-xs text-green-400 font-mono overflow-x-auto max-h-40 overflow-y-auto">
+      <div className="text-xs text-slate-500 dark:text-slate-400 mb-2 font-mono">Response Data:</div>
+      <pre className="text-xs text-green-700 dark:text-green-400 font-mono overflow-x-auto max-h-40 overflow-y-auto">
         {JSON.stringify(data, null, 2)}
       </pre>
     </motion.div>
@@ -95,7 +95,7 @@ export const StepCard: React.FC<StepCardProps> = ({
   const getBorderColor = () => {
     switch (status) {
       case 'idle':
-        return 'border-gray-700'
+        return 'border-slate-300 dark:border-slate-700'
       case 'loading':
         return 'border-blue-500'
       case 'success':
@@ -114,7 +114,7 @@ export const StepCard: React.FC<StepCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: stepNumber * 0.1 }}
       className={`
-        relative bg-gray-800 rounded-xl p-6 border-2 transition-all duration-300
+        relative bg-white dark:bg-slate-800 rounded-xl p-6 border-2 transition-all duration-300
         ${getBorderColor()}
         ${status === 'loading' ? 'shadow-lg shadow-blue-500/20' : ''}
         ${status === 'success' ? 'shadow-lg shadow-green-500/20' : ''}
@@ -130,17 +130,17 @@ export const StepCard: React.FC<StepCardProps> = ({
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3 flex-1">
           {/* Icon */}
-          <div className="p-2 bg-gray-700 rounded-lg">
+          <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
             {icon}
           </div>
 
           {/* Title and description */}
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-semibold text-white">{title}</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
               <StatusBadge status={status} />
             </div>
-            <p className="text-sm text-gray-400">{description}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
           </div>
         </div>
 
@@ -158,10 +158,10 @@ export const StepCard: React.FC<StepCardProps> = ({
           onClick={onExecute}
           disabled={disabled}
           className={`
-            w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200
+            w-full py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200
             ${
               disabled
-                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                 : 'bg-gradient-to-r from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700 shadow-lg hover:shadow-teal-500/50'
             }
           `}

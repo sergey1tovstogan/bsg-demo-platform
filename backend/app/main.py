@@ -17,8 +17,8 @@ from app.core.database import init_db, close_db, get_database
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
-from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events
-from app.services.eventhub_service import eventhub_service
+from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events, data_architecture
+from app.adapters.eventhub import get_eventhub_adapter
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 # Setup logging
@@ -52,12 +52,13 @@ async def lifespan(app: FastAPI):
     logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
     logger.info(f"Rate limiting: {'enabled' if settings.RATE_LIMIT_ENABLED else 'disabled'}")
 
-    # Start Event Hub consumer
+    # Start Event Hub adapter
     try:
-        await eventhub_service.start()
-        logger.info("Event Hub consumer started")
+        eventhub_adapter = get_eventhub_adapter()
+        await eventhub_adapter.start()
+        logger.info("Event Hub adapter started successfully")
     except Exception as e:
-        logger.error(f"Failed to start Event Hub consumer: {e}")
+        logger.error(f"Failed to start Event Hub adapter: {e}")
         logger.warning("Application will start but Event Hub features may not work")
 
     yield
@@ -66,14 +67,15 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down application")
-    
-    # Stop Event Hub consumer
+
+    # Stop Event Hub adapter
     try:
-        await eventhub_service.stop()
-        logger.info("Event Hub consumer stopped")
+        eventhub_adapter = get_eventhub_adapter()
+        await eventhub_adapter.stop()
+        logger.info("Event Hub adapter stopped successfully")
     except Exception as e:
-        logger.error(f"Error stopping Event Hub consumer: {e}")
-    
+        logger.error(f"Error stopping Event Hub adapter: {e}")
+
     # Close database connections
     await close_db()
     logger.info("Database connections closed")
@@ -186,6 +188,12 @@ app.include_router(security.router, prefix=settings.API_V1_PREFIX)
 app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
 app.include_router(cache.router, prefix=settings.API_V1_PREFIX)
+
+# Component-specific API routers
+app.include_router(data_architecture.router, prefix=settings.API_V1_PREFIX)
+
+# DEPRECATED: Legacy events router - kept for backward compatibility
+# Use /api/v1/components/data-architecture/events instead
 app.include_router(events.router, prefix=settings.API_V1_PREFIX)
 
 # Serve static files (frontend) if directory exists

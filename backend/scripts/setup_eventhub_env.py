@@ -1,7 +1,17 @@
 """
 Helper script to set up Event Hub environment variables.
 
-This script creates a .env file with the Event Hub connection string.
+Location: backend/scripts/setup_eventhub_env.py
+
+This script creates a .env file with the Event Hub connection string
+for the EventHub adapter (backend/app/adapters/eventhub/).
+
+The EventHub adapter is used by the data-architecture component
+for real-time event streaming.
+
+Usage:
+    cd backend/scripts
+    python setup_eventhub_env.py
 """
 
 import os
@@ -17,8 +27,9 @@ EVENTHUB_CONFIG = {
 
 def setup_env_file():
     """Create or update .env file with Event Hub configuration."""
-    # Get project root (parent of backend directory)
-    backend_dir = Path(__file__).parent
+    # Get project root (this file is in backend/scripts/)
+    scripts_dir = Path(__file__).parent
+    backend_dir = scripts_dir.parent
     project_root = backend_dir.parent
     env_file = project_root / ".env"
     
@@ -77,9 +88,10 @@ def setup_env_file():
     print("=" * 60)
     print()
     print("Next steps:")
-    print("1. Start the backend: cd backend && uvicorn app.main:app --reload")
-    print("2. Test connection: python test_eventhub_connection.py")
-    print("3. Check health: curl http://localhost:8000/api/v1/events/health")
+    print("1. Start the backend: cd backend && py -m uvicorn app.main:app --reload")
+    print("2. Check adapter health: curl http://localhost:8000/api/v1/components/data-architecture/events/health")
+    print("3. Get events: curl http://localhost:8000/api/v1/components/data-architecture/events?limit=10")
+    print("4. View API docs: http://localhost:8000/docs")
 
 if __name__ == "__main__":
     try:

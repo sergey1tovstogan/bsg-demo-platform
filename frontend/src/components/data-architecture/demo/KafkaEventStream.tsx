@@ -37,19 +37,19 @@ const EventTypeBadge: React.FC<{ type: KafkaEvent['type'] }> = ({ type }) => {
  */
 const EventMetadata: React.FC<{ event: KafkaEvent }> = ({ event }) => {
   return (
-    <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
+    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-mono">
       <span>
-        Partition: <span className="text-green-400">{event.partition}</span>
+        Partition: <span className="text-green-700 dark:text-green-400">{event.partition}</span>
       </span>
-      <span className="text-gray-600">|</span>
+      <span className="text-slate-400 dark:text-slate-600">|</span>
       <span>
-        Offset: <span className="text-green-400">{event.offset}</span>
+        Offset: <span className="text-green-700 dark:text-green-400">{event.offset}</span>
       </span>
       {event.transactionType && (
         <>
-          <span className="text-gray-600">|</span>
+          <span className="text-slate-400 dark:text-slate-600">|</span>
           <span>
-            Type: <span className="text-teal-400">{event.transactionType}</span>
+            Type: <span className="text-teal-600 dark:text-teal-400">{event.transactionType}</span>
           </span>
         </>
       )}
@@ -72,7 +72,7 @@ const PayloadPreview: React.FC<{ payload: any; isFirst?: boolean }> = ({ payload
     <div className="mt-2">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="text-xs text-green-400 hover:text-green-300 font-mono mb-1 flex items-center gap-1"
+        className="text-xs text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 font-mono mb-1 flex items-center gap-1"
       >
         <ArrowRight
           className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
@@ -85,16 +85,16 @@ const PayloadPreview: React.FC<{ payload: any; isFirst?: boolean }> = ({ payload
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="bg-gray-900 rounded p-3 border border-gray-700"
+          className="bg-slate-50 dark:bg-slate-900 rounded p-3 border border-slate-200 dark:border-slate-700"
         >
           {/* CloudEvents Fields - Highlighted */}
           {highlightedFields.length > 0 && (
-            <div className="mb-2 pb-2 border-b border-gray-700">
-              <div className="text-yellow-400 text-xs font-semibold mb-1">CloudEvents Fields:</div>
+            <div className="mb-2 pb-2 border-b border-slate-300 dark:border-slate-700">
+              <div className="text-yellow-700 dark:text-yellow-400 text-xs font-semibold mb-1">CloudEvents Fields:</div>
               {highlightedFields.map((key) => (
                 <div key={key} className="text-xs font-mono ml-2">
-                  <span className="text-cyan-400">{key}:</span>{' '}
-                  <span className="text-green-400">{JSON.stringify(payload[key])}</span>
+                  <span className="text-cyan-700 dark:text-cyan-400">{key}:</span>{' '}
+                  <span className="text-green-700 dark:text-green-400">{JSON.stringify(payload[key])}</span>
                 </div>
               ))}
             </div>
@@ -102,8 +102,8 @@ const PayloadPreview: React.FC<{ payload: any; isFirst?: boolean }> = ({ payload
           {/* Other Fields */}
           {otherFields.length > 0 && (
             <div>
-              <div className="text-gray-400 text-xs font-semibold mb-1">Additional Data:</div>
-              <pre className="text-xs text-green-400 font-mono overflow-x-auto max-h-48 overflow-y-auto">
+              <div className="text-slate-600 dark:text-slate-400 text-xs font-semibold mb-1">Additional Data:</div>
+              <pre className="text-xs text-green-700 dark:text-green-400 font-mono overflow-x-auto max-h-48 overflow-y-auto">
                 {JSON.stringify(
                   otherFields.reduce((acc, key) => ({ ...acc, [key]: payload[key] }), {}),
                   null,
@@ -115,13 +115,13 @@ const PayloadPreview: React.FC<{ payload: any; isFirst?: boolean }> = ({ payload
         </motion.div>
       ) : (
         // Show compact preview with key fields only
-        <div className="text-xs text-gray-500 font-mono pl-4">
+        <div className="text-xs text-slate-500 dark:text-slate-500 font-mono pl-4">
           {highlightedFields.slice(0, 3).map((key, idx) => (
             <div key={idx} className="truncate">
-              <span className="text-cyan-400">{key}:</span> {JSON.stringify(payload[key])}
+              <span className="text-cyan-700 dark:text-cyan-400">{key}:</span> {JSON.stringify(payload[key])}
             </div>
           ))}
-          {highlightedFields.length > 3 && <div className="text-gray-600">... +{highlightedFields.length - 3} more fields</div>}
+          {highlightedFields.length > 3 && <div className="text-slate-400 dark:text-slate-600">... +{highlightedFields.length - 3} more fields</div>}
         </div>
       )}
     </div>
@@ -148,7 +148,7 @@ const KafkaEventEntry: React.FC<{ event: KafkaEvent; index: number }> = ({ event
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       transition={{ delay: index * 0.05 }}
-      className="border-l-2 border-green-500 pl-4 py-3 hover:bg-green-950/30 transition-colors"
+      className="border-l-2 border-green-500 pl-4 py-3 hover:bg-green-50/30 dark:hover:bg-green-950/30 transition-colors"
     >
       {/* Event header */}
       <div className="flex items-center justify-between mb-2">
@@ -157,21 +157,21 @@ const KafkaEventEntry: React.FC<{ event: KafkaEvent; index: number }> = ({ event
           <EventTypeBadge type={event.type} />
 
           {/* Topic name */}
-          <span className="text-sm text-green-400 font-mono">{event.topic}</span>
+          <span className="text-sm text-green-700 dark:text-green-400 font-mono">{event.topic}</span>
 
           {/* Customer ID Badge (if available) */}
           {event.payload?.entityid && (
-            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono border border-blue-500/30">
+            <span className="text-xs bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-mono border border-blue-300 dark:border-blue-500/30">
               Customer: {event.payload.entityid}
             </span>
           )}
 
           {/* Event ID */}
-          <span className="text-xs text-gray-500 font-mono">ID: {event.id}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-500 font-mono">ID: {event.id}</span>
         </div>
 
         {/* Timestamp */}
-        <span className="text-xs text-gray-500 font-mono">{formatTimestamp(event.timestamp)}</span>
+        <span className="text-xs text-slate-500 dark:text-slate-500 font-mono">{formatTimestamp(event.timestamp)}</span>
       </div>
 
       {/* Event metadata */}
@@ -212,24 +212,24 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
   const dataEvents = events.filter((e) => e.type === 'data').length
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-green-950/20 to-gray-900 rounded-xl border border-green-800/30 overflow-hidden flex flex-col h-full">
+    <div className="bg-gradient-to-br from-white via-green-50 to-white dark:from-slate-900 dark:via-green-950/20 dark:to-slate-900 rounded-xl border border-green-300/30 dark:border-green-800/30 overflow-hidden flex flex-col h-full">
       {/* Header */}
-      <div className="bg-green-950/40 px-4 py-3 border-b border-green-800/30 backdrop-blur-sm">
+      <div className="bg-green-100/40 dark:bg-green-950/40 px-4 py-3 border-b border-green-300/30 dark:border-green-800/30 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Zap className="w-5 h-5 text-green-500" />
-            <h3 className="text-sm font-semibold text-green-400">Kafka Event Stream</h3>
+            <Zap className="w-5 h-5 text-green-600 dark:text-green-500" />
+            <h3 className="text-sm font-semibold text-green-700 dark:text-green-400">Kafka Event Stream</h3>
             {events.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-mono">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                   {events.length} {events.length === 1 ? 'event' : 'events'}
                 </span>
-                <span className="text-gray-600">|</span>
-                <span className="text-xs text-teal-400 font-mono">
+                <span className="text-slate-400 dark:text-slate-600">|</span>
+                <span className="text-xs text-teal-600 dark:text-teal-400 font-mono">
                   {businessEvents} business
                 </span>
-                <span className="text-gray-600">|</span>
-                <span className="text-xs text-purple-400 font-mono">
+                <span className="text-slate-400 dark:text-slate-600">|</span>
+                <span className="text-xs text-purple-600 dark:text-purple-400 font-mono">
                   {dataEvents} data
                 </span>
               </div>
@@ -241,7 +241,7 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
             {/* Pause/Resume button */}
             <button
               onClick={handlePauseToggle}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-300 hover:text-white hover:bg-green-950/60 transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-green-100/60 dark:hover:bg-green-950/60 transition-colors"
             >
               {localPaused ? (
                 <>
@@ -264,8 +264,8 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
                 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
                 ${
                   events.length === 0
-                    ? 'text-gray-600 cursor-not-allowed'
-                    : 'text-gray-300 hover:text-white hover:bg-green-950/60'
+                    ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-green-100/60 dark:hover:bg-green-950/60'
                 }
               `}
             >
@@ -279,10 +279,10 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
       {/* Events container */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-green-800 scrollbar-track-gray-900"
+        className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-green-500 dark:scrollbar-thumb-green-800 scrollbar-track-slate-100 dark:scrollbar-track-slate-900"
       >
         {events.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+          <div className="flex flex-col items-center justify-center h-full text-slate-500 dark:text-slate-500">
             <Zap className="w-12 h-12 mb-3 opacity-30" />
             <p className="text-sm">No events emitted yet</p>
             <p className="text-xs mt-1">Execute a transaction to see Kafka events here</p>
@@ -300,7 +300,7 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2 justify-center text-yellow-400 text-sm py-2 bg-yellow-950/20 rounded border border-yellow-800/30"
+            className="flex items-center gap-2 justify-center text-yellow-700 dark:text-yellow-400 text-sm py-2 bg-yellow-100/20 dark:bg-yellow-950/20 rounded border border-yellow-300/30 dark:border-yellow-800/30"
           >
             <Pause className="w-4 h-4" />
             <span>Stream paused</span>
@@ -309,22 +309,22 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
       </div>
 
       {/* Footer with streaming indicator */}
-      <div className="bg-green-950/40 px-4 py-2 border-t border-green-800/30 flex items-center justify-between backdrop-blur-sm">
+      <div className="bg-green-100/40 dark:bg-green-950/40 px-4 py-2 border-t border-green-300/30 dark:border-green-800/30 flex items-center justify-between backdrop-blur-sm">
         <div className="flex items-center gap-2">
           {!localPaused && events.length > 0 && (
             <>
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-xs text-green-400">Live streaming</span>
+              <div className="w-2 h-2 bg-green-600 dark:bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs text-green-700 dark:text-green-400">Live streaming</span>
             </>
           )}
         </div>
 
         {/* Stats */}
         {events.length > 0 && (
-          <div className="flex items-center gap-4 text-xs text-gray-400">
+          <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
             <span>
               Latest:{' '}
-              <span className="text-green-400 font-mono">
+              <span className="text-green-700 dark:text-green-400 font-mono">
                 {new Date(events[events.length - 1].timestamp).toLocaleTimeString()}
               </span>
             </span>

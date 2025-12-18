@@ -1,6 +1,15 @@
 """
 Events API - Direct Azure Event Hub Integration
 
+⚠️ DEPRECATED: This API is deprecated and will be removed in a future release.
+
+Use component-specific endpoints instead:
+    /api/v1/components/data-architecture/events
+
+This file is kept for backward compatibility only.
+
+---
+
 Provides access to Azure Event Hub events via direct consumer connection.
 Events are streamed in real-time and can be filtered by customerId.
 Transforms CloudEvents to KafkaEvent format for frontend consumption.

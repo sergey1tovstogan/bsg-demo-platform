@@ -15,7 +15,7 @@ import { TRANSACTION_STEPS, API_CONFIG } from '../config/simulation.config'
  */
 const ProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
   return (
-    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
       <motion.div
         className="h-full bg-gradient-to-r from-teal-500 to-teal-600"
         initial={{ width: 0 }}
@@ -63,7 +63,7 @@ const EventSourceIndicator: React.FC<{
 
       {/* Event Hub Connection Status */}
       {!isMock && connectionStatus && (
-        <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-gray-800 border border-gray-700">
+        <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
           <div
             className={`w-2 h-2 rounded-full ${
               connectionStatus === 'connected'
@@ -72,12 +72,12 @@ const EventSourceIndicator: React.FC<{
                 ? 'bg-yellow-500 animate-pulse'
                 : connectionStatus === 'error'
                 ? 'bg-red-500'
-                : 'bg-gray-500'
+                : 'bg-slate-500'
             }`}
           />
-          <span className="text-xs text-gray-400 capitalize">{connectionStatus}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400 capitalize">{connectionStatus}</span>
           {eventHubHealth?.buffer_size !== undefined && (
-            <span className="text-xs text-gray-500">| Buffer: {eventHubHealth.buffer_size}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-500">| Buffer: {eventHubHealth.buffer_size}</span>
           )}
         </div>
       )}
@@ -86,13 +86,13 @@ const EventSourceIndicator: React.FC<{
       {!isMock && connectionStatus === 'connected' && (
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
-          <span className="text-xs text-gray-400">Live</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Live</span>
         </div>
       )}
 
       {/* Event Count */}
       {eventCount > 0 && (
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-slate-500 dark:text-slate-500">
           {eventCount} {eventCount === 1 ? 'event' : 'events'}
         </span>
       )}
@@ -106,32 +106,32 @@ const EventSourceIndicator: React.FC<{
 const StatsDisplay: React.FC<{ stats: any }> = ({ stats }) => {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="text-sm text-gray-400 mb-1">Completed Steps</div>
-        <div className="text-2xl font-bold text-white">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+        <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Completed Steps</div>
+        <div className="text-2xl font-bold text-slate-900 dark:text-white">
           {stats.completedSteps} / {stats.totalSteps}
         </div>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="text-sm text-gray-400 mb-1">API Calls</div>
-        <div className="text-2xl font-bold text-blue-400">{stats.totalApiCalls}</div>
-        <div className="text-xs text-gray-500 mt-1">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+        <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">API Calls</div>
+        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.totalApiCalls}</div>
+        <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
           {stats.successfulApiCalls} success / {stats.failedApiCalls} failed
         </div>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="text-sm text-gray-400 mb-1">Kafka Events</div>
-        <div className="text-2xl font-bold text-green-400">{stats.totalKafkaEvents}</div>
-        <div className="text-xs text-gray-500 mt-1">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+        <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Kafka Events</div>
+        <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.totalKafkaEvents}</div>
+        <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
           {stats.businessEvents} business / {stats.dataEvents} data
         </div>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="text-sm text-gray-400 mb-1">Progress</div>
-        <div className="text-2xl font-bold text-teal-400">{Math.round(stats.progress)}%</div>
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+        <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Progress</div>
+        <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">{Math.round(stats.progress)}%</div>
         <div className="mt-2">
           <ProgressBar progress={stats.progress} />
         </div>
@@ -171,7 +171,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
   useEffect(() => {
     const checkEventHubHealth = async () => {
       try {
-        const response = await fetch('/api/v1/events/health')
+        const response = await fetch('/api/v1/components/data-architecture/events/health')
         if (response.ok) {
           const health = await response.json()
           setEventHubHealth(health)
@@ -221,15 +221,15 @@ export const TemenosTransactionSimulator: React.FC = () => {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
               Temenos Transaction Simulator
             </h1>
-            <p className="text-gray-400">
+            <p className="text-slate-500 dark:text-slate-400">
               Simulate banking operations and visualize data flow through the architecture
             </p>
           </div>
@@ -239,13 +239,13 @@ export const TemenosTransactionSimulator: React.FC = () => {
             {/* API Mode Toggle (shown if configured) */}
             {/* API Mode Toggle - DISABLED: Always uses real mode */}
             {false && API_CONFIG.SHOW_API_TOGGLE && (
-              <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2 border border-gray-700">
-                <span className="text-sm text-gray-400">API Mode:</span>
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg px-4 py-2 border border-slate-200 dark:border-slate-700">
+                <span className="text-sm text-slate-500 dark:text-slate-400">API Mode:</span>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleApiModeToggle}
-                  className="flex items-center gap-2 px-3 py-1 rounded-md font-medium text-sm transition-all bg-green-500/20 text-green-400 border border-green-500/30"
+                  className="flex items-center gap-2 px-3 py-1 rounded-md font-medium text-sm transition-all bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30"
                 >
                   <Globe className="w-4 h-4" />
                   Real
@@ -258,7 +258,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleReset}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               Reset Simulation
@@ -279,10 +279,10 @@ export const TemenosTransactionSimulator: React.FC = () => {
             <div className="flex items-center gap-4">
               <CheckCircle2 className="w-12 h-12 text-green-500" />
               <div>
-                <h3 className="text-xl font-bold text-white mb-1">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
                   Simulation Complete! 🎉
                 </h3>
-                <p className="text-gray-300">
+                <p className="text-slate-700 dark:text-slate-300">
                   All transactions executed successfully. Check the API Inspector and Kafka Event
                   Stream for details.
                 </p>
@@ -296,7 +296,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
           {/* Left column - Transaction steps */}
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-teal-500" />
                 Transaction Workflow
               </h2>
