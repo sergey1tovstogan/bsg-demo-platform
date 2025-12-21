@@ -124,19 +124,18 @@ function App() {
         {/* Content Container */}
         <div className="relative z-10 px-8 py-8 h-full overflow-y-auto custom-scrollbar">
           <div className="max-w-7xl mx-auto">
-            <Header onSearch={handleSearch} />
-
-            <div className="mt-8 animate-fade-in">
+            <div className="animate-fade-in">
               {currentComponent ? (
-                <ComponentPage 
-                  componentId={currentComponent} 
+                <ComponentPage
+                  componentId={currentComponent}
                   initialSelectedCard={selectedCard}
                   initialTab={activeTab}
                 />
               ) : (
-                <HomePage 
+                <HomePage
                   onSelectComponent={handleComponentChange}
                   onSettingsClick={() => setSettingsOpen(true)}
+                  searchBar={<Header onSearch={handleSearch} showSearch={true} />}
                 />
               )}
             </div>

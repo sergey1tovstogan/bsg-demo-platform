@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Play, Loader2, AlertCircle, CheckCircle, Key, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react'
-import axios from 'axios'
+import { apiService } from '../services/api'
 import { ApiKeyModal } from './ApiKeyModal'
 
 interface ApiResult {
@@ -114,20 +114,12 @@ export function IntegrationDemo() {
   const fetchBalance = async () => {
     setBalance({ loading: true })
     try {
-      const response = await axios.get(
-        'http://localhost:8000/api/v1/integration/proxy',
-        {
-          params: {
-            url: 'https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/accounts/11215/balances'
-          },
-          headers: {
-            'X-User-Id': 'demo_user'
-          },
-          timeout: 30000
-        }
+      const proxyData = await apiService.proxyRequest(
+        'https://mdsworkbench.temenos.com/irf-extension-api/api/v1.0.0/order/accounts/11215/balances',
+        'GET',
+        undefined,
+        'demo_user'
       )
-
-      const proxyData = response.data
       console.log('Balance API Response:', proxyData) // Debug log
 
       if (proxyData.success && proxyData.data) {
@@ -170,21 +162,12 @@ export function IntegrationDemo() {
     setGetResult({ loading: true })
     try {
       // Use backend proxy to avoid CORS issues
-      const response = await axios.get(
-        'http://localhost:8000/api/v1/integration/proxy',
-        {
-          params: {
-            url: 'https://api.temenos.com/api/v4.0.0/holdings/securityTrades/trades'
-          },
-          headers: {
-            'X-User-Id': 'demo_user'
-          },
-          timeout: 30000
-        }
+      const proxyData = await apiService.proxyRequest(
+        'https://api.temenos.com/api/v4.0.0/holdings/securityTrades/trades',
+        'GET',
+        undefined,
+        'demo_user'
       )
-
-      // Extract data from proxy response
-      const proxyData = response.data
       setGetResult({
         loading: false,
         status: proxyData.status,
@@ -209,23 +192,12 @@ export function IntegrationDemo() {
       const parsedBody = JSON.parse(postBody)
 
       // Use backend proxy to avoid CORS issues
-      const response = await axios.post(
-        'http://localhost:8000/api/v1/integration/proxy',
+      const proxyData = await apiService.proxyRequest(
+        'https://mdsworkbench.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders',
+        'POST',
         parsedBody,
-        {
-          params: {
-            url: 'https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders'
-          },
-          headers: {
-            'X-User-Id': 'demo_user',
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
-        }
+        'demo_user'
       )
-
-      // Extract data from proxy response
-      const proxyData = response.data
       setPostResult({
         loading: false,
         status: proxyData.status,
@@ -250,58 +222,35 @@ export function IntegrationDemo() {
   const executePortfolioRequest = async () => {
     setPortfolioResult({ loading: true })
     try {
-      const portfolioUrl = `https://transactwb.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/${portfolioId}`
+      const portfolioUrl = `https://mdsworkbench.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/${portfolioId}`
 
+      let proxyData
       if (portfolioMethod === 'POST') {
         // Validate JSON
         const parsedBody = JSON.parse(portfolioBody)
 
         // Use backend proxy to avoid CORS issues
-        const response = await axios.post(
-          'http://localhost:8000/api/v1/integration/proxy',
+        proxyData = await apiService.proxyRequest(
+          portfolioUrl,
+          'POST',
           parsedBody,
-          {
-            params: {
-              url: portfolioUrl
-            },
-            headers: {
-              'X-User-Id': 'demo_user',
-              'Content-Type': 'application/json'
-            },
-            timeout: 30000
-          }
+          'demo_user'
         )
-
-        // Extract data from proxy response
-        const proxyData = response.data
-        setPortfolioResult({
-          loading: false,
-          status: proxyData.status,
-          data: proxyData.data
-        })
       } else {
         // GET request
-        const response = await axios.get(
-          'http://localhost:8000/api/v1/integration/proxy',
-          {
-            params: {
-              url: portfolioUrl
-            },
-            headers: {
-              'X-User-Id': 'demo_user'
-            },
-            timeout: 30000
-          }
+        proxyData = await apiService.proxyRequest(
+          portfolioUrl,
+          'GET',
+          undefined,
+          'demo_user'
         )
-
-        // Extract data from proxy response
-        const proxyData = response.data
-        setPortfolioResult({
-          loading: false,
-          status: proxyData.status,
-          data: proxyData.data
-        })
       }
+
+      setPortfolioResult({
+        loading: false,
+        status: proxyData.status,
+        data: proxyData.data
+      })
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } }, message?: string }
       setPortfolioResult({
@@ -317,20 +266,12 @@ export function IntegrationDemo() {
     try {
       const customerUrl = `https://api.temenos.com/api/v5.7.0/party/customers/${customerId}`
 
-      const response = await axios.get(
-        'http://localhost:8000/api/v1/integration/proxy',
-        {
-          params: {
-            url: customerUrl
-          },
-          headers: {
-            'X-User-Id': 'demo_user'
-          },
-          timeout: 30000
-        }
+      const proxyData = await apiService.proxyRequest(
+        customerUrl,
+        'GET',
+        undefined,
+        'demo_user'
       )
-
-      const proxyData = response.data
       setCustomerResult({
         loading: false,
         status: proxyData.status,
@@ -349,22 +290,14 @@ export function IntegrationDemo() {
   const executeAccountsRequest = async () => {
     setAccountsResult({ loading: true })
     try {
-      const accountsUrl = `https://transactwb.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=${currencyId}`
+      const accountsUrl = `https://mdsworkbench.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=${currencyId}`
 
-      const response = await axios.get(
-        'http://localhost:8000/api/v1/integration/proxy',
-        {
-          params: {
-            url: accountsUrl
-          },
-          headers: {
-            'X-User-Id': 'demo_user'
-          },
-          timeout: 30000
-        }
+      const proxyData = await apiService.proxyRequest(
+        accountsUrl,
+        'GET',
+        undefined,
+        'demo_user'
       )
-
-      const proxyData = response.data
       setAccountsResult({
         loading: false,
         status: proxyData.status,
@@ -408,7 +341,7 @@ export function IntegrationDemo() {
               <h3 className="text-lg font-bold text-[#283054] dark:text-white">Payment Orders</h3>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              https://transactwb.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders
+              https://mdsworkbench.temenos.com/irf-extension-api/api/v1.0.0/order/paymentOrders
             </p>
           </div>
           <button
@@ -671,7 +604,7 @@ export function IntegrationDemo() {
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                https://transactwb.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/
+                https://mdsworkbench.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/
               </span>
               <input
                 type="text"
@@ -879,7 +812,7 @@ export function IntegrationDemo() {
             </div>
             <div className="flex items-center space-x-2">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                https://transactwb.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=
+                https://mdsworkbench.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances?currencyId=
               </p>
               <input
                 type="text"

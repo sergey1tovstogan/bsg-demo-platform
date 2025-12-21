@@ -125,27 +125,15 @@ async def save_user_api_key(
         raise HTTPException(status_code=500, detail=f"Failed to save API key: {str(e)}")
 
 
-@router.api_route("/proxy", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-async def proxy_api_request(
+async def _proxy_handler(
     request: Request,
     url: str,
-    user_id: Optional[str] = Header(None, alias="X-User-Id"),
-    settings: Settings = Depends(get_settings),
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    user_id: Optional[str],
+    settings: Settings,
+    db: AsyncIOMotorDatabase
 ) -> Dict[str, Any]:
     """
-    Proxy requests to external APIs to bypass CORS restrictions.
-    Uses user's stored API key from database if available, falls back to system key.
-
-    Args:
-        request: FastAPI request object
-        url: Target URL to proxy to
-        user_id: User identifier from header (optional for demo)
-        settings: Application settings
-        db: Database connection
-
-    Returns:
-        Response from the external API
+    Internal proxy handler for all HTTP methods.
     """
     try:
         # Get request body if present
@@ -207,3 +195,8 @@ async def proxy_api_request(
     except Exception as e:
         logger.error(f"Error proxying request to {url}: {str(e)}")
         raise HTTPException(status_code=502, detail=f"Bad gateway: {str(e)}")
+
+
+# NOTE: The /proxy endpoint is NOT registered in this router
+# All HTTP methods (GET, POST, PUT, DELETE, PATCH) for /proxy are registered
+# directly in main.py to avoid routing conflicts with the router system

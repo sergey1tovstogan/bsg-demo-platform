@@ -51,7 +51,7 @@ export function DataArchitectureContent() {
   const [greyedComponents, setGreyedComponents] = useState<Set<string>>(new Set()) // Components to grey out
   const [completedPaths, setCompletedPaths] = useState<Set<AnimationPath>>(new Set()) // Track which paths have been completed
   const [shouldSpawnPath1And2, setShouldSpawnPath1And2] = useState(false) // Track if Path 1/2 bubbles should continue spawning
-  const spawningIntervalRef = useRef<number | null>(null)
+  const spawningIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const diagramContainerRef = useRef<HTMLDivElement>(null)
   const diagramRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
