@@ -90,6 +90,16 @@ For detailed structure, see [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE
 - `videos` - Video metadata and references
 - `security_docs` - Security documentation
 - `presentations` - Presentation materials
+- `cache` - Cached RAG responses and component information (with expiration)
+
+**Client-Side Storage (localStorage):**
+The application uses browser localStorage to store user preferences and temporary data:
+- `bsg_selected_categories` - Selected component categories
+- `bsg_rag_jwt_token` - RAG API JWT token (cached for convenience)
+- `lastAzureSubscriptionId` - Last used Azure subscription ID
+- `app-theme` - UI theme preference (light/dark)
+
+**Note**: localStorage is browser-based storage that persists data locally on the user's machine. It's separate from MongoDB, which stores server-side persistent data in Azure Cosmos DB.
 
 For detailed documentation, see:
 - [Architecture Documentation](./docs/ARCHITECTURE.md)

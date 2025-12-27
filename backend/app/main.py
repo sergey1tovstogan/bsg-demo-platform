@@ -42,6 +42,31 @@ async def lifespan(app: FastAPI):
     try:
         await init_db()
         logger.info(f"Database: {settings.DATABASE_NAME}")
+        
+        # Warm up cache: Check for cached component info entries
+        try:
+            from datetime import datetime, timezone
+            db = await get_database()
+            
+            # Count cached component info entries (non-expired)
+            now = datetime.now(timezone.utc)
+            component_info_count = await db.cache.count_documents({
+                "cache_key": {"$regex": "^component_info:"},
+                "$or": [
+                    {"expires_at": {"$exists": False}},
+                    {"expires_at": {"$gt": now}}
+                ]
+            })
+            
+            if component_info_count > 0:
+                logger.info(f"✓ Found {component_info_count} cached component info entries in persistent storage")
+                logger.info("  Component info will be loaded from cache on-demand (no RAG API calls needed)")
+            else:
+                logger.info("  No cached component info found - will query RAG API when needed")
+        except Exception as e:
+            logger.warning(f"Failed to check cache status: {e}")
+            # Don't fail startup if cache check fails
+        
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
         logger.warning("Application will start but database-dependent features may not work")

@@ -983,7 +983,7 @@ function ResourceGroupSelector({
             )}
           </div>
           <div>
-            <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
+          <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
             {cached && (
               <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 flex items-center space-x-1">
                 <span>💡</span>

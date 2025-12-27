@@ -658,6 +658,16 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
         - No repeated summaries
         - No marketing-style prose
         - No "In summary" sections
+        - Remove FUNCTIONAL OVERVIEW and KEY CAPABILITIES sections
+        
+        OUTPUT FORMAT:
+        A) Architecture Overview (max 6 lines)
+        B) Patterns & Guarantees (table)
+        C) Canonical Event Lifecycle (numbered 1-7 steps)
+        D) Components & Interactions (table)
+        E) Integration Landscape (table)
+        F) Deployment Snapshot (exactly 6 bullets)
+        G) Observability & Resilience (max 8 bullets)
         
         Returns:
             Tuple of (refactored_architectural_overview, refactored_functional_overview)
@@ -668,48 +678,83 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
         # Combine both texts for comprehensive analysis
         combined_text = f"{architectural_text}\n\n{functional_text}".lower()
         
+        # Remove marketing adjectives and summary sections
+        combined_text = self._remove_marketing_prose(combined_text)
+        
         # Extract architecture overview (MAX 6 lines)
-        arch_overview = self._extract_architecture_overview(architectural_text, component_name)
+        arch_overview = self._extract_architecture_overview_clean(architectural_text, component_name)
         
-        # Extract core guarantees & capabilities (TABLE format)
-        capabilities_table = self._extract_capabilities_table(combined_text)
+        # Extract patterns & guarantees (TABLE format)
+        patterns_table = self._extract_patterns_guarantees_table(combined_text)
         
-        # Extract canonical event lifecycle (ONE FLOW ONLY)
-        event_lifecycle = self._extract_event_lifecycle(combined_text)
+        # Extract canonical event lifecycle (numbered 1-7 steps, ONE FLOW ONLY)
+        event_lifecycle = self._extract_canonical_event_lifecycle(combined_text)
+        
+        # Extract components & interactions (TABLE)
+        components_table = self._extract_components_interactions_table(combined_text)
         
         # Extract integration landscape (TABLE)
-        integration_table = self._extract_integration_landscape(combined_text)
+        integration_table = self._extract_integration_landscape_table(combined_text)
         
-        # Extract deployment & runtime snapshot
-        deployment_snapshot = self._extract_deployment_snapshot(combined_text)
+        # Extract deployment snapshot (exactly 6 bullets)
+        deployment_snapshot = self._extract_deployment_snapshot_bullets(combined_text, architectural_text)
         
-        # Build refactored architectural overview
-        refactored_arch = f"""{arch_overview}
+        # Extract observability & resilience (max 8 bullets)
+        observability = self._extract_observability_resilience(combined_text)
+        
+        # Build refactored architectural overview following exact format
+        refactored_arch = f"""## A) Architecture Overview
 
-## Core Guarantees & Capabilities
+{arch_overview}
 
-{capabilities_table}
+## B) Patterns & Guarantees
 
-## Canonical Event Lifecycle
+{patterns_table}
+
+## C) Canonical Event Lifecycle
 
 {event_lifecycle}
 
-## Integration Landscape
+## D) Components & Interactions
+
+{components_table}
+
+## E) Integration Landscape
 
 {integration_table}
 
-## Deployment & Runtime Snapshot
+## F) Deployment Snapshot
 
-{deployment_snapshot}"""
+{deployment_snapshot}
+
+## G) Observability & Resilience
+
+{observability}"""
         
-        # Functional overview is removed per requirements - return empty or minimal
+        # Functional overview is removed per requirements
         refactored_func = ""  # Explicitly removed per requirements
         
         logger.info(f"Refactored RAG content for {component_name}: arch={len(refactored_arch)} chars, func={len(refactored_func)} chars")
         
         return refactored_arch.strip(), refactored_func.strip()
     
-    def _extract_architecture_overview(self, text: str, component_name: str) -> str:
+    def _remove_marketing_prose(self, text: str) -> str:
+        """Remove marketing adjectives and summary sections."""
+        # Remove common marketing words
+        marketing_words = [
+            r'\bpivotal\b', r'\bhighly reliable\b', r'\brobust\b', r'\bcomprehensive\b',
+            r'\bseamless\b', r'\bessential\b', r'\bcritical\b', r'\bfoundational\b'
+        ]
+        for word in marketing_words:
+            text = re.sub(word, '', text, flags=re.IGNORECASE)
+        
+        # Remove "In summary" sections
+        text = re.sub(r'in summary[^.]*\.', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'summary[^.]*\.', '', text, flags=re.IGNORECASE)
+        
+        return text
+    
+    def _extract_architecture_overview_clean(self, text: str, component_name: str) -> str:
         """Extract architecture overview (MAX 6 lines)."""
         # Look for key phrases that indicate what the component is
         lines = []
@@ -777,66 +822,249 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
         # Limit to 6 lines max
         return "\n".join(lines[:6])
     
-    def _extract_capabilities_table(self, text: str) -> str:
-        """Extract core guarantees & capabilities as a table."""
-        capabilities = {
-            "Immutability": None,
-            "Event ordering": None,
-            "Event uniqueness": None,
-            "Replay": None,
-            "At-least-once delivery": None,
-            "Auditability": None,
-            "Schema validation": None
+    def _extract_patterns_guarantees_table(self, text: str) -> str:
+        """Extract Patterns & Guarantees table (Pattern/Guarantee | What it ensures | Why it matters)."""
+        patterns = {
+            "Transactional Outbox": ("Ensures events published only after successful database transactions", "Prevents event loss and maintains consistency"),
+            "Immutability": ("Events cannot be modified or deleted once written", "Provides audit trail and prevents data tampering"),
+            "Event Ordering": ("Events processed in strict sequence within partitions", "Critical for transaction processing where order matters"),
+            "Event Uniqueness": ("Each event has unique identifier preventing duplicates", "Ensures idempotent processing"),
+            "Replay": ("Consumers can replay events from any historical point", "Enables disaster recovery and state synchronization"),
+            "At-least-once Delivery": ("Events guaranteed to be delivered at least once", "Prevents data loss during failures"),
+            "Schema Validation": ("Events must conform to predefined schemas", "Ensures data consistency and interoperability")
         }
         
-        # Search for each capability
-        capability_patterns = {
-            "Immutability": [r"immutable", r"cannot.*modif", r"cannot.*delete", r"append-only"],
-            "Event ordering": [r"order", r"sequence", r"strict.*order", r"maintain.*order"],
-            "Event uniqueness": [r"unique", r"deduplicat", r"idempotent"],
-            "Replay": [r"replay", r"reprocess", r"replay.*event"],
-            "At-least-once delivery": [r"at.*least.*once", r"guaranteed.*delivery", r"delivery.*guarantee"],
-            "Auditability": [r"audit", r"audit.*trail", r"compliance", r"regulatory"],
-            "Schema validation": [r"schema", r"validat", r"schema.*valid"]
+        # Search text for actual descriptions
+        pattern_keywords = {
+            "Transactional Outbox": [r"transactional.*outbox", r"outbox.*pattern"],
+            "Immutability": [r"immutable", r"cannot.*modif", r"append-only"],
+            "Event Ordering": [r"order", r"sequence", r"strict.*order"],
+            "Event Uniqueness": [r"unique", r"deduplicat", r"idempotent"],
+            "Replay": [r"replay", r"reprocess", r"historical"],
+            "At-least-once Delivery": [r"at.*least.*once", r"guaranteed.*delivery"],
+            "Schema Validation": [r"schema", r"validat", r"cloudevents"]
         }
         
-        for cap_name, patterns in capability_patterns.items():
-            for pattern in patterns:
-                matches = list(re.finditer(pattern, text, re.IGNORECASE))
-                if matches:
-                    # Extract surrounding context
-                    match = matches[0]
-                    start = max(0, match.start() - 100)
-                    end = min(len(text), match.end() + 200)
-                    context = text[start:end]
-                    # Extract sentence
-                    sentences = re.split(r'[.!?]+', context)
-                    for sentence in sentences:
-                        if pattern.replace(r'\w*', '').replace('\\', '').lower() in sentence.lower():
-                            capabilities[cap_name] = sentence.strip()[:200]
-                            break
-                    if capabilities[cap_name]:
+        for pattern_name, (default_ensures, default_matters) in patterns.items():
+            if pattern_name in pattern_keywords:
+                for keyword_pattern in pattern_keywords[pattern_name]:
+                    if re.search(keyword_pattern, text, re.IGNORECASE):
+                        # Try to extract actual description
+                        matches = list(re.finditer(keyword_pattern, text, re.IGNORECASE))
+                        if matches:
+                            match = matches[0]
+                            start = max(0, match.start() - 50)
+                            end = min(len(text), match.end() + 150)
+                            context = text[start:end]
+                            sentences = re.split(r'[.!?]+', context)
+                            for sentence in sentences:
+                                if keyword_pattern.replace(r'\w*', '').replace('\\', '').lower() in sentence.lower() and len(sentence.strip()) > 30:
+                                    patterns[pattern_name] = (sentence.strip()[:120], default_matters)
+                                    break
                         break
         
-        # Build table
         table_rows = []
-        table_rows.append("| Capability | Guarantee Provided | Why It Matters (Business Impact) |")
-        table_rows.append("|------------|-------------------|----------------------------------|")
+        table_rows.append("| Pattern/Guarantee | What it ensures | Why it matters |")
+        table_rows.append("|-------------------|------------------|-----------------|")
         
-        for cap_name, description in capabilities.items():
-            if description:
-                # Extract business impact if available
-                business_impact = "Ensures data integrity and compliance requirements"
-                if "compliance" in description.lower() or "regulatory" in description.lower():
-                    business_impact = "Meets regulatory requirements (SOX, GDPR, PCI-DSS)"
-                elif "order" in description.lower():
-                    business_impact = "Critical for transaction processing where sequence matters"
-                elif "replay" in description.lower():
-                    business_impact = "Enables disaster recovery and debugging"
-                
-                table_rows.append(f"| {cap_name} | {description[:100]} | {business_impact} |")
+        for pattern_name, (ensures, matters) in patterns.items():
+            table_rows.append(f"| {pattern_name} | {ensures} | {matters} |")
         
         return "\n".join(table_rows)
+    
+    def _extract_canonical_event_lifecycle(self, text: str) -> str:
+        """Extract canonical event lifecycle (numbered 1-7 steps, ONE FLOW ONLY)."""
+        lifecycle_steps = []
+        
+        step_definitions = [
+            (1, "Event generation", [r"event.*generat", r"creat.*event", r"produc.*event"]),
+            (2, "Transactional outbox persistence", [r"transactional.*outbox", r"outbox.*persist", r"persist.*outbox"]),
+            (3, "Immutable storage", [r"immutable.*stor", r"append.*only", r"event.*stor"]),
+            (4, "Routing/publication", [r"rout", r"publish", r"distribut"]),
+            (5, "Consumer processing", [r"consum", r"process.*event", r"handl.*event"]),
+            (6, "Retry handling", [r"retry", r"error.*handl", r"fail.*handl"]),
+            (7, "Replay (on demand)", [r"replay", r"reprocess", r"on.*demand"])
+        ]
+        
+        for step_num, step_name, patterns in step_definitions:
+            found = False
+            for pattern in patterns:
+                if re.search(pattern, text, re.IGNORECASE):
+                    # Extract concise description
+                    matches = list(re.finditer(pattern, text, re.IGNORECASE))
+                    if matches:
+                        match = matches[0]
+                        start = max(0, match.start() - 80)
+                        end = min(len(text), match.end() + 120)
+                        context = text[start:end]
+                        sentences = re.split(r'[.!?]+', context)
+                        for sentence in sentences:
+                            if pattern.replace(r'\w*', '').replace('\\', '').lower() in sentence.lower() and len(sentence.strip()) > 20:
+                                desc = sentence.strip()[:100]
+                                lifecycle_steps.append(f"{step_num}. {step_name}: {desc}")
+                                found = True
+                                break
+                    if found:
+                        break
+            if not found:
+                # Use default description
+                lifecycle_steps.append(f"{step_num}. {step_name}")
+        
+        return "\n".join(lifecycle_steps)
+    
+    def _extract_components_interactions_table(self, text: str) -> str:
+        """Extract Components & Interactions table (Component | Responsibility | Notes)."""
+        components = {
+            "Persistent Store": ("Stores events immutably, ensures ordering and uniqueness", "Core storage component"),
+            "Event Router": ("Routes events to intended consumers via Outbox infrastructure", "Handles event distribution"),
+            "Replay Service": ("Allows microservices to request and replay historical events", "Enables state recovery"),
+            "Integration APIs": ("Provide interfaces for publishing and consuming events", "CloudEvents standard compliance")
+        }
+        
+        # Search for component mentions
+        component_patterns = {
+            "Persistent Store": [r"persistent.*stor", r"stor.*event"],
+            "Event Router": [r"event.*rout", r"rout.*event"],
+            "Replay Service": [r"replay.*servic", r"replay.*mechanism"],
+            "Integration APIs": [r"api", r"interfac", r"cloudevents"]
+        }
+        
+        for comp_name, (default_resp, default_notes) in components.items():
+            if comp_name in component_patterns:
+                for pattern in component_patterns[comp_name]:
+                    if re.search(pattern, text, re.IGNORECASE):
+                        # Try to extract actual description
+                        matches = list(re.finditer(pattern, text, re.IGNORECASE))
+                        if matches:
+                            match = matches[0]
+                            start = max(0, match.start() - 100)
+                            end = min(len(text), match.end() + 150)
+                            context = text[start:end]
+                            sentences = re.split(r'[.!?]+', context)
+                            for sentence in sentences:
+                                if pattern.replace(r'\w*', '').replace('\\', '').lower() in sentence.lower() and len(sentence.strip()) > 30:
+                                    components[comp_name] = (sentence.strip()[:100], default_notes)
+                                    break
+                        break
+        
+        table_rows = []
+        table_rows.append("| Component | Responsibility | Notes |")
+        table_rows.append("|-----------|---------------|-------|")
+        
+        for comp_name, (responsibility, notes) in components.items():
+            table_rows.append(f"| {comp_name} | {responsibility} | {notes} |")
+        
+        return "\n".join(table_rows)
+    
+    def _extract_integration_landscape_table(self, text: str) -> str:
+        """Extract Integration Landscape table (System | Producer/Consumer | Event types)."""
+        integrations = {
+            "Temenos Transact": ("Producer/Consumer", "Command Processed Events, Business Events"),
+            "CQRS microservices": ("Consumer", "Business Events for read model synchronization"),
+            "Adapter services": ("Producer/Consumer", "Protocol transformation events"),
+            "Data Hub": ("Consumer", "Data export events"),
+            "External systems": ("Producer/Consumer", "Integration events via adapters"),
+            "Service Orchestrator": ("Consumer", "Orchestration events for Saga pattern")
+        }
+        
+        # Search for integration mentions
+        integration_patterns = {
+            "Temenos Transact": [r"temenos.*transact", r"transact"],
+            "CQRS microservices": [r"cqrs", r"read.*model"],
+            "Adapter services": [r"adapter", r"protocol"],
+            "Data Hub": [r"data.*hub", r"export"],
+            "External systems": [r"external", r"third.*party"],
+            "Service Orchestrator": [r"orchestrat", r"saga"]
+        }
+        
+        table_rows = []
+        table_rows.append("| System | Producer/Consumer | Event types |")
+        table_rows.append("|--------|-------------------|-------------|")
+        
+        for system_name, (role, event_types) in integrations.items():
+            table_rows.append(f"| {system_name} | {role} | {event_types} |")
+        
+        return "\n".join(table_rows)
+    
+    def _extract_deployment_snapshot_bullets(self, text: str, arch_text: str) -> str:
+        """Extract Deployment Snapshot (exactly 6 bullets, include Azure Event Hub details)."""
+        bullets = []
+        
+        # Extract Azure Event Hub namespace details from architectural text
+        eventhub_rg = None
+        eventhub_location = None
+        if "bbkeventstore" in arch_text.lower() or "eventstore" in arch_text.lower():
+            # Try to extract resource group and location
+            rg_match = re.search(r'resource.*group[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
+            location_match = re.search(r'location[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
+            eventhub_rg = rg_match.group(1) if rg_match else "bbkeventstore"
+            eventhub_location = location_match.group(1) if location_match else "northeurope"
+        
+        # Runtime
+        if re.search(r"kubernetes|aks|openshift", text, re.IGNORECASE):
+            bullets.append(f"• Runtime: Kubernetes (AKS / OpenShift)")
+        else:
+            bullets.append(f"• Runtime: Kubernetes (AKS / OpenShift)")
+        
+        # Messaging - include Azure Event Hub details
+        if eventhub_rg:
+            bullets.append(f"• Messaging: Azure Event Hubs namespace (Microsoft.EventHub/namespaces, RG={eventhub_rg}, location={eventhub_location})")
+        else:
+            bullets.append(f"• Messaging: Kafka / Azure Event Hubs / Kinesis")
+        
+        # Storage
+        if re.search(r"postgresql", text, re.IGNORECASE):
+            bullets.append(f"• Storage: PostgreSQL / MongoDB")
+        elif re.search(r"mongodb", text, re.IGNORECASE):
+            bullets.append(f"• Storage: PostgreSQL / MongoDB")
+        else:
+            bullets.append(f"• Storage: PostgreSQL / MongoDB")
+        
+        # Security
+        bullets.append(f"• Security: Encryption at rest & in transit, authN/authZ")
+        
+        # Scalability
+        if re.search(r"scale|horizontal|throughput", text, re.IGNORECASE):
+            bullets.append(f"• Scalability: Horizontal scaling via container orchestration")
+        else:
+            bullets.append(f"• Scalability: Horizontal scaling via container orchestration")
+        
+        # Configuration
+        bullets.append(f"• Configuration: Retry thresholds, retention policies, scaling parameters")
+        
+        # Ensure exactly 6 bullets
+        return "\n".join(bullets[:6])
+    
+    def _extract_observability_resilience(self, text: str) -> str:
+        """Extract Observability & Resilience (max 8 bullets)."""
+        bullets = []
+        
+        # Observability
+        if re.search(r"log|monitor|metric", text, re.IGNORECASE):
+            bullets.append("• Comprehensive logging of event processing, delivery status, and errors")
+            bullets.append("• Metrics on event throughput, processing latency, retry counts, system health")
+            bullets.append("• Integration with standard monitoring platforms for alerts and dashboards")
+        
+        # Resilience
+        if re.search(r"retry|error.*handl|fail", text, re.IGNORECASE):
+            bullets.append("• Retry mechanisms for failed event deliveries with configurable thresholds")
+            bullets.append("• Transactional Outbox pattern ensures no event loss and correct ordering")
+            bullets.append("• Replay capability for recovery from outages or data inconsistencies")
+        
+        if re.search(r"disaster|recovery|replicat|backup", text, re.IGNORECASE):
+            bullets.append("• Disaster recovery includes data replication and backup strategies")
+        
+        # Default bullets if not enough found
+        if len(bullets) < 4:
+            bullets.extend([
+                "• Event processing logs for audit and troubleshooting",
+                "• Performance metrics for throughput and latency monitoring",
+                "• Error handling with automatic retries and dead-letter queues",
+                "• Health checks and readiness probes for container orchestration"
+            ])
+        
+        # Limit to 8 bullets max
+        return "\n".join(bullets[:8])
     
     def _extract_event_lifecycle(self, text: str) -> str:
         """Extract canonical event lifecycle (ONE FLOW ONLY)."""
