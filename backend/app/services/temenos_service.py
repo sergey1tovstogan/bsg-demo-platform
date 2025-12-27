@@ -87,6 +87,27 @@ class TemenosAnalysisResult:
 class TemenosService:
     """Service for interacting with Temenos RAG API via adapter."""
     
+    # Compile regex patterns once at class level for performance
+    _MARKETING_WORDS = [
+        re.compile(r'\bpivotal\b', re.IGNORECASE),
+        re.compile(r'\bhighly reliable\b', re.IGNORECASE),
+        re.compile(r'\brobust\b', re.IGNORECASE),
+        re.compile(r'\bcomprehensive\b', re.IGNORECASE),
+        re.compile(r'\bseamless\b', re.IGNORECASE),
+        re.compile(r'\bessential\b', re.IGNORECASE),
+        re.compile(r'\bcritical\b', re.IGNORECASE),
+        re.compile(r'\bfoundational\b', re.IGNORECASE),
+        re.compile(r'\bindispensable\b', re.IGNORECASE),
+        re.compile(r'\bkey\b', re.IGNORECASE),
+        re.compile(r'\bimportant\b', re.IGNORECASE)
+    ]
+    _SUMMARY_PATTERNS = [
+        re.compile(r'in summary[^.]*\.', re.IGNORECASE),
+        re.compile(r'summary[^.]*\.', re.IGNORECASE),
+        re.compile(r'functional overview[^.]*\.', re.IGNORECASE),
+        re.compile(r'key capabilities[^.]*\.', re.IGNORECASE)
+    ]
+    
     def __init__(self):
         """Initialize Temenos service."""
         try:
@@ -669,9 +690,10 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
         
         # Combine both texts for comprehensive analysis
         combined_text = f"{architectural_text}\n\n{functional_text}"
+        # Cache lowercase version to avoid multiple conversions
         combined_lower = combined_text.lower()
         
-        # Remove marketing prose and contradictions
+        # Remove marketing prose and contradictions (operates on lowercase)
         cleaned_text = self._remove_marketing_prose(combined_lower)
         
         # Extract component identity
@@ -748,22 +770,1146 @@ Open Questions
         
         return refactored_arch.strip(), refactored_func.strip()
     
-    def _remove_marketing_prose(self, text: str) -> str:
-        """Remove marketing adjectives and summary sections."""
-        # Remove common marketing words
-        marketing_words = [
+    def _refactor_rag_content_strict(self, architectural_text: str, functional_text: str, component_name: str) -> str:
+        """
+        Refactor RAG content into strict client-facing architecture documentation.
+        
+        MANDATORY RULES:
+        1. Use exact 12-section structure - no extra sections, no reordering
+        2. Each concept appears ONCE and only once
+        3. No speculative language (no "likely", "may", "assumed")
+        4. If unknown, state: "Not part of the documented scope."
+        5. Separate concerns strictly (Architecture ≠ Deployment ≠ Functional ≠ Operations)
+        6. Use concise, professional language
+        7. Bullet points syntactically consistent
+        8. No marketing fluff, no redundancy, no restatement
+        
+        Returns:
+            Single refactored document following strict 12-section structure
+        """
+        try:
+            if not architectural_text or architectural_text in ["Information not available - timeout", "Information not available"]:
+                return self._build_empty_strict_document(component_name)
+            
+            # Detect if input is already in old format - if so, we need to extract from it
+            has_old_format = (
+                "## A)" in architectural_text or 
+                "## B)" in architectural_text or 
+                "| Pattern/Guarantee |" in architectural_text or
+                "| Component | Role |" in architectural_text or
+                ("Core Architectural Guarantees" in architectural_text and "Component Identity" not in architectural_text) or
+                ("ARCHITECTURE OVERVIEW" in architectural_text and "## 1. Purpose & Scope" not in architectural_text)
+            )
+            
+            # If input is already in strict format, return it (shouldn't happen but handle gracefully)
+            if "## 1. Purpose & Scope" in architectural_text:
+                logger.info(f"Input already in strict format for {component_name}")
+                return architectural_text
+            
+            # Combine texts for analysis
+            combined_text = f"{architectural_text}\n\n{functional_text}"
+            
+            if has_old_format:
+                logger.info(f"🔄 Detected old format content for {component_name} - extracting and refactoring to strict format")
+                # For old format, try to extract from specific sections
+                # Old format has: ## A) Architecture Overview, ## B) Patterns & Guarantees, etc.
+                # We'll use the combined text but the extraction functions should handle it
+            
+            # Extract sections following strict structure (methods handle case-insensitive matching internally)
+            sections = {
+                "purpose_scope": self._extract_purpose_scope(combined_text, component_name),
+                "architectural_role": self._extract_architectural_role(combined_text, component_name),
+                "design_patterns": self._extract_design_patterns(combined_text),
+                "core_components": self._extract_core_components(combined_text, component_name),
+                "data_model": self._extract_data_model(combined_text),
+                "apis_access": self._extract_apis_access(combined_text),
+                "deployment": self._extract_deployment_architecture(combined_text),
+                "scalability": self._extract_scalability_performance(combined_text),
+                "security": self._extract_security_model(combined_text),
+                "observability": self._extract_observability_operations(combined_text),
+                "functional": self._extract_functional_capabilities(functional_text),
+                "non_goals": self._extract_non_goals(combined_text)
+            }
+            
+            # Validate extraction quality - if too many sections are empty, log warning
+            empty_sections = sum(1 for section in sections.values() if "Not part of the documented scope" in section or len(section.strip()) < 50)
+            if empty_sections > 6:  # More than half empty
+                logger.warning(f"⚠ Many empty sections extracted for {component_name} ({empty_sections}/12 sections empty) - extraction may have failed")
+            
+            # Build document following EXACT structure
+            refactored = f"""# {component_name}
+
+## 1. Purpose & Scope
+
+{sections['purpose_scope']}
+
+## 2. Architectural Role
+
+{sections['architectural_role']}
+
+## 3. Design Patterns & Guarantees
+
+{sections['design_patterns']}
+
+## 4. Core Components
+
+{sections['core_components']}
+
+## 5. Data Model & Consistency
+
+{sections['data_model']}
+
+## 6. APIs & Access Patterns
+
+{sections['apis_access']}
+
+## 7. Deployment Architecture
+
+{sections['deployment']}
+
+## 8. Scalability & Performance
+
+{sections['scalability']}
+
+## 9. Security Model
+
+{sections['security']}
+
+## 10. Observability & Operations
+
+{sections['observability']}
+
+## 11. Functional Capabilities
+
+{sections['functional']}
+
+## 12. Explicit Non-Goals / Out-of-Scope
+
+{sections['non_goals']}
+"""
+            
+            refactored = refactored.strip()
+            
+            # Post-process: Remove redundancies and improve structure
+            refactored = self._post_process_document(refactored, component_name)
+            
+            # Final validation: ensure strict format structure is present
+            if "## 1. Purpose & Scope" not in refactored:
+                logger.error(f"✗ CRITICAL: Refactored document missing strict format header for {component_name}")
+                return self._build_empty_strict_document(component_name)
+            
+            # Verify all 12 sections are present
+            required_sections = [
+                "## 1. Purpose & Scope",
+                "## 2. Architectural Role",
+                "## 3. Design Patterns & Guarantees",
+                "## 4. Core Components",
+                "## 5. Data Model & Consistency",
+                "## 6. APIs & Access Patterns",
+                "## 7. Deployment Architecture",
+                "## 8. Scalability & Performance",
+                "## 9. Security Model",
+                "## 10. Observability & Operations",
+                "## 11. Functional Capabilities",
+                "## 12. Explicit Non-Goals / Out-of-Scope"
+            ]
+            
+            missing_sections = [section for section in required_sections if section not in refactored]
+            if missing_sections:
+                logger.warning(f"⚠ Missing sections in refactored document for {component_name}: {missing_sections}")
+                # Still return it - better than nothing, but log the issue
+            
+            logger.info(f"✓ Refactored strict documentation for {component_name}: {len(refactored)} chars, all sections present: {len(missing_sections) == 0}")
+            
+            # Final safety check: ensure we always return strict format
+            if "## 1. Purpose & Scope" not in refactored:
+                logger.error(f"✗ CRITICAL: Post-processing removed headers for {component_name} - returning empty strict format")
+                return self._build_empty_strict_document(component_name)
+            
+            return refactored
+        except Exception as e:
+            logger.error(f"✗ CRITICAL: Error in _refactor_rag_content_strict for {component_name}: {e}", exc_info=True)
+            logger.error(f"  Architectural text length: {len(architectural_text) if architectural_text else 0}")
+            logger.error(f"  Functional text length: {len(functional_text) if functional_text else 0}")
+            # Always return strict format, even on error
+            return self._build_empty_strict_document(component_name)
+    
+    def _post_process_document(self, document: str, component_name: str) -> str:
+        """Post-process document to remove redundancies and improve structure."""
+        if not document:
+            return self._build_empty_strict_document(component_name)
+        
+        # CRITICAL: Ensure section headers are preserved
+        required_headers = [
+            "## 1. Purpose & Scope",
+            "## 2. Architectural Role",
+            "## 3. Design Patterns & Guarantees",
+            "## 4. Core Components",
+            "## 5. Data Model & Consistency",
+            "## 6. APIs & Access Patterns",
+            "## 7. Deployment Architecture",
+            "## 8. Scalability & Performance",
+            "## 9. Security Model",
+            "## 10. Observability & Operations",
+            "## 11. Functional Capabilities",
+            "## 12. Explicit Non-Goals / Out-of-Scope"
+        ]
+        
+        # Check if all headers are present before processing
+        missing_headers = [h for h in required_headers if h not in document]
+        if missing_headers:
+            logger.warning(f"⚠ Missing headers in document for {component_name}: {missing_headers}")
+            return self._build_empty_strict_document(component_name)
+        
+        lines = document.split('\n')
+        processed_lines = []
+        seen_content = set()
+        
+        for line in lines:
+            # Keep section headers exactly as-is (critical!)
+            if any(line.strip().startswith(header) for header in required_headers):
+                processed_lines.append(line)
+                continue
+            
+            # Keep main title
+            if line.strip().startswith('#') and not line.strip().startswith('##'):
+                processed_lines.append(line)
+                continue
+            
+            # Skip empty lines at section boundaries (we'll add them back)
+            if not line.strip():
+                if processed_lines and processed_lines[-1].strip() and not processed_lines[-1].startswith('#'):
+                    processed_lines.append('')
+                continue
+            
+            # For content lines, check for redundancy
+            line_lower = line.lower().strip()
+            
+            # Skip if line is too short (but keep bullet points)
+            if len(line_lower) < 5 and not line_lower.startswith('-'):
+                continue
+            
+            # Skip if we've seen very similar content before
+            # Create a signature from the line (remove common words)
+            signature_words = [w for w in line_lower.split() if len(w) > 4 and w not in ['that', 'this', 'with', 'from', 'which', 'part', 'documented', 'scope']]
+            signature = ' '.join(signature_words[:5])  # Use first 5 meaningful words
+            
+            if signature and signature in seen_content and len(signature) > 10:
+                continue  # Skip duplicate (but allow short lines through)
+            
+            if signature and len(signature) > 10:
+                seen_content.add(signature)
+            
+            # Clean the line (but preserve structure)
+            cleaned_line = self._clean_text(line)
+            if cleaned_line and (len(cleaned_line) > 5 or cleaned_line.startswith('-')):
+                processed_lines.append(cleaned_line)
+        
+        # Rejoin and normalize whitespace (but preserve section structure)
+        result = '\n'.join(processed_lines)
+        result = re.sub(r'\n{4,}', '\n\n', result)  # Max 3 consecutive newlines (allow space between sections)
+        result = result.strip()
+        
+        # Final check: ensure all headers are still present
+        missing_after = [h for h in required_headers if h not in result]
+        if missing_after:
+            logger.error(f"✗ CRITICAL: Post-processing removed headers for {component_name}: {missing_after}")
+            return self._build_empty_strict_document(component_name)
+        
+        return result
+    
+    def _build_empty_strict_document(self, component_name: str) -> str:
+        """Build empty document structure when no RAG data available."""
+        return f"""# {component_name}
+
+## 1. Purpose & Scope
+
+- Microservice name: {component_name}
+- Responsibility: Not part of the documented scope.
+- Out of scope: Not part of the documented scope.
+
+## 2. Architectural Role
+
+- Position in Temenos Transact ecosystem: Not part of the documented scope.
+- Relationship to core transactional services: Not part of the documented scope.
+
+## 3. Design Patterns & Guarantees
+
+- CQRS role: Not part of the documented scope.
+- Consistency model: Not part of the documented scope.
+- Availability and latency guarantees: Not part of the documented scope.
+
+## 4. Core Components
+
+- Core service components: Not part of the documented scope.
+- External dependencies: Not part of the documented scope.
+
+## 5. Data Model & Consistency
+
+- Types of data managed: Not part of the documented scope.
+- Update propagation model: Not part of the documented scope.
+- Consistency implications: Not part of the documented scope.
+
+## 6. APIs & Access Patterns
+
+- API style: Not part of the documented scope.
+- Supported operations: Not part of the documented scope.
+- Consumer expectations: Not part of the documented scope.
+
+## 7. Deployment Architecture
+
+- Cloud-native model: Not part of the documented scope.
+- Kubernetes usage: Not part of the documented scope.
+- Helm-based lifecycle management: Not part of the documented scope.
+
+## 8. Scalability & Performance
+
+- Horizontal scaling model: Not part of the documented scope.
+- Read optimization techniques: Not part of the documented scope.
+- Performance assumptions: Not part of the documented scope.
+
+## 9. Security Model
+
+- Authentication boundary: Not part of the documented scope.
+- Authorization model: Not part of the documented scope.
+- Data-in-transit and data-at-rest protections: Not part of the documented scope.
+
+## 10. Observability & Operations
+
+- Logging: Not part of the documented scope.
+- Monitoring: Not part of the documented scope.
+- Health checks: Not part of the documented scope.
+
+## 11. Functional Capabilities
+
+- Business-facing capabilities: Not part of the documented scope.
+
+## 12. Explicit Non-Goals / Out-of-Scope
+
+- Write operations: Not part of the documented scope.
+- Real-time consistency: Not part of the documented scope.
+- Workflow orchestration: Not part of the documented scope.
+"""
+    
+    def _clean_text(self, text: str) -> str:
+        """Remove redundancies, marketing fluff, and normalize text."""
+        if not text:
+            return ""
+        
+        # Remove common marketing words and phrases
+        marketing_patterns = [
             r'\bpivotal\b', r'\bhighly reliable\b', r'\brobust\b', r'\bcomprehensive\b',
             r'\bseamless\b', r'\bessential\b', r'\bcritical\b', r'\bfoundational\b',
-            r'\bindispensable\b', r'\bkey\b', r'\bimportant\b'
+            r'\bindispensable\b', r'\bkey\b', r'\bimportant\b', r'\bpowerful\b',
+            r'\badvanced\b', r'\bcutting-edge\b', r'\bstate-of-the-art\b'
         ]
-        for word in marketing_words:
-            text = re.sub(word, '', text, flags=re.IGNORECASE)
         
-        # Remove "In summary" sections and functional overview/key capabilities
-        text = re.sub(r'in summary[^.]*\.', '', text, flags=re.IGNORECASE)
-        text = re.sub(r'summary[^.]*\.', '', text, flags=re.IGNORECASE)
-        text = re.sub(r'functional overview[^.]*\.', '', text, flags=re.IGNORECASE)
-        text = re.sub(r'key capabilities[^.]*\.', '', text, flags=re.IGNORECASE)
+        cleaned = text
+        for pattern in marketing_patterns:
+            cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
+        
+        # Remove redundant phrases
+        redundant_patterns = [
+            r'in summary[^.]*\.',
+            r'summary[^.]*\.',
+            r'to summarize[^.]*\.',
+            r'in conclusion[^.]*\.'
+        ]
+        
+        for pattern in redundant_patterns:
+            cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
+        
+        # Normalize whitespace
+        cleaned = re.sub(r'\s+', ' ', cleaned)
+        cleaned = cleaned.strip()
+        
+        return cleaned
+    
+    def _extract_from_section(self, text: str, section_markers: list, max_chars: int = 500) -> str:
+        """Extract content from a specific section marked by headers."""
+        for marker in section_markers:
+            # Try to find section content
+            pattern = rf"{re.escape(marker)}[^\n]*\n(.*?)(?=\n##|\n###|$)"
+            match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+            if match:
+                content = match.group(1).strip()
+                if len(content) > 20:
+                    return self._clean_text(content[:max_chars])
+        return ""
+    
+    def _extract_from_table(self, text: str, table_header: str) -> list:
+        """Extract structured data from markdown tables in RAG responses."""
+        results = []
+        
+        # Find table with the header
+        pattern = rf"{re.escape(table_header)}.*?\n\|[-\|]+\|(.*?)(?=\n\n|\n##|$)"
+        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+        
+        if match:
+            table_content = match.group(1)
+            # Parse table rows
+            rows = [row.strip() for row in table_content.split('\n') if row.strip().startswith('|')]
+            
+            for row in rows:
+                # Split by | and clean
+                cells = [cell.strip() for cell in row.split('|') if cell.strip()]
+                if len(cells) >= 2:
+                    # Extract meaningful content from cells
+                    content = ' '.join(cells[1:])  # Skip first column (usually header)
+                    content = self._clean_text(content)
+                    if len(content) > 20:
+                        results.append(content)
+        
+        return results
+    
+    def _extract_purpose_scope(self, text: str, component_name: str) -> str:
+        """Extract Purpose & Scope section - improved to handle RAG responses."""
+        lines = []
+        text_lower = text.lower()
+        
+        # Try to extract from old format sections first
+        old_format_sections = ["## A)", "## A)", "Architecture Overview", "Purpose", "Scope"]
+        section_content = self._extract_from_section(text, old_format_sections)
+        
+        # What the microservice is - improved patterns
+        what_is_patterns = [
+            re.compile(rf"{re.escape(component_name)}\s+is\s+(?:a|an)\s+([^.]{{20,300}})", re.IGNORECASE),
+            re.compile(rf"{re.escape(component_name)}\s+provides\s+([^.]{{20,300}})", re.IGNORECASE),
+            re.compile(rf"{re.escape(component_name)}\s+is\s+([^.]{{20,300}})", re.IGNORECASE),
+            re.compile(r"is\s+(?:a|an)\s+([^.]{20,300})", re.IGNORECASE),
+            re.compile(r"provides\s+([^.]{20,300})", re.IGNORECASE),
+            re.compile(r"component\s+that\s+([^.]{20,300})", re.IGNORECASE)
+        ]
+        
+        what_is = "Not part of the documented scope."
+        for pattern in what_is_patterns:
+            match = pattern.search(text)
+            if match:
+                extracted = match.group(1).strip().rstrip('.')
+                extracted = self._clean_text(extracted)
+                if len(extracted) > 20 and len(extracted) < 300:
+                    what_is = extracted
+                    break
+        
+        # If we found section content, try to extract from it
+        if section_content and what_is == "Not part of the documented scope.":
+            for pattern in what_is_patterns:
+                match = pattern.search(section_content)
+                if match:
+                    extracted = match.group(1).strip().rstrip('.')
+                    extracted = self._clean_text(extracted)
+                    if len(extracted) > 20:
+                        what_is = extracted
+                        break
+        
+        lines.append(f"- What the microservice is: {what_is}")
+        
+        # Responsibilities - improved extraction
+        resp_patterns = [
+            re.compile(r"(?:responsible|handles|manages|provides|ensures|guarantees|supports|enables)\s+([^.]{30,400})", re.IGNORECASE),
+            re.compile(r"(?:captures|stores|routes|processes|delivers)\s+([^.]{30,400})", re.IGNORECASE),
+            re.compile(r"(?:function|capability|feature)\s+(?:is|to|of)\s+([^.]{30,400})", re.IGNORECASE)
+        ]
+        
+        responsibilities = []
+        seen = set()
+        
+        # Search in full text and section content
+        search_texts = [text]
+        if section_content:
+            search_texts.append(section_content)
+        
+        for search_text in search_texts:
+            for pattern in resp_patterns:
+                for match in pattern.finditer(search_text):
+                    resp = match.group(1).strip().rstrip('.')
+                    resp = self._clean_text(resp)
+                    resp_lower = resp.lower()
+                    
+                    # Filter out redundant or too short responses
+                    if (len(resp) > 30 and len(resp) < 400 and 
+                        resp_lower not in seen and
+                        not any(word in resp_lower for word in ['summary', 'conclusion', 'overview'])):
+                        responsibilities.append(f"  - {resp}")
+                        seen.add(resp_lower)
+                        if len(responsibilities) >= 5:
+                            break
+                if len(responsibilities) >= 5:
+                    break
+            if len(responsibilities) >= 5:
+                break
+        
+        if not responsibilities:
+            lines.append("- What it is explicitly responsible for: Not part of the documented scope.")
+        else:
+            lines.append("- What it is explicitly responsible for:")
+            lines.extend(responsibilities[:5])
+        
+        # Not responsible for
+        not_resp_patterns = [
+            re.compile(r"(?:not|does not|doesn't|out of scope|excluded)\s+(?:responsible|handle|manage|provide|include)\s+([^.]{20,300})", re.IGNORECASE),
+            re.compile(r"out of scope[^.]{0,100}([^.]{20,300})", re.IGNORECASE),
+            re.compile(r"(?:does not|doesn't)\s+(?:support|handle|process|manage)\s+([^.]{20,300})", re.IGNORECASE)
+        ]
+        
+        not_responsible = []
+        seen = set()
+        for pattern in not_resp_patterns:
+            for match in pattern.finditer(text):
+                not_resp = match.group(1).strip().rstrip('.')
+                not_resp = self._clean_text(not_resp)
+                not_resp_lower = not_resp.lower()
+                if len(not_resp) > 20 and not_resp_lower not in seen:
+                    not_responsible.append(f"  - {not_resp}")
+                    seen.add(not_resp_lower)
+                    if len(not_responsible) >= 3:
+                        break
+            if len(not_responsible) >= 3:
+                break
+        
+        if not_responsible:
+            lines.append("- What it is explicitly NOT responsible for:")
+            lines.extend(not_responsible[:3])
+        else:
+            lines.append("- What it is explicitly NOT responsible for: Not part of the documented scope.")
+        
+        return "\n".join(lines)
+    
+    def _extract_architectural_role(self, text: str, component_name: str) -> str:
+        """Extract Architectural Role section."""
+        lines = []
+        
+        # Position in ecosystem
+        position_patterns = [
+            r"(?:in|within|part of)\s+temenos\s+transact[^.]{0,150}",
+            r"temenos\s+transact[^.]{0,150}(?:ecosystem|platform|architecture)",
+            r"position[^.]{0,100}([^.]{30,200})"
+        ]
+        position = "Not part of the documented scope."
+        for pattern in position_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                position = match.group(0).strip().rstrip('.')
+                if len(position) > 30:
+                    break
+        
+        lines.append(f"- Position in Temenos Transact ecosystem: {position}")
+        
+        # Relationship to core services
+        relationship_patterns = [
+            r"(?:integrates|connects|relates|interacts)\s+with\s+([^.]{30,200})",
+            r"relationship\s+to\s+([^.]{30,200})",
+            r"(?:depends|depends on|uses)\s+([^.]{30,200})"
+        ]
+        relationships = []
+        seen = set()
+        for pattern in relationship_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                rel = match.group(1).strip().rstrip('.')
+                if len(rel) > 30 and rel.lower() not in seen:
+                    relationships.append(f"  - {rel}")
+                    seen.add(rel.lower())
+                    if len(relationships) >= 5:
+                        break
+        
+        if relationships:
+            lines.append("- Relationship to core transactional services:")
+            lines.extend(relationships[:5])
+        else:
+            lines.append("- Relationship to core transactional services: Not part of the documented scope.")
+        
+        return "\n".join(lines)
+    
+    def _extract_design_patterns(self, text: str) -> str:
+        """Extract Design Patterns & Guarantees section - improved for RAG responses."""
+        lines = []
+        
+        # Try to extract from old format Patterns & Guarantees section
+        patterns_section = self._extract_from_section(text, ["## B)", "Patterns & Guarantees", "Pattern/Guarantee"])
+        
+        # CQRS role - improved extraction
+        cqrs_patterns = [
+            re.compile(r"cqrs[^.]{0,400}", re.IGNORECASE),
+            re.compile(r"command.*query.*separation[^.]{0,400}", re.IGNORECASE),
+            re.compile(r"(?:read|query|write|command)\s+side[^.]{0,400}", re.IGNORECASE),
+            re.compile(r"cqrs\s+pattern[^.]{0,400}", re.IGNORECASE)
+        ]
+        
+        cqrs_role = "Not part of the documented scope."
+        search_texts = [text]
+        if patterns_section:
+            search_texts.append(patterns_section)
+        
+        for search_text in search_texts:
+            for pattern in cqrs_patterns:
+                match = pattern.search(search_text)
+                if match:
+                    extracted = match.group(0).strip().rstrip('.')
+                    extracted = self._clean_text(extracted)
+                    if len(extracted) > 10:
+                        cqrs_role = extracted[:300]
+                        break
+            if cqrs_role != "Not part of the documented scope.":
+                break
+        
+        lines.append(f"- CQRS role: {cqrs_role}")
+        
+        # Consistency model - improved extraction (also check tables)
+        consistency_patterns = [
+            re.compile(r"(?:at-least-once|at-most-once|exactly-once|eventual|strong|weak)\s+[^.]{0,300}", re.IGNORECASE),
+            re.compile(r"consistency\s+model[^.]{0,400}", re.IGNORECASE),
+            re.compile(r"event\s+ordering[^.]{0,400}", re.IGNORECASE),
+            re.compile(r"delivery\s+guarantee[^.]{0,400}", re.IGNORECASE),
+            re.compile(r"(?:guarantees|ensures)\s+(?:at-least-once|ordering|uniqueness)[^.]{0,400}", re.IGNORECASE)
+        ]
+        
+        consistency = "Not part of the documented scope."
+        
+        # Try extracting from table first (old format often uses tables)
+        table_rows = self._extract_from_table(text, "Pattern/Guarantee")
+        for row in table_rows:
+            if any(word in row.lower() for word in ['consistency', 'ordering', 'delivery', 'at-least-once']):
+                consistency = row[:300]
+                break
+        
+        # If not found in table, try patterns
+        if consistency == "Not part of the documented scope.":
+            for search_text in search_texts:
+                for pattern in consistency_patterns:
+                    match = pattern.search(search_text)
+                    if match:
+                        extracted = match.group(0).strip().rstrip('.')
+                        extracted = self._clean_text(extracted)
+                        if len(extracted) > 15:
+                            consistency = extracted[:300]
+                            break
+                if consistency != "Not part of the documented scope.":
+                    break
+        
+        lines.append(f"- Consistency model: {consistency}")
+        
+        # Availability and latency guarantees - improved extraction
+        availability_patterns = [
+            re.compile(r"(?:availability|uptime|sla|high availability)[^.]{0,400}", re.IGNORECASE),
+            re.compile(r"(?:latency|response time|performance|throughput)[^.]{0,400}", re.IGNORECASE),
+            re.compile(r"(?:guarantees|sla|slo|service level)[^.]{0,400}", re.IGNORECASE)
+        ]
+        
+        guarantees = []
+        seen = set()
+        for search_text in search_texts:
+            for pattern in availability_patterns:
+                matches = re.finditer(pattern, search_text, re.IGNORECASE)
+                for match in matches:
+                    guarantee = match.group(0).strip().rstrip('.')
+                    guarantee = self._clean_text(guarantee)
+                    if guarantee.lower() not in seen and len(guarantee) > 15:
+                        guarantees.append(f"  - {guarantee[:200]}")
+                        seen.add(guarantee.lower())
+                        if len(guarantees) >= 3:
+                            break
+                if len(guarantees) >= 3:
+                    break
+            if len(guarantees) >= 3:
+                break
+        
+        if guarantees:
+            lines.append("- Availability and latency guarantees:")
+            lines.extend(guarantees[:3])
+        else:
+            lines.append("- Availability and latency guarantees: Not part of the documented scope.")
+        
+        return "\n".join(lines)
+    
+    def _extract_core_components(self, text: str, component_name: str) -> str:
+        """Extract Core Components section."""
+        lines = []
+        
+        # Main components
+        component_patterns = [
+            r"(?:component|service|module|layer)\s+(?:named|called|is)\s+([A-Z][a-zA-Z\s]+?)(?:[.,]|\s+that|\s+which)",
+            r"([A-Z][a-zA-Z\s]+?)\s+(?:microservice|service|component|store|database)"
+        ]
+        components = []
+        seen = set()
+        for pattern in component_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                comp = match.group(1).strip()
+                if len(comp) > 3 and comp.lower() not in seen and component_name.lower() not in comp.lower():
+                    components.append(f"  - {comp}")
+                    seen.add(comp.lower())
+                    if len(components) >= 5:
+                        break
+        
+        if components:
+            lines.append(f"- {component_name} Microservice:")
+            lines.extend(components[:5])
+        else:
+            lines.append(f"- {component_name} Microservice: Not part of the documented scope.")
+        
+        # External dependencies
+        dependency_patterns = [
+            r"(?:depends|uses|requires|integrates with)\s+([A-Z][a-zA-Z\s]+?)(?:[.,]|\s+for)",
+            r"(?:azure|aws|kubernetes|postgresql|mongodb|event hub|event hub|kafka)"
+        ]
+        dependencies = []
+        seen = set()
+        for pattern in dependency_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                dep = match.group(1).strip() if match.lastindex else match.group(0).strip()
+                if len(dep) > 3 and dep.lower() not in seen:
+                    dependencies.append(f"  - {dep}")
+                    seen.add(dep.lower())
+                    if len(dependencies) >= 5:
+                        break
+        
+        if dependencies:
+            lines.append("- External dependencies:")
+            lines.extend(dependencies[:5])
+        else:
+            lines.append("- External dependencies: Not part of the documented scope.")
+        
+        return "\n".join(lines)
+    
+    def _extract_data_model(self, text: str) -> str:
+        """Extract Data Model & Consistency section."""
+        lines = []
+        
+        # Types of data
+        data_patterns = [
+            r"(?:manages|stores|handles)\s+([^.]{30,200})\s+data",
+            r"data\s+(?:types|structures|models|schemas)[^.]{0,200}",
+            r"(?:events|transactions|records|documents)[^.]{0,200}"
+        ]
+        data_types = []
+        seen = set()
+        for pattern in data_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                data_type = match.group(1).strip().rstrip('.') if match.lastindex else match.group(0).strip().rstrip('.')
+                if len(data_type) > 20 and data_type.lower() not in seen:
+                    data_types.append(f"  - {data_type}")
+                    seen.add(data_type.lower())
+                    if len(data_types) >= 5:
+                        break
+        
+        if data_types:
+            lines.append("- Types of data managed:")
+            lines.extend(data_types[:5])
+        else:
+            lines.append("- Types of data managed: Not part of the documented scope.")
+        
+        # Update propagation
+        propagation_patterns = [
+            r"(?:propagates|replicates|synchronizes|distributes)[^.]{0,200}",
+            r"(?:event|change|update)\s+(?:propagation|replication|synchronization)[^.]{0,200}",
+            r"(?:publish|subscribe|stream)[^.]{0,200}"
+        ]
+        propagation = "Not part of the documented scope."
+        for pattern in propagation_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                propagation = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Update propagation model: {propagation}")
+        
+        # Consistency implications
+        implications_patterns = [
+            r"consistency[^.]{0,200}(?:for|to|in)\s+([^.]{30,200})",
+            r"consumers[^.]{0,200}(?:expect|receive|see)[^.]{0,200}"
+        ]
+        implications = "Not part of the documented scope."
+        for pattern in implications_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                implications = match.group(1).strip().rstrip('.') if match.lastindex else match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Consistency implications for consumers: {implications}")
+        
+        return "\n".join(lines)
+    
+    def _extract_apis_access(self, text: str) -> str:
+        """Extract APIs & Access Patterns section."""
+        lines = []
+        
+        # API style
+        api_style_patterns = [
+            r"(?:rest|graphql|grpc|soap|http|json|graphql)[^.]{0,100}",
+            r"api\s+(?:style|type|protocol)[^.]{0,200}",
+            r"(?:restful|graphql|grpc)\s+api"
+        ]
+        api_style = "Not part of the documented scope."
+        for pattern in api_style_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                api_style = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- API style: {api_style}")
+        
+        # Supported operations
+        operation_patterns = [
+            r"(?:get|post|put|delete|patch|query|read|write|create|update)[^.]{0,150}",
+            r"(?:operations|methods|endpoints|actions)[^.]{0,200}"
+        ]
+        operations = []
+        seen = set()
+        for pattern in operation_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                op = match.group(0).strip().rstrip('.')
+                if op.lower() not in seen:
+                    operations.append(f"  - {op}")
+                    seen.add(op.lower())
+                    if len(operations) >= 5:
+                        break
+        
+        if operations:
+            lines.append("- Supported operations:")
+            lines.extend(operations[:5])
+        else:
+            lines.append("- Supported operations: Not part of the documented scope.")
+        
+        # Consumer expectations
+        expectations_patterns = [
+            r"consumers[^.]{0,200}(?:expect|receive|can|should)[^.]{0,200}",
+            r"(?:client|consumer|caller)[^.]{0,200}(?:expect|receive)[^.]{0,200}"
+        ]
+        expectations = "Not part of the documented scope."
+        for pattern in expectations_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                expectations = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Consumer expectations: {expectations}")
+        
+        return "\n".join(lines)
+    
+    def _extract_deployment_architecture(self, text: str) -> str:
+        """Extract Deployment Architecture section."""
+        lines = []
+        
+        # Cloud-native model
+        cloud_patterns = [
+            r"(?:cloud-native|containerized|microservices)[^.]{0,200}",
+            r"(?:azure|aws|gcp)[^.]{0,200}",
+            r"(?:kubernetes|k8s|aks|eks|gke)[^.]{0,200}"
+        ]
+        cloud_model = "Not part of the documented scope."
+        for pattern in cloud_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                cloud_model = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Cloud-native model: {cloud_model}")
+        
+        # Kubernetes usage
+        k8s_patterns = [
+            r"kubernetes[^.]{0,200}",
+            r"k8s[^.]{0,200}",
+            r"(?:aks|eks|gke)[^.]{0,200}",
+            r"(?:deployment|pod|service|namespace)[^.]{0,200}"
+        ]
+        k8s_usage = "Not part of the documented scope."
+        for pattern in k8s_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                k8s_usage = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Kubernetes usage: {k8s_usage}")
+        
+        # Helm
+        helm_patterns = [
+            r"helm[^.]{0,200}",
+            r"(?:chart|deployment|lifecycle)[^.]{0,200}"
+        ]
+        helm = "Not part of the documented scope."
+        for pattern in helm_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                helm = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Helm-based lifecycle management: {helm}")
+        
+        # Azure specifics
+        azure_patterns = [
+            r"azure[^.]{0,200}(?:event hub|sql|postgresql|cosmos|aks|container apps)",
+            r"(?:event hub|sql database|postgresql|cosmos db|aks|aca)[^.]{0,200}"
+        ]
+        azure_specifics = []
+        seen = set()
+        for pattern in azure_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                azure = match.group(0).strip().rstrip('.')
+                if azure.lower() not in seen:
+                    azure_specifics.append(f"  - {azure}")
+                    seen.add(azure.lower())
+                    if len(azure_specifics) >= 3:
+                        break
+        
+        if azure_specifics:
+            lines.append("- Azure deployment specifics:")
+            lines.extend(azure_specifics[:3])
+        else:
+            lines.append("- Azure deployment specifics: Not part of the documented scope.")
+        
+        return "\n".join(lines)
+    
+    def _extract_scalability_performance(self, text: str) -> str:
+        """Extract Scalability & Performance section."""
+        lines = []
+        
+        # Horizontal scaling
+        scaling_patterns = [
+            r"(?:horizontal|vertical)\s+scaling[^.]{0,200}",
+            r"scales[^.]{0,200}",
+            r"(?:replicas|instances|pods)[^.]{0,200}"
+        ]
+        scaling = "Not part of the documented scope."
+        for pattern in scaling_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                scaling = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Horizontal scaling model: {scaling}")
+        
+        # Read optimization
+        read_patterns = [
+            r"(?:read|query)\s+(?:optimization|performance|caching)[^.]{0,200}",
+            r"(?:cache|caching|index|indexing)[^.]{0,200}",
+            r"(?:optimize|optimization)[^.]{0,200}(?:read|query)"
+        ]
+        read_opt = "Not part of the documented scope."
+        for pattern in read_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                read_opt = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Read optimization techniques: {read_opt}")
+        
+        # Performance assumptions
+        perf_patterns = [
+            r"(?:performance|throughput|latency|response time)[^.]{0,200}",
+            r"(?:tps|transactions per second|requests per second)[^.]{0,200}"
+        ]
+        perf = "Not part of the documented scope."
+        for pattern in perf_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                perf = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Performance assumptions: {perf}")
+        
+        return "\n".join(lines)
+    
+    def _extract_security_model(self, text: str) -> str:
+        """Extract Security Model section."""
+        lines = []
+        
+        # Authentication
+        auth_patterns = [
+            r"(?:authentication|auth|jwt|oauth|keycloak)[^.]{0,200}",
+            r"(?:authenticate|login|token)[^.]{0,200}"
+        ]
+        auth = "Not part of the documented scope."
+        for pattern in auth_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                auth = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Authentication boundary: {auth}")
+        
+        # Authorization
+        authz_patterns = [
+            r"(?:authorization|authorize|permissions|roles|rbac)[^.]{0,200}",
+            r"(?:access control|permission|role)[^.]{0,200}"
+        ]
+        authz = "Not part of the documented scope."
+        for pattern in authz_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                authz = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Authorization model: {authz}")
+        
+        # Data protection
+        protection_patterns = [
+            r"(?:encryption|encrypt|tls|ssl|https)[^.]{0,200}",
+            r"(?:data-in-transit|data-at-rest|data protection)[^.]{0,200}",
+            r"(?:secure|security)[^.]{0,200}"
+        ]
+        protection = []
+        seen = set()
+        for pattern in protection_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                prot = match.group(0).strip().rstrip('.')
+                if prot.lower() not in seen:
+                    protection.append(f"  - {prot}")
+                    seen.add(prot.lower())
+                    if len(protection) >= 3:
+                        break
+        
+        if protection:
+            lines.append("- Data-in-transit and data-at-rest protections:")
+            lines.extend(protection[:3])
+        else:
+            lines.append("- Data-in-transit and data-at-rest protections: Not part of the documented scope.")
+        
+        return "\n".join(lines)
+    
+    def _extract_observability_operations(self, text: str) -> str:
+        """Extract Observability & Operations section."""
+        lines = []
+        
+        # Logging
+        logging_patterns = [
+            r"(?:logging|logs|log)[^.]{0,200}",
+            r"(?:structured|unstructured)\s+logging[^.]{0,200}"
+        ]
+        logging = "Not part of the documented scope."
+        for pattern in logging_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                logging = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Logging: {logging}")
+        
+        # Monitoring
+        monitoring_patterns = [
+            r"(?:monitoring|metrics|prometheus|grafana)[^.]{0,200}",
+            r"(?:observe|observability|telemetry)[^.]{0,200}"
+        ]
+        monitoring = "Not part of the documented scope."
+        for pattern in monitoring_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                monitoring = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Monitoring: {monitoring}")
+        
+        # Health checks
+        health_patterns = [
+            r"(?:health|healthcheck|liveness|readiness)[^.]{0,200}",
+            r"(?:probe|status|check)[^.]{0,200}"
+        ]
+        health = "Not part of the documented scope."
+        for pattern in health_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                health = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Health checks: {health}")
+        
+        return "\n".join(lines)
+    
+    def _extract_functional_capabilities(self, functional_text: str) -> str:
+        """Extract Functional Capabilities section - business-facing only."""
+        if not functional_text or functional_text in ["Information not available", "Information not available - timeout"]:
+            return "- Business-facing capabilities: Not part of the documented scope."
+        
+        lines = []
+        
+        # Extract business capabilities
+        capability_patterns = [
+            r"(?:provides|enables|supports|handles|manages)\s+([^.]{30,200})",
+            r"(?:capability|feature|function)[^.]{0,100}([^.]{30,200})"
+        ]
+        capabilities = []
+        seen = set()
+        for pattern in capability_patterns:
+            matches = re.finditer(pattern, functional_text, re.IGNORECASE)
+            for match in matches:
+                cap = match.group(1).strip().rstrip('.') if match.lastindex else match.group(0).strip().rstrip('.')
+                if len(cap) > 30 and cap.lower() not in seen:
+                    capabilities.append(f"  - {cap}")
+                    seen.add(cap.lower())
+                    if len(capabilities) >= 10:
+                        break
+        
+        if capabilities:
+            lines.append("- Business-facing capabilities:")
+            lines.extend(capabilities[:10])
+        else:
+            lines.append("- Business-facing capabilities: Not part of the documented scope.")
+        
+        return "\n".join(lines)
+    
+    def _extract_non_goals(self, text: str) -> str:
+        """Extract Explicit Non-Goals / Out-of-Scope section."""
+        lines = []
+        
+        # Write operations
+        write_patterns = [
+            r"(?:does not|doesn't|not)\s+(?:write|create|update|modify|change)[^.]{0,200}",
+            r"(?:read-only|read only|readonly)[^.]{0,200}"
+        ]
+        write_ops = "Not part of the documented scope."
+        for pattern in write_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                write_ops = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Write operations: {write_ops}")
+        
+        # Real-time consistency
+        realtime_patterns = [
+            r"(?:not|does not|doesn't)\s+(?:real-time|realtime|synchronous)[^.]{0,200}",
+            r"(?:eventual|asynchronous|async)[^.]{0,200}consistency"
+        ]
+        realtime = "Not part of the documented scope."
+        for pattern in realtime_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                realtime = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Real-time consistency: {realtime}")
+        
+        # Workflow orchestration
+        workflow_patterns = [
+            r"(?:does not|doesn't|not)\s+(?:orchestrate|orchestration|workflow)[^.]{0,200}",
+            r"out of scope[^.]{0,100}(?:workflow|orchestration)"
+        ]
+        workflow = "Not part of the documented scope."
+        for pattern in workflow_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                workflow = match.group(0).strip().rstrip('.')
+                break
+        
+        lines.append(f"- Workflow orchestration: {workflow}")
+        
+        return "\n".join(lines)
+    
+    def _remove_marketing_prose(self, text: str) -> str:
+        """Remove marketing adjectives and summary sections."""
+        # Use pre-compiled regex patterns for performance
+        for pattern in self._MARKETING_WORDS:
+            text = pattern.sub('', text)
+        
+        # Remove "In summary" sections using pre-compiled patterns
+        for pattern in self._SUMMARY_PATTERNS:
+            text = pattern.sub('', text)
         
         return text
     
@@ -1978,6 +3124,68 @@ Open Questions
             self._cache_service = await get_cache_service()
         return self._cache_service
     
+    async def refactor_documentation_strict(
+        self,
+        component_name: str,
+        force_refresh: bool = False
+    ) -> str:
+        """
+        Query RAG API and refactor into strict client-facing architecture documentation.
+        
+        Args:
+            component_name: Name of the Temenos component/microservice
+            force_refresh: If True, bypass cache and force fresh RAG query
+            
+        Returns:
+            Refactored documentation following strict 12-section structure
+        """
+        try:
+            logger.info(f"🔄 Refactoring documentation for {component_name} (strict format, force_refresh={force_refresh})")
+            
+            # Query architectural overview
+            arch_query = self._build_architectural_query(component_name, "microservice")
+            arch_response = await self._query_rag(
+                arch_query,
+                region="global",
+                rag_model_id="ModularBanking, TechnologyOverview",
+                context="This is about Temenos microservice architecture for client-facing documentation."
+            )
+            
+            architectural_text = ""
+            if arch_response.get("answer"):
+                architectural_text = arch_response["answer"]
+            else:
+                architectural_text = "Information not available"
+            
+            # Query functional overview
+            func_query = self._build_functional_query(component_name, "microservice")
+            func_response = await self._query_rag(
+                func_query,
+                region="global",
+                rag_model_id="ModularBanking, TechnologyOverview",
+                context="This is about Temenos microservice functional capabilities for client-facing documentation."
+            )
+            
+            functional_text = ""
+            if func_response.get("answer"):
+                functional_text = func_response["answer"]
+            else:
+                functional_text = "Information not available"
+            
+            # Refactor using strict structure
+            refactored_doc = self._refactor_rag_content_strict(
+                architectural_text,
+                functional_text,
+                component_name
+            )
+            
+            logger.info(f"✓ Refactored strict documentation for {component_name}: {len(refactored_doc)} chars")
+            return refactored_doc
+            
+        except Exception as e:
+            logger.error(f"Failed to refactor documentation for {component_name}: {e}")
+            return self._build_empty_strict_document(component_name)
+    
     async def identify_component(
         self, service: AzureResource, all_services: Optional[List[AzureResource]] = None, use_cache: bool = True, force_refresh: bool = False
     ) -> Optional[TemenosComponentInfo]:
@@ -2050,7 +3258,7 @@ Open Questions
             elif force_refresh:
                 logger.info(f"🔄 Force refresh enabled - skipping persistent component_info cache check for {component_name}")
             
-            # If force_refresh is True, clear caches FIRST before any checks
+            # If force_refresh is True, clear ALL caches to ensure fresh data
             if force_refresh:
                 logger.info(f"🔄 FORCE REFRESH requested for {component_name} - clearing ALL caches and fetching fresh data from RAG API")
                 cache_key = component_name.lower()
@@ -2060,10 +3268,12 @@ Open Questions
                     del self._component_cache[cache_key]
                     logger.info(f"✓ Cleared in-memory cache for {component_name}")
                 
-                # Clear persistent cache
+                # Clear persistent cache - be aggressive (delete component info and RAG responses)
                 try:
                     cache_service = await self._get_cache_service()
+                    # Delete component info
                     deleted_comp = await cache_service.delete_component_info(component_name)
+                    # Delete all RAG responses for this component
                     deleted_arch = await cache_service.delete_rag_response(component_name, "architectural", "ModularBanking, TechnologyOverview")
                     deleted_func = await cache_service.delete_rag_response(component_name, "functional", "ModularBanking, FuncTransactGeneric")
                     logger.info(f"✓ Cleared persistent cache for {component_name} (comp_info={deleted_comp}, arch={deleted_arch}, func={deleted_func})")
@@ -2071,21 +3281,22 @@ Open Questions
                     logger.warning(f"⚠ Error clearing persistent cache for {component_name}: {e}, continuing...")
                 
                 logger.info(f"🔄 Cache cleared - will now fetch fresh data from RAG API for {component_name}")
-                # Force skip all cache checks below
-                use_cache = False
             
             # Check in-memory cache (unless force_refresh is True)
             cache_key = component_name.lower()
             if use_cache and not force_refresh and cache_key in self._component_cache:
                 cached_info = self._component_cache[cache_key]
                 
-                # Check if cached entry has old table format - if so, invalidate cache
+                # Check if cached entry has old format - if so, invalidate cache
+                # Old format indicators: table format, A/B sections, or missing strict format header
                 has_old_format = (
                     "## A)" in cached_info.architectural_overview or 
                     "## B)" in cached_info.architectural_overview or 
                     "| Pattern/Guarantee |" in cached_info.architectural_overview or
                     "| Component | Role |" in cached_info.architectural_overview or
-                    ("Core Architectural Guarantees" in cached_info.architectural_overview and "Component Identity" not in cached_info.architectural_overview)
+                    ("Core Architectural Guarantees" in cached_info.architectural_overview and "Component Identity" not in cached_info.architectural_overview) or
+                    ("Component Identity" in cached_info.architectural_overview and "## 1. Purpose & Scope" not in cached_info.architectural_overview) or
+                    ("ARCHITECTURE OVERVIEW" in cached_info.architectural_overview and "## 1. Purpose & Scope" not in cached_info.architectural_overview)
                 )
                 
                 # Check if cached entry is minimal (from non-RAG fallback)
@@ -2168,7 +3379,13 @@ Open Questions
                     logger.info(f"Using cached architectural RAG response for {component_name}")
                     architectural_response = cached_arch
             elif force_refresh:
-                logger.info(f"🔄 Force refresh enabled - skipping cache check for architectural RAG response")
+                logger.info(f"🔄 Force refresh enabled - clearing cache and fetching fresh architectural RAG response")
+                # Clear cached RAG responses to ensure fresh data
+                try:
+                    await cache_service.delete_rag_response(component_name, "architectural", "ModularBanking, TechnologyOverview")
+                    logger.info(f"✓ Cleared cached architectural RAG response for {component_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to clear architectural cache (non-fatal): {e}")
             
             if not architectural_response:
                 logger.info(f"🔄 Querying RAG API for {component_name} - Architectural query (force_refresh={force_refresh})...")
@@ -2213,7 +3430,13 @@ Open Questions
                     logger.info(f"Using cached functional RAG response for {component_name}")
                     functional_response = cached_func
             elif force_refresh:
-                logger.info(f"🔄 Force refresh enabled - skipping cache check for functional RAG response")
+                logger.info(f"🔄 Force refresh enabled - clearing cache and fetching fresh functional RAG response")
+                # Clear cached RAG responses to ensure fresh data
+                try:
+                    await cache_service.delete_rag_response(component_name, "functional", "ModularBanking, FuncTransactGeneric")
+                    logger.info(f"✓ Cleared cached functional RAG response for {component_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to clear functional cache (non-fatal): {e}")
             
             if not functional_response:
                 logger.info(f"🔄 Querying RAG API for {component_name} - Functional query (force_refresh={force_refresh})...")
@@ -2256,74 +3479,95 @@ Open Questions
             logger.info(f"  Architectural: {len(architectural_text)} chars - {architectural_text[:100]}...")
             logger.info(f"  Functional: {len(functional_text)} chars - {functional_text[:100]}...")
             
-            # Refactor RAG responses according to Component Architecture Brief template
-            # Apply strict refactoring for all components to remove redundancy
-            logger.info(f"🔄 Refactoring RAG content for {component_name} (force_refresh={force_refresh})...")
-            logger.info(f"  Raw architectural text length: {len(architectural_text)} chars")
-            logger.info(f"  Raw functional text length: {len(functional_text)} chars")
-            
-            arch_formatted, func_formatted = self._refactor_rag_content(
+            # Refactor RAG responses using STRICT 12-section format
+            logger.info(f"🔄 Refactoring RAG content for {component_name} using STRICT format (force_refresh={force_refresh})...")
+            arch_formatted = self._refactor_rag_content_strict(
                 architectural_text, 
                 functional_text, 
                 component_name
             )
+            func_formatted = ""  # Functional content is now part of the strict format
             
-            logger.info(f"✓ Refactored content lengths - Arch: {len(arch_formatted)} chars, Func: {len(func_formatted)} chars")
-            logger.info(f"  Refactored content preview (first 200 chars): {arch_formatted[:200]}...")
+            logger.info(f"✓ Refactored strict documentation length: {len(arch_formatted)} chars")
             
-            # Verify new format is applied
-            if "Component Identity" not in arch_formatted:
-                logger.warning(f"⚠ WARNING: Refactored content does not contain 'Component Identity' - format may be incorrect")
-            if "## A)" in arch_formatted or "| Pattern/Guarantee |" in arch_formatted:
-                logger.error(f"✗ ERROR: Refactored content still contains old table format markers!")
+            # Verify strict format is applied (check for strict template headers)
+            if "## 1. Purpose & Scope" not in arch_formatted:
+                logger.warning(f"⚠ WARNING: Refactored content doesn't have strict format header - format may be incorrect")
+                logger.warning(f"  First 200 chars: {arch_formatted[:200]}")
+            else:
+                logger.info(f"✓ Strict 12-section format confirmed - '## 1. Purpose & Scope' header found")
             
             # Log formatted lengths
             logger.info(f"Formatted response lengths: arch={len(arch_formatted)}, func={len(func_formatted)}")
             
-            # If RAG returned "Information not available", provide more detailed fallback description
-            if arch_formatted in ["Information not available", "Information not available - timeout"]:
-                logger.warning(f"RAG returned no information for {component_name} - using detailed fallback")
-                arch_formatted = f"""{component_name} is a Temenos microservice component deployed in Azure Kubernetes Service. 
-
-Architecture:
-- Deployed as containerized microservices in Azure Kubernetes Service (AKS)
-- Follows microservices architecture patterns for scalability and resilience
-- Integrates with other Temenos components through well-defined APIs
-- Uses cloud-native technologies for deployment and orchestration
-
-Key Components:
-- Core service components handling business logic
-- API endpoints for external and internal communication
-- Data access layers for persistence
-- Integration layers for component communication
-
-Deployment:
-- Containerized using Docker
-- Orchestrated via Kubernetes
-- Scalable and resilient architecture
-- Cloud-native design patterns"""
+            # Check if refactored content has strict format - if not, use fallback
+            has_strict_format = "## 1. Purpose & Scope" in arch_formatted
+            has_old_format = (
+                "## A)" in arch_formatted or 
+                "## B)" in arch_formatted or 
+                "## C)" in arch_formatted or
+                "## D)" in arch_formatted or
+                "## E)" in arch_formatted or
+                "## F)" in arch_formatted or
+                "## G)" in arch_formatted or
+                "| Pattern/Guarantee |" in arch_formatted or
+                "| Component | Role |" in arch_formatted or
+                ("Core Architectural Guarantees" in arch_formatted and "Component Identity" not in arch_formatted) or
+                ("ARCHITECTURE OVERVIEW" in arch_formatted and "## 1. Purpose & Scope" not in arch_formatted) or
+                (arch_formatted.startswith("#") and "## 1. Purpose & Scope" not in arch_formatted and len(arch_formatted) > 500)
+            )
             
-            if func_formatted in ["Information not available", "Information not available - timeout"]:
-                logger.warning(f"RAG returned no information for {component_name} - using detailed fallback")
-                func_formatted = f"""{component_name} provides core banking functionality as part of the Temenos Transact platform.
-
-Functional Capabilities:
-- Core banking operations and business logic processing
-- Transaction processing and validation
-- Business rule enforcement
-- Data management and persistence
-
-Business Functions:
-- Handles critical banking operations
-- Supports core banking workflows
-- Manages business data and state
-- Provides APIs for integration with other components
-
-Integration:
-- Integrates with other Temenos microservices
-- Communicates via standard APIs and protocols
-- Supports event-driven architectures
-- Enables distributed system patterns"""
+            if arch_formatted in ["Information not available", "Information not available - timeout"]:
+                logger.warning(f"RAG returned no information for {component_name} - using strict format fallback")
+                arch_formatted = self._build_empty_strict_document(component_name)
+            elif not has_strict_format or has_old_format:
+                logger.warning(f"⚠ Refactored content for {component_name} doesn't have strict format (has_strict={has_strict_format}, has_old={has_old_format})")
+                logger.warning(f"  First 500 chars: {arch_formatted[:500]}")
+                
+                # If we have substantial RAG content but wrong format, try one more time with better extraction
+                if len(architectural_text) > 500 and architectural_text not in ["Information not available", "Information not available - timeout"]:
+                    logger.info(f"  Attempting improved refactoring with better extraction...")
+                    try:
+                        # Force re-extraction with improved patterns
+                        arch_formatted_retry = self._refactor_rag_content_strict(
+                            architectural_text,
+                            functional_text,
+                            component_name
+                        )
+                        
+                        # Validate retry result
+                        has_strict_retry = "## 1. Purpose & Scope" in arch_formatted_retry
+                        has_old_retry = any(marker in arch_formatted_retry for marker in ["## A)", "## B)", "| Pattern/Guarantee |"])
+                        
+                        if has_strict_retry and not has_old_retry:
+                            logger.info(f"✓ Retry refactoring succeeded - strict format confirmed")
+                            arch_formatted = arch_formatted_retry
+                        else:
+                            logger.warning(f"⚠ Retry refactoring still failed (has_strict={has_strict_retry}, has_old={has_old_retry}) - using empty strict format fallback")
+                            arch_formatted = self._build_empty_strict_document(component_name)
+                    except Exception as e:
+                        logger.error(f"✗ Error during retry refactoring: {e}", exc_info=True)
+                        logger.warning(f"  Using empty strict format fallback")
+                        arch_formatted = self._build_empty_strict_document(component_name)
+                else:
+                    # Not enough content to retry - use empty strict format
+                    logger.warning(f"  Insufficient RAG content for retry - using empty strict format fallback")
+                    arch_formatted = self._build_empty_strict_document(component_name)
+            
+            # Final validation: ensure we NEVER cache or return non-strict format
+            if "## 1. Purpose & Scope" not in arch_formatted:
+                logger.error(f"✗ CRITICAL: Refactoring failed completely for {component_name} - using empty strict format")
+                arch_formatted = self._build_empty_strict_document(component_name)
+            
+            # Verify no old format markers remain
+            if any(marker in arch_formatted for marker in ["## A)", "## B)", "| Pattern/Guarantee |", "| Component | Role |"]):
+                logger.error(f"✗ CRITICAL: Old format markers detected in refactored content for {component_name} - using empty strict format")
+                arch_formatted = self._build_empty_strict_document(component_name)
+            
+            # func_formatted is always empty now (functional content is in strict format)
+            func_formatted = ""
+            
+            logger.info(f"✓ Final architectural overview for {component_name}: {len(arch_formatted)} chars, strict format: {'## 1. Purpose & Scope' in arch_formatted}")
             
             component_info = TemenosComponentInfo(
                 component_name=component_name,
@@ -2336,26 +3580,31 @@ Integration:
             )
             
             # Cache the component info in both memory and persistent storage
+            # IMPORTANT: Only cache if content is in strict format
             if use_cache:
-                # Update in-memory cache for fast access
-                self._component_cache[cache_key] = component_info
-                logger.info(f"Cached component info in memory for {component_name}")
-                
-                # Also save to persistent cache so it's available on next application startup
-                try:
-                    cache_service = await self._get_cache_service()
-                    await cache_service.set_component_info(component_name, {
-                        "component_name": component_info.component_name,
-                        "component_type": component_info.component_type,
-                        "architectural_overview": component_info.architectural_overview,
-                        "functional_overview": component_info.functional_overview,
-                        "capabilities": component_info.capabilities,
-                        "related_services": component_info.related_services
-                    })
-                    logger.debug(f"Saved component info to persistent cache for {component_name}")
-                except Exception as e:
-                    logger.warning(f"Failed to save component info to persistent cache for {component_name}: {e}")
-                    # Don't fail - in-memory cache is still available
+                # Final check before caching - ensure strict format
+                if "## 1. Purpose & Scope" not in component_info.architectural_overview:
+                    logger.error(f"✗ CRITICAL: Attempted to cache non-strict format for {component_name} - skipping cache")
+                else:
+                    # Update in-memory cache for fast access
+                    self._component_cache[cache_key] = component_info
+                    logger.info(f"✓ Cached component info in memory for {component_name} (strict format verified)")
+                    
+                    # Also save to persistent cache so it's available on next application startup
+                    try:
+                        cache_service = await self._get_cache_service()
+                        await cache_service.set_component_info(component_name, {
+                            "component_name": component_info.component_name,
+                            "component_type": component_info.component_type,
+                            "architectural_overview": component_info.architectural_overview,
+                            "functional_overview": component_info.functional_overview,
+                            "capabilities": component_info.capabilities,
+                            "related_services": component_info.related_services
+                        })
+                        logger.debug(f"Saved component info to persistent cache for {component_name}")
+                    except Exception as e:
+                        logger.warning(f"Failed to save component info to persistent cache for {component_name}: {e}")
+                        # Don't fail - in-memory cache is still available
             
             logger.info(f"Successfully identified component: {component_name} for {service.name}")
             return component_info

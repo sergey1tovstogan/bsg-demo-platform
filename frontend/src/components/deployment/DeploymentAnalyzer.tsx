@@ -5,8 +5,9 @@
  * Provides functionality to connect to Azure, select resource groups, and analyze Temenos components.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Code, Settings, GitBranch, Box, Zap, HardDrive, Globe, Layers, Cpu, Info } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
 
@@ -273,10 +274,19 @@ export function DeploymentAnalyzer() {
       setAnalysisProgress({ current: 1, total: 3, message: 'Loading resources from selected resource groups...' })
       const response = await apiService.getAzureResources(subscriptionId, selected)
       const servicesData = (response.data as any)?.data || response.data || []
-      setServices(Array.isArray(servicesData) ? servicesData : [])
+      const validServices = Array.isArray(servicesData) ? servicesData : []
+      setServices(validServices)
+
+      // Check if we have any services to analyze
+      if (!validServices || validServices.length === 0) {
+        setError('No Azure resources found in the selected resource groups. Please select different resource groups.')
+        setAnalysisProgress(null)
+        setLoading(false)
+        return
+      }
 
       // Check if there are AKS clusters - if so, get namespaces for selection
-      const hasAKS = servicesData.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
+      const hasAKS = validServices.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
 
       if (hasAKS) {
         // Get namespaces from AKS clusters - dynamically fetch from actual clusters
@@ -348,10 +358,10 @@ export function DeploymentAnalyzer() {
             url: nsErr.config?.url
           })
           // Continue to analysis without namespace selection
-          setAnalysisProgress(null)
-          setLoading(false)
           setCurrentStep('analysis')
-          analyzeServices(servicesData).catch(err => {
+          setLoading(true) // Ensure loading is true when starting analysis
+          setAnalysisProgress({ current: 0, total: validServices.length, message: 'Starting analysis...' })
+          analyzeServices(validServices).catch(err => {
             console.error('Analysis error:', err)
             setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
             setLoading(false)
@@ -359,10 +369,10 @@ export function DeploymentAnalyzer() {
         }
       } else {
         // No AKS clusters, proceed directly to analysis
-        setAnalysisProgress(null)
-        setLoading(false)
         setCurrentStep('analysis')
-        analyzeServices(servicesData).catch(err => {
+        setLoading(true) // Ensure loading is true when starting analysis
+        setAnalysisProgress({ current: 0, total: validServices.length, message: 'Starting analysis...' })
+        analyzeServices(validServices).catch(err => {
           console.error('Analysis error:', err)
           setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
           setLoading(false)
@@ -473,7 +483,7 @@ export function DeploymentAnalyzer() {
                       resource_group: rgName,
                       total_cost: 0,
                       services: {},
-                      error: errorMessage || 'No cost data returned for this resource group'
+                      error: 'No cost data returned for this resource group'
                     }
                   }
                 })
@@ -723,6 +733,13 @@ export function DeploymentAnalyzer() {
             setLogAnalyzerOpen(true)
           }}
           selectedResourceGroups={selectedResourceGroups}
+          onUpdateAnalysisResult={(updatedResult: AnalysisResult) => {
+            setAnalysisResults((prev: AnalysisResult[]) => 
+              prev.map((r: AnalysisResult) => 
+                r.service.id === updatedResult.service.id ? updatedResult : r
+              )
+            )
+          }}
         />
       )}
 
@@ -1470,7 +1487,8 @@ function ServiceAnalysis({
   costsLoading,
   includeCosts,
   onOpenLogAnalyzer,
-  selectedResourceGroups
+  selectedResourceGroups,
+  onUpdateAnalysisResult
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
@@ -1491,6 +1509,7 @@ function ServiceAnalysis({
   includeCosts: boolean
   onOpenLogAnalyzer: (resourceGroup: string) => void
   selectedResourceGroups: string[]
+  onUpdateAnalysisResult: (updatedResult: AnalysisResult) => void
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
   const [selectedAzureService, setSelectedAzureService] = useState<string | null>(null)
@@ -1507,32 +1526,18 @@ function ServiceAnalysis({
 
   const selectedResult = identifiedComponents.find(r => r.service.id === selectedComponent) || identifiedComponents[0]
 
-  // Callback to handle component refresh - defined without useCallback to ensure proper closure
-  const handleComponentRefresh = (updatedResult: AnalysisResult) => {
+  // Callback to handle component refresh
+  const handleComponentRefresh = useCallback((updatedResult: AnalysisResult) => {
     try {
       console.log('[Refresh] handleComponentRefresh called with:', updatedResult)
-      console.log('[Refresh] setAnalysisResults available:', typeof setAnalysisResults)
-      
-      // Update the analysis results with refreshed data using functional update
-      setAnalysisResults((prev: AnalysisResult[]) => {
-        console.log('[Refresh] setAnalysisResults callback - prev length:', prev.length)
-        const updated = prev.map((r: AnalysisResult) => {
-          if (r.service.id === updatedResult.service.id) {
-            console.log('[Refresh] Updating result for service:', r.service.id)
-            return updatedResult
-          }
-          return r
-        })
-        console.log('[Refresh] Updated analysis results, new count:', updated.length)
-        return updated
-      })
+      onUpdateAnalysisResult(updatedResult)
+      console.log('[Refresh] State update queued successfully')
     } catch (err) {
-      console.error('[Refresh] Error in handleComponentRefresh:', err)
+      console.error('[Refresh] Error updating state:', err)
       console.error('[Refresh] Error stack:', err instanceof Error ? err.stack : 'No stack')
-      console.error('[Refresh] Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err)))
       alert(`Failed to update component information: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
-  }
+  }, [onUpdateAnalysisResult])
 
   // Show error if present
   if (error) {
@@ -2268,6 +2273,7 @@ function ComponentDetailPanel({
 
 }) {
   const { service, componentInfo } = result
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Debug logging
   useEffect(() => {
@@ -2322,7 +2328,10 @@ function ComponentDetailPanel({
         )}
         <button
           onClick={async () => {
+            if (isRefreshing) return // Prevent multiple clicks
+            
             try {
+              setIsRefreshing(true)
               console.log('[Refresh] Starting refresh for component:', componentInfo.componentName)
               console.log('[Refresh] Service object:', service)
               console.log('[Refresh] Service name:', service.name)
@@ -2352,30 +2361,59 @@ function ComponentDetailPanel({
               )
               
               console.log('[Refresh] Full response:', JSON.stringify(response, null, 2))
-              console.log('[Refresh] Response data:', response.data)
-              console.log('[Refresh] Response data.data:', response.data?.data)
-              console.log('[Refresh] Response data.data type:', typeof response.data?.data)
-              console.log('[Refresh] Response data.data is array?', Array.isArray(response.data?.data))
-              console.log('[Refresh] Response data.data length:', response.data?.data?.length)
+              console.log('[Refresh] Response structure:', {
+                hasData: !!response.data,
+                dataType: typeof response.data,
+                hasDataData: !!response.data?.data,
+                dataDataType: typeof response.data?.data,
+                isDataArray: Array.isArray(response.data),
+                isDataDataArray: Array.isArray(response.data?.data),
+                dataKeys: response.data ? Object.keys(response.data) : [],
+                status: response.data?.status
+              })
               
               // Handle different response structures
               let resultsArray: any[] = []
               
-              // Check if response.data.data exists and is an array
+              // Standard structure: response.data.data is an array
               if (response.data?.data && Array.isArray(response.data.data)) {
                 resultsArray = response.data.data
+                console.log('[Refresh] Using response.data.data (standard structure)')
               } 
-              // Fallback: maybe response.data is the array directly
+              // Fallback: response.data is the array directly
               else if (Array.isArray(response.data)) {
                 resultsArray = response.data
+                console.log('[Refresh] Using response.data (fallback structure)')
               }
-              // Fallback: maybe response is the array directly
+              // Fallback: response is the array directly
               else if (Array.isArray(response)) {
                 resultsArray = response
+                console.log('[Refresh] Using response directly (fallback structure)')
+              }
+              // Check if response has a different structure
+              else if (response.data && typeof response.data === 'object') {
+                console.warn('[Refresh] Unexpected response structure:', response.data)
+                // Try to find any array in the response
+                for (const key in response.data) {
+                  if (Array.isArray(response.data[key])) {
+                    resultsArray = response.data[key]
+                    console.log(`[Refresh] Found array in response.data.${key}`)
+                    break
+                  }
+                }
               }
               
               console.log('[Refresh] Results array:', resultsArray)
               console.log('[Refresh] Results array length:', resultsArray.length)
+              
+              if (resultsArray.length === 0) {
+                console.error('[Refresh] No results found in response. Full response structure:', {
+                  responseType: typeof response,
+                  responseKeys: Object.keys(response || {}),
+                  dataType: typeof response.data,
+                  dataKeys: response.data ? Object.keys(response.data) : []
+                })
+              }
               
               if (resultsArray.length > 0) {
                 const firstResult = resultsArray[0]
@@ -2386,6 +2424,12 @@ function ComponentDetailPanel({
                 console.log('[Refresh] New component info:', newComponentInfo)
                 
                 if (newComponentInfo) {
+                  // Check if architectural overview has strict format
+                  const hasStrictFormat = newComponentInfo.architecturalOverview?.includes('## 1. Purpose & Scope')
+                  console.log('[Refresh] Has strict format:', hasStrictFormat)
+                  console.log('[Refresh] Architectural overview length:', newComponentInfo.architecturalOverview?.length)
+                  console.log('[Refresh] Architectural overview preview:', newComponentInfo.architecturalOverview?.substring(0, 200))
+                  
                   // Create updated result with new component info
                   const updatedResult: AnalysisResult = {
                     ...result,
@@ -2397,124 +2441,108 @@ function ComponentDetailPanel({
                   if (onRefresh) {
                     console.log('[Refresh] Calling onRefresh callback')
                     onRefresh(updatedResult)
+                    
+                    // Show success message
+                    if (!hasStrictFormat) {
+                      alert('Refresh completed, but the documentation is not in the strict 12-section format. The RAG API may not be configured or may have returned incomplete data. Check backend logs for details.')
+                    }
                   } else {
                     console.warn('[Refresh] No onRefresh callback provided')
                   }
                 } else {
                   console.warn('[Refresh] No componentInfo in response. First result:', firstResult)
                   if (firstResult?.error) {
-                    alert(`Refresh completed but encountered an error: ${firstResult.error}`)
+                    alert(`Refresh completed but encountered an error: ${firstResult.error}\n\nCheck backend logs for more details.`)
                   } else {
-                    alert('Refresh completed but no component information was returned. The service may not be identified as a Temenos component. Check backend logs.')
+                    alert('Refresh completed but no component information was returned.\n\nPossible causes:\n1. RAG API is not configured (check RAG_JWT_TOKEN)\n2. Service was not identified as a Temenos component\n3. Backend error occurred\n\nCheck backend logs for details.')
                   }
                 }
               } else {
                 console.warn('[Refresh] Empty results array. Full response:', response)
-                alert('Refresh completed but no results were returned. The service may not be identified as a Temenos component. Check backend logs.')
+                alert('Refresh completed but no results were returned.\n\nPossible causes:\n1. Service was not identified as a Temenos component\n2. Backend error occurred\n3. RAG API is not configured\n\nCheck backend logs for details.')
               }
-            } catch (error) {
+            } catch (error: any) {
               console.error('[Refresh] Failed to refresh component info:', error)
-              alert(`Failed to refresh component information: ${error instanceof Error ? error.message : 'Unknown error'}. Check browser console and backend logs.`)
+              console.error('[Refresh] Error details:', {
+                message: error?.message,
+                response: error?.response?.data,
+                status: error?.response?.status,
+                url: error?.config?.url
+              })
+              
+              let errorMessage = 'Failed to refresh component information.'
+              if (error?.response?.data?.detail) {
+                const detail = error.response.data.detail
+                if (typeof detail === 'string') {
+                  errorMessage += `\n\nError: ${detail}`
+                } else if (detail.error) {
+                  errorMessage += `\n\nError: ${detail.error}`
+                } else {
+                  errorMessage += `\n\nError: ${JSON.stringify(detail)}`
+                }
+              } else if (error?.message) {
+                errorMessage += `\n\nError: ${error.message}`
+              }
+              
+              errorMessage += '\n\nCheck browser console and backend logs for more details.'
+              alert(errorMessage)
+            } finally {
+              setIsRefreshing(false)
             }
           }}
+          disabled={isRefreshing}
           className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh Info</span>
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>{isRefreshing ? 'Refreshing...' : 'Refresh Info'}</span>
         </button>
       </div>
 
-      {/* Horizontal Information Panels */}
+      {/* Structured Documentation - Strict 12-Section Format */}
       <div className="space-y-6">
-        {/* Architectural Overview */}
-        <div className="bg-gradient-to-br from-gray-50 to-indigo-50/30 dark:from-slate-800 dark:to-indigo-900/20 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-          <div className="flex items-center space-x-3 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-700 shadow-md">
-              <Layers className="w-5 h-5 text-white" />
-            </div>
-            <h5 className="font-bold text-gray-900 dark:text-white text-lg">ARCHITECTURE OVERVIEW</h5>
+        {componentInfo.architecturalOverview && 
+         componentInfo.architecturalOverview.trim() && 
+         componentInfo.architecturalOverview.includes('## 1. Purpose & Scope') ? (
+          // Strict format - render as structured markdown document
+          <div className="prose prose-lg dark:prose-invert max-w-none">
+            <ReactMarkdown
+              components={{
+                h1: ({ ...props }) => <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-6 mb-4 pb-2 border-b border-gray-300 dark:border-gray-600" {...props} />,
+                h2: ({ ...props }) => <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-8 mb-4 pt-4 border-t border-gray-200 dark:border-gray-700 first:border-t-0 first:pt-0" {...props} />,
+                h3: ({ ...props }) => <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-6 mb-3" {...props} />,
+                h4: ({ ...props }) => <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mt-4 mb-2" {...props} />,
+                ul: ({ ...props }) => <ul className="list-none space-y-2 mb-4 text-gray-700 dark:text-gray-300 ml-4" {...props} />,
+                ol: ({ ...props }) => <ol className="list-decimal list-outside ml-6 space-y-2 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
+                li: ({ children, ...props }: any) => (
+                  <li className="flex items-start space-x-3 leading-relaxed" {...props}>
+                    <div className="mt-2 flex-shrink-0">
+                      <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-700 mt-1.5"></div>
+                    </div>
+                    <span className="flex-1">{children}</span>
+                  </li>
+                ),
+                p: ({ ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
+                strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-indigo-600 dark:text-indigo-400" {...props} />,
+              }}
+            >
+              {componentInfo.architecturalOverview}
+            </ReactMarkdown>
           </div>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim() && 
-             componentInfo.architecturalOverview.toLowerCase() !== 'information not available' &&
-             !componentInfo.architecturalOverview.toLowerCase().includes('cannot provide') &&
-             !componentInfo.architecturalOverview.toLowerCase().includes('not available in my knowledge base')
-              ? formatRAGText(componentInfo.architecturalOverview)
-              : <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
-                  <AlertCircle className="w-4 h-4" />
-                  <p className="italic">No architectural overview available. Click "Refresh Info" to fetch from RAG API.</p>
-                </div>}
-          </div>
-        </div>
-
-        {/* Deployment Architecture - Only show if not already covered in architectural overview */}
-        {service.type && !componentInfo.architecturalOverview?.toLowerCase().includes('azure service type') ? (
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                <li>Azure Service Type: {service.type}</li>
-              {service.resourceGroup && (
-                <li>Resource Group: {service.resourceGroup}</li>
-              )}
-              {service.location && (
-                <li>Location: {service.location}</li>
-              )}
-            </ul>
-          </div>
-        ) : null}
-
-        {/* Functional Overview */}
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            {componentInfo.functionalOverview && componentInfo.functionalOverview.trim()
-              ? formatRAGText(componentInfo.functionalOverview)
-              : <p className="text-gray-500 dark:text-gray-400 italic">No functional overview available</p>}
-          </div>
-        </div>
-
-        {/* Key Capabilities */}
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">KEY CAPABILITIES</h5>
-          {componentInfo.capabilities && Array.isArray(componentInfo.capabilities) && componentInfo.capabilities.length > 0 ? (
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              {componentInfo.capabilities.map((cap, idx) => (
-                <li key={idx}>{cap}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No capabilities listed</p>
-          )}
-        </div>
-
-        {/* Related Services */}
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">RELATED SERVICES</h5>
-          {componentInfo.relatedServices && Array.isArray(componentInfo.relatedServices) && componentInfo.relatedServices.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {componentInfo.relatedServices.map((svc, idx) => (
-                <span key={idx} className="px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
-                  {svc}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No related services listed</p>
-          )}
-        </div>
-
-        {/* Relationships */}
-        {componentInfo.relationships && Array.isArray(componentInfo.relationships) && componentInfo.relationships.length > 0 && (
-          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">COMPONENT RELATIONSHIPS</h5>
-            <div className="space-y-3">
-              {componentInfo.relationships.map((rel, idx) => (
-                <div key={idx} className="bg-white dark:bg-slate-700 rounded p-3 border border-indigo-200 dark:border-indigo-500/30">
-                  <div className="font-medium text-gray-900 dark:text-white">{rel.targetComponent}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rel.relationshipType}</div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300 mt-2">{rel.description}</div>
+        ) : (
+          // Legacy format or missing - show structured placeholder
+          <div className="space-y-6">
+            <div className="bg-gradient-to-br from-gray-50 to-indigo-50/30 dark:from-slate-800 dark:to-indigo-900/20 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="flex items-center space-x-3 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-700 shadow-md">
+                  <Layers className="w-5 h-5 text-white" />
                 </div>
-              ))}
+                <h5 className="font-bold text-gray-900 dark:text-white text-lg">ARCHITECTURAL DOCUMENTATION</h5>
+              </div>
+              <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+                <AlertCircle className="w-4 h-4" />
+                <p className="italic">Structured documentation not available. Component information must follow the strict 12-section format. Click "Refresh Info" to fetch structured documentation from RAG API.</p>
+              </div>
             </div>
           </div>
         )}

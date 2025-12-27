@@ -203,6 +203,7 @@ class CostService:
                 # If still has error, format it properly
                 if result.get('error'):
                     # Provide more specific error messages based on status code
+                    error_msg = result.get('error', 'Unknown error')
                     if status_code == 403:
                         error_msg = f'Permission denied. Verify you have "Cost Management Reader" role on subscription "{self.subscription_id}". You may need to contact your Azure administrator to grant this role.'
                     elif status_code == 404:
