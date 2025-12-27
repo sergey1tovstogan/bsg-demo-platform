@@ -864,7 +864,9 @@ async def analyze_services(request: AnalyzeRequest):
 @router.post("/temenos/analyze/refresh")
 async def refresh_analysis(request: AnalyzeRequest):
     """Refresh analysis - forces RAG queries even if cached."""
+    logger.info(f"🔄 REFRESH endpoint called - forcing refresh for {len(request.services)} services")
     request.force_refresh = True
+    logger.info(f"🔄 force_refresh set to: {request.force_refresh}")
     return await _analyze_services_impl(request)
 
 
@@ -958,7 +960,9 @@ async def _analyze_services_impl(request: AnalyzeRequest):
         
         # Analyze services (use cache by default, unless force_refresh is True)
         force_refresh = getattr(request, 'force_refresh', False)
+        logger.info(f"🔄 Analyzing services with force_refresh={force_refresh}, use_cache=True")
         results = await temenos_service.analyze_services(services, use_cache=True, force_refresh=force_refresh)
+        logger.info(f"✓ Analysis complete - {len(results)} results returned")
         
         # Deduplicate components (simplified version)
         deduplicated_results = _deduplicate_components(results)

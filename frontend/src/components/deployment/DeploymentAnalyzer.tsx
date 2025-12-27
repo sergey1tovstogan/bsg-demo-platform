@@ -1507,6 +1507,33 @@ function ServiceAnalysis({
 
   const selectedResult = identifiedComponents.find(r => r.service.id === selectedComponent) || identifiedComponents[0]
 
+  // Callback to handle component refresh - defined without useCallback to ensure proper closure
+  const handleComponentRefresh = (updatedResult: AnalysisResult) => {
+    try {
+      console.log('[Refresh] handleComponentRefresh called with:', updatedResult)
+      console.log('[Refresh] setAnalysisResults available:', typeof setAnalysisResults)
+      
+      // Update the analysis results with refreshed data using functional update
+      setAnalysisResults((prev: AnalysisResult[]) => {
+        console.log('[Refresh] setAnalysisResults callback - prev length:', prev.length)
+        const updated = prev.map((r: AnalysisResult) => {
+          if (r.service.id === updatedResult.service.id) {
+            console.log('[Refresh] Updating result for service:', r.service.id)
+            return updatedResult
+          }
+          return r
+        })
+        console.log('[Refresh] Updated analysis results, new count:', updated.length)
+        return updated
+      })
+    } catch (err) {
+      console.error('[Refresh] Error in handleComponentRefresh:', err)
+      console.error('[Refresh] Error stack:', err instanceof Error ? err.stack : 'No stack')
+      console.error('[Refresh] Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err)))
+      alert(`Failed to update component information: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+  }
+
   // Show error if present
   if (error) {
     return (
@@ -1747,12 +1774,7 @@ function ServiceAnalysis({
             {selectedResult && (
               <ComponentDetailPanel 
                 result={selectedResult} 
-                onRefresh={(updatedResult) => {
-                  // Update the analysis results with refreshed data
-                  setAnalysisResults(prev => 
-                    prev.map(r => r.service.id === updatedResult.service.id ? updatedResult : r)
-                  )
-                }}
+                onRefresh={handleComponentRefresh}
               />
             )}
           </div>
@@ -2301,26 +2323,98 @@ function ComponentDetailPanel({
         <button
           onClick={async () => {
             try {
+              console.log('[Refresh] Starting refresh for component:', componentInfo.componentName)
+              console.log('[Refresh] Service object:', service)
+              console.log('[Refresh] Service name:', service.name)
+              console.log('[Refresh] Service type:', service.type)
+              console.log('[Refresh] Service ID:', service.id)
+              console.log('[Refresh] Service properties:', service.properties)
+              console.log('[Refresh] Calling analyzeAzureServices with forceRefresh=true')
+              
+              // Ensure service is in the correct format for the API
+              const servicePayload = {
+                id: service.id,
+                name: service.name,
+                type: service.type,
+                location: service.location,
+                resourceGroup: service.resourceGroup,
+                properties: service.properties || {},
+                tags: service.tags || {}
+              }
+              
+              console.log('[Refresh] Service payload:', servicePayload)
+              
               const response = await apiService.analyzeAzureServices(
-                [service],
+                [servicePayload],
                 undefined,
                 undefined,
                 true // forceRefresh
               )
-              if (response.data?.data && Array.isArray(response.data.data) && response.data.data.length > 0 && response.data.data[0].componentInfo) {
-                // Create updated result with new component info
-                const updatedResult: AnalysisResult = {
-                  ...result,
-                  componentInfo: response.data.data[0].componentInfo
+              
+              console.log('[Refresh] Full response:', JSON.stringify(response, null, 2))
+              console.log('[Refresh] Response data:', response.data)
+              console.log('[Refresh] Response data.data:', response.data?.data)
+              console.log('[Refresh] Response data.data type:', typeof response.data?.data)
+              console.log('[Refresh] Response data.data is array?', Array.isArray(response.data?.data))
+              console.log('[Refresh] Response data.data length:', response.data?.data?.length)
+              
+              // Handle different response structures
+              let resultsArray: any[] = []
+              
+              // Check if response.data.data exists and is an array
+              if (response.data?.data && Array.isArray(response.data.data)) {
+                resultsArray = response.data.data
+              } 
+              // Fallback: maybe response.data is the array directly
+              else if (Array.isArray(response.data)) {
+                resultsArray = response.data
+              }
+              // Fallback: maybe response is the array directly
+              else if (Array.isArray(response)) {
+                resultsArray = response
+              }
+              
+              console.log('[Refresh] Results array:', resultsArray)
+              console.log('[Refresh] Results array length:', resultsArray.length)
+              
+              if (resultsArray.length > 0) {
+                const firstResult = resultsArray[0]
+                console.log('[Refresh] First result:', firstResult)
+                console.log('[Refresh] First result keys:', Object.keys(firstResult || {}))
+                
+                const newComponentInfo = firstResult?.componentInfo
+                console.log('[Refresh] New component info:', newComponentInfo)
+                
+                if (newComponentInfo) {
+                  // Create updated result with new component info
+                  const updatedResult: AnalysisResult = {
+                    ...result,
+                    componentInfo: newComponentInfo
+                  }
+                  console.log('[Refresh] Updated result:', updatedResult)
+                  
+                  // Update parent state via callback
+                  if (onRefresh) {
+                    console.log('[Refresh] Calling onRefresh callback')
+                    onRefresh(updatedResult)
+                  } else {
+                    console.warn('[Refresh] No onRefresh callback provided')
+                  }
+                } else {
+                  console.warn('[Refresh] No componentInfo in response. First result:', firstResult)
+                  if (firstResult?.error) {
+                    alert(`Refresh completed but encountered an error: ${firstResult.error}`)
+                  } else {
+                    alert('Refresh completed but no component information was returned. The service may not be identified as a Temenos component. Check backend logs.')
+                  }
                 }
-                // Update parent state via callback
-                if (onRefresh) {
-                  onRefresh(updatedResult)
-                }
+              } else {
+                console.warn('[Refresh] Empty results array. Full response:', response)
+                alert('Refresh completed but no results were returned. The service may not be identified as a Temenos component. Check backend logs.')
               }
             } catch (error) {
-              console.error('Failed to refresh component info:', error)
-              alert('Failed to refresh component information. Please try again.')
+              console.error('[Refresh] Failed to refresh component info:', error)
+              alert(`Failed to refresh component information: ${error instanceof Error ? error.message : 'Unknown error'}. Check browser console and backend logs.`)
             }
           }}
           className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"

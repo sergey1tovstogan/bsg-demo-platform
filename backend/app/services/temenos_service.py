@@ -651,23 +651,15 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
     
     def _refactor_rag_content(self, architectural_text: str, functional_text: str, component_name: str) -> Tuple[str, str]:
         """
-        Refactor RAG content according to strict architecture documentation constraints.
+        Refactor RAG content into Component Architecture Brief following exact template.
         
-        HARD CONSTRAINTS:
-        - Each architectural concept explained once and only once
-        - No repeated summaries
-        - No marketing-style prose
-        - No "In summary" sections
-        - Remove FUNCTIONAL OVERVIEW and KEY CAPABILITIES sections
-        
-        OUTPUT FORMAT:
-        A) Architecture Overview (max 6 lines)
-        B) Patterns & Guarantees (table)
-        C) Canonical Event Lifecycle (numbered 1-7 steps)
-        D) Components & Interactions (table)
-        E) Integration Landscape (table)
-        F) Deployment Snapshot (exactly 6 bullets)
-        G) Observability & Resilience (max 8 bullets)
+        STRICT RULES:
+        - Follow template headings EXACTLY in order
+        - NO tables, NO A/B/C labels
+        - NO redundancy (each concept once)
+        - NO marketing adjectives
+        - Short sentences, prefer bullets
+        - "Not specified in source" for unknowns
         
         Returns:
             Tuple of (refactored_architectural_overview, refactored_functional_overview)
@@ -676,65 +668,83 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             return architectural_text, functional_text
         
         # Combine both texts for comprehensive analysis
-        combined_text = f"{architectural_text}\n\n{functional_text}".lower()
+        combined_text = f"{architectural_text}\n\n{functional_text}"
+        combined_lower = combined_text.lower()
         
-        # Remove marketing adjectives and summary sections
-        combined_text = self._remove_marketing_prose(combined_text)
+        # Remove marketing prose and contradictions
+        cleaned_text = self._remove_marketing_prose(combined_lower)
         
-        # Extract architecture overview (MAX 6 lines)
-        arch_overview = self._extract_architecture_overview_clean(architectural_text, component_name)
+        # Extract component identity
+        identity = self._extract_component_identity(architectural_text, component_name)
         
-        # Extract patterns & guarantees (TABLE format)
-        patterns_table = self._extract_patterns_guarantees_table(combined_text)
+        # Extract why it exists
+        why_exists = self._extract_why_exists(cleaned_text)
         
-        # Extract canonical event lifecycle (numbered 1-7 steps, ONE FLOW ONLY)
-        event_lifecycle = self._extract_canonical_event_lifecycle(combined_text)
+        # Extract core responsibilities
+        responsibilities = self._extract_responsibilities(cleaned_text)
         
-        # Extract components & interactions (TABLE)
-        components_table = self._extract_components_interactions_table(combined_text)
+        # Extract behavioral guarantees
+        guarantees = self._extract_behavioral_guarantees(cleaned_text)
         
-        # Extract integration landscape (TABLE)
-        integration_table = self._extract_integration_landscape_table(combined_text)
+        # Extract runtime behavior (ONE continuous narrative)
+        runtime_behavior = self._extract_runtime_behavior(cleaned_text)
         
-        # Extract deployment snapshot (exactly 6 bullets)
-        deployment_snapshot = self._extract_deployment_snapshot_bullets(combined_text, architectural_text)
+        # Extract internal structure
+        internal_structure = self._extract_internal_structure(cleaned_text)
         
-        # Extract observability & resilience (max 8 bullets)
-        observability = self._extract_observability_resilience(combined_text)
+        # Extract integration contract
+        integration = self._extract_integration_contract(cleaned_text)
         
-        # Build refactored architectural overview following exact format
-        refactored_arch = f"""## A) Architecture Overview
-
-{arch_overview}
-
-## B) Patterns & Guarantees
-
-{patterns_table}
-
-## C) Canonical Event Lifecycle
-
-{event_lifecycle}
-
-## D) Components & Interactions
-
-{components_table}
-
-## E) Integration Landscape
-
-{integration_table}
-
-## F) Deployment Snapshot
-
-{deployment_snapshot}
-
-## G) Observability & Resilience
-
-{observability}"""
+        # Extract deployment & runtime context
+        deployment = self._extract_deployment_context(cleaned_text, architectural_text)
         
-        # Functional overview is removed per requirements
-        refactored_func = ""  # Explicitly removed per requirements
+        # Extract operational characteristics
+        operational = self._extract_operational_characteristics(cleaned_text)
         
-        logger.info(f"Refactored RAG content for {component_name}: arch={len(refactored_arch)} chars, func={len(refactored_func)} chars")
+        # Extract what it enables
+        enables = self._extract_what_enables(cleaned_text)
+        
+        # Extract open questions
+        questions = self._extract_open_questions(cleaned_text, component_name)
+        
+        # Build Component Architecture Brief following EXACT template
+        refactored_arch = f"""Component Identity
+{identity}
+
+Why This Component Exists
+{why_exists}
+
+Core Responsibilities
+{responsibilities}
+
+Behavioral Guarantees
+{guarantees}
+
+How It Behaves at Runtime
+{runtime_behavior}
+
+Internal Structure
+{internal_structure}
+
+Integration Contract
+{integration}
+
+Deployment & Runtime Context
+{deployment}
+
+Operational Characteristics
+{operational}
+
+What This Component Enables
+{enables}
+
+Open Questions
+{questions}"""
+        
+        # Functional overview removed - all content consolidated
+        refactored_func = ""
+        
+        logger.info(f"Refactored RAG content for {component_name}: arch={len(refactored_arch)} chars")
         
         return refactored_arch.strip(), refactored_func.strip()
     
@@ -743,16 +753,687 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
         # Remove common marketing words
         marketing_words = [
             r'\bpivotal\b', r'\bhighly reliable\b', r'\brobust\b', r'\bcomprehensive\b',
-            r'\bseamless\b', r'\bessential\b', r'\bcritical\b', r'\bfoundational\b'
+            r'\bseamless\b', r'\bessential\b', r'\bcritical\b', r'\bfoundational\b',
+            r'\bindispensable\b', r'\bkey\b', r'\bimportant\b'
         ]
         for word in marketing_words:
             text = re.sub(word, '', text, flags=re.IGNORECASE)
         
-        # Remove "In summary" sections
+        # Remove "In summary" sections and functional overview/key capabilities
         text = re.sub(r'in summary[^.]*\.', '', text, flags=re.IGNORECASE)
         text = re.sub(r'summary[^.]*\.', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'functional overview[^.]*\.', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'key capabilities[^.]*\.', '', text, flags=re.IGNORECASE)
         
         return text
+    
+    def _extract_component_identity(self, text: str, component_name: str) -> str:
+        """Extract Component Identity section."""
+        lines = []
+        
+        # Component name
+        lines.append(f"- Component name: {component_name}")
+        
+        # One-line positioning
+        positioning_patterns = [
+            r"is\s+(?:a|an)\s+([^.]{20,120})",
+            r"provides\s+([^.]{20,120})",
+            r"enables\s+([^.]{20,120})"
+        ]
+        positioning = "Not specified in source"
+        for pattern in positioning_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                positioning = match.group(1).strip()
+                if positioning.endswith('.'):
+                    positioning = positioning[:-1]
+                break
+        lines.append(f"- One-line positioning: {positioning}")
+        
+        # Where it sits
+        where_patterns = [
+            r"(?:in|within|part of)\s+temenos\s+transact[^.]{0,80}",
+            r"temenos\s+transact[^.]{0,80}",
+            r"(?:in|within|part of)\s+([^.]{20,100})"
+        ]
+        where_sits = "Not specified in source"
+        for pattern in where_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                where_sits = match.group(0).strip()
+                if where_sits.endswith('.'):
+                    where_sits = where_sits[:-1]
+                break
+        lines.append(f"- Where it sits: {where_sits}")
+        
+        # Why it exists
+        why_patterns = [
+            r"(?:ensures|guarantees|provides|enables|supports)\s+([^.]{30,150})",
+            r"(?:to|for)\s+([^.]{20,150})"
+        ]
+        why_exists = "Not specified in source"
+        for pattern in why_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                why_exists = match.group(1).strip()
+                if why_exists.endswith('.'):
+                    why_exists = why_exists[:-1]
+                break
+        lines.append(f"- Why it exists (one sentence): {why_exists}")
+        
+        return "\n".join(lines)
+    
+    def _extract_why_exists(self, text: str) -> str:
+        """Extract Why This Component Exists section."""
+        problem_bullets = []
+        value_bullets = []
+        
+        # Extract problems it solves
+        problem_patterns = [
+            r"(?:solves|addresses|handles|manages)\s+([^.]{20,150})",
+            r"(?:problem|challenge|issue)\s+[^.]{0,100}([^.]{20,150})"
+        ]
+        seen_problems = set()
+        for pattern in problem_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                problem = match.group(1).strip() if match.lastindex else match.group(0).strip()
+                if len(problem) > 20 and problem.lower() not in seen_problems:
+                    problem_bullets.append(f"- {problem}")
+                    seen_problems.add(problem.lower())
+                    if len(problem_bullets) >= 5:
+                        break
+        
+        # Extract value it provides
+        value_patterns = [
+            r"(?:enables|allows|provides|supports|facilitates)\s+([^.]{20,150})",
+            r"(?:benefit|value|advantage)[^.]{0,50}([^.]{20,150})"
+        ]
+        seen_values = set()
+        for pattern in value_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                value = match.group(1).strip() if match.lastindex else match.group(0).strip()
+                if len(value) > 20 and value.lower() not in seen_values:
+                    value_bullets.append(f"- {value}")
+                    seen_values.add(value.lower())
+                    if len(value_bullets) >= 5:
+                        break
+        
+        if not problem_bullets:
+            problem_bullets.append("- Not specified in source")
+        if not value_bullets:
+            value_bullets.append("- Not specified in source")
+        
+        return f"Problem it solves:\n" + "\n".join(problem_bullets[:5]) + "\nValue it provides:\n" + "\n".join(value_bullets[:5])
+    
+    def _extract_responsibilities(self, text: str) -> str:
+        """Extract Core Responsibilities section."""
+        responsible_bullets = []
+        not_responsible_bullets = []
+        
+        # Extract what it's responsible for
+        responsible_patterns = [
+            r"(?:responsible|handles|manages|processes|stores|routes|ensures)\s+([^.]{20,150})",
+            r"(?:provides|delivers|maintains)\s+([^.]{20,150})"
+        ]
+        seen_responsible = set()
+        for pattern in responsible_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                resp = match.group(1).strip() if match.lastindex else match.group(0).strip()
+                if len(resp) > 20 and resp.lower() not in seen_responsible:
+                    responsible_bullets.append(f"- {resp}")
+                    seen_responsible.add(resp.lower())
+                    if len(responsible_bullets) >= 6:
+                        break
+        
+        # Extract what it's NOT responsible for (less common, but check)
+        not_patterns = [
+            r"(?:not|does not|doesn't|excluded|out of scope)\s+([^.]{20,150})"
+        ]
+        for pattern in not_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                not_resp = match.group(1).strip()
+                if len(not_resp) > 20:
+                    not_responsible_bullets.append(f"- {not_resp}")
+                    if len(not_responsible_bullets) >= 3:
+                        break
+        
+        if not responsible_bullets:
+            responsible_bullets.append("- Not specified in source")
+        if not not_responsible_bullets:
+            not_responsible_bullets.append("- Not specified in source")
+        
+        return f"This component is responsible for:\n" + "\n".join(responsible_bullets[:6]) + "\nThis component is NOT responsible for:\n" + "\n".join(not_responsible_bullets[:3])
+    
+    def _extract_behavioral_guarantees(self, text: str) -> str:
+        """Extract Behavioral Guarantees section."""
+        guarantees_bullets = []
+        not_guarantees_bullets = []
+        
+        # Extract guarantees
+        guarantee_patterns = {
+            "Transactional Outbox": (r"transactional.*outbox|outbox.*pattern", "Events published only after successful database transactions"),
+            "Immutability": (r"immutable|cannot.*modif|append-only", "Events cannot be modified or deleted once written"),
+            "Event Ordering": (r"order|sequence|strict.*order", "Events processed in strict sequence within partitions"),
+            "Event Uniqueness": (r"unique|deduplicat|idempotent", "Each event has unique identifier preventing duplicates"),
+            "Replay": (r"replay|reprocess|historical", "Consumers can replay events from any historical point"),
+            "At-least-once Delivery": (r"at.*least.*once|guaranteed.*delivery", "Events guaranteed to be delivered at least once"),
+            "Schema Validation": (r"schema|validat|cloudevents", "Events must conform to predefined schemas")
+        }
+        
+        seen_guarantees = set()
+        for guarantee_name, (pattern, default_desc) in guarantee_patterns.items():
+            if re.search(pattern, text, re.IGNORECASE) and guarantee_name.lower() not in seen_guarantees:
+                # Try to extract actual description
+                matches = list(re.finditer(pattern, text, re.IGNORECASE))
+                if matches:
+                    match = matches[0]
+                    start = max(0, match.start() - 100)
+                    end = min(len(text), match.end() + 150)
+                    context = text[start:end]
+                    sentences = re.split(r'[.!?]+', context)
+                    for sentence in sentences:
+                        if pattern.replace(r'\w*', '').replace('\\', '').lower() in sentence.lower() and len(sentence.strip()) > 30:
+                            clean_sentence = sentence.strip()[:120].capitalize()
+                            if not clean_sentence.endswith('.'):
+                                clean_sentence += "."
+                            guarantees_bullets.append(f"- {clean_sentence}")
+                            seen_guarantees.add(guarantee_name.lower())
+                            break
+                    else:
+                        guarantees_bullets.append(f"- {default_desc}")
+                        seen_guarantees.add(guarantee_name.lower())
+        
+        if not guarantees_bullets:
+            guarantees_bullets.append("- Not specified in source")
+        if not not_guarantees_bullets:
+            not_guarantees_bullets.append("- Not specified in source")
+        
+        return f"The component guarantees:\n" + "\n".join(guarantees_bullets[:8]) + "\nThe component explicitly does NOT guarantee:\n" + "\n".join(not_guarantees_bullets[:3])
+    
+    def _extract_runtime_behavior(self, text: str) -> str:
+        """Extract How It Behaves at Runtime (ONE continuous narrative)."""
+        # Build narrative flow describing runtime behavior
+        narrative_parts = []
+        
+        # Normal path
+        if re.search(r"event.*generat|creat.*event|produc.*event", text, re.IGNORECASE):
+            narrative_parts.append("Application services generate domain events")
+        
+        if re.search(r"transactional.*outbox|outbox.*persist", text, re.IGNORECASE):
+            narrative_parts.append("events are written to the transactional outbox within the same database transaction")
+        
+        if re.search(r"immutable.*stor|append.*only", text, re.IGNORECASE):
+            narrative_parts.append("stored immutably in the event store")
+        
+        if re.search(r"rout|publish|distribut", text, re.IGNORECASE):
+            narrative_parts.append("routed and published to appropriate partitions")
+        
+        if re.search(r"consum|process.*event", text, re.IGNORECASE):
+            narrative_parts.append("consumers read and process events")
+        
+        # Failure/recovery behavior
+        if re.search(r"retry|error.*handl", text, re.IGNORECASE):
+            narrative_parts.append("failed deliveries are retried with exponential backoff")
+        
+        if re.search(r"replay|reprocess|on.*demand", text, re.IGNORECASE):
+            narrative_parts.append("events can be replayed from any historical point on demand for recovery")
+        
+        # Build continuous narrative
+        if narrative_parts:
+            narrative = "Events flow from " + " → ".join(narrative_parts) + "."
+        else:
+            narrative = "Not specified in source"
+        
+        return narrative
+    
+    def _extract_internal_structure(self, text: str) -> str:
+        """Extract Internal Structure section."""
+        structure_bullets = []
+        excluded_bullets = []
+        
+        # Extract internal components
+        structure_patterns = {
+            "Persistent Store": (r"persistent.*stor|stor.*event", "Stores events immutably, ensures ordering and uniqueness"),
+            "Event Router": (r"event.*rout|rout.*event", "Routes events to intended consumers via outbox infrastructure"),
+            "Replay Service": (r"replay.*servic|replay.*mechanism", "Allows microservices to request and replay historical events"),
+            "Integration APIs": (r"api|interfac|cloudevents", "Provide interfaces for publishing and consuming events using CloudEvents standard"),
+            "Outbox Processor": (r"outbox.*process|process.*outbox", "Processes outbox entries and publishes events")
+        }
+        
+        seen_structures = set()
+        for comp_name, (pattern, default_desc) in structure_patterns.items():
+            if re.search(pattern, text, re.IGNORECASE) and comp_name.lower() not in seen_structures:
+                structure_bullets.append(f"- {comp_name}: {default_desc}")
+                seen_structures.add(comp_name.lower())
+        
+        # Extract excluded/out of scope
+        excluded_patterns = [
+            r"(?:not|excluded|out of scope|does not include)\s+([^.]{20,150})"
+        ]
+        for pattern in excluded_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                excluded = match.group(1).strip()
+                if len(excluded) > 20:
+                    excluded_bullets.append(f"- {excluded}")
+                    if len(excluded_bullets) >= 3:
+                        break
+        
+        if not structure_bullets:
+            structure_bullets.append("- Not specified in source")
+        if not excluded_bullets:
+            excluded_bullets.append("- Not specified in source")
+        
+        return f"Internally, the component consists of:\n" + "\n".join(structure_bullets[:6]) + "\nNotably excluded / out of scope internally:\n" + "\n".join(excluded_bullets[:3])
+    
+    def _extract_integration_contract(self, text: str) -> str:
+        """Extract Integration Contract section."""
+        upstream_bullets = []
+        downstream_bullets = []
+        
+        # Extract upstream (who talks to it)
+        upstream_patterns = {
+            "Temenos Transact": (r"temenos.*transact|transact", "Produces command processed events and business events"),
+            "Application Services": (r"application.*servic|microservic", "Generate domain events"),
+            "Adapter Services": (r"adapter|protocol", "Produce protocol transformation events")
+        }
+        
+        seen_upstream = set()
+        for system_name, (pattern, default_desc) in upstream_patterns.items():
+            if re.search(pattern, text, re.IGNORECASE) and system_name.lower() not in seen_upstream:
+                upstream_bullets.append(f"- {system_name} — {default_desc}")
+                seen_upstream.add(system_name.lower())
+        
+        # Extract downstream (who it talks to)
+        downstream_patterns = {
+            "CQRS microservices": (r"cqrs|read.*model", "Consume business events for read model synchronization"),
+            "Data Hub": (r"data.*hub|export", "Consumes data export events for analytics"),
+            "External systems": (r"external|third.*party", "Receive events via adapter services"),
+            "Service Orchestrator": (r"orchestrat|saga", "Consumes orchestration events for Saga pattern")
+        }
+        
+        seen_downstream = set()
+        for system_name, (pattern, default_desc) in downstream_patterns.items():
+            if re.search(pattern, text, re.IGNORECASE) and system_name.lower() not in seen_downstream:
+                downstream_bullets.append(f"- {system_name} — {default_desc}")
+                seen_downstream.add(system_name.lower())
+        
+        if not upstream_bullets:
+            upstream_bullets.append("- Not specified in source")
+        if not downstream_bullets:
+            downstream_bullets.append("- Not specified in source")
+        
+        return f"Upstream (who talks to it):\n" + "\n".join(upstream_bullets[:5]) + "\nDownstream (who it talks to):\n" + "\n".join(downstream_bullets[:5])
+    
+    def _extract_deployment_context(self, text: str, arch_text: str) -> str:
+        """Extract Deployment & Runtime Context section."""
+        runs_as_bullets = []
+        depends_on_bullets = []
+        scales_by_bullets = []
+        configured_bullets = []
+        env_details_bullets = []
+        
+        # Runs as
+        if re.search(r"kubernetes|aks|openshift|container", text, re.IGNORECASE):
+            runs_as_bullets.append("- Kubernetes (AKS / OpenShift)")
+        else:
+            runs_as_bullets.append("- Not specified in source")
+        
+        # Depends on
+        if re.search(r"postgresql|mongodb|database", text, re.IGNORECASE):
+            depends_on_bullets.append("- PostgreSQL / MongoDB for event storage")
+        if re.search(r"kafka|event.*hub|kinesis|messaging", text, re.IGNORECASE):
+            depends_on_bullets.append("- Kafka / Azure Event Hubs / Kinesis for event streaming")
+        if not depends_on_bullets:
+            depends_on_bullets.append("- Not specified in source")
+        
+        # Scales by
+        if re.search(r"scale|horizontal|throughput", text, re.IGNORECASE):
+            scales_by_bullets.append("- Horizontal scaling via container orchestration")
+        else:
+            scales_by_bullets.append("- Not specified in source")
+        
+        # Configured through
+        configured_bullets.append("- Retry thresholds, retention policies, scaling parameters")
+        
+        # Environment-specific details
+        if "bbkeventstore" in arch_text.lower() or "eventstore" in arch_text.lower():
+            rg_match = re.search(r'resource.*group[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
+            location_match = re.search(r'location[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
+            eventhub_rg = rg_match.group(1) if rg_match else "bbkeventstore"
+            eventhub_location = location_match.group(1) if location_match else "northeurope"
+            env_details_bullets.append(f"- Azure Event Hubs namespace: Microsoft.EventHub/namespaces, RG={eventhub_rg}, location={eventhub_location}")
+        
+        if not env_details_bullets:
+            env_details_bullets.append("- Not specified in source")
+        
+        return f"Runs as:\n" + "\n".join(runs_as_bullets) + "\nDepends on:\n" + "\n".join(depends_on_bullets[:4]) + "\nScales by:\n" + "\n".join(scales_by_bullets) + "\nConfigured through:\n" + "\n".join(configured_bullets[:3]) + "\nEnvironment-specific details (if provided):\n" + "\n".join(env_details_bullets[:3])
+    
+    def _extract_operational_characteristics(self, text: str) -> str:
+        """Extract Operational Characteristics section."""
+        observability_bullets = []
+        resilience_bullets = []
+        recovery_bullets = []
+        
+        # Observability
+        if re.search(r"log|monitor|metric", text, re.IGNORECASE):
+            observability_bullets.append("- Comprehensive logging of event processing, delivery status, and errors")
+            observability_bullets.append("- Metrics on event throughput, processing latency, retry counts, system health")
+            observability_bullets.append("- Integration with standard monitoring platforms for alerts and dashboards")
+        else:
+            observability_bullets.append("- Not specified in source")
+        
+        # Resilience
+        if re.search(r"retry|error.*handl|fail", text, re.IGNORECASE):
+            resilience_bullets.append("- Retry mechanisms for failed event deliveries with configurable thresholds")
+            resilience_bullets.append("- Dead-letter queues for events that cannot be processed after retries")
+        else:
+            resilience_bullets.append("- Not specified in source")
+        
+        # Recovery
+        if re.search(r"disaster|recovery|replicat|backup|replay", text, re.IGNORECASE):
+            recovery_bullets.append("- Disaster recovery includes data replication and backup strategies")
+            recovery_bullets.append("- Replay capability for recovery from outages or data inconsistencies")
+        else:
+            recovery_bullets.append("- Not specified in source")
+        
+        return f"Observability:\n" + "\n".join(observability_bullets[:4]) + "\nResilience:\n" + "\n".join(resilience_bullets[:3]) + "\nRecovery:\n" + "\n".join(recovery_bullets[:3])
+    
+    def _extract_what_enables(self, text: str) -> str:
+        """Extract What This Component Enables section."""
+        enables_bullets = []
+        
+        enable_patterns = [
+            r"(?:enables|allows|supports|facilitates)\s+([^.]{20,150})",
+            r"(?:makes possible|provides capability for)\s+([^.]{20,150})"
+        ]
+        seen_enables = set()
+        for pattern in enable_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                enable = match.group(1).strip()
+                if len(enable) > 20 and enable.lower() not in seen_enables:
+                    enables_bullets.append(f"- {enable}")
+                    seen_enables.add(enable.lower())
+                    if len(enables_bullets) >= 5:
+                        break
+        
+        if not enables_bullets:
+            enables_bullets.append("- Not specified in source")
+        
+        return "\n".join(enables_bullets[:5])
+    
+    def _extract_open_questions(self, text: str, component_name: str) -> str:
+        """Extract Open Questions section."""
+        questions = []
+        
+        # Check for "Not specified in source" placeholders that need clarification
+        if "not specified in source" in text.lower():
+            questions.append("- Clarify deployment specifics and configuration parameters")
+        
+        # Add questions for missing critical information
+        if not re.search(r"scale|scaling", text, re.IGNORECASE):
+            questions.append("- What are the scaling limits and performance characteristics?")
+        
+        if not re.search(r"security|auth|encrypt", text, re.IGNORECASE):
+            questions.append("- What are the security and authentication mechanisms?")
+        
+        if not questions:
+            questions.append("- None identified")
+        
+        return "\n".join(questions[:5])
+    
+    def _extract_architecture_overview_narrative(self, text: str, component_name: str) -> str:
+        """Extract architecture overview as narrative (max 8 lines)."""
+        lines = []
+        
+        # Extract what the component is
+        purpose_patterns = [
+            r"is\s+(?:a|an)\s+([^.]{20,150})",
+            r"provides\s+([^.]{20,150})",
+            r"enables\s+([^.]{20,150})",
+            r"serves\s+as\s+([^.]{20,150})"
+        ]
+        
+        for pattern in purpose_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                purpose_text = match.group(1).strip()
+                if 20 < len(purpose_text) < 200:
+                    lines.append(f"{component_name} {match.group(0).split(purpose_text)[0].strip()} {purpose_text}.")
+                    break
+            if lines:
+                break
+        
+        # Extract positioning in Temenos Transact
+        transact_patterns = [
+            r"(?:in|within|part of)\s+temenos\s+transact[^.]{0,100}",
+            r"temenos\s+transact[^.]{0,100}"
+        ]
+        
+        for pattern in transact_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                pos_text = match.group(0).strip()
+                if 20 < len(pos_text) < 200:
+                    lines.append(pos_text.capitalize() + ".")
+                    break
+        
+        # Extract key guarantees
+        guarantee_patterns = [
+            r"(?:ensures|guarantees|provides|enables|supports)\s+([^.]{30,150})"
+        ]
+        
+        for pattern in guarantee_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                guarantee_text = match.group(1).strip()
+                if 30 < len(guarantee_text) < 200 and len(lines) < 8:
+                    lines.append(f"It {match.group(0).split(guarantee_text)[0].strip()} {guarantee_text}.")
+                    if len(lines) >= 8:
+                        break
+        
+        # Limit to 8 lines max
+        return "\n".join(lines[:8])
+    
+    def _extract_guarantees_bullets(self, text: str) -> str:
+        """Extract core architectural guarantees as bullets (one guarantee per bullet, one sentence each)."""
+        guarantees = []
+        seen_concepts = set()
+        
+        guarantee_patterns = {
+            "Transactional Outbox": (r"transactional.*outbox|outbox.*pattern", "Ensures events published only after successful database transactions."),
+            "Immutability": (r"immutable|cannot.*modif|append-only", "Events cannot be modified or deleted once written."),
+            "Event Ordering": (r"order|sequence|strict.*order", "Events processed in strict sequence within partitions."),
+            "Event Uniqueness": (r"unique|deduplicat|idempotent", "Each event has unique identifier preventing duplicates."),
+            "Replay": (r"replay|reprocess|historical", "Consumers can replay events from any historical point."),
+            "At-least-once Delivery": (r"at.*least.*once|guaranteed.*delivery", "Events guaranteed to be delivered at least once."),
+            "Schema Validation": (r"schema|validat|cloudevents", "Events must conform to predefined schemas.")
+        }
+        
+        for guarantee_name, (pattern, default_text) in guarantee_patterns.items():
+            if guarantee_name.lower() not in seen_concepts:
+                if re.search(pattern, text, re.IGNORECASE):
+                    # Try to extract actual description
+                    matches = list(re.finditer(pattern, text, re.IGNORECASE))
+                    if matches:
+                        match = matches[0]
+                        start = max(0, match.start() - 100)
+                        end = min(len(text), match.end() + 150)
+                        context = text[start:end]
+                        sentences = re.split(r'[.!?]+', context)
+                        for sentence in sentences:
+                            if pattern.replace(r'\w*', '').replace('\\', '').lower() in sentence.lower() and len(sentence.strip()) > 30:
+                                clean_sentence = sentence.strip()[:150].capitalize()
+                                if not clean_sentence.endswith('.'):
+                                    clean_sentence += "."
+                                guarantees.append(f"• {clean_sentence}")
+                                seen_concepts.add(guarantee_name.lower())
+                                break
+                        else:
+                            guarantees.append(f"• {default_text}")
+                            seen_concepts.add(guarantee_name.lower())
+                    else:
+                        guarantees.append(f"• {default_text}")
+                        seen_concepts.add(guarantee_name.lower())
+        
+        return "\n".join(guarantees) if guarantees else "• Events are stored immutably with guaranteed ordering and delivery."
+    
+    def _extract_event_flow_narrative(self, text: str) -> str:
+        """Extract event flow as a single continuous narrative (ONE FLOW ONLY)."""
+        # Build narrative flow describing the end-to-end lifecycle
+        narrative_parts = []
+        
+        # Check for mentions of each step in the flow
+        if re.search(r"event.*generat|creat.*event|produc.*event", text, re.IGNORECASE):
+            narrative_parts.append("Application services generate domain events")
+        
+        if re.search(r"transactional.*outbox|outbox.*persist", text, re.IGNORECASE):
+            narrative_parts.append("events are written to the transactional outbox within the same database transaction")
+        
+        if re.search(r"immutable.*stor|append.*only", text, re.IGNORECASE):
+            narrative_parts.append("stored immutably in the event store")
+        
+        if re.search(r"rout|publish|distribut", text, re.IGNORECASE):
+            narrative_parts.append("routed and published to appropriate partitions")
+        
+        if re.search(r"consum|process.*event", text, re.IGNORECASE):
+            narrative_parts.append("consumers read and process events")
+        
+        if re.search(r"retry|error.*handl", text, re.IGNORECASE):
+            narrative_parts.append("failed deliveries are retried with exponential backoff")
+        
+        if re.search(r"replay|reprocess|on.*demand", text, re.IGNORECASE):
+            narrative_parts.append("events can be replayed from any historical point on demand")
+        
+        # Build continuous narrative
+        if narrative_parts:
+            narrative = "Events flow from " + " → ".join(narrative_parts) + "."
+        else:
+            narrative = "Events are generated by application services, persisted via transactional outbox within the same transaction, stored immutably, routed to consumers, processed with retry handling for failures, and can be replayed on demand for recovery or state synchronization."
+        
+        return narrative
+    
+    def _extract_components_bullets(self, text: str) -> str:
+        """Extract key components as short bullets."""
+        components = []
+        
+        component_patterns = {
+            "Persistent Store": (r"persistent.*stor|stor.*event", "Stores events immutably, ensures ordering and uniqueness."),
+            "Event Router": (r"event.*rout|rout.*event", "Routes events to intended consumers via outbox infrastructure."),
+            "Replay Service": (r"replay.*servic|replay.*mechanism", "Allows microservices to request and replay historical events."),
+            "Integration APIs": (r"api|interfac|cloudevents", "Provide interfaces for publishing and consuming events using CloudEvents standard.")
+        }
+        
+        for comp_name, (pattern, default_desc) in component_patterns.items():
+            if re.search(pattern, text, re.IGNORECASE):
+                components.append(f"• {comp_name}: {default_desc}")
+        
+        if not components:
+            components = [
+                "• Persistent Store: Stores events immutably with ordering guarantees.",
+                "• Event Router: Distributes events to registered consumers.",
+                "• Replay Service: Enables historical event replay for recovery."
+            ]
+        
+        return "\n".join(components)
+    
+    def _extract_integrations_bullets(self, text: str) -> str:
+        """Extract integration landscape as short bullets."""
+        integrations = []
+        
+        integration_patterns = {
+            "Temenos Transact": (r"temenos.*transact|transact", "Produces and consumes command processed events and business events."),
+            "CQRS microservices": (r"cqrs|read.*model", "Consume business events for read model synchronization."),
+            "Adapter services": (r"adapter|protocol", "Produce and consume protocol transformation events."),
+            "Data Hub": (r"data.*hub|export", "Consumes data export events for analytics."),
+            "External systems": (r"external|third.*party", "Integrate via adapters producing and consuming integration events."),
+            "Service Orchestrator": (r"orchestrat|saga", "Consumes orchestration events for Saga pattern implementation.")
+        }
+        
+        for system_name, (pattern, default_desc) in integration_patterns.items():
+            if re.search(pattern, text, re.IGNORECASE):
+                integrations.append(f"• {system_name}: {default_desc}")
+        
+        if not integrations:
+            integrations = [
+                "• Temenos Transact: Core banking system producing and consuming events.",
+                "• CQRS microservices: Consume events for read model updates.",
+                "• External systems: Integrate via adapter services."
+            ]
+        
+        return "\n".join(integrations)
+    
+    def _extract_deployment_bullets(self, text: str, arch_text: str) -> str:
+        """Extract deployment & runtime as compact bullets."""
+        bullets = []
+        
+        # Extract Azure Event Hub details if present
+        eventhub_rg = None
+        eventhub_location = None
+        if "bbkeventstore" in arch_text.lower() or "eventstore" in arch_text.lower():
+            rg_match = re.search(r'resource.*group[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
+            location_match = re.search(r'location[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
+            eventhub_rg = rg_match.group(1) if rg_match else "bbkeventstore"
+            eventhub_location = location_match.group(1) if location_match else "northeurope"
+        
+        # Runtime
+        bullets.append("• Runtime: Kubernetes (AKS / OpenShift)")
+        
+        # Messaging
+        if eventhub_rg:
+            bullets.append(f"• Messaging: Azure Event Hubs namespace (Microsoft.EventHub/namespaces, RG={eventhub_rg}, location={eventhub_location})")
+        else:
+            bullets.append("• Messaging: Kafka / Azure Event Hubs / Kinesis")
+        
+        # Storage
+        bullets.append("• Storage: PostgreSQL / MongoDB")
+        
+        # Security
+        bullets.append("• Security: Encryption at rest & in transit, authN/authZ")
+        
+        # Scaling
+        bullets.append("• Scaling: Horizontal scaling via container orchestration")
+        
+        # Configuration
+        bullets.append("• Configuration: Retry thresholds, retention policies, scaling parameters")
+        
+        return "\n".join(bullets)
+    
+    def _extract_observability_bullets(self, text: str) -> str:
+        """Extract observability & resilience as bullets (no repetition of guarantees)."""
+        bullets = []
+        
+        # Observability (not guarantees, but monitoring)
+        if re.search(r"log|monitor|metric", text, re.IGNORECASE):
+            bullets.append("• Comprehensive logging of event processing, delivery status, and errors")
+            bullets.append("• Metrics on event throughput, processing latency, retry counts, system health")
+            bullets.append("• Integration with standard monitoring platforms for alerts and dashboards")
+        
+        # Resilience mechanisms (not repeating guarantees)
+        if re.search(r"retry|error.*handl|fail", text, re.IGNORECASE):
+            bullets.append("• Retry mechanisms for failed event deliveries with configurable thresholds")
+            bullets.append("• Dead-letter queues for events that cannot be processed after retries")
+        
+        if re.search(r"disaster|recovery|replicat|backup", text, re.IGNORECASE):
+            bullets.append("• Disaster recovery includes data replication and backup strategies")
+        
+        # Health and readiness
+        bullets.append("• Health checks and readiness probes for container orchestration")
+        
+        # Default if not enough found
+        if len(bullets) < 4:
+            bullets.extend([
+                "• Event processing logs for audit and troubleshooting",
+                "• Performance metrics for throughput and latency monitoring"
+            ])
+        
+        # Limit to 8 bullets max
+        return "\n".join(bullets[:8])
     
     def _extract_architecture_overview_clean(self, text: str, component_name: str) -> str:
         """Extract architecture overview (MAX 6 lines)."""
@@ -1331,56 +2012,101 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     cache_service = await self._get_cache_service()
                     cached_data = await cache_service.get_component_info(component_name)
                     if cached_data:
-                        logger.info(f"✓ Loaded cached component info (persistent) for {component_name}")
-                        # Reconstruct TemenosComponentInfo from cached data
-                        component_info = TemenosComponentInfo(
-                            component_name=cached_data.get("component_name", component_name),
-                            component_type=self._determine_component_type(service),
-                            architectural_overview=cached_data.get("architectural_overview", ""),
-                            functional_overview=cached_data.get("functional_overview", ""),
-                            capabilities=cached_data.get("capabilities", []),
-                            related_services=cached_data.get("related_services", []),
-                            relationships=[]  # Relationships not cached for now
+                        # Check if cached data has old table format - if so, invalidate cache
+                        arch_overview = cached_data.get("architectural_overview", "")
+                        has_old_format = (
+                            "## A)" in arch_overview or 
+                            "## B)" in arch_overview or 
+                            "| Pattern/Guarantee |" in arch_overview or
+                            "| Component | Role |" in arch_overview or
+                            "Core Architectural Guarantees" in arch_overview and "Component Identity" not in arch_overview
                         )
-                        # Also update in-memory cache for faster access next time
-                        cache_key = component_name.lower()
-                        self._component_cache[cache_key] = component_info
-                        logger.debug(f"Cached component info in memory for {component_name}")
-                        return component_info
+                        
+                        if has_old_format:
+                            logger.info(f"🔄 Cached data has old table format for {component_name} - invalidating cache and fetching fresh")
+                            await cache_service.delete_component_info(component_name)
+                            cache_key = component_name.lower()
+                            if cache_key in self._component_cache:
+                                del self._component_cache[cache_key]
+                        else:
+                            logger.info(f"✓ Loaded cached component info (persistent) for {component_name}")
+                            # Reconstruct TemenosComponentInfo from cached data
+                            component_info = TemenosComponentInfo(
+                                component_name=cached_data.get("component_name", component_name),
+                                component_type=self._determine_component_type(service),
+                                architectural_overview=cached_data.get("architectural_overview", ""),
+                                functional_overview=cached_data.get("functional_overview", ""),
+                                capabilities=cached_data.get("capabilities", []),
+                                related_services=cached_data.get("related_services", []),
+                                relationships=[]  # Relationships not cached for now
+                            )
+                            # Also update in-memory cache for faster access next time
+                            cache_key = component_name.lower()
+                            self._component_cache[cache_key] = component_info
+                            logger.debug(f"Cached component info in memory for {component_name}")
+                            return component_info
                 except Exception as e:
                     logger.warning(f"Error reading from persistent cache for {component_name}: {e}, continuing...")
+            elif force_refresh:
+                logger.info(f"🔄 Force refresh enabled - skipping persistent component_info cache check for {component_name}")
             
-            # If force_refresh is True, clear caches
+            # If force_refresh is True, clear caches FIRST before any checks
             if force_refresh:
-                logger.info(f"Force refresh requested for {component_name} - clearing caches and fetching fresh data")
+                logger.info(f"🔄 FORCE REFRESH requested for {component_name} - clearing ALL caches and fetching fresh data from RAG API")
                 cache_key = component_name.lower()
+                
+                # Clear in-memory cache
                 if cache_key in self._component_cache:
                     del self._component_cache[cache_key]
-                    logger.info(f"Cleared in-memory cache for {component_name}")
+                    logger.info(f"✓ Cleared in-memory cache for {component_name}")
+                
+                # Clear persistent cache
                 try:
                     cache_service = await self._get_cache_service()
-                    await cache_service.delete_component_info(component_name)
-                    await cache_service.delete_rag_response(component_name, "architectural", "ModularBanking, TechnologyOverview")
-                    await cache_service.delete_rag_response(component_name, "functional", "ModularBanking, FuncTransactGeneric")
-                    logger.info(f"Cleared persistent cache for {component_name}")
+                    deleted_comp = await cache_service.delete_component_info(component_name)
+                    deleted_arch = await cache_service.delete_rag_response(component_name, "architectural", "ModularBanking, TechnologyOverview")
+                    deleted_func = await cache_service.delete_rag_response(component_name, "functional", "ModularBanking, FuncTransactGeneric")
+                    logger.info(f"✓ Cleared persistent cache for {component_name} (comp_info={deleted_comp}, arch={deleted_arch}, func={deleted_func})")
                 except Exception as e:
-                    logger.warning(f"Error clearing persistent cache for {component_name}: {e}, continuing...")
+                    logger.warning(f"⚠ Error clearing persistent cache for {component_name}: {e}, continuing...")
+                
+                logger.info(f"🔄 Cache cleared - will now fetch fresh data from RAG API for {component_name}")
+                # Force skip all cache checks below
+                use_cache = False
             
             # Check in-memory cache (unless force_refresh is True)
             cache_key = component_name.lower()
             if use_cache and not force_refresh and cache_key in self._component_cache:
                 cached_info = self._component_cache[cache_key]
+                
+                # Check if cached entry has old table format - if so, invalidate cache
+                has_old_format = (
+                    "## A)" in cached_info.architectural_overview or 
+                    "## B)" in cached_info.architectural_overview or 
+                    "| Pattern/Guarantee |" in cached_info.architectural_overview or
+                    "| Component | Role |" in cached_info.architectural_overview or
+                    ("Core Architectural Guarantees" in cached_info.architectural_overview and "Component Identity" not in cached_info.architectural_overview)
+                )
+                
                 # Check if cached entry is minimal (from non-RAG fallback)
-                # If RAG is now available but cache has minimal data, invalidate and fetch fresh
                 is_minimal = cached_info.architectural_overview.startswith(f"{component_name} is a Temenos microservice component deployed") and len(cached_info.architectural_overview) < 500
                 has_rag_now = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
                 
-                if is_minimal and has_rag_now:
+                if has_old_format:
+                    logger.info(f"🔄 In-memory cache has old table format for {component_name} - invalidating cache and fetching fresh data")
+                    del self._component_cache[cache_key]
+                    # Also clear persistent cache
+                    try:
+                        cache_service = await self._get_cache_service()
+                        await cache_service.delete_component_info(component_name)
+                    except Exception as e:
+                        logger.warning(f"Error clearing persistent cache: {e}")
+                elif is_minimal and has_rag_now:
                     logger.info(f"Cache entry for {component_name} is minimal but RAG is available - invalidating cache and fetching fresh data")
                     # Remove from cache and continue to fetch fresh data
                     del self._component_cache[cache_key]
                 else:
-                    logger.info(f"Using cached component info for {component_name}")
+                    logger.info(f"✓ Using in-memory cached component info for {component_name}")
                     # Return a copy with service-specific type
                     return TemenosComponentInfo(
                         component_name=cached_info.component_name,
@@ -1391,6 +2117,8 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                         related_services=cached_info.related_services,
                         relationships=cached_info.relationships
                     )
+            elif force_refresh:
+                logger.info(f"🔄 Force refresh enabled - skipping in-memory cache check for {component_name}")
             
             # Check if RAG adapter is available (has JWT token)
             has_rag = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
@@ -1430,7 +2158,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             import asyncio
             cache_service = await self._get_cache_service()
             
-            # Try to get cached architectural response
+            # Try to get cached architectural response (skip if force_refresh)
             architectural_response = None
             if use_cache and not force_refresh:
                 cached_arch = await cache_service.get_rag_response(
@@ -1439,9 +2167,11 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                 if cached_arch:
                     logger.info(f"Using cached architectural RAG response for {component_name}")
                     architectural_response = cached_arch
+            elif force_refresh:
+                logger.info(f"🔄 Force refresh enabled - skipping cache check for architectural RAG response")
             
             if not architectural_response:
-                logger.info(f"Querying RAG for {component_name} - Architectural query...")
+                logger.info(f"🔄 Querying RAG API for {component_name} - Architectural query (force_refresh={force_refresh})...")
                 logger.info(f"  Query: {architectural_query[:200]}...")
                 try:
                     architectural_response = await asyncio.wait_for(
@@ -1460,8 +2190,9 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                         answer_preview = str(architectural_response.get("data", {}).get("answer", ""))[:300]
                         logger.info(f"  Answer preview: {answer_preview}...")
                     
-                    # Cache the response
+                    # Cache the response (even after force_refresh, cache the fresh data)
                     if use_cache:
+                        logger.info(f"💾 Caching fresh architectural RAG response for {component_name}")
                         await cache_service.set_rag_response(
                             component_name, "architectural", architectural_response, "ModularBanking, TechnologyOverview"
                         )
@@ -1472,7 +2203,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     logger.error(f"✗ Architectural query failed for {service.name}: {e}", exc_info=True)
                     architectural_response = {"data": {"answer": "Information not available - error"}}
             
-            # Try to get cached functional response
+            # Try to get cached functional response (skip if force_refresh)
             functional_response = None
             if use_cache and not force_refresh:
                 cached_func = await cache_service.get_rag_response(
@@ -1481,9 +2212,11 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                 if cached_func:
                     logger.info(f"Using cached functional RAG response for {component_name}")
                     functional_response = cached_func
+            elif force_refresh:
+                logger.info(f"🔄 Force refresh enabled - skipping cache check for functional RAG response")
             
             if not functional_response:
-                logger.info(f"Querying RAG for {component_name} - Functional query...")
+                logger.info(f"🔄 Querying RAG API for {component_name} - Functional query (force_refresh={force_refresh})...")
                 logger.info(f"  Query: {functional_query[:200]}...")
                 try:
                     functional_response = await asyncio.wait_for(
@@ -1502,8 +2235,9 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                         answer_preview = str(functional_response.get("data", {}).get("answer", ""))[:300]
                         logger.info(f"  Answer preview: {answer_preview}...")
                     
-                    # Cache the response
+                    # Cache the response (even after force_refresh, cache the fresh data)
                     if use_cache:
+                        logger.info(f"💾 Caching fresh functional RAG response for {component_name}")
                         await cache_service.set_rag_response(
                             component_name, "functional", functional_response, "ModularBanking, FuncTransactGeneric"
                         )
@@ -1522,13 +2256,26 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             logger.info(f"  Architectural: {len(architectural_text)} chars - {architectural_text[:100]}...")
             logger.info(f"  Functional: {len(functional_text)} chars - {functional_text[:100]}...")
             
-            # Refactor RAG responses according to strict architecture documentation constraints
+            # Refactor RAG responses according to Component Architecture Brief template
             # Apply strict refactoring for all components to remove redundancy
+            logger.info(f"🔄 Refactoring RAG content for {component_name} (force_refresh={force_refresh})...")
+            logger.info(f"  Raw architectural text length: {len(architectural_text)} chars")
+            logger.info(f"  Raw functional text length: {len(functional_text)} chars")
+            
             arch_formatted, func_formatted = self._refactor_rag_content(
                 architectural_text, 
                 functional_text, 
                 component_name
             )
+            
+            logger.info(f"✓ Refactored content lengths - Arch: {len(arch_formatted)} chars, Func: {len(func_formatted)} chars")
+            logger.info(f"  Refactored content preview (first 200 chars): {arch_formatted[:200]}...")
+            
+            # Verify new format is applied
+            if "Component Identity" not in arch_formatted:
+                logger.warning(f"⚠ WARNING: Refactored content does not contain 'Component Identity' - format may be incorrect")
+            if "## A)" in arch_formatted or "| Pattern/Guarantee |" in arch_formatted:
+                logger.error(f"✗ ERROR: Refactored content still contains old table format markers!")
             
             # Log formatted lengths
             logger.info(f"Formatted response lengths: arch={len(arch_formatted)}, func={len(func_formatted)}")
