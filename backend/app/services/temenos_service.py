@@ -801,10 +801,23 @@ Open Questions
                 ("ARCHITECTURE OVERVIEW" in architectural_text and "## 1. Purpose & Scope" not in architectural_text)
             )
             
-            # If input is already in strict format, return it (shouldn't happen but handle gracefully)
+            # If input is already in strict format, validate it before returning
             if "## 1. Purpose & Scope" in architectural_text:
-                logger.info(f"Input already in strict format for {component_name}")
-                return architectural_text
+                # Verify it's actually strict format (has all required sections, no old format markers)
+                has_all_sections = all(section in architectural_text for section in [
+                    "## 1. Purpose & Scope", "## 2. Architectural Role", "## 3. Design Patterns & Guarantees",
+                    "## 4. Core Components", "## 5. Data Model & Consistency", "## 6. APIs & Access Patterns",
+                    "## 7. Deployment Architecture", "## 8. Scalability & Performance", "## 9. Security Model",
+                    "## 10. Observability & Operations", "## 11. Functional Capabilities", "## 12. Explicit Non-Goals / Out-of-Scope"
+                ])
+                has_old_markers = any(marker in architectural_text for marker in ["## A)", "## B)", "| Pattern/Guarantee |"])
+                
+                if has_all_sections and not has_old_markers:
+                    logger.info(f"Input already in valid strict format for {component_name} - returning as-is")
+                    return architectural_text
+                else:
+                    logger.warning(f"Input claims to be strict format but validation failed for {component_name} (has_all={has_all_sections}, has_old={has_old_markers}) - will refactor")
+                    # Continue to refactor it
             
             # Combine texts for analysis
             combined_text = f"{architectural_text}\n\n{functional_text}"
@@ -3567,8 +3580,22 @@ Open Questions
             # func_formatted is always empty now (functional content is in strict format)
             func_formatted = ""
             
+            # ABSOLUTE FINAL CHECK: Ensure strict format before creating component_info
+            # This is the last line of defense - if we get here without strict format, something is very wrong
+            if "## 1. Purpose & Scope" not in arch_formatted:
+                logger.error(f"✗ CRITICAL: About to create component_info without strict format for {component_name}!")
+                logger.error(f"  Content preview: {arch_formatted[:500]}")
+                arch_formatted = self._build_empty_strict_document(component_name)
+            
+            # Check for any old format markers one more time
+            old_markers = [m for m in ["## A)", "## B)", "## C)", "## D)", "## E)", "## F)", "## G)", "| Pattern/Guarantee |", "| Component | Role |"] if m in arch_formatted]
+            if old_markers:
+                logger.error(f"✗ CRITICAL: Old format markers found in final content for {component_name}: {old_markers}")
+                arch_formatted = self._build_empty_strict_document(component_name)
+            
             logger.info(f"✓ Final architectural overview for {component_name}: {len(arch_formatted)} chars, strict format: {'## 1. Purpose & Scope' in arch_formatted}")
             
+            # Create component_info - at this point arch_formatted MUST be in strict format
             component_info = TemenosComponentInfo(
                 component_name=component_name,
                 component_type=self._determine_component_type(service),
@@ -3578,6 +3605,20 @@ Open Questions
                 related_services=[],
                 relationships=[]
             )
+            
+            # One final validation on the created object
+            if "## 1. Purpose & Scope" not in component_info.architectural_overview:
+                logger.error(f"✗ CRITICAL: component_info created without strict format for {component_name} - this should never happen!")
+                # Rebuild with empty strict format
+                component_info = TemenosComponentInfo(
+                    component_name=component_name,
+                    component_type=self._determine_component_type(service),
+                    architectural_overview=self._build_empty_strict_document(component_name),
+                    functional_overview="",
+                    capabilities=[f"Core {component_name} functionality"],
+                    related_services=[],
+                    relationships=[]
+                )
             
             # Cache the component info in both memory and persistent storage
             # IMPORTANT: Only cache if content is in strict format
@@ -3605,6 +3646,30 @@ Open Questions
                     except Exception as e:
                         logger.warning(f"Failed to save component info to persistent cache for {component_name}: {e}")
                         # Don't fail - in-memory cache is still available
+            
+            # ABSOLUTE FINAL VALIDATION: Log and verify before returning
+            final_overview = component_info.architectural_overview
+            has_strict_final = "## 1. Purpose & Scope" in final_overview
+            has_old_final = any(marker in final_overview for marker in ["## A)", "## B)", "| Pattern/Guarantee |"])
+            
+            if not has_strict_final or has_old_final:
+                logger.error(f"✗ CRITICAL: About to return component_info without strict format for {component_name}!")
+                logger.error(f"  Has strict format: {has_strict_final}")
+                logger.error(f"  Has old format: {has_old_final}")
+                logger.error(f"  Content preview (first 500 chars): {final_overview[:500]}")
+                # Rebuild with empty strict format - this should NEVER happen but be safe
+                component_info = TemenosComponentInfo(
+                    component_name=component_name,
+                    component_type=self._determine_component_type(service),
+                    architectural_overview=self._build_empty_strict_document(component_name),
+                    functional_overview="",
+                    capabilities=[f"Core {component_name} functionality"],
+                    related_services=[],
+                    relationships=[]
+                )
+                logger.warning(f"  Rebuilt component_info with empty strict format for {component_name}")
+            else:
+                logger.info(f"✓ Final validation passed for {component_name} - strict format confirmed before return")
             
             logger.info(f"Successfully identified component: {component_name} for {service.name}")
             return component_info
