@@ -4,7 +4,7 @@ Temenos Service
 Handles Temenos RAG API interactions for component identification and analysis.
 """
 
-from typing import List, Optional, Dict, Any, Callable
+from typing import List, Optional, Dict, Any, Callable, Tuple
 import re
 import asyncio
 from app.adapters.rag import get_rag_adapter
@@ -554,6 +554,404 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             context=context
         )
 
+    def _consolidate_rag_response(self, text: str, response_type: str = "architectural") -> str:
+        """Consolidate and deduplicate RAG responses to remove redundancy and improve coherence."""
+        if not text or text in ["Information not available - timeout", "Information not available"]:
+            return text
+        
+        # Remove common redundant section headers that appear multiple times
+        # Replace multiple occurrences of same headers with single occurrence
+        text = re.sub(r'(ARCHITECTURE OVERVIEW\s*\n)', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'(DEPLOYMENT ARCHITECTURE\s*\n)', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'(FUNCTIONAL OVERVIEW\s*\n)', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'(KEY CAPABILITIES\s*\n)', '', text, flags=re.IGNORECASE)
+        
+        # Split into paragraphs
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        
+        # Remove duplicate paragraphs (exact or near-duplicate)
+        seen_paragraphs = set()
+        unique_paragraphs = []
+        
+        for para in paragraphs:
+            # Normalize paragraph for comparison
+            normalized = re.sub(r'\s+', ' ', para.lower()).strip()
+            # Remove common prefixes/suffixes
+            normalized = re.sub(r'^(the|a|an)\s+', '', normalized)
+            
+            # Check if we've seen a very similar paragraph
+            is_duplicate = False
+            for seen in seen_paragraphs:
+                # Check for high similarity (80% word overlap for longer paragraphs)
+                if len(normalized) > 100 and len(seen) > 100:
+                    seen_words = set(seen.split())
+                    para_words = set(normalized.split())
+                    if len(seen_words) > 0 and len(para_words) > 0:
+                        similarity = len(seen_words & para_words) / max(len(seen_words), len(para_words))
+                        if similarity > 0.8:
+                            is_duplicate = True
+                            break
+                elif normalized == seen or (len(normalized) > 50 and (normalized in seen or seen in normalized)):
+                    is_duplicate = True
+                    break
+            
+            if not is_duplicate:
+                unique_paragraphs.append(para)
+                seen_paragraphs.add(normalized)
+        
+        # Remove redundant sentences within paragraphs
+        consolidated_paragraphs = []
+        seen_sentences = set()
+        
+        for para in unique_paragraphs:
+            # Split into sentences
+            sentences = re.split(r'(?<=[.!?])\s+', para)
+            unique_sentences = []
+            
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if not sentence or len(sentence) < 20:
+                    continue
+                
+                # Normalize sentence
+                normalized_sent = re.sub(r'\s+', ' ', sentence.lower()).strip()
+                
+                # Skip if duplicate
+                if normalized_sent not in seen_sentences:
+                    # Check for high similarity with existing sentences
+                    is_similar = False
+                    for seen in seen_sentences:
+                        if len(normalized_sent) > 50 and len(seen) > 50:
+                            seen_words = set(seen.split())
+                            sent_words = set(normalized_sent.split())
+                            if len(seen_words) > 0 and len(sent_words) > 0:
+                                similarity = len(seen_words & sent_words) / max(len(seen_words), len(sent_words))
+                                if similarity > 0.85:  # Very high similarity threshold
+                                    is_similar = True
+                                    break
+                    
+                    if not is_similar:
+                        unique_sentences.append(sentence)
+                        seen_sentences.add(normalized_sent)
+            
+            if unique_sentences:
+                consolidated_paragraphs.append(' '.join(unique_sentences))
+        
+        # Reconstruct text
+        consolidated_text = '\n\n'.join(consolidated_paragraphs)
+        
+        # Final formatting
+        formatted = re.sub(r"\n{3,}", "\n\n", consolidated_text)
+        formatted = re.sub(r"[ \t]{3,}", " ", formatted)
+        formatted = formatted.strip()
+        
+        logger.info(f"Consolidated RAG response: {len(text)} -> {len(formatted)} characters ({response_type}, removed {len(text) - len(formatted)} redundant chars)")
+        
+        return formatted
+    
+    def _refactor_rag_content(self, architectural_text: str, functional_text: str, component_name: str) -> Tuple[str, str]:
+        """
+        Refactor RAG content according to strict architecture documentation constraints.
+        
+        HARD CONSTRAINTS:
+        - Each architectural concept explained once and only once
+        - No repeated summaries
+        - No marketing-style prose
+        - No "In summary" sections
+        
+        Returns:
+            Tuple of (refactored_architectural_overview, refactored_functional_overview)
+        """
+        if not architectural_text or architectural_text in ["Information not available - timeout", "Information not available"]:
+            return architectural_text, functional_text
+        
+        # Combine both texts for comprehensive analysis
+        combined_text = f"{architectural_text}\n\n{functional_text}".lower()
+        
+        # Extract architecture overview (MAX 6 lines)
+        arch_overview = self._extract_architecture_overview(architectural_text, component_name)
+        
+        # Extract core guarantees & capabilities (TABLE format)
+        capabilities_table = self._extract_capabilities_table(combined_text)
+        
+        # Extract canonical event lifecycle (ONE FLOW ONLY)
+        event_lifecycle = self._extract_event_lifecycle(combined_text)
+        
+        # Extract integration landscape (TABLE)
+        integration_table = self._extract_integration_landscape(combined_text)
+        
+        # Extract deployment & runtime snapshot
+        deployment_snapshot = self._extract_deployment_snapshot(combined_text)
+        
+        # Build refactored architectural overview
+        refactored_arch = f"""{arch_overview}
+
+## Core Guarantees & Capabilities
+
+{capabilities_table}
+
+## Canonical Event Lifecycle
+
+{event_lifecycle}
+
+## Integration Landscape
+
+{integration_table}
+
+## Deployment & Runtime Snapshot
+
+{deployment_snapshot}"""
+        
+        # Functional overview is removed per requirements - return empty or minimal
+        refactored_func = ""  # Explicitly removed per requirements
+        
+        logger.info(f"Refactored RAG content for {component_name}: arch={len(refactored_arch)} chars, func={len(refactored_func)} chars")
+        
+        return refactored_arch.strip(), refactored_func.strip()
+    
+    def _extract_architecture_overview(self, text: str, component_name: str) -> str:
+        """Extract architecture overview (MAX 6 lines)."""
+        # Look for key phrases that indicate what the component is
+        lines = []
+        
+        # Extract purpose statement
+        purpose_patterns = [
+            r"is\s+(?:a|an)\s+([^.]{20,150})",
+            r"provides\s+([^.]{20,150})",
+            r"enables\s+([^.]{20,150})",
+            r"serves\s+as\s+([^.]{20,150})"
+        ]
+        
+        purpose_found = False
+        for pattern in purpose_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                purpose_text = match.group(1).strip()
+                if len(purpose_text) > 20 and len(purpose_text) < 200:
+                    lines.append(f"{component_name} {match.group(0).split(purpose_text)[0].strip()} {purpose_text}.")
+                    purpose_found = True
+                    break
+            if purpose_found:
+                break
+        
+        # Extract why it exists
+        why_patterns = [
+            r"(?:ensures|guarantees|provides|enables|supports)\s+([^.]{30,150})",
+            r"(?:critical|essential|important|key)\s+for\s+([^.]{20,150})"
+        ]
+        
+        for pattern in why_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                why_text = match.group(1).strip()
+                if len(why_text) > 20 and len(why_text) < 200:
+                    lines.append(f"It {match.group(0).split(why_text)[0].strip()} {why_text}.")
+                    break
+        
+        # Extract positioning in Temenos Transact
+        transact_patterns = [
+            r"(?:in|within|part of)\s+temenos\s+transact[^.]{0,100}",
+            r"temenos\s+transact[^.]{0,100}"
+        ]
+        
+        for pattern in transact_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                pos_text = match.group(0).strip()
+                if len(pos_text) > 20 and len(pos_text) < 200:
+                    lines.append(pos_text.capitalize() + ".")
+                    break
+        
+        # If we don't have enough lines, extract key architectural patterns
+        if len(lines) < 3:
+            pattern_keywords = ["transactional outbox", "event sourcing", "cloudevents", "microservice", "event streaming"]
+            for keyword in pattern_keywords:
+                if keyword in text.lower() and len(lines) < 6:
+                    # Find sentence containing keyword
+                    sentences = re.split(r'[.!?]+', text)
+                    for sentence in sentences:
+                        if keyword in sentence.lower() and len(sentence.strip()) > 30:
+                            lines.append(sentence.strip() + ".")
+                            break
+        
+        # Limit to 6 lines max
+        return "\n".join(lines[:6])
+    
+    def _extract_capabilities_table(self, text: str) -> str:
+        """Extract core guarantees & capabilities as a table."""
+        capabilities = {
+            "Immutability": None,
+            "Event ordering": None,
+            "Event uniqueness": None,
+            "Replay": None,
+            "At-least-once delivery": None,
+            "Auditability": None,
+            "Schema validation": None
+        }
+        
+        # Search for each capability
+        capability_patterns = {
+            "Immutability": [r"immutable", r"cannot.*modif", r"cannot.*delete", r"append-only"],
+            "Event ordering": [r"order", r"sequence", r"strict.*order", r"maintain.*order"],
+            "Event uniqueness": [r"unique", r"deduplicat", r"idempotent"],
+            "Replay": [r"replay", r"reprocess", r"replay.*event"],
+            "At-least-once delivery": [r"at.*least.*once", r"guaranteed.*delivery", r"delivery.*guarantee"],
+            "Auditability": [r"audit", r"audit.*trail", r"compliance", r"regulatory"],
+            "Schema validation": [r"schema", r"validat", r"schema.*valid"]
+        }
+        
+        for cap_name, patterns in capability_patterns.items():
+            for pattern in patterns:
+                matches = list(re.finditer(pattern, text, re.IGNORECASE))
+                if matches:
+                    # Extract surrounding context
+                    match = matches[0]
+                    start = max(0, match.start() - 100)
+                    end = min(len(text), match.end() + 200)
+                    context = text[start:end]
+                    # Extract sentence
+                    sentences = re.split(r'[.!?]+', context)
+                    for sentence in sentences:
+                        if pattern.replace(r'\w*', '').replace('\\', '').lower() in sentence.lower():
+                            capabilities[cap_name] = sentence.strip()[:200]
+                            break
+                    if capabilities[cap_name]:
+                        break
+        
+        # Build table
+        table_rows = []
+        table_rows.append("| Capability | Guarantee Provided | Why It Matters (Business Impact) |")
+        table_rows.append("|------------|-------------------|----------------------------------|")
+        
+        for cap_name, description in capabilities.items():
+            if description:
+                # Extract business impact if available
+                business_impact = "Ensures data integrity and compliance requirements"
+                if "compliance" in description.lower() or "regulatory" in description.lower():
+                    business_impact = "Meets regulatory requirements (SOX, GDPR, PCI-DSS)"
+                elif "order" in description.lower():
+                    business_impact = "Critical for transaction processing where sequence matters"
+                elif "replay" in description.lower():
+                    business_impact = "Enables disaster recovery and debugging"
+                
+                table_rows.append(f"| {cap_name} | {description[:100]} | {business_impact} |")
+        
+        return "\n".join(table_rows)
+    
+    def _extract_event_lifecycle(self, text: str) -> str:
+        """Extract canonical event lifecycle (ONE FLOW ONLY)."""
+        lifecycle_steps = []
+        
+        step_patterns = [
+            (1, r"event.*generat", r"creat", r"produc"),
+            (2, r"transactional.*outbox", r"outbox.*persist", r"persist.*outbox"),
+            (3, r"immutable.*stor", r"append.*only", r"event.*stor"),
+            (4, r"rout", r"publish", r"distribut"),
+            (5, r"consum", r"process", r"handl"),
+            (6, r"retry", r"error.*handl", r"fail.*handl"),
+            (7, r"replay", r"reprocess", r"on.*demand")
+        ]
+        
+        for step_num, *patterns in step_patterns:
+            for pattern in patterns:
+                if re.search(pattern, text, re.IGNORECASE):
+                    # Find sentence containing this step
+                    sentences = re.split(r'[.!?]+', text)
+                    for sentence in sentences:
+                        if pattern.replace(r'\w*', '').replace('\\', '').lower() in sentence.lower() and len(sentence.strip()) > 20:
+                            lifecycle_steps.append(f"{step_num}. {sentence.strip().capitalize()}")
+                            break
+                    break
+        
+        if not lifecycle_steps:
+            # Fallback: create basic lifecycle
+            lifecycle_steps = [
+                "1. Event generation: Application service creates domain event",
+                "2. Transactional outbox persistence: Event written to outbox within same transaction",
+                "3. Immutable storage: Event stored as append-only record",
+                "4. Routing/publication: Event routed to appropriate partition/consumer",
+                "5. Consumer processing: Consumer reads and processes event",
+                "6. Retry handling: Failed events retried with exponential backoff",
+                "7. Replay (on demand): Events can be replayed from any point using sequence numbers"
+            ]
+        
+        return "\n".join(lifecycle_steps)
+    
+    def _extract_integration_landscape(self, text: str) -> str:
+        """Extract integration landscape as a table."""
+        integrations = {
+            "Temenos Transact": None,
+            "CQRS microservices": None,
+            "Adapter services": None,
+            "Data Hub": None,
+            "External systems": None,
+            "Service Orchestrator": None
+        }
+        
+        integration_patterns = {
+            "Temenos Transact": [r"temenos.*transact", r"transact"],
+            "CQRS microservices": [r"cqrs", r"microservice"],
+            "Adapter services": [r"adapter", r"adaptation"],
+            "Data Hub": [r"data.*hub", r"hub"],
+            "External systems": [r"external", r"third.*party"],
+            "Service Orchestrator": [r"orchestrat", r"orchestrator"]
+        }
+        
+        for int_name, patterns in integration_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, text, re.IGNORECASE):
+                    integrations[int_name] = "Integrated via events and APIs"
+                    break
+        
+        table_rows = []
+        table_rows.append("| Component | Role | Event Interaction |")
+        table_rows.append("|-----------|------|-------------------|")
+        
+        for comp_name, interaction in integrations.items():
+            if interaction:
+                role = "Core banking system" if "Transact" in comp_name else "Microservice component"
+                table_rows.append(f"| {comp_name} | {role} | {interaction} |")
+        
+        return "\n".join(table_rows) if len(table_rows) > 2 else "| Component | Role | Event Interaction |\n|-----------|------|-------------------|"
+    
+    def _extract_deployment_snapshot(self, text: str) -> str:
+        """Extract deployment & runtime snapshot (CONCISE)."""
+        snapshot_parts = []
+        
+        # Runtime
+        if re.search(r"kubernetes|aks|openshift", text, re.IGNORECASE):
+            snapshot_parts.append("**Runtime:** Kubernetes (AKS / OpenShift)")
+        
+        # Messaging
+        messaging_found = False
+        for msg in ["kafka", "event.*hub", "kinesis"]:
+            if re.search(msg, text, re.IGNORECASE):
+                msg_name = "Kafka" if "kafka" in msg else "Azure Event Hubs" if "event.*hub" in msg else "Kinesis"
+                snapshot_parts.append(f"**Messaging:** {msg_name} / Azure Event Hubs / Kinesis")
+                messaging_found = True
+                break
+        if not messaging_found:
+            snapshot_parts.append("**Messaging:** Kafka / Azure Event Hubs / Kinesis")
+        
+        # Storage
+        storage_found = False
+        for storage in ["postgresql", "mongodb", "database"]:
+            if re.search(storage, text, re.IGNORECASE):
+                storage_name = "PostgreSQL" if "postgresql" in storage else "MongoDB" if "mongodb" in storage else "PostgreSQL / MongoDB"
+                snapshot_parts.append(f"**Storage:** {storage_name}")
+                storage_found = True
+                break
+        if not storage_found:
+            snapshot_parts.append("**Storage:** PostgreSQL / MongoDB")
+        
+        # Security
+        if re.search(r"encrypt|auth|security", text, re.IGNORECASE):
+            snapshot_parts.append("**Security:** Encryption at rest & in transit, authN/authZ")
+        else:
+            snapshot_parts.append("**Security:** Encryption at rest & in transit, authN/authZ")
+        
+        return "\n".join(snapshot_parts) if snapshot_parts else "**Runtime:** Kubernetes (AKS / OpenShift)\n**Messaging:** Kafka / Azure Event Hubs / Kinesis\n**Storage:** PostgreSQL / MongoDB\n**Security:** Encryption at rest & in transit, authN/authZ"
+    
     def _format_rag_response(self, text: str) -> str:
         """Format RAG API responses for better readability - NO TRUNCATION."""
         if not text or text in ["Information not available - timeout", "Information not available"]:
@@ -705,7 +1103,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     cache_service = await self._get_cache_service()
                     cached_data = await cache_service.get_component_info(component_name)
                     if cached_data:
-                        logger.info(f"Using cached component info (persistent) for {component_name}")
+                        logger.info(f"✓ Loaded cached component info (persistent) for {component_name}")
                         # Reconstruct TemenosComponentInfo from cached data
                         component_info = TemenosComponentInfo(
                             component_name=cached_data.get("component_name", component_name),
@@ -716,12 +1114,29 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                             related_services=cached_data.get("related_services", []),
                             relationships=[]  # Relationships not cached for now
                         )
-                        # Also update in-memory cache
+                        # Also update in-memory cache for faster access next time
                         cache_key = component_name.lower()
                         self._component_cache[cache_key] = component_info
+                        logger.debug(f"Cached component info in memory for {component_name}")
                         return component_info
                 except Exception as e:
-                    logger.warning(f"Error reading from persistent cache: {e}, continuing...")
+                    logger.warning(f"Error reading from persistent cache for {component_name}: {e}, continuing...")
+            
+            # If force_refresh is True, clear caches
+            if force_refresh:
+                logger.info(f"Force refresh requested for {component_name} - clearing caches and fetching fresh data")
+                cache_key = component_name.lower()
+                if cache_key in self._component_cache:
+                    del self._component_cache[cache_key]
+                    logger.info(f"Cleared in-memory cache for {component_name}")
+                try:
+                    cache_service = await self._get_cache_service()
+                    await cache_service.delete_component_info(component_name)
+                    await cache_service.delete_rag_response(component_name, "architectural", "ModularBanking, TechnologyOverview")
+                    await cache_service.delete_rag_response(component_name, "functional", "ModularBanking, FuncTransactGeneric")
+                    logger.info(f"Cleared persistent cache for {component_name}")
+                except Exception as e:
+                    logger.warning(f"Error clearing persistent cache for {component_name}: {e}, continuing...")
             
             # Check in-memory cache (unless force_refresh is True)
             cache_key = component_name.lower()
@@ -879,9 +1294,13 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             logger.info(f"  Architectural: {len(architectural_text)} chars - {architectural_text[:100]}...")
             logger.info(f"  Functional: {len(functional_text)} chars - {functional_text[:100]}...")
             
-            # Format responses - but don't truncate too aggressively
-            arch_formatted = self._format_rag_response(architectural_text)
-            func_formatted = self._format_rag_response(functional_text)
+            # Refactor RAG responses according to strict architecture documentation constraints
+            # Apply strict refactoring for all components to remove redundancy
+            arch_formatted, func_formatted = self._refactor_rag_content(
+                architectural_text, 
+                functional_text, 
+                component_name
+            )
             
             # Log formatted lengths
             logger.info(f"Formatted response lengths: arch={len(arch_formatted)}, func={len(func_formatted)}")
@@ -941,10 +1360,27 @@ Integration:
                 relationships=[]
             )
             
-            # Cache the component info
+            # Cache the component info in both memory and persistent storage
             if use_cache:
+                # Update in-memory cache for fast access
                 self._component_cache[cache_key] = component_info
-                logger.info(f"Cached component info for {component_name}")
+                logger.info(f"Cached component info in memory for {component_name}")
+                
+                # Also save to persistent cache so it's available on next application startup
+                try:
+                    cache_service = await self._get_cache_service()
+                    await cache_service.set_component_info(component_name, {
+                        "component_name": component_info.component_name,
+                        "component_type": component_info.component_type,
+                        "architectural_overview": component_info.architectural_overview,
+                        "functional_overview": component_info.functional_overview,
+                        "capabilities": component_info.capabilities,
+                        "related_services": component_info.related_services
+                    })
+                    logger.debug(f"Saved component info to persistent cache for {component_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to save component info to persistent cache for {component_name}: {e}")
+                    # Don't fail - in-memory cache is still available
             
             logger.info(f"Successfully identified component: {component_name} for {service.name}")
             return component_info

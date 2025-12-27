@@ -179,28 +179,48 @@ class CostService:
             if result.get('error'):
                 error_msg = result.get('error', 'Unknown error')
                 status_code = result.get('status_code', 500)
+                error_detail = result.get("detail", {})
+                
                 # If it's a 404 or 403, try subscription scope as fallback
                 if status_code in [403, 404]:
                     logger.info(f"Resource group scope failed with {status_code}, trying subscription scope")
                     url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
-                    result = self._make_api_request(url, "POST", query_definition)
-                    if result.get('error'):
-                        # Both failed, return error
-                        return {
-                            'resource_group': resource_group_name,
-                            'total_cost': 0.0,
-                            'services': {},
-                            'error': f'Cost Management API error: {result.get("error")}. Verify you have "Cost Management Reader" role on the subscription.',
-                            'start_date': start_date.isoformat(),
-                            'end_date': end_date.isoformat()
-                        }
-                else:
-                    # Other errors, return immediately
+                    fallback_result = self._make_api_request(url, "POST", query_definition)
+                    if fallback_result.get('error'):
+                        # Both failed, return error with more details
+                        fallback_error = fallback_result.get("error", "Unknown error")
+                        fallback_status = fallback_result.get("status_code", status_code)
+                        fallback_detail = fallback_result.get("detail", error_detail)
+                        
+                        # Use the more specific error from fallback attempt
+                        error_msg = fallback_error
+                        status_code = fallback_status
+                        error_detail = fallback_detail
+                    else:
+                        # Fallback succeeded, use that result
+                        result = fallback_result
+                
+                # If still has error, format it properly
+                if result.get('error'):
+                    # Provide more specific error messages based on status code
+                    if status_code == 403:
+                        error_msg = f'Permission denied. Verify you have "Cost Management Reader" role on subscription "{self.subscription_id}". You may need to contact your Azure administrator to grant this role.'
+                    elif status_code == 404:
+                        error_msg = f'Resource group "{resource_group_name}" not found or cost data not available. Cost data may take 24-48 hours to appear after resource creation.'
+                    elif status_code == 429:
+                        error_msg = f'Rate limit exceeded. Azure Cost Management API is throttling requests. Please wait a few minutes and try again.'
+                    elif "timeout" in error_msg.lower() or status_code == 504:
+                        error_msg = f'Request timeout. Azure Cost Management API is taking too long to respond. Try again later or select fewer resource groups.'
+                    elif status_code >= 500:
+                        error_msg = f'Azure Cost Management API server error ({status_code}). The service may be experiencing issues. Please try again later.'
+                    
                     return {
                         'resource_group': resource_group_name,
                         'total_cost': 0.0,
                         'services': {},
-                        'error': f'Cost Management API error: {error_msg}',
+                        'error': error_msg,
+                        'error_detail': error_detail,
+                        'status_code': status_code,
                         'start_date': start_date.isoformat(),
                         'end_date': end_date.isoformat()
                     }

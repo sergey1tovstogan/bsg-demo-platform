@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Code, Settings, GitBranch, Box, Zap, HardDrive, Globe, Layers, Cpu, Info } from 'lucide-react'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
 
@@ -172,9 +172,22 @@ export function DeploymentAnalyzer() {
 
       // If we still don't have a good error message, use the status code
       if (errorMessage === 'Failed to connect to Azure' && err.response?.status) {
+        // Try to extract a better error message from the response
+        if (err.response.data?.detail) {
+          const detail = err.response.data.detail
+          if (typeof detail === 'object' && detail.error) {
+            errorMessage = detail.error
+            // Make sure we have recovery steps if they exist
+            if (detail.recoverySteps && Array.isArray(detail.recoverySteps) && recoverySteps.length === 0) {
+              recoverySteps = detail.recoverySteps
+            }
+          } else if (typeof detail === 'string') {
+            errorMessage = detail
+          } else {
         errorMessage = `Request failed with status code ${err.response.status}`
-        if (err.response.data) {
-          errorMessage += `. ${JSON.stringify(err.response.data)}`
+          }
+        } else {
+          errorMessage = `Request failed with status code ${err.response.status}`
         }
       }
 
@@ -209,6 +222,29 @@ export function DeploymentAnalyzer() {
         ]
       }
 
+      // Always try to extract recovery steps from error detail if not already found
+      if (recoverySteps.length === 0 && errorDetail && typeof errorDetail === 'object') {
+        if (errorDetail.recoverySteps && Array.isArray(errorDetail.recoverySteps)) {
+          recoverySteps = errorDetail.recoverySteps
+        }
+      }
+
+      // For 500 errors, provide default recovery steps if none found
+      if (recoverySteps.length === 0 && err.response?.status === 500) {
+        errorMessage = 'Azure connection failed. This usually means Azure CLI authentication is required.'
+        recoverySteps = [
+          'Open PowerShell or Command Prompt (as Administrator if needed)',
+          'Check if Azure CLI is installed: az --version',
+          'If not installed, download from: https://aka.ms/installazurecliwindows',
+          'Login to Azure: az login --use-device-code',
+          'A browser will open - complete authentication',
+          'Select your subscription (usually option 1)',
+          'Verify login: az account show',
+          'Set the subscription: az account set --subscription ' + subscriptionId,
+          'After login completes, refresh this page and try connecting again'
+        ]
+      }
+
       // Format error message with recovery steps
       if (recoverySteps.length > 0) {
         errorMessage += '\n\nTo fix this:\n' + recoverySteps.map((step, i) => `${i + 1}. ${step}`).join('\n')
@@ -216,6 +252,8 @@ export function DeploymentAnalyzer() {
 
       setError(errorMessage)
       console.error('Azure connection error:', err)
+      console.error('Error detail:', errorDetail)
+      console.error('Recovery steps:', recoverySteps)
     } finally {
       setLoading(false)
     }
@@ -435,7 +473,7 @@ export function DeploymentAnalyzer() {
                       resource_group: rgName,
                       total_cost: 0,
                       services: {},
-                      error: 'No cost data returned for this resource group'
+                      error: errorMessage || 'No cost data returned for this resource group'
                     }
                   }
                 })
@@ -467,10 +505,18 @@ export function DeploymentAnalyzer() {
               message: err.message,
               response: err.response?.data,
               status: err.response?.status,
-              url: err.config?.url
+              url: err.config?.url,
+              signal: err.name === 'AbortError' ? 'Request aborted' : 'Not aborted'
             })
+            
             // Set error state for costs but don't fail the analysis
             const costMap: Record<string, any> = {}
+            
+            // If it's a timeout or abort error, provide specific message
+            const isTimeout = err.message?.includes('timeout') || err.name === 'AbortError'
+            const errorMessage = isTimeout 
+              ? 'Request timed out. Cost Management API is taking too long. Try selecting fewer resource groups.'
+              : err.response?.data?.detail?.error || err.response?.data?.error || err.message || 'Failed to fetch cost data'
 
             // Check if the response contains cost data with errors (partial success)
             if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
@@ -499,9 +545,11 @@ export function DeploymentAnalyzer() {
               })
             } else {
               // Complete failure - set error for all RGs
-              selectedResourceGroups.forEach(rgName => {
+              // Determine error message
                 let errorMessage = 'Failed to load costs'
-                if (err.response?.data?.detail) {
+              if (err.message?.includes('timeout') || err.name === 'AbortError') {
+                errorMessage = 'Request timed out. Cost Management API is taking too long. Try selecting fewer resource groups.'
+              } else if (err.response?.data?.detail) {
                   if (typeof err.response.data.detail === 'string') {
                     errorMessage = err.response.data.detail
                   } else if (err.response.data.detail.error) {
@@ -517,6 +565,8 @@ export function DeploymentAnalyzer() {
                     errorMessage = err.message
                   }
                 }
+              // Set error for all selected resource groups
+              selectedResourceGroups.forEach(rgName => {
                 costMap[rgName] = {
                   resource_group: rgName,
                   total_cost: 0,
@@ -622,7 +672,7 @@ export function DeploymentAnalyzer() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-[400px]">
       {currentStep === 'subscription' && (
         <SubscriptionInput
           onSubmit={handleSubscriptionSubmit}
@@ -642,6 +692,7 @@ export function DeploymentAnalyzer() {
           cached={resourceGroupsCached}
           error={error}
           analysisProgress={analysisProgress}
+          subscriptionId={subscriptionId}
         />
       )}
 
@@ -708,11 +759,22 @@ function SubscriptionInput({
   }
 
   const [subscriptionId, setSubscriptionId] = useState(getInitialSubscriptionId())
+  const [isUsingCachedId, setIsUsingCachedId] = useState(false)
+  const [showSubscriptionId, setShowSubscriptionId] = useState(false)
+
+  // Check if we're using cached ID on mount
+  useEffect(() => {
+    const cached = localStorage.getItem('lastAzureSubscriptionId')
+    if (cached && cached === subscriptionId) {
+      setIsUsingCachedId(true)
+    }
+  }, [])
 
   // Save to localStorage when subscription ID changes
   useEffect(() => {
     if (subscriptionId.trim()) {
       localStorage.setItem('lastAzureSubscriptionId', subscriptionId.trim())
+      setIsUsingCachedId(true)
     }
   }, [subscriptionId])
 
@@ -726,7 +788,7 @@ function SubscriptionInput({
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[400px]">
       <div className="card bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 sm:p-8">
         <div className="flex items-center space-x-3 mb-6">
           <Cloud className="w-8 h-8 text-purple-600 dark:text-purple-400" />
@@ -747,8 +809,8 @@ function SubscriptionInput({
                 {error.includes('\n\nTo fix this:') ? error.split('\n\nTo fix this:')[0] : error}
               </div>
               {error.includes('\n\nTo fix this:') && (
-                <div className="mt-3 pt-3 border-t border-red-200">
-                  <div className="text-sm font-semibold text-red-800 mb-2">📋 Steps to Fix:</div>
+                <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-700">
+                  <div className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">📋 Steps to Fix:</div>
                   <ol className="text-sm text-red-700 dark:text-red-300 space-y-2 list-decimal list-inside">
                     {error.split('\n\nTo fix this:\n')[1]?.split('\n').filter((line: string) => line.trim() && !line.match(/^\d+\.\s*$/)).map((step: string, idx: number) => (
                       <li key={idx} className="ml-2 bg-red-100 dark:bg-red-900/40 px-2 py-1 rounded">
@@ -756,7 +818,7 @@ function SubscriptionInput({
                       </li>
                     ))}
                   </ol>
-                  <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-800 dark:text-blue-200">
+                  <div className="mt-3 p-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded text-xs text-indigo-800 dark:text-indigo-200">
                     <strong>💡 Tip:</strong> After completing these steps, refresh this page and try connecting again.
                   </div>
                 </div>
@@ -770,15 +832,35 @@ function SubscriptionInput({
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Azure Subscription ID
+            {isUsingCachedId && (
+              <span className="ml-2 text-xs text-indigo-600 dark:text-indigo-400 font-normal">
+                (Using cached subscription ID)
+              </span>
+            )}
           </label>
+          <div className="relative">
           <input
-            type="text"
+              type={showSubscriptionId ? "text" : "password"}
             value={subscriptionId}
             onChange={(e) => setSubscriptionId(e.target.value)}
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+              className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
             disabled={loading}
           />
+            <button
+              type="button"
+              onClick={() => setShowSubscriptionId(!showSubscriptionId)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              disabled={loading}
+              title={showSubscriptionId ? "Hide subscription ID" : "Show subscription ID"}
+            >
+              {showSubscriptionId ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
+          </div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             You can find your subscription ID in the Azure Portal under Subscriptions.
           </p>
@@ -787,7 +869,7 @@ function SubscriptionInput({
         <button
           type="submit"
           disabled={loading || !subscriptionId.trim()}
-          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold"
+          className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold"
         >
           {loading ? (
             <>
@@ -804,9 +886,44 @@ function SubscriptionInput({
   )
 }
 
+// ARM Template Export Handler
+async function handleExportArmTemplate(
+  subscriptionId: string,
+  resourceGroupName: string,
+  onError: (error: string) => void
+): Promise<boolean> {
+  try {
+    const response = await apiService.exportArmTemplate(subscriptionId, resourceGroupName)
+    
+    if (response.data?.template_json) {
+      // Create a blob with the ARM template JSON
+      const blob = new Blob([response.data.template_json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${resourceGroupName}-arm-template.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      return true
+    } else {
+      onError('ARM template export failed: No template data returned')
+      return false
+    }
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.detail?.error || 
+                     error.response?.data?.detail || 
+                     error.message || 
+                     'Failed to export ARM template'
+    onError(`ARM template export failed: ${errorMsg}`)
+    return false
+  }
+}
+
 // Resource Group Selector Component
 function ResourceGroupSelector({
-
   resourceGroups,
   onSelected,
   onBack,
@@ -814,7 +931,8 @@ function ResourceGroupSelector({
   loading,
   cached,
   error,
-  analysisProgress
+  analysisProgress,
+  subscriptionId
 }: {
 
   resourceGroups: AzureResourceGroup[]
@@ -825,10 +943,13 @@ function ResourceGroupSelector({
   cached: boolean
   error: string | null
   analysisProgress: { current: number; total: number; message: string } | null
+  subscriptionId: string
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [includeCosts, setIncludeCosts] = useState(false)
+  const [exportingRg, setExportingRg] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   const toggleSelection = (rgName: string) => {
     setSelected(prev =>
@@ -855,19 +976,32 @@ function ResourceGroupSelector({
           <div className="flex items-center space-x-3 mb-2">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Select Resource Groups</h2>
             {cached && (
-              <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">
-                Cached
+              <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full flex items-center space-x-1">
+                <span>📦</span>
+                <span>Cached</span>
               </span>
             )}
           </div>
-          <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
+          <div>
+            <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
+            {cached && (
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 flex items-center space-x-1">
+                <span>💡</span>
+                <span>Using cached data. If you don't see a newly created resource group, click "Refresh" to fetch the latest list from Azure.</span>
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex items-center space-x-3">
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="btn-secondary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Refresh resource groups from Azure"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              cached 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                : 'btn-secondary'
+            }`}
+            title={cached ? "Refresh to fetch latest resource groups from Azure (including newly created ones)" : "Refresh resource groups from Azure"}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -885,22 +1019,42 @@ function ResourceGroupSelector({
         </div>
       )}
 
+      {exportError && (
+        <div className={`card border-2 ${
+          exportError.includes('successfully') 
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300'
+        }`}>
+          <div className="flex items-start space-x-2">
+            {exportError.includes('successfully') ? (
+              <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            )}
+            <div className="flex-1">
+              <p className="font-semibold mb-1">ARM Template Export</p>
+              <p className="text-sm whitespace-pre-line">{exportError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Loading/Progress Indicator */}
       {loading && analysisProgress && (
-        <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30">
+        <div className="card bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-500/30">
           <div className="flex items-center space-x-4">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+              <p className="text-sm font-medium text-indigo-900 dark:text-indigo-100 mb-2">
                 {analysisProgress.message}
               </p>
-              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+              <div className="w-full bg-indigo-200 dark:bg-indigo-800 rounded-full h-2">
                 <div
-                  className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                  className="bg-indigo-600 dark:bg-indigo-400 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
                 ></div>
               </div>
-              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+              <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-1">
                 Step {analysisProgress.current} of {analysisProgress.total}
               </p>
             </div>
@@ -928,12 +1082,72 @@ function ResourceGroupSelector({
             {selected.length === filteredResourceGroups.length ? 'Deselect All' : 'Select All'}
           </button>
         </div>
-        <div className="mt-3 text-sm text-gray-600">
+        <div className="mt-3 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
           {selected.length > 0 && (
             <span className="font-medium text-purple-600">{selected.length} selected</span>
           )}
           {' '}
           {filteredResourceGroups.length} resource group{filteredResourceGroups.length !== 1 ? 's' : ''} found
+          </div>
+          {selected.length > 0 && (
+            <button
+              onClick={async () => {
+                setExportingRg('bulk')
+                setExportError(null)
+                try {
+                  let successCount = 0
+                  let failCount = 0
+                  const errors: string[] = []
+                  
+                  for (const rgName of selected) {
+                    try {
+                      const success = await handleExportArmTemplate(
+                        subscriptionId,
+                        rgName,
+                        (error) => {
+                          errors.push(`${rgName}: ${error}`)
+                          failCount++
+                        }
+                      )
+                      if (success) {
+                        successCount++
+                      }
+                    } catch (err: any) {
+                      errors.push(`${rgName}: ${err.message || 'Export failed'}`)
+                      failCount++
+                    }
+                  }
+                  
+                  if (failCount > 0) {
+                    setExportError(`${successCount} exported successfully, ${failCount} failed. ${errors.join('; ')}`)
+                  } else {
+                    setExportError(null)
+                  }
+                } finally {
+                  setExportingRg(null)
+                  if (selected.length > 0) {
+                    setTimeout(() => setExportError(null), 5000)
+                  }
+                }
+              }}
+              disabled={exportingRg === 'bulk' || loading}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              title="Export ARM templates for all selected resource groups"
+            >
+              {exportingRg === 'bulk' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Exporting {selected.length} RGs...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Export Selected ({selected.length}) as ARM Templates</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -947,29 +1161,68 @@ function ResourceGroupSelector({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredResourceGroups.map((rg) => {
           const isSelected = selected.includes(rg.name)
+          const isExporting = exportingRg === rg.name
+          
           return (
             <div
               key={rg.id}
-              onClick={() => toggleSelection(rg.name)}
-              className={`card cursor-pointer transition-all ${isSelected
+              className={`card transition-all ${isSelected
                 ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20'
                 : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700'
                 }`}
             >
               <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-3 flex-1">
+                <div 
+                  className="flex items-start space-x-3 flex-1 cursor-pointer"
+                  onClick={() => toggleSelection(rg.name)}
+                >
                   <FolderOpen className={`w-6 h-6 mt-1 ${isSelected ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`} />
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 dark:text-white">{rg.name}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{rg.location}</p>
                   </div>
                 </div>
+                <div className="flex items-center space-x-2">
                 {isSelected && (
                   <div className="bg-purple-600 text-white rounded-full p-1">
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                 )}
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      setExportingRg(rg.name)
+                      setExportError(null)
+                      try {
+                        const success = await handleExportArmTemplate(
+                          subscriptionId,
+                          rg.name,
+                          (error) => setExportError(error)
+                        )
+                        if (success) {
+                          setTimeout(() => setExportError(null), 3000)
+                        }
+                      } finally {
+                        setExportingRg(null)
+                      }
+                    }}
+                    disabled={isExporting}
+                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Export ARM Template (IaC)"
+                  >
+                    {isExporting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                  </button>
               </div>
+              </div>
+              {exportError && exportingRg === rg.name && (
+                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300">
+                  {exportError}
+                </div>
+              )}
             </div>
           )
         })}
@@ -977,7 +1230,7 @@ function ResourceGroupSelector({
 
       {/* Include Costs Checkbox */}
       {/* Include Costs Checkbox */}
-      <div className="card bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-100 dark:border-purple-500/30 transition-all hover:shadow-md">
+      <div className="card bg-gradient-to-r from-indigo-50 to-indigo-50 dark:from-indigo-900/20 dark:to-indigo-900/20 border-indigo-100 dark:border-indigo-500/30 transition-all hover:shadow-md">
         <label className="flex items-center space-x-3 cursor-pointer group">
           <div className="relative flex items-center justify-center">
             <input
@@ -1240,6 +1493,7 @@ function ServiceAnalysis({
   selectedResourceGroups: string[]
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
+  const [selectedAzureService, setSelectedAzureService] = useState<string | null>(null)
 
   const identifiedComponents = analysisResults.filter(r => r.componentInfo)
   const unidentifiedServices = analysisResults.filter(r => !r.componentInfo && !r.error)
@@ -1352,13 +1606,13 @@ function ServiceAnalysis({
 
       {loading && (
         <div className="card text-center py-12 bg-white dark:bg-slate-800">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
           <p className="text-gray-700 font-medium mb-2">Analyzing Azure services and identifying Temenos components...</p>
           {analysisProgress && (
             <div className="mt-4">
               <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
                 <div
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                  className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
                   style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
                 ></div>
               </div>
@@ -1381,12 +1635,12 @@ function ServiceAnalysis({
             </div>
           </div>
         </div>
-        <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <div className="card bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800">
           <div className="flex items-center space-x-3">
-            <Cloud className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            <Cloud className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             <div>
-              <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Azure Services</p>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{services.length}</p>
+              <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">Azure Services</p>
+              <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{services.length}</p>
             </div>
           </div>
         </div>
@@ -1491,7 +1745,15 @@ function ServiceAnalysis({
               <span>Temenos Components</span>
             </h3>
             {selectedResult && (
-              <ComponentDetailPanel result={selectedResult} />
+              <ComponentDetailPanel 
+                result={selectedResult} 
+                onRefresh={(updatedResult) => {
+                  // Update the analysis results with refreshed data
+                  setAnalysisResults(prev => 
+                    prev.map(r => r.service.id === updatedResult.service.id ? updatedResult : r)
+                  )
+                }}
+              />
             )}
           </div>
 
@@ -1535,18 +1797,146 @@ function ServiceAnalysis({
         </div>
       )}
 
+      {/* Empty State - No Results */}
+      {!loading && analysisResults.length === 0 && services.length > 0 && (
+        <div className="card text-center py-12 bg-white dark:bg-slate-800">
+          <AlertCircle className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Analysis Results</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            Analysis completed but no results were returned. This may indicate an issue with the analysis service.
+          </p>
+          <button onClick={onRefresh} className="btn-primary flex items-center space-x-2 mx-auto">
+            <RefreshCw className="w-4 h-4" />
+            <span>Retry Analysis</span>
+          </button>
+        </div>
+      )}
+
+      {/* Empty State - All Results Have Errors */}
+      {!loading && analysisResults.length > 0 && identifiedComponents.length === 0 && unidentifiedServices.length === 0 && (
+        <div className="card text-center py-12 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800">
+          <AlertCircle className="w-16 h-16 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Analysis Completed with Errors</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            All {analysisResults.length} service{analysisResults.length !== 1 ? 's' : ''} encountered errors during analysis.
+            Please check the backend logs or try refreshing the analysis.
+          </p>
+          <button onClick={onRefresh} className="btn-primary flex items-center space-x-2 mx-auto">
+            <RefreshCw className="w-4 h-4" />
+            <span>Retry Analysis</span>
+          </button>
+        </div>
+      )}
+
       {/* Other Services */}
       {unidentifiedServices.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Other Azure Services</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {unidentifiedServices.map((result, index) => (
-              <div key={result.service.id || index} className="card bg-white dark:bg-slate-800">
-                <h4 className="font-semibold text-gray-900 dark:text-white">{result.service.name}</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{result.service.type}</p>
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+            <Cloud className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <span>Azure Services ({unidentifiedServices.length})</span>
+          </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Azure Services List */}
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {unidentifiedServices.map((result, index) => {
+                  const isSelected = result.service.id === selectedAzureService
+                  const ServiceIcon = getServiceIcon(result.service.type)
+                  return (
+                    <div
+                      key={result.service.id || index}
+                      onClick={() => setSelectedAzureService(result.service.id || null)}
+                      className={`card cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-500 dark:border-indigo-400 shadow-lg'
+                          : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className={`p-2 rounded-lg ${isSelected ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <ServiceIcon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 dark:text-white truncate">{result.service.name}</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">{result.service.type}</p>
+                          {result.service.location && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{result.service.location}</p>
+                          )}
               </div>
-            ))}
+          </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            
+            {/* Azure Service Info Panel */}
+            {selectedAzureService && (() => {
+              const selectedService = unidentifiedServices.find(r => r.service.id === selectedAzureService)
+              if (!selectedService) return null
+              const ServiceIcon = getServiceIcon(selectedService.service.type)
+              const serviceDescription = getAzureServiceDescription(selectedService.service.type, selectedService.service.name)
+              return (
+                <div className="lg:col-span-1">
+                  <div className="card bg-white dark:bg-slate-800 sticky top-4">
+                    <div className="flex items-center space-x-2 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-700">
+                        <ServiceIcon className="w-5 h-5 text-white" />
+                      </div>
+                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">Service Info</h4>
+                    </div>
+                    <div className="space-y-3">
+                      {/* Service Description */}
+                      {serviceDescription && (
+                        <div className="pb-3 border-b border-gray-200 dark:border-gray-700">
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Description</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{serviceDescription}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Name</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedService.service.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Type</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{selectedService.service.type}</p>
+                      </div>
+                      {selectedService.service.resourceGroup && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Resource Group</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{selectedService.service.resourceGroup}</p>
+                        </div>
+                      )}
+                      {selectedService.service.location && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Location</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{selectedService.service.location}</p>
+                        </div>
+                      )}
+                      {selectedService.service.id && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Resource ID</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 break-all font-mono">{selectedService.service.id}</p>
+                        </div>
+                      )}
+                      {selectedService.service.portalUrl && (
+                        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                          <a
+                            href={selectedService.service.portalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium w-full justify-center"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            <span>Open in Azure Portal</span>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -1554,7 +1944,100 @@ function ServiceAnalysis({
   )
 }
 
-// Format RAG text with better formatting (headings, bold, paragraphs, lists)
+// Icon mapping for services and technologies
+const getServiceIcon = (text: string): any => {
+  const lowerText = text.toLowerCase()
+  if (lowerText.includes('kubernetes') || lowerText.includes('aks') || lowerText.includes('container')) return Container
+  if (lowerText.includes('database') || lowerText.includes('sql') || lowerText.includes('postgresql') || lowerText.includes('mongodb') || lowerText.includes('cosmos')) return Database
+  if (lowerText.includes('event hub') || lowerText.includes('messaging') || lowerText.includes('activemq') || lowerText.includes('kinesis')) return MessageSquare
+  if (lowerText.includes('server') || lowerText.includes('compute') || lowerText.includes('vm')) return Server
+  if (lowerText.includes('storage') || lowerText.includes('blob') || lowerText.includes('file')) return HardDrive
+  if (lowerText.includes('network') || lowerText.includes('vnet') || lowerText.includes('load balancer')) return Network
+  if (lowerText.includes('security') || lowerText.includes('key vault') || lowerText.includes('identity')) return Shield
+  if (lowerText.includes('monitoring') || lowerText.includes('log') || lowerText.includes('insights')) return Activity
+  if (lowerText.includes('azure') || lowerText.includes('cloud')) return Cloud
+  if (lowerText.includes('microservice') || lowerText.includes('service')) return Box
+  return Layers
+}
+
+// Generate description for Azure services based on type
+const getAzureServiceDescription = (serviceType: string, serviceName: string): string => {
+  const lowerType = serviceType.toLowerCase()
+  const lowerName = serviceName.toLowerCase()
+  
+  // Kubernetes / AKS
+  if (lowerType.includes('kubernetes') || lowerType.includes('aks') || lowerType.includes('container')) {
+    return `Azure Kubernetes Service (AKS) provides a managed Kubernetes environment for deploying, managing, and scaling containerized applications. This cluster hosts containerized workloads and provides orchestration capabilities for microservices architectures.`
+  }
+  
+  // Event Hub
+  if (lowerType.includes('event hub') || lowerType.includes('eventhub')) {
+    return `Azure Event Hubs is a fully managed, real-time data ingestion service that can receive and process millions of events per second. It's commonly used for event streaming, real-time analytics, and building event-driven architectures.`
+  }
+  
+  // Database services
+  if (lowerType.includes('database') || lowerType.includes('sql') || lowerType.includes('postgresql') || lowerType.includes('mongodb') || lowerType.includes('cosmos')) {
+    if (lowerType.includes('cosmos')) {
+      return `Azure Cosmos DB is a globally distributed, multi-model database service designed for low-latency, high-availability applications. It supports multiple APIs including MongoDB, SQL, Cassandra, and Gremlin.`
+    } else if (lowerType.includes('postgresql')) {
+      return `Azure Database for PostgreSQL is a fully managed relational database service based on the open-source PostgreSQL database engine. It provides high availability, automated backups, and built-in security features.`
+    } else if (lowerType.includes('sql')) {
+      return `Azure SQL Database is a fully managed relational database service built on SQL Server. It provides high availability, automated backups, and intelligent performance optimization for cloud applications.`
+    } else {
+      return `This database service provides persistent storage and data management capabilities for applications. It supports structured data storage, querying, and transaction processing.`
+    }
+  }
+  
+  // Storage
+  if (lowerType.includes('storage') || lowerType.includes('blob') || lowerType.includes('file')) {
+    return `Azure Storage provides scalable, durable cloud storage for data, files, and application content. It includes Blob storage for unstructured data, File storage for file shares, and Queue storage for messaging.`
+  }
+  
+  // Virtual Machine / Compute
+  if (lowerType.includes('virtualmachine') || lowerType.includes('vm') || lowerType.includes('compute')) {
+    return `Azure Virtual Machines provide on-demand, scalable computing resources in the cloud. They enable you to deploy and run applications with full control over the operating system and configuration.`
+  }
+  
+  // Key Vault
+  if (lowerType.includes('key vault') || lowerType.includes('keyvault')) {
+    return `Azure Key Vault is a cloud service for securely storing and accessing secrets, keys, and certificates. It helps protect cryptographic keys and secrets used by cloud applications and services.`
+  }
+  
+  // App Service
+  if (lowerType.includes('app service') || lowerType.includes('appservice') || lowerType.includes('web')) {
+    return `Azure App Service is a fully managed platform for building, deploying, and scaling web apps and APIs. It supports multiple programming languages and provides built-in DevOps capabilities.`
+  }
+  
+  // Container Apps / Container Instances
+  if (lowerType.includes('container') && (lowerType.includes('app') || lowerType.includes('instance'))) {
+    return `Azure Container Apps or Container Instances provide serverless container hosting for running containerized applications without managing infrastructure. They're ideal for microservices and event-driven applications.`
+  }
+  
+  // Network services
+  if (lowerType.includes('network') || lowerType.includes('vnet') || lowerType.includes('load balancer')) {
+    return `Azure networking services provide connectivity, security, and traffic management capabilities. They enable secure communication between Azure resources and connect on-premises networks to Azure.`
+  }
+  
+  // Monitoring / Log Analytics
+  if (lowerType.includes('monitoring') || lowerType.includes('log') || lowerType.includes('insights') || lowerType.includes('application insights')) {
+    return `Azure monitoring and logging services provide observability for applications and infrastructure. They collect telemetry data, enable performance monitoring, and support troubleshooting and diagnostics.`
+  }
+  
+  // Service Bus
+  if (lowerType.includes('service bus') || lowerType.includes('servicebus')) {
+    return `Azure Service Bus is a fully managed enterprise message broker with message queues and publish-subscribe topics. It enables reliable messaging between distributed applications and services.`
+  }
+  
+  // Function Apps
+  if (lowerType.includes('function') || lowerType.includes('functionapp')) {
+    return `Azure Functions is a serverless compute service that lets you run event-driven code without managing infrastructure. It's ideal for building microservices, processing data, and integrating systems.`
+  }
+  
+  // Default description
+  return `This Azure service provides cloud infrastructure and capabilities for hosting and managing applications. It's part of the Azure cloud platform and integrates with other Azure services for comprehensive cloud solutions.`
+}
+
+// Format RAG text with better formatting (headings, bold, paragraphs, lists) and icons
 function formatRAGText(text: string): JSX.Element | null {
   if (!text || !text.trim()) return null
 
@@ -1569,11 +2052,41 @@ function formatRAGText(text: string): JSX.Element | null {
     if (currentParagraph.length > 0) {
       const paragraphText = currentParagraph.join(' ').trim()
       if (paragraphText) {
+        // Check if paragraph mentions services/technologies
+        const serviceMatches = paragraphText.match(/\b(Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi)
+        if (serviceMatches && serviceMatches.length > 0) {
+          // Split paragraph and add icons for service mentions
+          const parts: React.ReactNode[] = []
+          let lastIndex = 0
+          serviceMatches.forEach((match, idx) => {
+            const matchIndex = paragraphText.toLowerCase().indexOf(match.toLowerCase(), lastIndex)
+            if (matchIndex > lastIndex) {
+              parts.push(paragraphText.substring(lastIndex, matchIndex))
+            }
+            const Icon = getServiceIcon(match)
+            parts.push(
+              <span key={`service-${idx}`} className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">
+                <Icon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span className="font-medium text-indigo-700 dark:text-indigo-300">{match}</span>
+              </span>
+            )
+            lastIndex = matchIndex + match.length
+          })
+          if (lastIndex < paragraphText.length) {
+            parts.push(paragraphText.substring(lastIndex))
+          }
+          elements.push(
+            <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3 flex flex-wrap items-center gap-1">
+              {parts.map((part, pidx) => <span key={pidx}>{typeof part === 'string' ? formatInlineText(part) : part}</span>)}
+            </p>
+          )
+        } else {
         elements.push(
           <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
             {formatInlineText(paragraphText)}
           </p>
         )
+        }
       }
       currentParagraph = []
     }
@@ -1582,12 +2095,35 @@ function formatRAGText(text: string): JSX.Element | null {
   const flushList = () => {
     if (listItems.length > 0) {
       elements.push(
-        <ul key={key++} className="list-disc list-inside space-y-2 mb-4 ml-4">
-          {listItems.map((item, idx) => (
-            <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-              {formatInlineText(item)}
+        <ul key={key++} className="list-none space-y-2 mb-4">
+          {listItems.map((item, idx) => {
+            const Icon = getServiceIcon(item)
+            return (
+              <li key={idx} className="flex items-start space-x-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                <div className="mt-1.5 flex-shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-700"></div>
+                </div>
+                <div className="flex-1 flex flex-wrap items-center gap-1">
+                  {item.match(/\b(Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi) ? (
+                    item.split(/(\b(?:Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*)/gi).map((part, pidx) => {
+                      if (part.match(/\b(?:Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi)) {
+                        const PartIcon = getServiceIcon(part)
+                        return (
+                          <span key={pidx} className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">
+                            <PartIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                            <span className="font-medium text-indigo-700 dark:text-indigo-300">{part}</span>
+                          </span>
+                        )
+                      }
+                      return <span key={pidx}>{formatInlineText(part)}</span>
+                    })
+                  ) : (
+                    formatInlineText(item)
+                  )}
+                </div>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )
       listItems = []
@@ -1609,10 +2145,16 @@ function formatRAGText(text: string): JSX.Element | null {
       flushParagraph()
       flushList()
       const headingText = trimmed.replace(/^(\*\*|##)\s*/, '').replace(/\*\*$/, '').replace(/:$/, '').trim()
+      const HeadingIcon = getServiceIcon(headingText)
       elements.push(
-        <h6 key={key++} className="font-bold text-gray-900 dark:text-white text-base mt-4 mb-2 first:mt-0">
+        <div key={key++} className="flex items-center space-x-2 mt-4 mb-2 first:mt-0">
+          <div className="p-1.5 rounded-md bg-gradient-to-br from-indigo-600 to-blue-700">
+            <HeadingIcon className="w-4 h-4 text-white" />
+          </div>
+          <h6 className="font-bold text-gray-900 dark:text-white text-base">
           {formatInlineText(headingText)}
         </h6>
+        </div>
       )
       continue
     }
@@ -1689,10 +2231,10 @@ function formatInlineText(text: string): JSX.Element | string | null {
 // Component Detail Panel - Horizontal layout with all information visible
 function ComponentDetailPanel({
   result,
-
-
+  onRefresh
 }: {
   result: AnalysisResult
+  onRefresh?: (updatedResult: AnalysisResult) => void
 
 
 
@@ -1750,7 +2292,7 @@ function ComponentDetailPanel({
             href={service.portalUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
           >
             <ExternalLink className="w-4 h-4" />
             <span>Open in Azure Portal</span>
@@ -1766,10 +2308,15 @@ function ComponentDetailPanel({
                 true // forceRefresh
               )
               if (response.data?.data && Array.isArray(response.data.data) && response.data.data.length > 0 && response.data.data[0].componentInfo) {
-                // Update the component info
-                result.componentInfo = response.data.data[0].componentInfo
-                // Trigger re-render by updating parent state
-                window.location.reload() // Simple refresh for now
+                // Create updated result with new component info
+                const updatedResult: AnalysisResult = {
+                  ...result,
+                  componentInfo: response.data.data[0].componentInfo
+                }
+                // Update parent state via callback
+                if (onRefresh) {
+                  onRefresh(updatedResult)
+                }
               }
             } catch (error) {
               console.error('Failed to refresh component info:', error)
@@ -1786,45 +2333,37 @@ function ComponentDetailPanel({
       {/* Horizontal Information Panels */}
       <div className="space-y-6">
         {/* Architectural Overview */}
-        <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
+        <div className="bg-gradient-to-br from-gray-50 to-indigo-50/30 dark:from-slate-800 dark:to-indigo-900/20 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center space-x-3 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-700 shadow-md">
+              <Layers className="w-5 h-5 text-white" />
+            </div>
+            <h5 className="font-bold text-gray-900 dark:text-white text-lg">ARCHITECTURE OVERVIEW</h5>
+          </div>
           <div className="prose prose-sm max-w-none dark:prose-invert">
-            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
+            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim() && 
+             componentInfo.architecturalOverview.toLowerCase() !== 'information not available' &&
+             !componentInfo.architecturalOverview.toLowerCase().includes('cannot provide') &&
+             !componentInfo.architecturalOverview.toLowerCase().includes('not available in my knowledge base')
               ? formatRAGText(componentInfo.architecturalOverview)
-              : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
+              : <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+                  <AlertCircle className="w-4 h-4" />
+                  <p className="italic">No architectural overview available. Click "Refresh Info" to fetch from RAG API.</p>
+                </div>}
           </div>
         </div>
 
-        {/* Deployment Architecture */}
-        {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') ||
-          componentInfo.architecturalOverview?.toLowerCase().includes('aks') ||
-          componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes') ||
-          componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
-          service.type?.toLowerCase().includes('containerservice') ||
-          service.type?.toLowerCase().includes('kubernetes')) ? (
+        {/* Deployment Architecture - Only show if not already covered in architectural overview */}
+        {service.type && !componentInfo.architecturalOverview?.toLowerCase().includes('azure service type') ? (
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
             <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('docker') ||
-                service.type?.toLowerCase().includes('containerservice')) && (
-                  <li>Containerized using Docker and deployed in Azure Kubernetes Service (AKS)</li>
-                )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('orchestrated') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes')) && (
-                  <li>Orchestrated via Kubernetes for automated scaling, health management, and service discovery</li>
-                )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('scaling') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('scale')) && (
-                  <li>Supports horizontal scaling based on load and demand</li>
-                )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('high-availability') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('availability') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('replica')) && (
-                  <li>Implements high-availability patterns with multiple replicas and health checks</li>
-                )}
-              {service.type && (
                 <li>Azure Service Type: {service.type}</li>
+              {service.resourceGroup && (
+                <li>Resource Group: {service.resourceGroup}</li>
+              )}
+              {service.location && (
+                <li>Location: {service.location}</li>
               )}
             </ul>
           </div>
