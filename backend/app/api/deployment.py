@@ -907,12 +907,16 @@ async def _analyze_services_impl(request: AnalyzeRequest):
         # This ensures we find all pods, then we can filter if needed
         selected_namespaces = request.selected_namespaces if request.selected_namespaces else None
         
-        # Extract subscription ID from first resource
+        # Extract subscription ID from first resource (optimized)
         subscription_id = None
         if services and services[0].id:
-            id_parts = services[0].id.split("/")
-            if "subscriptions" in id_parts:
-                subscription_id = id_parts[id_parts.index("subscriptions") + 1]
+            # More efficient: find subscription ID directly without full split
+            id_str = services[0].id
+            sub_idx = id_str.find("/subscriptions/")
+            if sub_idx != -1:
+                start = sub_idx + len("/subscriptions/")
+                end = id_str.find("/", start)
+                subscription_id = id_str[start:end] if end != -1 else id_str[start:]
         
         if subscription_id:
             try:
@@ -926,20 +930,19 @@ async def _analyze_services_impl(request: AnalyzeRequest):
                     logger.info(f"Discovering pods from ALL Temenos namespaces (auto-detection)...")
                     aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=None)
                     
-                    # Log what we found
+                    # Log what we found (optimize namespace extraction - do once)
                     if aks_pods:
-                        all_pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
+                        # Extract namespaces once and reuse
+                        all_pod_namespaces = list(set(p.properties.get('namespace', 'unknown') for p in aks_pods))
                         logger.info(f"✓ Discovered pods from {len(all_pod_namespaces)} namespaces: {all_pod_namespaces}")
                         
                         # If namespaces were selected, log which ones match
-                        if selected_namespaces and len(selected_namespaces) > 0:
+                        if selected_namespaces:
                             matching_namespaces = [ns for ns in all_pod_namespaces if ns in selected_namespaces]
-                            logger.info(f"Selected namespaces {selected_namespaces} match {len(matching_namespaces)} discovered namespaces: {matching_namespaces}")
-                    
-                    if aks_pods:
+                            if matching_namespaces:
+                                logger.info(f"Selected namespaces match {len(matching_namespaces)} discovered namespaces: {matching_namespaces}")
+                        
                         logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods")
-                        pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
-                        logger.info(f"Pod namespaces found: {pod_namespaces}")
                         services.extend(aks_pods)
                         logger.info(f"Total services after adding pods: {len(services)}")
                     else:
@@ -948,11 +951,13 @@ async def _analyze_services_impl(request: AnalyzeRequest):
                 logger.error(f"Failed to discover AKS pods: {e}", exc_info=True)
                 # Continue with analysis even if AKS discovery fails
         
-        # Log what we're analyzing
-        pod_count = sum(1 for s in services if "managedclusters/pods" in s.type.lower())
+        # Log what we're analyzing (optimize: cache type checks)
+        pod_type_str = "managedclusters/pods"
+        pod_count = sum(1 for s in services if pod_type_str in s.type.lower())
         logger.info(f"Analyzing {len(services)} services ({pod_count} AKS pods, {len(services) - pod_count} Azure resources)")
         if pod_count > 0:
-            pod_namespaces = list(set([s.properties.get("namespace", "unknown") for s in services if "managedclusters/pods" in s.type.lower()]))
+            # Extract namespaces efficiently
+            pod_namespaces = list(set(s.properties.get("namespace", "unknown") for s in services if pod_type_str in s.type.lower()))
             logger.info(f"Pod namespaces: {pod_namespaces}")
         
         # Initialize Temenos service
@@ -990,70 +995,54 @@ def _deduplicate_components(results: List[TemenosAnalysisResult]) -> List[Temeno
     """
     Deduplicate components by grouping services with the same normalized component name.
     For AKS pods, group by namespace/component rather than individual pod names.
+    Optimized for performance.
     """
     component_map: Dict[str, TemenosAnalysisResult] = {}
     unidentified: List[TemenosAnalysisResult] = []
+    
+    # Pre-compile infrastructure type checks for performance
+    pod_type_str = "managedclusters/pods"
+    infrastructure_types = (
+        "microsoft.storage", "microsoft.keyvault", "microsoft.network",
+        "microsoft.insights", "microsoft.operationalinsights", 
+        "microsoft.compute/virtualmachines", "microsoft.compute/virtualmachinescalesets"
+    )
     
     for result in results:
         if not result.component_info:
             unidentified.append(result)
             continue
         
-        # Use normalized component name for grouping (not the individual service/pod name)
-        # This groups all pods from the same namespace/component together
+        service_type_lower = result.service.type.lower()
         normalized_name = result.component_info.component_name
         
-        # For AKS pods, group by namespace ONLY - all pods in same namespace = one component
-        # This way: eventstore namespace = 1 component, adapterservice = 1 component, etc.
-        if "managedclusters/pods" in result.service.type.lower():
+        # For AKS pods, group by namespace ONLY
+        if pod_type_str in service_type_lower:
             namespace = result.service.properties.get("namespace", "")
-            if namespace:
-                # Use namespace as the PRIMARY grouping key
-                # All pods from the same namespace should be grouped as ONE component
-                # This ensures: adapterservice (3 pods) = 1 component, eventstore (3 pods) = 1 component
-                grouping_key = namespace.lower()  # Use lowercase for consistency
-            else:
-                # Fallback if namespace not found (shouldn't happen)
-                grouping_key = normalized_name
+            grouping_key = namespace.lower() if namespace else normalized_name
         else:
-            # For non-pod resources, use normalized name
-            # But exclude infrastructure types
-            if any(infra_type in result.service.type.lower() for infra_type in [
-                "microsoft.storage", "microsoft.keyvault", "microsoft.network",
-                "microsoft.insights", "microsoft.operationalinsights"
-            ]):
-                # Skip infrastructure resources - they shouldn't be Temenos components
+            # For non-pod resources, check infrastructure types efficiently
+            if any(infra_type in service_type_lower for infra_type in infrastructure_types):
                 logger.debug(f"Skipping infrastructure resource: {result.service.name} ({result.service.type})")
                 unidentified.append(result)
                 continue
             grouping_key = normalized_name
         
         existing = component_map.get(grouping_key)
-        
         if not existing:
             component_map[grouping_key] = result
         else:
             # Merge services - add related services list
-            # Keep the first result but note that there are multiple instances
-            if result.service.name not in existing.component_info.related_services:
-                existing.component_info.related_services.append(result.service.name)
+            service_name = result.service.name
+            if service_name not in existing.component_info.related_services:
+                existing.component_info.related_services.append(service_name)
     
-    # Filter out infrastructure services from unidentified
-    # Infrastructure services are not meaningful to show as "Other Azure Services"
-    infrastructure_types = [
-        "microsoft.storage", "microsoft.keyvault", "microsoft.network",
-        "microsoft.insights", "microsoft.operationalinsights", "microsoft.compute/virtualmachines",
-        "microsoft.compute/virtualmachinescalesets"
-    ]
-    
+    # Filter out infrastructure services from unidentified (optimized)
     filtered_unidentified = []
     for result in unidentified:
         resource_type = result.service.type.lower()
-        # Skip infrastructure resources
-        if any(infra_type in resource_type for infra_type in infrastructure_types):
-            logger.debug(f"Filtering out infrastructure resource: {result.service.name} ({result.service.type})")
-            continue
-        filtered_unidentified.append(result)
+        if not any(infra_type in resource_type for infra_type in infrastructure_types):
+            filtered_unidentified.append(result)
     
     # Return identified components first, then filtered unidentified
     identified = list(component_map.values())
@@ -1077,6 +1066,79 @@ async def temenos_health():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class RefactorDocumentationRequest(BaseModel):
+    """Request model for strict documentation refactoring."""
+    component_name: str = Field(..., description="Name of the Temenos component/microservice")
+    force_refresh: Optional[bool] = Field(False, description="Force refresh RAG queries even if cached")
+
+
+@router.post("/temenos/refactor-documentation")
+async def refactor_documentation_strict(request: RefactorDocumentationRequest):
+    """
+    Query RAG API and refactor into strict client-facing architecture documentation.
+    
+    This endpoint follows a strict 12-section structure:
+    1. Purpose & Scope
+    2. Architectural Role
+    3. Design Patterns & Guarantees
+    4. Core Components
+    5. Data Model & Consistency
+    6. APIs & Access Patterns
+    7. Deployment Architecture
+    8. Scalability & Performance
+    9. Security Model
+    10. Observability & Operations
+    11. Functional Capabilities
+    12. Explicit Non-Goals / Out-of-Scope
+    
+    Args:
+        request: Refactoring request with component name and optional force_refresh flag
+        
+    Returns:
+        Refactored documentation following strict structure
+    """
+    try:
+        component_name = request.component_name
+        force_refresh = request.force_refresh or False
+        
+        if not component_name or not component_name.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="component_name is required"
+            )
+        
+        logger.info(f"🔄 Refactoring documentation for {component_name} (strict format, force_refresh={force_refresh})")
+        
+        temenos_service = TemenosService()
+        refactored_doc = await temenos_service.refactor_documentation_strict(
+            component_name=component_name.strip(),
+            force_refresh=force_refresh
+        )
+        
+        return {
+            "status": "success",
+            "data": {
+                "component_name": component_name,
+                "documentation": refactored_doc,
+                "format": "strict_12_section",
+                "refactored_at": datetime.utcnow().isoformat()
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error refactoring documentation: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": type(e).__name__
+            }
+        )
 
 
 @router.post("/temenos/query")
