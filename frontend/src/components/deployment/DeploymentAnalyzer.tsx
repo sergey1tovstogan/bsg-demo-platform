@@ -6,11 +6,10 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, BookOpen } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download } from 'lucide-react'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
-import { RAGBriefingViewer } from './RAGBriefingViewer'
-import { Briefing, validateBriefing } from '../../schemas/briefingSchema'
+import { StructuredRAGDisplay } from './StructuredRAGDisplay'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -30,6 +29,7 @@ interface AzureResource {
   tags?: Record<string, string>
   properties?: Record<string, any>
   portalUrl?: string
+  description?: string  // Azure service description from Microsoft
 }
 
 interface ComponentInfo {
@@ -1973,9 +1973,6 @@ function ComponentDetailPanel({
 
 }) {
   const { service, componentInfo } = result
-  const [briefing, setBriefing] = useState<Briefing | null>(null)
-  const [briefingLoading, setBriefingLoading] = useState(false)
-  const [showBriefing, setShowBriefing] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   // Debug logging
@@ -1989,71 +1986,6 @@ function ComponentDetailPanel({
     }
   }, [componentInfo])
 
-  const handleGenerateBriefing = async () => {
-    if (!componentInfo) return
-    
-    setBriefingLoading(true)
-    try {
-      // Determine product family (default to "Temenos Transact")
-      const productFamily = "Temenos Transact"
-      const componentName = componentInfo.componentName
-      
-      // Build aliases from component type and related services
-      const aliases: string[] = []
-      if (componentInfo.componentType) {
-        aliases.push(componentInfo.componentType)
-      }
-      if (componentInfo.relatedServices) {
-        aliases.push(...componentInfo.relatedServices.slice(0, 5))
-      }
-      
-      console.log('[Briefing] Generating briefing for:', { productFamily, componentName, aliases })
-      console.log('[Briefing] API base URL:', apiService.getBaseUrl())
-      
-      const response = await apiService.generateBriefing(productFamily, componentName, aliases)
-      
-      console.log('[Briefing] Response received:', response)
-      
-      if (response.data) {
-        // Validate briefing
-        const validation = validateBriefing(response.data)
-        if (validation.valid) {
-          setBriefing(response.data as Briefing)
-          setShowBriefing(true)
-        } else {
-          console.error('Briefing validation failed:', validation.errors)
-          alert('Briefing generated but validation failed. Please check console for details.')
-          setBriefing(response.data as Briefing)
-          setShowBriefing(true)
-        }
-      } else {
-        console.error('[Briefing] No data in response:', response)
-        alert('Briefing response did not contain data. Please check console for details.')
-      }
-    } catch (error: any) {
-      console.error('[Briefing] Failed to generate briefing:', error)
-      console.error('[Briefing] Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url,
-        baseURL: error.config?.baseURL
-      })
-      
-      let errorMsg = 'Failed to generate briefing'
-      if (error.response?.status === 404) {
-        errorMsg = 'Briefing endpoint not found (404). Please ensure the backend server is running and has been restarted to load the new endpoint.'
-      } else if (error.response?.data?.detail) {
-        errorMsg = `Failed to generate briefing: ${JSON.stringify(error.response.data.detail)}`
-      } else if (error.message) {
-        errorMsg = `Failed to generate briefing: ${error.message}`
-      }
-      
-      alert(errorMsg)
-    } finally {
-      setBriefingLoading(false)
-    }
-  }
 
   if (!componentInfo) {
     return (
@@ -2095,15 +2027,6 @@ function ComponentDetailPanel({
             <span>Open in Azure Portal</span>
           </a>
         )}
-        <button
-          onClick={handleGenerateBriefing}
-          disabled={briefingLoading}
-          className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Generate Perfect RAG Briefing"
-        >
-          <BookOpen className={`w-4 h-4 ${briefingLoading ? 'animate-pulse' : ''}`} />
-          <span>{briefingLoading ? 'Generating...' : 'Generate Briefing'}</span>
-        </button>
         <button
           onClick={async () => {
             if (refreshing) return // Prevent double-clicks
@@ -2255,24 +2178,31 @@ function ComponentDetailPanel({
         </button>
       </div>
 
-      {/* Briefing Viewer */}
-      {showBriefing && briefing && (
-        <div className="mb-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-          <RAGBriefingViewer briefing={briefing} onClose={() => setShowBriefing(false)} />
-        </div>
-      )}
 
-      {/* Horizontal Information Panels */}
+      {/* Structured Information Display */}
       <div className="space-y-6">
-        {/* Architectural Overview */}
-        <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
-              ? formatRAGText(componentInfo.architecturalOverview)
-              : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
-          </div>
-        </div>
+        {/* Use structured display if we have RAG content */}
+        {componentInfo.architecturalOverview && 
+         componentInfo.architecturalOverview.trim() && 
+         !componentInfo.architecturalOverview.includes("Information not available") ? (
+          <StructuredRAGDisplay
+            architecturalOverview={componentInfo.architecturalOverview}
+            functionalOverview={componentInfo.functionalOverview || ""}
+            capabilities={componentInfo.capabilities || []}
+          />
+        ) : (
+          <>
+            {/* Fallback to old display if no structured content */}
+            <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+              <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
+                  ? formatRAGText(componentInfo.architecturalOverview)
+                  : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Deployment Architecture */}
         {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') ||
