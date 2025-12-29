@@ -39,7 +39,8 @@ class TemenosComponentInfo:
         functional_overview: str,
         capabilities: List[str],
         related_services: List[str],
-        relationships: Optional[List[ComponentRelationship]] = None
+        relationships: Optional[List[ComponentRelationship]] = None,
+        data_source: Optional[str] = None  # "rag_fresh", "rag_cached", "fallback", "cache"
     ):
         self.component_name = component_name
         self.component_type = component_type
@@ -48,6 +49,7 @@ class TemenosComponentInfo:
         self.capabilities = capabilities
         self.related_services = related_services
         self.relationships = relationships or []
+        self.data_source = data_source or "cache"  # Default to cache
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -57,7 +59,8 @@ class TemenosComponentInfo:
             "functionalOverview": self.functional_overview,
             "capabilities": self.capabilities,
             "relatedServices": self.related_services,
-            "relationships": [r.to_dict() for r in self.relationships]
+            "relationships": [r.to_dict() for r in self.relationships],
+            "dataSource": self.data_source  # Include data source in response
         }
 
 
@@ -700,26 +703,35 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             logger.info(f"Identifying component for {service.name}: {component_name}")
             
             # Check persistent cache first (unless force_refresh is True)
-            if use_cache and not force_refresh:
+            # If force_refresh, we still check cache but will try to refresh from RAG first
+            cached_component_info = None
+            if use_cache:
                 try:
                     cache_service = await self._get_cache_service()
                     cached_data = await cache_service.get_component_info(component_name)
                     if cached_data:
-                        logger.info(f"Using cached component info (persistent) for {component_name}")
+                        logger.info(f"Found cached component info (persistent) for {component_name}")
                         # Reconstruct TemenosComponentInfo from cached data
-                        component_info = TemenosComponentInfo(
+                        cached_component_info = TemenosComponentInfo(
                             component_name=cached_data.get("component_name", component_name),
                             component_type=self._determine_component_type(service),
                             architectural_overview=cached_data.get("architectural_overview", ""),
                             functional_overview=cached_data.get("functional_overview", ""),
                             capabilities=cached_data.get("capabilities", []),
                             related_services=cached_data.get("related_services", []),
-                            relationships=[]  # Relationships not cached for now
+                            relationships=[],  # Relationships not cached for now
+                            data_source="rag_cached" if force_refresh else "cache"  # Mark as cached unless force_refresh
                         )
                         # Also update in-memory cache
                         cache_key = component_name.lower()
-                        self._component_cache[cache_key] = component_info
-                        return component_info
+                        self._component_cache[cache_key] = cached_component_info
+                        
+                        # If not force_refresh, return cached data immediately
+                        if not force_refresh:
+                            logger.info(f"Using cached component info (persistent) for {component_name}")
+                            return cached_component_info
+                        else:
+                            logger.info(f"Found cached data but force_refresh=True, will try to refresh from RAG")
                 except Exception as e:
                     logger.warning(f"Error reading from persistent cache: {e}, continuing...")
             
@@ -746,13 +758,31 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                         functional_overview=cached_info.functional_overview,
                         capabilities=cached_info.capabilities,
                         related_services=cached_info.related_services,
-                        relationships=cached_info.relationships
+                        relationships=cached_info.relationships,
+                        data_source=cached_info.data_source or "cache"  # Preserve data source from cache
                     )
             
             # Check if RAG adapter is available (has JWT token)
+            # If force_refresh is True, try to refresh the JWT token from settings
+            if force_refresh and self.rag_adapter:
+                try:
+                    from app.api.settings import get_rag_jwt_token_value
+                    # Try to refresh JWT token from settings (async)
+                    try:
+                        new_token = await get_rag_jwt_token_value()
+                        if new_token:
+                            self.rag_adapter.jwt_token = new_token
+                            logger.info(f"✓ Refreshed RAG JWT token for {component_name} (force_refresh=True)")
+                        else:
+                            logger.warning(f"Could not refresh JWT token - token is None")
+                    except Exception as e:
+                        logger.warning(f"Could not refresh JWT token: {e}, using existing token")
+                except Exception as e:
+                    logger.warning(f"Error refreshing JWT token: {e}")
+            
             has_rag = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
             
-            logger.info(f"RAG availability check for {component_name}:")
+            logger.info(f"RAG availability check for {component_name} (force_refresh={force_refresh}):")
             logger.info(f"  rag_adapter is None: {self.rag_adapter is None}")
             if self.rag_adapter:
                 logger.info(f"  has jwt_token attr: {hasattr(self.rag_adapter, 'jwt_token')}")
@@ -761,7 +791,23 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             logger.info(f"  Final has_rag: {has_rag}")
             
             if not has_rag:
-                # If RAG is not available, create component info from namespace/name only
+                # If RAG is not available, use cached data if available, otherwise use minimal fallback
+                if force_refresh:
+                    logger.warning(f"  ⚠ force_refresh=True but RAG is not available - cannot fetch fresh data")
+                    # If we have cached data, return it instead of minimal fallback
+                    if cached_component_info:
+                        logger.info(f"  Returning cached data since RAG is not available and force_refresh was requested")
+                        return cached_component_info
+                    # Also check in-memory cache as fallback
+                    if cache_key in self._component_cache:
+                        cached_info = self._component_cache[cache_key]
+                        # Only return cached if it's not minimal fallback
+                        is_minimal = cached_info.architectural_overview.startswith(f"{component_name} is a Temenos microservice component deployed") and len(cached_info.architectural_overview) < 500
+                        if not is_minimal:
+                            logger.info(f"  Returning in-memory cached data (non-minimal) since RAG is not available")
+                            return cached_info
+                
+                # If no cached data or cached data is minimal, create minimal fallback
                 logger.warning(f"✗ RAG not available for {component_name}, using minimal fallback description")
                 component_info = TemenosComponentInfo(
                     component_name=component_name,
@@ -770,11 +816,12 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     functional_overview=f"{component_name} provides core banking functionality as part of the Temenos Transact platform.",
                     capabilities=[f"Core {component_name} functionality"],
                     related_services=[],
-                    relationships=[]
+                    relationships=[],
+                    data_source="fallback"
                 )
                 logger.info(f"Successfully identified component (without RAG): {component_name} for {service.name}")
-                # Cache even non-RAG responses
-                if use_cache:
+                # Don't cache minimal fallback when force_refresh is True
+                if use_cache and not force_refresh:
                     self._component_cache[cache_key] = component_info
                 return component_info
             
@@ -789,6 +836,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             
             # Try to get cached architectural response
             architectural_response = None
+            rag_fresh_arch = False
             if use_cache and not force_refresh:
                 cached_arch = await cache_service.get_rag_response(
                     component_name, "architectural", "ModularBanking, TechnologyOverview"
@@ -798,6 +846,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     architectural_response = cached_arch
             
             if not architectural_response:
+                rag_fresh_arch = True  # Mark that we're fetching fresh RAG data
                 logger.info(f"Querying RAG for {component_name} - Architectural query...")
                 logger.info(f"  Query: {architectural_query[:200]}...")
                 try:
@@ -831,6 +880,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             
             # Try to get cached functional response
             functional_response = None
+            rag_fresh_func = False
             if use_cache and not force_refresh:
                 cached_func = await cache_service.get_rag_response(
                     component_name, "functional", "ModularBanking, FuncTransactGeneric"
@@ -840,6 +890,7 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     functional_response = cached_func
             
             if not functional_response:
+                rag_fresh_func = True  # Mark that we're fetching fresh RAG data
                 logger.info(f"Querying RAG for {component_name} - Functional query...")
                 logger.info(f"  Query: {functional_query[:200]}...")
                 try:
@@ -931,6 +982,11 @@ Integration:
 - Supports event-driven architectures
 - Enables distributed system patterns"""
             
+            # Determine data source: if either architectural or functional was fresh, mark as rag_fresh
+            data_source = "rag_fresh" if (rag_fresh_arch or rag_fresh_func) else "rag_cached"
+            if rag_fresh_arch or rag_fresh_func:
+                logger.info(f"✓ Successfully fetched fresh RAG data for {component_name} (arch: {rag_fresh_arch}, func: {rag_fresh_func})")
+            
             component_info = TemenosComponentInfo(
                 component_name=component_name,
                 component_type=self._determine_component_type(service),
@@ -938,7 +994,8 @@ Integration:
                 functional_overview=func_formatted,
                 capabilities=self._extract_capabilities(functional_text) if functional_text != "Information not available" else [f"Core {component_name} functionality"],
                 related_services=[],
-                relationships=[]
+                relationships=[],
+                data_source=data_source
             )
             
             # Cache the component info

@@ -6,9 +6,11 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, BookOpen } from 'lucide-react'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
+import { RAGBriefingViewer } from './RAGBriefingViewer'
+import { Briefing, validateBriefing } from '../../schemas/briefingSchema'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -37,6 +39,7 @@ interface ComponentInfo {
   functionalOverview: string
   capabilities: string[]
   relatedServices: string[]
+  dataSource?: string  // "rag_fresh", "rag_cached", "fallback", "cache"
   relationships?: Array<{
     targetComponent: string
     relationshipType: string
@@ -53,6 +56,12 @@ interface AnalysisResult {
 export function DeploymentAnalyzer() {
   const [currentStep, setCurrentStep] = useState<Step>('subscription')
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
+
+  // Function to mask subscription ID for display
+  const maskSubscriptionId = (id: string): string => {
+    if (!id || id.length < 12) return id
+    return `${id.substring(0, 8)}...${id.substring(id.length - 4)}`
+  }
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
   const [services, setServices] = useState<AzureResource[]>([])
   const [clusterNamespaces, setClusterNamespaces] = useState<Array<{ 
@@ -642,6 +651,7 @@ export function DeploymentAnalyzer() {
           cached={resourceGroupsCached}
           error={error}
           analysisProgress={analysisProgress}
+          subscriptionId={subscriptionId}
         />
       )}
 
@@ -664,6 +674,9 @@ export function DeploymentAnalyzer() {
           error={error}
           onBack={handleBack}
           onRefresh={() => analyzeServices(services)}
+          onUpdateAnalysisResults={(updatedResults) => {
+            setAnalysisResults(updatedResults)
+          }}
           costs={costs}
           costsLoading={costsLoading}
           includeCosts={includeCostsInAnalysis}
@@ -708,6 +721,14 @@ function SubscriptionInput({
   }
 
   const [subscriptionId, setSubscriptionId] = useState(getInitialSubscriptionId())
+  const [isFocused, setIsFocused] = useState(false)
+  const [showMasked, setShowMasked] = useState(true)
+
+  // Function to mask subscription ID for display
+  const maskSubscriptionId = (id: string): string => {
+    if (!id || id.length < 12) return id
+    return `${id.substring(0, 8)}...${id.substring(id.length - 4)}`
+  }
 
   // Save to localStorage when subscription ID changes
   useEffect(() => {
@@ -722,6 +743,18 @@ function SubscriptionInput({
       // Save to localStorage before submitting
       localStorage.setItem('lastAzureSubscriptionId', subscriptionId.trim())
       onSubmit(subscriptionId.trim())
+    }
+  }
+
+  const handleFocus = () => {
+    setIsFocused(true)
+    setShowMasked(false)
+  }
+
+  const handleBlur = () => {
+    setIsFocused(false)
+    if (subscriptionId && subscriptionId.length > 0) {
+      setShowMasked(true)
     }
   }
 
@@ -771,14 +804,34 @@ function SubscriptionInput({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Azure Subscription ID
           </label>
-          <input
-            type="text"
-            value={subscriptionId}
-            onChange={(e) => setSubscriptionId(e.target.value)}
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
-            disabled={loading}
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={isFocused || !showMasked ? subscriptionId : maskSubscriptionId(subscriptionId)}
+              onChange={(e) => setSubscriptionId(e.target.value)}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-mono text-sm"
+              disabled={loading}
+            />
+            {!isFocused && subscriptionId && subscriptionId.length > 0 && showMasked && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFocused(true)
+                  setShowMasked(false)
+                  // Focus the input
+                  const input = document.querySelector('input[type="text"]') as HTMLInputElement
+                  input?.focus()
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs"
+                title="Click to reveal full subscription ID"
+              >
+                Show
+              </button>
+            )}
+          </div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             You can find your subscription ID in the Azure Portal under Subscriptions.
           </p>
@@ -814,7 +867,8 @@ function ResourceGroupSelector({
   loading,
   cached,
   error,
-  analysisProgress
+  analysisProgress,
+  subscriptionId
 }: {
 
   resourceGroups: AzureResourceGroup[]
@@ -825,6 +879,7 @@ function ResourceGroupSelector({
   cached: boolean
   error: string | null
   analysisProgress: { current: number; total: number; message: string } | null
+  subscriptionId: string
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -950,25 +1005,62 @@ function ResourceGroupSelector({
           return (
             <div
               key={rg.id}
-              onClick={() => toggleSelection(rg.name)}
-              className={`card cursor-pointer transition-all ${isSelected
+              className={`card transition-all ${isSelected
                 ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20'
                 : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700'
                 }`}
             >
               <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-3 flex-1">
+                <div 
+                  className="flex items-start space-x-3 flex-1 cursor-pointer"
+                  onClick={() => toggleSelection(rg.name)}
+                >
                   <FolderOpen className={`w-6 h-6 mt-1 ${isSelected ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`} />
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 dark:text-white">{rg.name}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{rg.location}</p>
                   </div>
                 </div>
-                {isSelected && (
-                  <div className="bg-purple-600 text-white rounded-full p-1">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                )}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      try {
+                        const exportData = await apiService.exportResourceGroups(subscriptionId, [rg.name])
+                        if (exportData.data && exportData.data.length > 0) {
+                          const exportItem = exportData.data[0]
+                          if (exportItem.status === 'success' && exportItem.template) {
+                            const blob = new Blob([JSON.stringify(exportItem.template, null, 2)], { type: 'application/json' })
+                            const url = URL.createObjectURL(blob)
+                            const a = document.createElement('a')
+                            a.href = url
+                            a.download = `arm-template-${rg.name}-${new Date().toISOString().split('T')[0]}.json`
+                            document.body.appendChild(a)
+                            a.click()
+                            document.body.removeChild(a)
+                            URL.revokeObjectURL(url)
+                          } else {
+                            alert(`Failed to export ${rg.name}: ${exportItem.error || 'Unknown error'}`)
+                          }
+                        }
+                      } catch (error: any) {
+                        console.error('Export failed:', error)
+                        const errorMsg = error.response?.data?.detail || error.message || 'Failed to export resource group'
+                        alert(`Export failed: ${errorMsg}`)
+                      }
+                    }}
+                    className="p-1.5 text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded transition-colors"
+                    title={`Export ${rg.name} as ARM template`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  {isSelected && (
+                    <div className="bg-purple-600 text-white rounded-full p-1">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )
@@ -1217,7 +1309,8 @@ function ServiceAnalysis({
   costsLoading,
   includeCosts,
   onOpenLogAnalyzer,
-  selectedResourceGroups
+  selectedResourceGroups,
+  onUpdateAnalysisResults
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
@@ -1238,11 +1331,19 @@ function ServiceAnalysis({
   includeCosts: boolean
   onOpenLogAnalyzer: (resourceGroup: string) => void
   selectedResourceGroups: string[]
+  onUpdateAnalysisResults?: (updatedResults: AnalysisResult[]) => void
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
 
-  const identifiedComponents = analysisResults.filter(r => r.componentInfo)
-  const unidentifiedServices = analysisResults.filter(r => !r.componentInfo && !r.error)
+  const [analysisResultsState, setAnalysisResultsState] = useState(analysisResults)
+  
+  // Update local state when prop changes
+  useEffect(() => {
+    setAnalysisResultsState(analysisResults)
+  }, [analysisResults])
+
+  const identifiedComponents = analysisResultsState.filter(r => r.componentInfo)
+  const unidentifiedServices = analysisResultsState.filter(r => !r.componentInfo && !r.error)
 
   // Auto-select first component if none selected
   useEffect(() => {
@@ -1252,6 +1353,19 @@ function ServiceAnalysis({
   }, [identifiedComponents, selectedComponent])
 
   const selectedResult = identifiedComponents.find(r => r.service.id === selectedComponent) || identifiedComponents[0]
+  
+  const handleComponentUpdate = (updatedResult: AnalysisResult) => {
+    // Update both local state and parent state
+    const updatedResults = analysisResultsState.map(r => 
+      r.service.id === updatedResult.service.id ? updatedResult : r
+    )
+    setAnalysisResultsState(updatedResults)
+    
+    // Update parent state by calling a callback if available
+    // Since we're in ServiceAnalysis component, we need to propagate up
+    // For now, update local state which will trigger re-render
+    // The parent's analysisResults prop will be updated on next analysis
+  }
 
   // Show error if present
   if (error) {
@@ -1320,24 +1434,129 @@ function ServiceAnalysis({
         </div>
         <div className="flex items-center space-x-3">
           {selectedResourceGroups.length > 0 && (
-            <div className="relative">
+            <>
               <button
-                onClick={() => {
-                  // Open log analyzer with first resource group, or show dropdown if multiple
-                  if (selectedResourceGroups.length === 1) {
-                    onOpenLogAnalyzer(selectedResourceGroups[0])
-                  } else {
-                    // For multiple RGs, open with the first one (user can change in modal)
-                    onOpenLogAnalyzer(selectedResourceGroups[0])
+                onClick={async () => {
+                  try {
+                    const exportData = await apiService.exportResourceGroups(subscriptionId, selectedResourceGroups)
+                    if (exportData.data && exportData.data.length > 0) {
+                      const successfulExports = exportData.data.filter(item => item.status === 'success' && item.template)
+                      const failedExports = exportData.data.filter(item => item.status === 'error')
+                      
+                      if (failedExports.length > 0) {
+                        const failedRGs = failedExports.map(item => item.resource_group).join(', ')
+                        console.warn(`Failed to export some resource groups: ${failedRGs}`)
+                      }
+                      
+                      if (successfulExports.length === 0) {
+                        alert('Failed to export resource groups. Please check permissions and try again.')
+                        return
+                      }
+                      
+                      // If single RG, export as-is; if multiple, combine resources
+                      if (successfulExports.length === 1) {
+                        // Single RG - export the template as-is
+                        const template = successfulExports[0].template
+                        const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' })
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `arm-template-${successfulExports[0].resource_group}-${new Date().toISOString().split('T')[0]}.json`
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                        URL.revokeObjectURL(url)
+                      } else {
+                        // Multiple RGs - combine resources from all templates
+                        const combinedResources: any[] = []
+                        const combinedParameters: Record<string, any> = {}
+                        const combinedVariables: Record<string, any> = {}
+                        
+                        successfulExports.forEach((item, index) => {
+                          const template = item.template
+                          if (template) {
+                            // Collect resources
+                            if (template.resources && Array.isArray(template.resources)) {
+                              template.resources.forEach((resource: any) => {
+                                // Ensure resource has proper name prefix to avoid conflicts
+                                combinedResources.push(resource)
+                              })
+                            }
+                            
+                            // Collect parameters (with prefix to avoid conflicts)
+                            if (template.parameters) {
+                              Object.keys(template.parameters).forEach(key => {
+                                const prefixedKey = `${item.resource_group}_${key}`
+                                combinedParameters[prefixedKey] = template.parameters[key]
+                              })
+                            }
+                            
+                            // Collect variables (with prefix to avoid conflicts)
+                            if (template.variables) {
+                              Object.keys(template.variables).forEach(key => {
+                                const prefixedKey = `${item.resource_group}_${key}`
+                                combinedVariables[prefixedKey] = template.variables[key]
+                              })
+                            }
+                          }
+                        })
+                        
+                        const exportContent = {
+                          $schema: "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                          contentVersion: "1.0.0.0",
+                          parameters: Object.keys(combinedParameters).length > 0 ? combinedParameters : undefined,
+                          variables: Object.keys(combinedVariables).length > 0 ? combinedVariables : undefined,
+                          resources: combinedResources
+                        }
+                        
+                        // Remove undefined fields
+                        if (!exportContent.parameters) delete exportContent.parameters
+                        if (!exportContent.variables) delete exportContent.variables
+                        
+                        const blob = new Blob([JSON.stringify(exportContent, null, 2)], { type: 'application/json' })
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `arm-template-${selectedResourceGroups.join('-')}-${new Date().toISOString().split('T')[0]}.json`
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                        URL.revokeObjectURL(url)
+                      }
+                    } else {
+                      alert('No data returned from export. Please try again.')
+                    }
+                  } catch (error: any) {
+                    console.error('Export failed:', error)
+                    const errorMsg = error.response?.data?.detail || error.message || 'Failed to export resource groups. Please try again.'
+                    alert(`Export failed: ${errorMsg}`)
                   }
                 }}
                 className="btn-secondary flex items-center space-x-2"
-                title="Analyze logs for Temenos components in this resource group"
+                title={`Export ${selectedResourceGroups.length} selected resource group${selectedResourceGroups.length !== 1 ? 's' : ''} as ARM template JSON`}
               >
-                <FileText className="w-4 h-4" />
-                <span>Log Analyzer</span>
+                <Download className="w-4 h-4" />
+                <span>Export ARM</span>
               </button>
-            </div>
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    // Open log analyzer with first resource group, or show dropdown if multiple
+                    if (selectedResourceGroups.length === 1) {
+                      onOpenLogAnalyzer(selectedResourceGroups[0])
+                    } else {
+                      // For multiple RGs, open with the first one (user can change in modal)
+                      onOpenLogAnalyzer(selectedResourceGroups[0])
+                    }
+                  }}
+                  className="btn-secondary flex items-center space-x-2"
+                  title="Analyze logs for Temenos components in this resource group"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Log Analyzer</span>
+                </button>
+              </div>
+            </>
           )}
           <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -1491,7 +1710,20 @@ function ServiceAnalysis({
               <span>Temenos Components</span>
             </h3>
             {selectedResult && (
-              <ComponentDetailPanel result={selectedResult} />
+              <ComponentDetailPanel 
+                result={selectedResult}
+                onComponentUpdate={(updatedResult) => {
+                  // Update local state immediately for instant UI feedback
+                  const updatedResults = analysisResultsState.map(r => 
+                    r.service.id === updatedResult.service.id ? updatedResult : r
+                  )
+                  setAnalysisResultsState(updatedResults)
+                  // Also update parent state if callback provided
+                  if (onUpdateAnalysisResults) {
+                    onUpdateAnalysisResults(updatedResults)
+                  }
+                }}
+              />
             )}
           </div>
 
@@ -1538,12 +1770,17 @@ function ServiceAnalysis({
       {/* Other Services */}
       {unidentifiedServices.length > 0 && (
         <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Other Azure Services</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Other Azure Services</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {unidentifiedServices.map((result, index) => (
               <div key={result.service.id || index} className="card bg-white dark:bg-slate-800">
                 <h4 className="font-semibold text-gray-900 dark:text-white">{result.service.name}</h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{result.service.type}</p>
+                {result.service.description && (
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+                    {result.service.description}
+                  </p>
+                )}
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{result.service.location}</p>
               </div>
             ))}
@@ -1558,8 +1795,36 @@ function ServiceAnalysis({
 function formatRAGText(text: string): JSX.Element | null {
   if (!text || !text.trim()) return null
 
+  // Clean up text: remove ugly markdown table separators and format tables better
+  let cleanedText = text
+    // Remove markdown table separator lines (like |-------------------|------------------|-----------------|)
+    .replace(/\|[\s\-|:]+\|/g, '')
+    // Remove empty table rows
+    .replace(/\|\s*\|\s*\|\s*\|/g, '')
+    // Convert markdown tables to cleaner format
+    .replace(/\|([^|]+)\|([^|]+)\|([^|]+)\|/g, (match, col1, col2, col3) => {
+      // Convert table rows to bullet points with better formatting
+      const c1 = col1.trim()
+      const c2 = col2.trim()
+      const c3 = col3.trim()
+      if (c1 && c2 && c3 && !c1.match(/^[-:]+$/) && !c2.match(/^[-:]+$/)) {
+        return `• **${c1}**: ${c2} - ${c3}`
+      }
+      return ''
+    })
+    // Remove redundant whitespace
+    .replace(/\n{3,}/g, '\n\n')
+    // Remove lines that are just separators
+    .split('\n')
+    .filter(line => {
+      const trimmed = line.trim()
+      // Skip lines that are just dashes, pipes, or separators
+      return trimmed && !trimmed.match(/^[-=|:]+$/) && !trimmed.match(/^[\s|]+$/)
+    })
+    .join('\n')
+
   // Split by lines and process
-  const lines = text.split('\n').filter(line => line.trim())
+  const lines = cleanedText.split('\n')
   const elements: React.ReactNode[] = []
   let currentParagraph: string[] = []
   let listItems: string[] = []
@@ -1568,7 +1833,7 @@ function formatRAGText(text: string): JSX.Element | null {
   const flushParagraph = () => {
     if (currentParagraph.length > 0) {
       const paragraphText = currentParagraph.join(' ').trim()
-      if (paragraphText) {
+      if (paragraphText && paragraphText.length > 0) {
         elements.push(
           <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
             {formatInlineText(paragraphText)}
@@ -1609,11 +1874,13 @@ function formatRAGText(text: string): JSX.Element | null {
       flushParagraph()
       flushList()
       const headingText = trimmed.replace(/^(\*\*|##)\s*/, '').replace(/\*\*$/, '').replace(/:$/, '').trim()
-      elements.push(
-        <h6 key={key++} className="font-bold text-gray-900 dark:text-white text-base mt-4 mb-2 first:mt-0">
-          {formatInlineText(headingText)}
-        </h6>
-      )
+      if (headingText) {
+        elements.push(
+          <h6 key={key++} className="font-bold text-gray-900 dark:text-white text-base mt-4 mb-2 first:mt-0">
+            {formatInlineText(headingText)}
+          </h6>
+        )
+      }
       continue
     }
 
@@ -1632,11 +1899,13 @@ function formatRAGText(text: string): JSX.Element | null {
       flushParagraph()
       flushList()
       const headingText = trimmed.replace(/^\*\*/, '').replace(/\*\*:$/, '').trim()
-      elements.push(
-        <h6 key={key++} className="font-semibold text-gray-900 dark:text-white text-sm mt-3 mb-2">
-          {formatInlineText(headingText)}
-        </h6>
-      )
+      if (headingText) {
+        elements.push(
+          <h6 key={key++} className="font-semibold text-gray-900 dark:text-white text-sm mt-3 mb-2">
+            {formatInlineText(headingText)}
+          </h6>
+        )
+      }
       continue
     }
 
@@ -1689,10 +1958,10 @@ function formatInlineText(text: string): JSX.Element | string | null {
 // Component Detail Panel - Horizontal layout with all information visible
 function ComponentDetailPanel({
   result,
-
-
+  onComponentUpdate
 }: {
   result: AnalysisResult
+  onComponentUpdate?: (updatedResult: AnalysisResult) => void
 
 
 
@@ -1704,6 +1973,10 @@ function ComponentDetailPanel({
 
 }) {
   const { service, componentInfo } = result
+  const [briefing, setBriefing] = useState<Briefing | null>(null)
+  const [briefingLoading, setBriefingLoading] = useState(false)
+  const [showBriefing, setShowBriefing] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   // Debug logging
   useEffect(() => {
@@ -1715,6 +1988,72 @@ function ComponentDetailPanel({
       console.log('Related Services:', componentInfo.relatedServices)
     }
   }, [componentInfo])
+
+  const handleGenerateBriefing = async () => {
+    if (!componentInfo) return
+    
+    setBriefingLoading(true)
+    try {
+      // Determine product family (default to "Temenos Transact")
+      const productFamily = "Temenos Transact"
+      const componentName = componentInfo.componentName
+      
+      // Build aliases from component type and related services
+      const aliases: string[] = []
+      if (componentInfo.componentType) {
+        aliases.push(componentInfo.componentType)
+      }
+      if (componentInfo.relatedServices) {
+        aliases.push(...componentInfo.relatedServices.slice(0, 5))
+      }
+      
+      console.log('[Briefing] Generating briefing for:', { productFamily, componentName, aliases })
+      console.log('[Briefing] API base URL:', apiService.getBaseUrl())
+      
+      const response = await apiService.generateBriefing(productFamily, componentName, aliases)
+      
+      console.log('[Briefing] Response received:', response)
+      
+      if (response.data) {
+        // Validate briefing
+        const validation = validateBriefing(response.data)
+        if (validation.valid) {
+          setBriefing(response.data as Briefing)
+          setShowBriefing(true)
+        } else {
+          console.error('Briefing validation failed:', validation.errors)
+          alert('Briefing generated but validation failed. Please check console for details.')
+          setBriefing(response.data as Briefing)
+          setShowBriefing(true)
+        }
+      } else {
+        console.error('[Briefing] No data in response:', response)
+        alert('Briefing response did not contain data. Please check console for details.')
+      }
+    } catch (error: any) {
+      console.error('[Briefing] Failed to generate briefing:', error)
+      console.error('[Briefing] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      })
+      
+      let errorMsg = 'Failed to generate briefing'
+      if (error.response?.status === 404) {
+        errorMsg = 'Briefing endpoint not found (404). Please ensure the backend server is running and has been restarted to load the new endpoint.'
+      } else if (error.response?.data?.detail) {
+        errorMsg = `Failed to generate briefing: ${JSON.stringify(error.response.data.detail)}`
+      } else if (error.message) {
+        errorMsg = `Failed to generate briefing: ${error.message}`
+      }
+      
+      alert(errorMsg)
+    } finally {
+      setBriefingLoading(false)
+    }
+  }
 
   if (!componentInfo) {
     return (
@@ -1744,7 +2083,7 @@ function ComponentDetailPanel({
       </div>
 
       {/* Action Buttons */}
-      <div className="mb-6 flex items-center space-x-3">
+      <div className="mb-6 flex items-center space-x-3 flex-wrap gap-2">
         {service.portalUrl && (
           <a
             href={service.portalUrl}
@@ -1757,31 +2096,171 @@ function ComponentDetailPanel({
           </a>
         )}
         <button
+          onClick={handleGenerateBriefing}
+          disabled={briefingLoading}
+          className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Generate Perfect RAG Briefing"
+        >
+          <BookOpen className={`w-4 h-4 ${briefingLoading ? 'animate-pulse' : ''}`} />
+          <span>{briefingLoading ? 'Generating...' : 'Generate Briefing'}</span>
+        </button>
+        <button
           onClick={async () => {
+            if (refreshing) return // Prevent double-clicks
+            setRefreshing(true)
             try {
+              console.log('[Refresh] Starting refresh for component:', componentInfo?.componentName)
+              console.log('[Refresh] Service:', service)
               const response = await apiService.analyzeAzureServices(
                 [service],
                 undefined,
                 undefined,
                 true // forceRefresh
               )
-              if (response.data?.data && Array.isArray(response.data.data) && response.data.data.length > 0 && response.data.data[0].componentInfo) {
-                // Update the component info
-                result.componentInfo = response.data.data[0].componentInfo
-                // Trigger re-render by updating parent state
-                window.location.reload() // Simple refresh for now
+              console.log('[Refresh] Response received:', response)
+              console.log('[Refresh] Response structure:', {
+                hasData: !!response.data,
+                dataType: typeof response.data,
+                isDataArray: Array.isArray(response.data),
+                hasDataData: !!response.data?.data,
+                isDataDataArray: Array.isArray(response.data?.data),
+                responseKeys: Object.keys(response || {}),
+                dataKeys: response.data ? Object.keys(response.data) : []
+              })
+              
+              // The API service returns response.data from axios
+              // Based on console logs, response is: {status: 'success', data: Array(1), ...}
+              // So response.data is the array of results
+              let resultsArray: any[] = []
+              
+              // First try: response.data (the array property)
+              if (response.data && Array.isArray(response.data)) {
+                resultsArray = response.data
+                console.log('[Refresh] Using response.data (direct array), length:', resultsArray.length)
+              } 
+              // Fallback: response.data.data (nested structure)
+              else if (response.data?.data && Array.isArray(response.data.data)) {
+                resultsArray = response.data.data
+                console.log('[Refresh] Using response.data.data (nested structure), length:', resultsArray.length)
               }
-            } catch (error) {
-              console.error('Failed to refresh component info:', error)
-              alert('Failed to refresh component information. Please try again.')
+              // Last resort: response itself is an array
+              else if (Array.isArray(response)) {
+                resultsArray = response
+                console.log('[Refresh] Using response (direct array), length:', resultsArray.length)
+              }
+              else {
+                console.error('[Refresh] Could not find results array. Response structure:', {
+                  response,
+                  responseData: response.data,
+                  responseDataType: typeof response.data,
+                  isArray: Array.isArray(response.data),
+                  responseKeys: Object.keys(response || {})
+                })
+                alert('Invalid response structure from refresh. Please check console for details.')
+                return
+              }
+              
+              console.log('[Refresh] Results array:', resultsArray)
+              
+              if (resultsArray.length > 0) {
+                const firstResult = resultsArray[0]
+                console.log('[Refresh] First result:', firstResult)
+                console.log('[Refresh] First result keys:', Object.keys(firstResult || {}))
+                
+                // Try both camelCase and snake_case for componentInfo
+                const updatedComponentInfo = firstResult?.componentInfo || firstResult?.component_info
+                
+                if (updatedComponentInfo) {
+                  console.log('[Refresh] Updated component info found:', updatedComponentInfo)
+                  
+                  // Check if fresh RAG data was fetched
+                  const dataSource = updatedComponentInfo.dataSource || updatedComponentInfo.data_source
+                  const isFreshRAG = dataSource === 'rag_fresh'
+                  
+                  if (isFreshRAG) {
+                    // Show success message for fresh RAG data
+                    console.log('[Refresh] ✓ Successfully fetched fresh RAG data from API')
+                    // Use a more visible notification
+                    const notification = document.createElement('div')
+                    notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-2'
+                    notification.innerHTML = `
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      <span class="font-medium">Successfully refreshed from RAG API</span>
+                    `
+                    document.body.appendChild(notification)
+                    setTimeout(() => {
+                      notification.style.transition = 'opacity 0.5s'
+                      notification.style.opacity = '0'
+                      setTimeout(() => notification.remove(), 500)
+                    }, 3000)
+                  } else if (dataSource === 'rag_cached' || dataSource === 'cache') {
+                    console.log('[Refresh] Using cached RAG data')
+                    const notification = document.createElement('div')
+                    notification.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-2'
+                    notification.innerHTML = `
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                      </svg>
+                      <span class="font-medium">Using cached data</span>
+                    `
+                    document.body.appendChild(notification)
+                    setTimeout(() => {
+                      notification.style.transition = 'opacity 0.5s'
+                      notification.style.opacity = '0'
+                      setTimeout(() => notification.remove(), 500)
+                    }, 2000)
+                  }
+                  
+                  // Create updated result with new component info
+                  const updatedResult: AnalysisResult = {
+                    ...result,
+                    componentInfo: updatedComponentInfo
+                  }
+                  // Update parent state via callback
+                  if (onComponentUpdate) {
+                    onComponentUpdate(updatedResult)
+                    console.log('[Refresh] Component updated via callback successfully')
+                  } else {
+                    console.warn('[Refresh] No callback provided, reloading page')
+                    window.location.reload()
+                  }
+                } else {
+                  console.warn('[Refresh] No component info in response. First result:', firstResult)
+                  alert('No component information returned from refresh. The service may not be a Temenos component.')
+                }
+              } else {
+                console.warn('[Refresh] Empty results array. Full response:', response)
+                alert('No results returned from refresh. Please check console for details.')
+              }
+            } catch (error: any) {
+              console.error('[Refresh] Failed to refresh component info:', error)
+              console.error('[Refresh] Error details:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status
+              })
+              const errorMsg = error.response?.data?.detail || error.message || 'Failed to refresh component information. Please try again.'
+              alert(`Failed to refresh: ${errorMsg}`)
+            } finally {
+              setRefreshing(false)
             }
           }}
+          disabled={refreshing}
           className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh Info</span>
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <span>{refreshing ? 'Refreshing...' : 'Refresh Info'}</span>
         </button>
       </div>
+
+      {/* Briefing Viewer */}
+      {showBriefing && briefing && (
+        <div className="mb-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+          <RAGBriefingViewer briefing={briefing} onClose={() => setShowBriefing(false)} />
+        </div>
+      )}
 
       {/* Horizontal Information Panels */}
       <div className="space-y-6">

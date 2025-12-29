@@ -820,6 +820,46 @@ class ApiService {
     })
     return response.data
   }
+
+  async updateRagJwtToken(token: string) {
+    const response = await this.client.post<ApiResponse<{ status: string; message: string }>>(
+      '/settings/rag/jwt-token',
+      { token }
+    )
+    return response.data
+  }
+
+  async getRagJwtToken() {
+    const response = await this.client.get<ApiResponse<{ token: string | null }>>(
+      '/settings/rag/jwt-token'
+    )
+    return response.data
+  }
+
+  async exportResourceGroups(subscriptionId: string, resourceGroupNames: string[]) {
+    const response = await this.client.post<ApiResponse<{
+      data: Array<{
+        resource_group: string
+        template: any
+        status: string
+        error?: string
+      }>
+      count: number
+    }>>('/deployment/azure/export', {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames
+    })
+    return response.data
+  }
+
+  async generateBriefing(productFamily: string, componentName: string, aliases: string[] = []) {
+    const response = await this.client.post<ApiResponse<any>>('/deployment/temenos/briefing', {
+      product_family: productFamily,
+      component_name: componentName,
+      aliases
+    })
+    return response.data
+  }
 }
 
 export const apiService = new ApiService()
