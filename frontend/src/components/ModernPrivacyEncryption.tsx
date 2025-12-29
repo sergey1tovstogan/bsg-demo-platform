@@ -9,14 +9,19 @@ import {
     Database,
     HardDrive,
     Network,
-    ArrowRight,
-    Info
+    Info,
+    Shield
 } from 'lucide-react';
 import { Exate } from './eXate';
 
 export const ModernPrivacyEncryption: React.FC = () => {
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-    const [showExate, setShowExate] = useState<boolean>(false);
+    const [activeTab, setActiveTab] = useState<'privacy' | 'eXate'>('privacy');
+
+    const tabs = [
+        { id: 'privacy' as const, label: 'Privacy & Encryption', icon: Lock },
+        { id: 'eXate' as const, label: 'eXate Solution Overview', icon: Shield }
+    ];
 
     const tooltips = {
         'transit': {
@@ -29,16 +34,73 @@ export const ModernPrivacyEncryption: React.FC = () => {
         }
     };
 
-    const handleExateClick = () => {
-        setShowExate(true);
-    };
-
     return (
-        <div className="w-full h-full bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800 p-8 pb-32">
-            {/* Background Grid Pattern */}
-            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
-                style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700">
+            {/* Header Tabs */}
+            <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 shadow-sm z-10">
+                <div className="flex space-x-4">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => {
+                                setActiveTooltip(null);
+                                setActiveTab(tab.id);
+                            }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${activeTab === tab.id
+                                    ? 'bg-cyan-600 text-white shadow-md transform scale-105'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
+                                }`}
+                        >
+                            <tab.icon className="w-4 h-4" />
+                            <span className="font-medium">{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto p-6">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="h-full"
+                    >
+                        {activeTab === 'privacy' && (
+                            <PrivacyEncryptionView activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} tooltips={tooltips} />
+                        )}
+                        {activeTab === 'eXate' && (
+                            <div className="h-full">
+                                <Exate />
+                            </div>
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+        </div>
+    );
+};
+
+interface PrivacyProps {
+    activeTooltip: string | null;
+    setActiveTooltip: (value: string | null) => void;
+    tooltips: {
+        transit: { title: string; description: string };
+        rest: { title: string; description: string };
+    };
+}
+
+function PrivacyEncryptionView({ activeTooltip, setActiveTooltip, tooltips }: PrivacyProps) {
+    return (
+        <div className="w-full h-full bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-y-auto shadow-inner border border-slate-200 dark:border-slate-700 dark:border-slate-800 p-8 pb-24">
+            {/* Background Grid Pattern */}
+            <div
+                className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
+                style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+            ></div>
 
             {/* Header */}
             <div className="relative z-10 mb-8 text-center">
@@ -131,17 +193,6 @@ export const ModernPrivacyEncryption: React.FC = () => {
                 </div>
             </div>
 
-            {/* eXate Button */}
-            <div className="absolute bottom-8 right-8 z-20">
-                <button
-                    onClick={handleExateClick}
-                    className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-red-500/30 transition-all duration-300 font-bold group"
-                >
-                    <span>eXate Solution</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </button>
-            </div>
-
             {/* Tooltip Popup */}
             <AnimatePresence>
                 {activeTooltip && tooltips[activeTooltip as keyof typeof tooltips] && (
@@ -169,32 +220,6 @@ export const ModernPrivacyEncryption: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* eXate modal */}
-            <AnimatePresence>
-                {showExate && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                        onClick={() => setShowExate(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                            className="w-full max-w-6xl h-[85vh]"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <Exate onClose={() => setShowExate(false)} />
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
-};
-
-
+}
