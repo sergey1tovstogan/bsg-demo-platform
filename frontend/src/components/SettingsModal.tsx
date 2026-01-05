@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Sun, Moon, Check, Eye, EyeOff, Save } from 'lucide-react'
 import type { ComponentId } from '../types'
-import { Network, Database, Cloud, Shield, Eye as EyeIcon, Palette } from 'lucide-react'
+import { Network, Database, Cloud, Shield, Palette } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { apiService } from '../services/api'
 

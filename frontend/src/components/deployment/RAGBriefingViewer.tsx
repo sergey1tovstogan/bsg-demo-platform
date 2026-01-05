@@ -5,10 +5,10 @@
  */
 
 import { useState } from 'react'
-import { 
-  FileText, Copy, Download, AlertTriangle, CheckCircle2, 
-  XCircle, BookOpen, Shield, Cpu, Network, Settings, 
-  BarChart3, Lock, AlertCircle
+import {
+  FileText, Copy, AlertTriangle, CheckCircle2,
+  XCircle, BookOpen, Shield, Cpu, Network, Settings,
+  BarChart3, AlertCircle
 } from 'lucide-react'
 import { Briefing, validateBriefing, checkCitationCoverage } from '../../schemas/briefingSchema'
 
@@ -151,7 +151,7 @@ export function RAGBriefingViewer({ briefing, onClose }: RAGBriefingViewerProps)
 }
 
 // Executive Summary Tab
-function ExecutiveSummaryTab({ briefing, renderCitationTags }: { briefing: Briefing; renderCitationTags: (citations: string[]) => JSX.Element | null }) {
+function ExecutiveSummaryTab({ briefing, renderCitationTags: _renderCitationTags }: { briefing: Briefing; renderCitationTags: (citations: string[]) => JSX.Element | null }) {
   const { executive_summary } = briefing
   const confidenceColors = {
     high: 'text-green-600 dark:text-green-400',
