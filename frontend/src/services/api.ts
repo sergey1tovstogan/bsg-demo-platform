@@ -763,6 +763,36 @@ class ApiService {
     return response.data
   }
 
+  // JWT Token Management APIs
+  async getUserJWTToken(userId?: string) {
+    const response = await this.client.get<ApiResponse<{
+      success: boolean
+      has_token: boolean
+      jwt_token: string
+      updated_at: string | null
+    }>>('/deployment/temenos/jwt-token', {
+      headers: {
+        'X-User-Id': userId || 'demo_user'
+      }
+    })
+    return response.data
+  }
+
+  async saveUserJWTToken(jwtToken: string, userId?: string) {
+    const response = await this.client.post<ApiResponse<{
+      success: boolean
+      message: string
+      updated: boolean
+    }>>('/deployment/temenos/jwt-token',
+    { jwt_token: jwtToken },
+    {
+      headers: {
+        'X-User-Id': userId || 'demo_user'
+      }
+    })
+    return response.data
+  }
+
   // Integration Proxy APIs
   async proxyRequest(targetUrl: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'GET', body?: any, userId?: string) {
     const config: any = {

@@ -46,6 +46,9 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
     email?: string
   } | null>(null)
   const [jwtLoading, setJwtLoading] = useState(true)
+  const [showRefreshTokenModal, setShowRefreshTokenModal] = useState(false)
+  const [newJwtToken, setNewJwtToken] = useState('')
+  const [isSavingToken, setIsSavingToken] = useState(false)
   const [kafkaPrompt, setKafkaPrompt] = useState('What are the Kafka capabilities in Temenos platform for event-driven architecture and messaging, including CloudEvents support?')
   const [publicCatalogPrompt, setPublicCatalogPrompt] = useState('What is the Temenos public API catalog and what are its key capabilities for banks and developers?')
   const [openStandardsPrompt, setOpenStandardsPrompt] = useState('Elaborate about API and related open standards such as Berlin Group, OpenAPI and PSD2')
@@ -525,7 +528,50 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
             {/* JWT Token Information - at the end with purple background */}
             <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-[#00A3E0]">
-              <h4 className="text-lg font-semibold text-[#003366] dark:text-slate-100 mb-3">RAG API JWT Token Status</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-lg font-semibold text-[#003366] dark:text-slate-100">RAG API JWT Token Status</h4>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={async () => {
+                      setJwtLoading(true)
+                      try {
+                        const response = await apiService.getJWTInfo()
+                        setJwtInfo(response.data)
+                      } catch (err) {
+                        console.error('Failed to refresh JWT info:', err)
+                      } finally {
+                        setJwtLoading(false)
+                      }
+                    }}
+                    disabled={jwtLoading}
+                    className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
+                  >
+                    {jwtLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M21 12a9 9 0 11-6.219-8.56" strokeLinecap="round" />
+                          <path d="M15 3v6h6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <span>Update</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowRefreshTokenModal(true)}
+                    className="px-6 py-3 bg-[#00A3E0] hover:bg-[#0088C0] text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>Refresh Token</span>
+                  </button>
+                </div>
+              </div>
               {jwtLoading ? (
                 <div className="flex items-center space-x-2 text-gray-600">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -534,12 +580,12 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               ) : jwtInfo ? (
                 <div className="space-y-1">
                   {jwtInfo.email && (
-                    <p className="text-xs text-gray-700">
+                    <p className="text-xs text-gray-700 dark:text-slate-300">
                       <span className="font-semibold">User:</span> {jwtInfo.email}
                     </p>
                   )}
                   {jwtInfo.expires_at && (
-                    <p className="text-xs text-gray-700">
+                    <p className="text-xs text-gray-700 dark:text-slate-300">
                       <span className="font-semibold">Expires:</span> {new Date(jwtInfo.expires_at).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
@@ -572,7 +618,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-gray-600">JWT token information not available</p>
+                <p className="text-xs text-gray-600 dark:text-slate-400">JWT token information not available</p>
               )}
             </div>
           </div>
@@ -684,6 +730,89 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <button onClick={approveOpenStandardsContent} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all font-medium flex items-center space-x-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   <span>Approve & Update Cache</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Refresh JWT Token Modal */}
+        {showRefreshTokenModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full">
+              {/* Modal Header */}
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900">Update RAG API JWT Token</h2>
+                <p className="text-sm text-gray-600 mt-1">Enter your new JWT token below</p>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6">
+                <label htmlFor="jwt-token-input" className="block text-sm font-medium text-gray-700 mb-2">
+                  JWT Token
+                </label>
+                <textarea
+                  id="jwt-token-input"
+                  value={newJwtToken}
+                  onChange={(e) => setNewJwtToken(e.target.value)}
+                  placeholder="Paste your JWT token here..."
+                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0066CC] focus:border-transparent resize-none font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  This token will be used for RAG API queries. Make sure it's valid and not expired.
+                </p>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowRefreshTokenModal(false)
+                    setNewJwtToken('')
+                  }}
+                  disabled={isSavingToken}
+                  className="px-6 py-3 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-semibold rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!newJwtToken.trim()) {
+                      alert('Please enter a JWT token')
+                      return
+                    }
+                    setIsSavingToken(true)
+                    try {
+                      await apiService.saveUserJWTToken(newJwtToken.trim())
+                      // Refresh JWT info after saving
+                      const response = await apiService.getJWTInfo()
+                      setJwtInfo(response.data)
+                      setShowRefreshTokenModal(false)
+                      setNewJwtToken('')
+                      alert('JWT token updated successfully!')
+                    } catch (err) {
+                      console.error('Failed to save JWT token:', err)
+                      alert('Failed to save JWT token. Please try again.')
+                    } finally {
+                      setIsSavingToken(false)
+                    }
+                  }}
+                  disabled={isSavingToken || !newJwtToken.trim()}
+                  className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
+                >
+                  {isSavingToken ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span>Save Token</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1497,36 +1626,47 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
           <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-[#00A3E0]">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-lg font-semibold text-[#003366] dark:text-slate-100">RAG API JWT Token Status</h4>
-              <button
-                onClick={async () => {
-                  setJwtLoading(true)
-                  try {
-                    const response = await apiService.getJWTInfo()
-                    setJwtInfo(response.data)
-                  } catch (err) {
-                    console.error('Failed to refresh JWT info:', err)
-                  } finally {
-                    setJwtLoading(false)
-                  }
-                }}
-                disabled={jwtLoading}
-                className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
-              >
-                {jwtLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Updating...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M21 12a9 9 0 11-6.219-8.56" strokeLinecap="round" />
-                      <path d="M15 3v6h6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <span>Update</span>
-                  </>
-                )}
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={async () => {
+                    setJwtLoading(true)
+                    try {
+                      const response = await apiService.getJWTInfo()
+                      setJwtInfo(response.data)
+                    } catch (err) {
+                      console.error('Failed to refresh JWT info:', err)
+                    } finally {
+                      setJwtLoading(false)
+                    }
+                  }}
+                  disabled={jwtLoading}
+                  className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
+                >
+                  {jwtLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M21 12a9 9 0 11-6.219-8.56" strokeLinecap="round" />
+                        <path d="M15 3v6h6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span>Update</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowRefreshTokenModal(true)}
+                  className="px-6 py-3 bg-[#00A3E0] hover:bg-[#0088C0] text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span>Refresh Token</span>
+                </button>
+              </div>
             </div>
             {jwtLoading ? (
               <div className="flex items-center space-x-2 text-gray-600">
@@ -1751,6 +1891,89 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         </div>
       )}
         </>
+      )}
+
+      {/* Refresh JWT Token Modal */}
+      {showRefreshTokenModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Update RAG API JWT Token</h2>
+              <p className="text-sm text-gray-600 mt-1">Enter your new JWT token below</p>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <label htmlFor="jwt-token-input" className="block text-sm font-medium text-gray-700 mb-2">
+                JWT Token
+              </label>
+              <textarea
+                id="jwt-token-input"
+                value={newJwtToken}
+                onChange={(e) => setNewJwtToken(e.target.value)}
+                placeholder="Paste your JWT token here..."
+                className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0066CC] focus:border-transparent resize-none font-mono text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                This token will be used for RAG API queries. Make sure it's valid and not expired.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRefreshTokenModal(false)
+                  setNewJwtToken('')
+                }}
+                disabled={isSavingToken}
+                className="px-6 py-3 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-semibold rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!newJwtToken.trim()) {
+                    alert('Please enter a JWT token')
+                    return
+                  }
+                  setIsSavingToken(true)
+                  try {
+                    await apiService.saveUserJWTToken(newJwtToken.trim())
+                    // Refresh JWT info after saving
+                    const response = await apiService.getJWTInfo()
+                    setJwtInfo(response.data)
+                    setShowRefreshTokenModal(false)
+                    setNewJwtToken('')
+                    alert('JWT token updated successfully!')
+                  } catch (err) {
+                    console.error('Failed to save JWT token:', err)
+                    alert('Failed to save JWT token. Please try again.')
+                  } finally {
+                    setIsSavingToken(false)
+                  }
+                }}
+                disabled={isSavingToken || !newJwtToken.trim()}
+                className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
+              >
+                {isSavingToken ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>Save Token</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* API Wizards Gallery Modal */}
