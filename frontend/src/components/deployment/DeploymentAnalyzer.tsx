@@ -9,7 +9,6 @@ import { useState, useEffect } from 'react'
 import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download } from 'lucide-react'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
-import { StructuredRAGDisplay } from './StructuredRAGDisplay'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -2179,30 +2178,16 @@ function ComponentDetailPanel({
       </div>
 
 
-      {/* Structured Information Display */}
+      {/* Architecture Overview */}
       <div className="space-y-6">
-        {/* Use structured display if we have RAG content */}
-        {componentInfo.architecturalOverview && 
-         componentInfo.architecturalOverview.trim() && 
-         !componentInfo.architecturalOverview.includes("Information not available") ? (
-          <StructuredRAGDisplay
-            architecturalOverview={componentInfo.architecturalOverview}
-            functionalOverview={componentInfo.functionalOverview || ""}
-            capabilities={componentInfo.capabilities || []}
-          />
-        ) : (
-          <>
-            {/* Fallback to old display if no structured content */}
-            <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-              <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
-                  ? formatRAGText(componentInfo.architecturalOverview)
-                  : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
-              </div>
-            </div>
-          </>
-        )}
+        <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none dark:prose-invert">
+            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
+              ? formatRAGText(componentInfo.architecturalOverview)
+              : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
+          </div>
+        </div>
 
         {/* Deployment Architecture */}
         {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') ||
