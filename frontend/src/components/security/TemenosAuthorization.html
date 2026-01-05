@@ -186,35 +186,60 @@
         
         /* Tooltip Styles */
         .tooltip {
-            position: absolute;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
             background: white;
-            border: 2px solid #ff0000;
-            border-radius: 8px;
-            padding: 12px 16px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 10000;
+            border-top: 2px solid #ff0000;
+            border-radius: 0;
+            padding: 15px;
+            font-size: 16px;
+            line-height: 1.5;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+            z-index: 2000;
             display: none;
-            max-width: 500px;
-            width: auto;
-            min-width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            text-align: left;
         }
         
         .tooltip.show {
-            display: block;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
         
         .tooltip-title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: #000;
+            display: none;
         }
         
         .tooltip-description {
             color: #333;
             font-size: 16px;
-            line-height: 1.5;
+            line-height: 1;
             white-space: pre-line;
+            text-align: left;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .tooltip-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #283054;
+            z-index: 2001;
+        }
+        
+        .tooltip-close:hover {
+            color: #ff0000;
         }
         
         .clickable {
@@ -400,6 +425,7 @@
     
     <!-- Tooltip Element -->
     <div id="tooltip" class="tooltip">
+        <button class="tooltip-close" id="tooltip-close">&times;</button>
         <div class="tooltip-title" id="tooltip-title"></div>
         <div class="tooltip-description" id="tooltip-description"></div>
     </div>
@@ -430,60 +456,39 @@
         const tooltip = document.getElementById('tooltip');
         const tooltipTitle = document.getElementById('tooltip-title');
         const tooltipDescription = document.getElementById('tooltip-description');
+        const tooltipClose = document.getElementById('tooltip-close');
         
         function showTooltip(config, element) {
-            tooltipTitle.textContent = config.title;
-            tooltipDescription.textContent = config.description;
-            tooltip.classList.add('show');
+            if (!tooltip || !tooltipTitle || !tooltipDescription) {
+                console.error('Tooltip elements not found');
+                return;
+            }
             
-            setTimeout(function() {
-                const rect = element.getBoundingClientRect();
-                const containerRect = document.querySelector('.container').getBoundingClientRect();
-                const tooltipRect = tooltip.getBoundingClientRect();
-                
-                let left, top;
-                
-                switch(config.position) {
-                    case 'right':
-                        left = rect.right + 15;
-                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                        break;
-                    case 'left':
-                        left = rect.left - tooltipRect.width - 15;
-                        top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-                        break;
-                    case 'top':
-                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                        top = rect.top - tooltipRect.height - 15;
-                        break;
-                    case 'bottom':
-                    default:
-                        left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-                        top = rect.bottom + 15;
-                        break;
-                }
-                
-                // Ensure tooltip stays within container bounds
-                if (left < containerRect.left) {
-                    left = containerRect.left + 10;
-                }
-                if (left + tooltipRect.width > containerRect.right) {
-                    left = containerRect.right - tooltipRect.width - 10;
-                }
-                if (top < containerRect.top) {
-                    top = containerRect.top + 10;
-                }
-                if (top + tooltipRect.height > containerRect.bottom - 80) {
-                    top = containerRect.bottom - tooltipRect.height - 90;
-                }
-                
-                tooltip.style.left = (left - containerRect.left) + 'px';
-                tooltip.style.top = (top - containerRect.top) + 'px';
-            }, 10);
+            tooltipTitle.textContent = config.title;
+            tooltipDescription.textContent = config.description.replace(/\\\\n/g, '\\n');
+            
+            // Position tooltip at bottom with full width
+            tooltip.style.position = 'fixed';
+            tooltip.style.bottom = '0';
+            tooltip.style.left = '0';
+            tooltip.style.width = '100%';
+            tooltip.style.right = '0';
+            tooltip.style.top = 'auto';
+            
+            // Show tooltip
+            tooltip.style.display = 'block';
+            tooltip.style.visibility = 'visible';
+            tooltip.style.opacity = '1';
+            tooltip.classList.add('show');
         }
         
         function hideTooltip() {
-            tooltip.classList.remove('show');
+            if (tooltip) {
+                tooltip.classList.remove('show');
+                tooltip.style.display = 'none';
+                tooltip.style.visibility = 'hidden';
+                tooltip.style.opacity = '0';
+            }
         }
         
         // Attach click handlers to all elements with tooltips
@@ -492,7 +497,8 @@
             if (element) {
                 element.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    if (tooltip.classList.contains('show') && tooltipTitle.textContent === config.title) {
+                    const isSameTooltip = tooltip && tooltip.classList.contains('show') && tooltipTitle && tooltipTitle.textContent === config.title;
+                    if (isSameTooltip) {
                         hideTooltip();
                     } else {
                         showTooltip(config, element);
@@ -501,9 +507,23 @@
             }
         });
         
+        // Close tooltip handler
+        if (tooltipClose) {
+            tooltipClose.addEventListener('click', function(e) {
+                e.stopPropagation();
+                hideTooltip();
+            });
+        }
+        
         // Hide tooltip when clicking outside
         document.addEventListener('click', function(e) {
-            if (!tooltip.contains(e.target) && !e.target.classList.contains('clickable') && !e.target.closest('.clickable')) {
+            const target = e.target;
+            const isTooltipElement = tooltips.some(function(config) {
+                const element = document.getElementById(config.id);
+                return element && element.contains(target);
+            });
+            const isTooltipBox = tooltip && tooltip.contains(target);
+            if (!isTooltipElement && !isTooltipBox) {
                 hideTooltip();
             }
         });

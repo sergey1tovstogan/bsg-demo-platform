@@ -12,8 +12,14 @@ from app.core.logging import get_logger
 from app.services.azure_service import AzureService, AzureResourceGroup, AzureResource
 from app.services.temenos_service import TemenosService, TemenosAnalysisResult
 from app.services.aks_service import AKSService
+from app.services.cost_service import CostService
+from app.services.azure_service_info import get_azure_service_description, get_azure_service_descriptions_batch
+from app.services.rag_briefing_service import RAGBriefingService
+from app.core.database import get_database
 import asyncio
 import time
+import requests
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/deployment", tags=["deployment"])
 logger = get_logger(__name__)
@@ -45,6 +51,47 @@ class NamespacesRequest(BaseModel):
     """Request model for getting AKS namespaces."""
     subscription_id: str = Field(..., description="Azure subscription ID")
     resource_group_names: List[str] = Field(..., description="List of resource group names")
+    refresh: bool = Field(False, description="Force refresh, bypass cache")
+
+
+class ExportRequest(BaseModel):
+    """Request model for exporting resource groups as ARM templates."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group_names: List[str] = Field(..., description="List of resource group names to export")
+
+
+class BriefingRequest(BaseModel):
+    """Request model for generating RAG briefing."""
+    product_family: str = Field(..., description="Product family (e.g., 'Temenos Transact')")
+    component_name: str = Field(..., description="Component name (e.g., 'Event Store Microservice')")
+    aliases: Optional[List[str]] = Field(default_factory=list, description="List of alternate names for the component")
+
+
+class ClusterDiagnosticsRequest(BaseModel):
+    """Request model for AKS cluster diagnostics."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group: str = Field(..., description="Resource group name")
+    cluster_name: str = Field(..., description="AKS cluster name")
+
+
+class CostRequest(BaseModel):
+    """Request model for getting costs."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group_names: List[str] = Field(..., description="List of resource group names")
+    start_date: Optional[str] = Field(None, description="Start date in ISO format (YYYY-MM-DD). Defaults to first day of current month")
+    end_date: Optional[str] = Field(None, description="End date in ISO format (YYYY-MM-DD). Defaults to current date")
+
+
+class CloudLogsAnalyzeRequest(BaseModel):
+    """Request model for cloud logs analysis."""
+    platform: str = Field(..., description="Platform: 'aks' or 'aca'")
+    component_name: str = Field(..., description="Temenos component name (e.g. transact-app, transact-web, irf-provider)")
+    environment: str = Field(..., description="Environment description (e.g. zkb_poc, dev, test)")
+    log_snippet: str = Field(..., description="Log snippet to analyze (max a few hundred lines)")
+    symptoms: Optional[str] = Field(None, description="Optional symptoms (e.g. COB hangs, API 500s, CrashLoopBackOff)")
+    recent_changes: Optional[str] = Field(None, description="Optional recent changes (deploy, Helm values, DB password, scaling, etc.)")
+    resource_group: Optional[str] = Field(None, description="Azure resource group name")
+    subscription_id: Optional[str] = Field(None, description="Azure subscription ID")
 
 
 def get_azure_service(subscription_id: str) -> AzureService:
@@ -72,7 +119,32 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
             raise HTTPException(status_code=400, detail="Subscription ID is required")
         
         # Create or retrieve Azure service instance
-        azure_service = get_azure_service(subscription_id)
+        try:
+            azure_service = get_azure_service(subscription_id)
+        except Exception as init_error:
+            logger.error(f"Failed to initialize Azure service: {init_error}", exc_info=True)
+            error_msg = str(init_error)
+            error_type = type(init_error).__name__
+            
+            # Provide specific guidance for initialization errors
+            recovery_steps = [
+                "Check if Azure CLI is installed: Run `az --version`",
+                "Login to Azure: Run `az login` or `az login --use-device-code`",
+                "Verify your login: Run `az account show`",
+                f"Set the correct subscription: Run `az account set --subscription {subscription_id}`",
+                "For Azure App Service: Ensure Managed Identity is enabled or Service Principal credentials are configured",
+                "After configuration, restart the backend server"
+            ]
+            
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "status": "error",
+                    "error": f"Failed to initialize Azure service: {error_msg}",
+                    "errorType": error_type,
+                    "recoverySteps": recovery_steps
+                }
+            )
         
         # Test the connection
         await azure_service.test_connection()
@@ -172,12 +244,13 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
 
 
 @router.get("/azure/resource-groups")
-async def get_resource_groups(subscriptionId: str):
+async def get_resource_groups(subscriptionId: str, refresh: bool = False):
     """
     Get all resource groups for a subscription.
     
     Args:
         subscriptionId: Azure subscription ID
+        refresh: If True, bypass cache and fetch fresh data
         
     Returns:
         List of resource groups
@@ -186,13 +259,35 @@ async def get_resource_groups(subscriptionId: str):
         if not subscriptionId:
             raise HTTPException(status_code=400, detail="Subscription ID is required")
         
+        # Check cache first unless refresh is requested
+        from app.services.cache_service import get_cache_service
+        cache_service = await get_cache_service()
+        cached_resource_groups = None
+        if not refresh:
+            cached_resource_groups = await cache_service.get_azure_resource_groups(subscriptionId)
+            if cached_resource_groups:
+                logger.info(f"Using cached resource groups for subscription {subscriptionId}")
+                return {
+                    "status": "success",
+                    "data": cached_resource_groups,
+                    "count": len(cached_resource_groups),
+                    "cached": True
+                }
+        
+        # Fetch fresh data
         azure_service = get_azure_service(subscriptionId)
         resource_groups = await azure_service.get_resource_groups()
+        resource_groups_dict = [rg.to_dict() for rg in resource_groups]
+        
+        # Cache the results
+        await cache_service.set_azure_resource_groups(subscriptionId, resource_groups_dict)
+        logger.info(f"Cached {len(resource_groups_dict)} resource groups for subscription {subscriptionId}")
         
         return {
             "status": "success",
-            "data": [rg.to_dict() for rg in resource_groups],
-            "count": len(resource_groups)
+            "data": resource_groups_dict,
+            "count": len(resource_groups_dict),
+            "cached": False
         }
     except Exception as e:
         logger.error(f"Error getting resource groups: {e}")
@@ -271,34 +366,126 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 "message": "No AKS clusters found in selected resource groups"
             }
         
+        # Check cache for AKS namespaces first (unless refresh is requested)
+        from app.services.cache_service import get_cache_service
+        cache_service = await get_cache_service()
+        
+        if not request.refresh:
+            cached_namespaces = await cache_service.get_aks_namespaces(subscription_id, resource_group_names)
+            if cached_namespaces:
+                logger.info(f"Using cached AKS namespaces for {len(resource_group_names)} resource groups")
+                return {
+                    "status": "success",
+                    "data": cached_namespaces,
+                    "count": len(cached_namespaces)
+                }
+        else:
+            logger.info(f"Refresh requested, bypassing cache and clearing old cache for AKS namespaces")
+            # Clear cache for these resource groups to ensure fresh data
+            try:
+                # Generate the same cache key that would be used for this request
+                cache_key = cache_service._generate_cache_key(
+                    "aks_namespaces",
+                    subscription_id=subscription_id,
+                    resource_groups=",".join(sorted(resource_group_names))
+                )
+                deleted = await cache_service.delete(cache_key)
+                if deleted:
+                    logger.info(f"✓ Cleared cache for key: {cache_key}")
+                else:
+                    logger.info(f"No cache entry found for key: {cache_key} (will fetch fresh data)")
+            except Exception as e:
+                logger.warning(f"Failed to clear cache (non-fatal, will continue with fresh fetch): {e}")
+        
         # Get namespaces from each cluster
         logger.info(f"Initializing AKS service for subscription: {subscription_id}")
         aks_service = AKSService(subscription_id)
         cluster_namespaces = {}
         
         logger.info(f"Step 4: Processing {len(aks_clusters)} cluster(s) for namespace discovery...")
+        logger.info(f"Selected resource groups: {resource_group_names}")
+        logger.info(f"AKS clusters found: {[c.name for c in aks_clusters]}")
+        
         for idx, cluster in enumerate(aks_clusters, 1):
+            # CRITICAL: Only process clusters that are in the selected resource groups
+            if cluster.resource_group not in resource_group_names:
+                logger.warning(f"Skipping cluster {cluster.name} - not in selected resource groups. Cluster RG: {cluster.resource_group}, Selected RGs: {resource_group_names}")
+                continue
+                
             try:
                 logger.info("=" * 80)
                 logger.info(f"=== CLUSTER {idx}/{len(aks_clusters)}: {cluster.name} ===")
                 logger.info(f"Cluster type: {cluster.type}")
                 logger.info(f"Cluster ID: {cluster.id}")
                 logger.info(f"Resource Group: {cluster.resource_group}")
+                logger.info(f"Verifying cluster is in selected RGs: {resource_group_names}")
                 logger.info("Calling aks_service.list_cluster_namespaces()...")
                 logger.info("=" * 80)
-                namespaces = await aks_service.list_cluster_namespaces(cluster)
-                logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name}")
-                if namespaces:
-                    logger.info(f"Namespaces: {namespaces[:5]}...")  # Show first 5
-                else:
-                    logger.warning(f"⚠ No namespaces returned for cluster {cluster.name}")
-                logger.info(f"Retrieved {len(namespaces)} namespaces from cluster {cluster.name}")
-                logger.info(f"Namespaces list: {namespaces}")
+                
+                # Dynamically retrieve namespaces from the actual cluster
+                try:
+                    namespaces = await aks_service.list_cluster_namespaces(cluster)
+                    logger.info(f"✓ Got {len(namespaces)} namespaces from cluster {cluster.name} in RG {cluster.resource_group}")
+                    if namespaces:
+                        logger.info(f"Namespaces retrieved from cluster {cluster.name}: {namespaces}")
+                    else:
+                        # Empty list is valid - cluster may just have no application namespaces
+                        # Check backend logs to see if kubectl succeeded or failed
+                        logger.info(f"Cluster {cluster.name} has no non-system namespaces (this is valid - cluster may be empty or only have system namespaces)")
+                        logger.info("Check backend logs above to verify kubectl succeeded - if it did, the cluster simply has no application namespaces")
+                    
+                    # Always return the result, even if empty (empty is valid)
+                    cluster_namespaces[cluster.name] = {
+                        "cluster_name": cluster.name,
+                        "resource_group": cluster.resource_group,
+                        "namespaces": namespaces
+                    }
+                except Exception as ns_error:
+                    # Only treat exceptions as errors (kubectl actually failed)
+                    logger.error(f"⚠ CRITICAL: Failed to retrieve namespaces from cluster {cluster.name} in RG {cluster.resource_group}: {ns_error}")
+                    logger.error("This indicates one of the following issues:")
+                    logger.error("  1. kubectl command failed (check backend logs for kubectl errors)")
+                    logger.error("  2. Cluster credentials not configured or expired")
+                    logger.error("  3. Network/connectivity issues to the cluster")
+                    logger.error("  4. Insufficient permissions to list namespaces")
+                    
+                    # Build detailed error message with actionable steps
+                    error_details = {
+                        "message": "Failed to retrieve namespaces from cluster",
+                        "cluster": cluster.name,
+                        "resource_group": cluster.resource_group,
+                        "error": str(ns_error),
+                        "troubleshooting_steps": [
+                            "1. Check if you're logged in to Azure CLI: `az account show`",
+                            f"2. Refresh cluster credentials: `az aks get-credentials --resource-group {cluster.resource_group} --name {cluster.name} --overwrite-existing`",
+                            "3. Verify kubectl can connect: `kubectl cluster-info`",
+                            "4. Check backend logs for detailed kubectl error messages",
+                            "5. Ensure you have 'Azure Kubernetes Service Cluster User Role' on the cluster"
+                        ],
+                        "for_azure_app_service": [
+                            "1. Verify Managed Identity has 'Azure Kubernetes Service Cluster User Role' on the AKS cluster",
+                            "2. Check App Service logs for startup.sh execution",
+                            "3. Verify kubectl was installed by startup.sh",
+                            "4. Check if Kubernetes Python client library is available"
+                        ]
+                    }
+                    
+                    # Return error so frontend knows retrieval failed
+                    cluster_namespaces[cluster.name] = {
+                        "cluster_name": cluster.name,
+                        "resource_group": cluster.resource_group,
+                        "namespaces": [],
+                        "error": f"Failed to retrieve namespaces from cluster '{cluster.name}'. Check backend logs for kubectl errors. Ensure cluster credentials are configured (run: az aks get-credentials --resource-group {cluster.resource_group} --name {cluster.name} --overwrite-existing).",
+                        "error_details": error_details
+                    }
+                    continue
+                
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
                     "resource_group": cluster.resource_group,
                     "namespaces": namespaces
                 }
+                
                 if len(namespaces) == 0:
                     logger.warning(f"No namespaces found for cluster {cluster.name}. This might indicate:")
                     logger.warning("  1. kubectl is not installed or not in PATH")
@@ -311,16 +498,78 @@ async def get_aks_namespaces(request: NamespacesRequest):
                     logger.warning("  Also check if Managed Identity has permissions to access AKS cluster")
             except Exception as e:
                 logger.error(f"Error getting namespaces from cluster {cluster.name}: {e}", exc_info=True)
+                import traceback
+                error_trace = traceback.format_exc()
+                logger.error(f"Full traceback: {error_trace}")
+                
+                # Build detailed error message
+                error_message = str(e)
+                if "kubectl" in error_message.lower() or "kubeconfig" in error_message.lower():
+                    error_message = f"kubectl/kubeconfig error: {error_message}"
+                elif "credential" in error_message.lower() or "authentication" in error_message.lower():
+                    error_message = f"Authentication error: {error_message}. Try refreshing credentials: az aks get-credentials --resource-group {cluster.resource_group} --name {cluster.name} --overwrite-existing"
+                
                 cluster_namespaces[cluster.name] = {
                     "cluster_name": cluster.name,
                     "resource_group": cluster.resource_group,
                     "namespaces": [],
-                    "error": f"Failed to retrieve namespaces: {str(e)}"
+                    "error": f"Failed to retrieve namespaces: {error_message}",
+                    "error_details": {
+                        "message": error_message,
+                        "cluster": cluster.name,
+                        "resource_group": cluster.resource_group,
+                        "troubleshooting_steps": [
+                            f"1. Refresh credentials: `az aks get-credentials --resource-group {cluster.resource_group} --name {cluster.name} --overwrite-existing`",
+                            "2. Verify Azure CLI login: `az account show`",
+                            "3. Check backend logs for full error details",
+                            "4. Test kubectl manually: `kubectl get namespaces`"
+                        ]
+                    }
                 }
+        
+        result_data = list(cluster_namespaces.values())
+        
+        # Check if we have any successful retrievals
+        # Empty namespaces list is valid (cluster just has no application namespaces)
+        # Only clusters with errors are considered failed
+        successful_clusters = [c for c in result_data if not c.get("error")]
+        failed_clusters = [c for c in result_data if c.get("error")]
+        
+        if failed_clusters:
+            logger.error(f"⚠ {len(failed_clusters)} cluster(s) failed to retrieve namespaces:")
+            for fc in failed_clusters:
+                logger.error(f"  - Cluster: {fc.get('cluster_name')}, RG: {fc.get('resource_group')}, Error: {fc.get('error', 'No namespaces found')}")
+        
+        # Cache all successful retrievals (including empty results - they're valid)
+        if successful_clusters:
+            await cache_service.set_aks_namespaces(
+                subscription_id,
+                resource_group_names,
+                successful_clusters  # Cache successful retrievals (including empty namespaces)
+            )
+            clusters_with_namespaces = [c for c in successful_clusters if c.get("namespaces") and len(c.get("namespaces", [])) > 0]
+            clusters_without_namespaces = [c for c in successful_clusters if not c.get("namespaces") or len(c.get("namespaces", [])) == 0]
+            logger.info(f"Cached AKS namespaces for {len(successful_clusters)} cluster(s)")
+            if clusters_with_namespaces:
+                logger.info(f"  - {len(clusters_with_namespaces)} cluster(s) with application namespaces")
+            if clusters_without_namespaces:
+                logger.info(f"  - {len(clusters_without_namespaces)} cluster(s) with no application namespaces (valid - only system namespaces)")
+        else:
+            logger.error(f"⚠ CRITICAL: All {len(result_data)} cluster(s) failed to retrieve namespaces! Not caching.")
+            logger.error(f"Check backend logs for kubectl errors.")
+        
+        # Return all results (including errors) so frontend can show appropriate messages
+        return {
+            "status": "success" if successful_clusters else "partial" if result_data else "error",
+            "data": result_data,
+            "count": len(result_data),
+            "successful_clusters": len(successful_clusters),
+            "failed_clusters": len(failed_clusters)
+        }
         
         return {
             "status": "success",
-            "data": list(cluster_namespaces.values()),
+            "data": result_data,
             "count": len(cluster_namespaces)
         }
     except Exception as e:
@@ -336,6 +585,147 @@ async def get_aks_namespaces(request: NamespacesRequest):
                 status_code=500,
                 detail=error_detail
             )
+
+
+@router.post("/aks/diagnostics")
+async def diagnose_aks_cluster(request: ClusterDiagnosticsRequest):
+    """
+    Diagnose AKS cluster connection and namespace discovery issues.
+    
+    This endpoint helps troubleshoot why namespace discovery might be failing.
+    
+    Args:
+        request: Cluster diagnostics request with subscription ID, resource group, and cluster name
+        
+    Returns:
+        Diagnostic information about the cluster connection
+    """
+    logger.info("=" * 80)
+    logger.info("=== AKS CLUSTER DIAGNOSTICS ===")
+    logger.info(f"Cluster: {request.cluster_name}")
+    logger.info(f"Resource Group: {request.resource_group}")
+    logger.info(f"Subscription: {request.subscription_id}")
+    logger.info("=" * 80)
+    
+    try:
+        # Initialize AKS service
+        aks_service = AKSService(request.subscription_id)
+        
+        # Test cluster connection
+        logger.info("Running connection test...")
+        connection_test = await aks_service.test_cluster_connection(
+            request.resource_group,
+            request.cluster_name
+        )
+        
+        # Try to get namespaces
+        logger.info("Attempting to list namespaces...")
+        from app.services.azure_service import AzureResource
+        cluster_resource = AzureResource(
+            id=f"/subscriptions/{request.subscription_id}/resourceGroups/{request.resource_group}/providers/Microsoft.ContainerService/managedClusters/{request.cluster_name}",
+            name=request.cluster_name,
+            resource_type="Microsoft.ContainerService/managedClusters",
+            location="",
+            resource_group=request.resource_group,
+            tags={},
+            properties={}
+        )
+        
+        namespaces = []
+        namespace_error = None
+        try:
+            namespaces = await aks_service.list_cluster_namespaces(cluster_resource)
+        except Exception as e:
+            namespace_error = str(e)
+            logger.error(f"Failed to list namespaces: {e}", exc_info=True)
+        
+        # Compile diagnostics
+        diagnostics = {
+            "cluster_name": request.cluster_name,
+            "resource_group": request.resource_group,
+            "subscription_id": request.subscription_id,
+            "connection_test": connection_test,
+            "namespaces_found": len(namespaces),
+            "namespaces": namespaces,
+            "namespace_error": namespace_error,
+            "is_azure_app_service": aks_service.is_azure_app_service,
+            "recommendations": []
+        }
+        
+        # Add recommendations based on diagnostics
+        if not connection_test.get("can_get_kubeconfig"):
+            diagnostics["recommendations"].append({
+                "issue": "Cannot get kubeconfig from Azure API",
+                "solution": "Assign 'Azure Kubernetes Service Cluster User Role' to the App Service Managed Identity on the AKS cluster",
+                "steps": [
+                    "1. Go to Azure Portal → AKS cluster → Access control (IAM)",
+                    "2. Click 'Add role assignment'",
+                    "3. Select role: 'Azure Kubernetes Service Cluster User Role'",
+                    "4. Assign to: Managed Identity → Select your App Service",
+                    "5. Save and wait 1-2 minutes for propagation"
+                ]
+            })
+        
+        if not connection_test.get("kubectl_available"):
+            diagnostics["recommendations"].append({
+                "issue": "kubectl not available",
+                "solution": "kubectl should be installed by startup.sh - check App Service logs",
+                "steps": [
+                    "1. Check App Service logs for startup.sh execution",
+                    "2. Verify kubectl installation in startup.sh",
+                    "3. Check if startup.sh has execute permissions"
+                ]
+            })
+        
+        if not connection_test.get("kubernetes_client_available"):
+            diagnostics["recommendations"].append({
+                "issue": "Kubernetes Python client not available",
+                "solution": "Install kubernetes package: pip install kubernetes",
+                "steps": [
+                    "1. Check requirements.txt includes 'kubernetes==28.1.0'",
+                    "2. Verify pip install completed successfully",
+                    "3. Check App Service build logs"
+                ]
+            })
+        
+        if len(namespaces) == 0 and not namespace_error:
+            diagnostics["recommendations"].append({
+                "issue": "No namespaces found (but connection succeeded)",
+                "solution": "Cluster may only have system namespaces, or all namespaces are filtered out",
+                "steps": [
+                    "1. Verify cluster has non-system namespaces",
+                    "2. Check if namespaces exist: kubectl get namespaces",
+                    "3. System namespaces (kube-system, kube-public, default) are excluded"
+                ]
+            })
+        
+        if namespace_error:
+            diagnostics["recommendations"].append({
+                "issue": f"Namespace discovery failed: {namespace_error}",
+                "solution": "Check the error message and follow recommendations above",
+                "steps": [
+                    "1. Verify Managed Identity permissions",
+                    "2. Check kubectl installation",
+                    "3. Review App Service logs for detailed error messages"
+                ]
+            })
+        
+        return {
+            "status": "success",
+            "diagnostics": diagnostics
+        }
+        
+    except Exception as e:
+        logger.error(f"Error running diagnostics: {e}", exc_info=True)
+        import traceback
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            }
+        )
 
 
 @router.post("/azure/resources")
@@ -362,8 +752,44 @@ async def get_resources(request: ResourcesRequest):
                 detail="At least one resource group name is required"
             )
         
-        azure_service = get_azure_service(subscription_id)
-        resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
+        # Check cache first
+        from app.services.cache_service import get_cache_service
+        cache_service = await get_cache_service()
+        
+        cached_resources = await cache_service.get_azure_resources(subscription_id, resource_group_names)
+        if cached_resources:
+            logger.info(f"Using cached Azure resources for {len(resource_group_names)} resource groups")
+            # Convert cached resources (which have 'type') to AzureResource (which expects 'resource_type')
+            resources = []
+            for r in cached_resources:
+                # Map 'type' to 'resource_type' for AzureResource constructor
+                resource_dict = r.copy()
+                if 'type' in resource_dict and 'resource_type' not in resource_dict:
+                    resource_dict['resource_type'] = resource_dict.pop('type')
+                # Also map 'resourceGroup' to 'resource_group' if needed
+                if 'resourceGroup' in resource_dict and 'resource_group' not in resource_dict:
+                    resource_dict['resource_group'] = resource_dict.pop('resourceGroup')
+                # Remove fields that are not in AzureResource constructor (like portalUrl)
+                resource_dict_clean = {
+                    'id': resource_dict.get('id', ''),
+                    'name': resource_dict.get('name', ''),
+                    'resource_type': resource_dict.get('type', resource_dict.get('resource_type', '')),
+                    'location': resource_dict.get('location', ''),
+                    'resource_group': resource_dict.get('resource_group', ''),
+                    'tags': resource_dict.get('tags', {}),
+                    'properties': resource_dict.get('properties', {})
+                }
+                resources.append(AzureResource(**resource_dict_clean))
+        else:
+            azure_service = get_azure_service(subscription_id)
+            resources = await azure_service.get_resources_by_resource_groups(resource_group_names)
+            # Cache the resources
+            await cache_service.set_azure_resources(
+                subscription_id,
+                resource_group_names,
+                [r.to_dict() for r in resources]
+            )
+            logger.info(f"Cached {len(resources)} Azure resources")
         
         # Discover pods from AKS clusters
         try:
@@ -516,6 +942,20 @@ async def _analyze_services_impl(request: AnalyzeRequest):
         
         # Deduplicate components (simplified version)
         deduplicated_results = _deduplicate_components(results)
+        
+        # Add Azure service descriptions for non-Temenos services
+        try:
+            db = await get_database().__anext__()
+            unidentified_services = [r for r in deduplicated_results if not r.component_info]
+            if unidentified_services:
+                service_types = list(set([r.service.type for r in unidentified_services]))
+                descriptions = await get_azure_service_descriptions_batch(service_types, db)
+                # Add descriptions to results
+                for result in unidentified_services:
+                    if result.service.type in descriptions:
+                        result.service.description = descriptions[result.service.type]
+        except (StopAsyncIteration, Exception) as e:
+            logger.debug(f"Could not add Azure service descriptions: {e}")
         
         return {
             "status": "success",
@@ -704,6 +1144,341 @@ async def query_rag(request: Dict[str, Any]):
         )
 
 
+@router.post("/azure/costs")
+async def get_resource_group_costs(request: CostRequest):
+    """
+    Get cost data for one or more resource groups.
+    
+    Args:
+        request: Cost request with subscription ID and resource group names
+        
+    Returns:
+        List of cost information for each resource group
+    """
+    try:
+        subscription_id = request.subscription_id
+        resource_group_names = request.resource_group_names
+        
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="Subscription ID is required")
+        
+        if not resource_group_names or len(resource_group_names) == 0:
+            raise HTTPException(status_code=400, detail="At least one resource group name is required")
+        
+        # Parse dates if provided
+        start_date = None
+        end_date = None
+        
+        if request.start_date:
+            try:
+                start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid start_date format: {request.start_date}. Use ISO format (YYYY-MM-DD)")
+        
+        if request.end_date:
+            try:
+                end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid end_date format: {request.end_date}. Use ISO format (YYYY-MM-DD)")
+        
+        # Create cost service
+        cost_service = CostService(subscription_id)
+        
+        # Calculate timeout based on number of resource groups
+        # Each resource group takes ~2-3 seconds, plus delays
+        # For large batches, increase timeout significantly
+        num_rgs = len(resource_group_names)
+        if num_rgs > 50:
+            timeout_seconds = 300.0  # 5 minutes for 50+ resource groups
+        elif num_rgs > 20:
+            timeout_seconds = 180.0  # 3 minutes for 20-50 resource groups
+        elif num_rgs == 1:
+            timeout_seconds = 30.0   # 30 seconds for single resource group
+        else:
+            timeout_seconds = 60.0   # 60 seconds for small batches (2-20)
+        
+        logger.info(f"Fetching costs for {num_rgs} resource groups with {timeout_seconds}s timeout")
+        
+        # Wrap the cost fetching in a timeout
+        # Run the synchronous cost service in a thread pool to avoid blocking
+        async def fetch_costs_with_timeout():
+            loop = asyncio.get_event_loop()
+            try:
+                # Run the synchronous cost service call in a thread pool
+                cost_results = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        cost_service.get_multiple_resource_group_costs,
+                        resource_group_names,
+                        start_date,
+                        end_date
+                    ),
+                    timeout=timeout_seconds
+                )
+                return cost_results
+            except asyncio.TimeoutError:
+                logger.error(f"Cost fetching timed out after {timeout_seconds} seconds for {num_rgs} resource groups")
+                # Return error results for all resource groups
+                return [
+                    {
+                        'resource_group': rg_name,
+                        'total_cost': 0.0,
+                        'services': {},
+                        'error': f'Request timed out after {int(timeout_seconds)}s. Cost Management API is taking too long to respond. Try selecting fewer resource groups or try again later.',
+                        'start_date': start_date.isoformat() if start_date else None,
+                        'end_date': end_date.isoformat() if end_date else None
+                    }
+                    for rg_name in resource_group_names
+                ]
+        
+        # Get costs for all resource groups with timeout
+        cost_results = await fetch_costs_with_timeout()
+        
+        return {
+            "status": "success",
+            "data": cost_results,
+            "count": len(cost_results)
+        }
+        
+    except HTTPException:
+        raise
+    except asyncio.TimeoutError:
+        logger.error("Cost fetching timed out at endpoint level")
+        raise HTTPException(
+            status_code=504,
+            detail={
+                "status": "error",
+                "error": "Request timed out. Cost Management API is taking too long to respond.",
+                "errorType": "TimeoutError",
+                "recoverySteps": [
+                    "Try again later - Azure Cost Management API may be experiencing delays",
+                    "Verify you have 'Cost Management Reader' role on the subscription",
+                    "Check that the subscription has billing enabled",
+                    "Cost data may take 24-48 hours to appear after resource creation"
+                ]
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error getting costs: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": type(e).__name__,
+                "recoverySteps": [
+                    "Verify you have 'Cost Management Reader' role on the subscription",
+                    "Check that the subscription has billing enabled",
+                    "Ensure resource groups exist and are accessible",
+                    "Cost data may take 24-48 hours to appear after resource creation"
+                ]
+            }
+        )
+
+
+@router.post("/cloud-logs/analyze")
+async def analyze_cloud_logs(request: CloudLogsAnalyzeRequest):
+    """
+    Analyze Temenos cloud logs using AI sub-agent.
+    
+    This endpoint uses the Temenos RAG API to analyze logs from Temenos components
+    deployed on AKS or ACA and provides structured troubleshooting guidance.
+    
+    Args:
+        request: Cloud logs analysis request
+        
+    Returns:
+        Structured analysis result with summary, classification, root causes,
+        recommended actions, and impact assessment
+    """
+    try:
+        # Validate platform
+        if request.platform not in ['aks', 'aca']:
+            raise HTTPException(
+                status_code=400,
+                detail="platform must be 'aks' or 'aca'"
+            )
+        
+        # Construct the analysis prompt based on the sub-agent specification
+        prompt_parts = [
+            "You are the 'Temenos Cloud Logs Analyzer' AI sub-agent.",
+            "",
+            "YOUR ROLE:",
+            "- You analyze and explain logs coming from Temenos core banking components",
+            f"  (e.g. Transact app/web, IRIS/IRF providers, batch/COB services, ingesters, adapters)",
+            f"  deployed on: {request.platform.upper()} ({'Azure Kubernetes Service' if request.platform == 'aks' else 'Azure Container Apps'})",
+            "",
+            "GOAL:",
+            "- Help cloud/DevOps/BSG engineers quickly understand what is going wrong.",
+            "- Propose concrete next troubleshooting steps and Azure / kubectl commands.",
+            "- When possible, map the issue to the most likely infrastructure or application layer.",
+            "",
+            "INPUT PROVIDED:",
+            f"- platform: {request.platform}",
+            f"- component_name: {request.component_name}",
+            f"- environment: {request.environment}",
+            f"- log_snippet: (provided below)",
+            f"- symptoms: {request.symptoms or 'Not specified'}",
+            f"- recent_changes: {request.recent_changes or 'Not specified'}",
+            "",
+            "LOG SNIPPET:",
+            "```",
+            request.log_snippet[:5000],  # Limit log snippet to 5000 chars
+            "```",
+            "",
+            "EXPECTED OUTPUT:",
+            "Respond ALWAYS using the following structure:",
+            "",
+            "1. Short Summary",
+            "- 2–4 sentences explaining in plain language what seems to be the problem.",
+            "",
+            "2. Classification",
+            f"- Platform: {request.platform.upper()}",
+            "- Layer: choose one or more: [Application, Database, Network, Configuration, Resource/Capacity, Azure Platform]",
+            "- Severity: choose one: [Info, Warning, Major, Critical]",
+            "- Category: short tag (e.g. 'DB connection', 'Timeout', 'Authentication', 'CrashLoopBackOff', 'OutOfMemory', 'Config mismatch')",
+            "",
+            "3. Most Likely Root Causes (bullet list)",
+            "- 2–5 bullets with concrete hypotheses linked to specific log lines.",
+            "- For each bullet, quote the minimum necessary log fragment (no more than one line) to justify your reasoning.",
+            "",
+            "4. Recommended Actions for Engineer",
+            "Split by platform:",
+            "",
+            "4.1. Checks to perform",
+            "- Concrete checks, e.g. verify DB connectivity, test DNS resolution, check secret/ConfigMap values, etc.",
+            "",
+            "4.2. Suggested commands",
+            f"- For {request.platform.upper()}, propose specific `{'kubectl' if request.platform == 'aks' else 'az containerapp'}` commands",
+            "- Include placeholders for names (e.g. <NAMESPACE>, <POD_NAME>, <RESOURCE_GROUP>, <CONTAINERAPP_NAME>).",
+            "",
+            "4.3. Possible configuration fixes",
+            "- Suggest which Helm values, environment variables, secrets, or scaling settings the engineer should review.",
+            "- When relevant, mention typical Temenos settings (e.g. DB URL, user, connection pool, JVM heap limits, thread pools)",
+            "  but do NOT invent proprietary values.",
+            "",
+            "5. Impact Assessment",
+            "- Briefly describe how this issue likely impacts the bank:",
+            "  e.g. 'Only COB batch affected', 'Only back-office UI', 'All APIs unavailable', 'Non-critical background job'.",
+            "",
+            "6. If Information Is Insufficient",
+            "- If the logs are not enough to be confident, clearly say what is missing.",
+            "- Ask 2–4 very specific follow-up questions.",
+            "",
+            "STYLE & RULES:",
+            "- Be concise but actionable. Prefer bullet points over long paragraphs.",
+            "- Never fabricate exact configuration values, passwords, or internal hostnames.",
+            "- If you are uncertain, explicitly say so and offer multiple plausible hypotheses.",
+            "- When suggesting commands, always provide them in code blocks.",
+            "- Assume the engineer is familiar with Azure and kubectl, but not necessarily with all Temenos internals.",
+            "",
+            "Now analyze the provided log snippet and respond in the exact structure specified above.",
+            "",
+            "IMPORTANT: Respond in valid JSON format with the following structure:",
+            "{",
+            '  "summary": "2-4 sentence summary",',
+            '  "classification": {',
+            f'    "platform": "{request.platform}",',
+            '    "layer": ["Application"],',
+            '    "severity": "Warning",',
+            '    "category": "category name"',
+            '  },',
+            '  "root_causes": [',
+            '    {"hypothesis": "...", "log_evidence": "..."}',
+            '  ],',
+            '  "recommended_actions": {',
+            '    "checks": ["check1", "check2"],',
+            f'    "commands": {{"{request.platform}": ["command1", "command2"]}},',
+            '    "configuration_fixes": ["fix1", "fix2"]',
+            '  },',
+            '  "impact_assessment": "impact description",',
+            '  "insufficient_info": {',
+            '    "message": "if info is insufficient (optional)",',
+            '    "follow_up_questions": ["q1", "q2"]',
+            '  }',
+            '}'
+        ]
+        
+        analysis_prompt = "\n".join(prompt_parts)
+        
+        # Call RAG API with the analysis prompt
+        temenos_service = TemenosService()
+        rag_result = await temenos_service.query_rag(
+            question=analysis_prompt,
+            region="global",
+            rag_model_id="ModularBanking, TechnologyOverview",
+            context=f"Analyzing logs from {request.component_name} component in {request.environment} environment on {request.platform.upper()}. "
+                   f"Resource group: {request.resource_group or 'Not specified'}. "
+                   f"Symptoms: {request.symptoms or 'Not specified'}. "
+                   f"Recent changes: {request.recent_changes or 'Not specified'}. "
+                   f"IMPORTANT: Provide actionable, professional guidance. If specific details are not available, focus on general best practices, "
+                   f"common troubleshooting approaches, and standard Azure/kubectl commands that would apply to similar scenarios. "
+                   f"Avoid phrases like 'I cannot provide' or 'information not available' - instead provide helpful, constructive guidance."
+        )
+        
+        # Parse the RAG response
+        answer = rag_result.get("data", {}).get("answer", rag_result.get("answer", ""))
+        
+        # Try to extract and parse JSON from the response
+        import json
+        import re
+        
+        try:
+            # Try to extract JSON from the response (look for JSON object)
+            json_match = re.search(r'\{[\s\S]*\}', answer, re.MULTILINE)
+            if json_match:
+                json_str = json_match.group()
+                parsed_result = json.loads(json_str)
+                # Ensure all required fields are present
+                if "summary" in parsed_result and "classification" in parsed_result:
+                    return {
+                        "status": "success",
+                        "data": parsed_result
+                    }
+        except (json.JSONDecodeError, AttributeError, KeyError) as e:
+            logger.warning(f"Failed to parse JSON from RAG response: {e}. Using fallback structure.")
+        
+        # Fallback: Return structured format with full analysis text
+        # Frontend can parse or display the full text
+        return {
+            "status": "success",
+            "data": {
+                "summary": answer.split('\n')[0] if answer else "Analysis completed. Please review the full analysis text.",
+                "classification": {
+                    "platform": request.platform,
+                    "layer": ["Application", "Infrastructure"],
+                    "severity": "Warning",
+                    "category": "Log Analysis"
+                },
+                "root_causes": [
+                    {
+                        "hypothesis": "See full analysis below for detailed root cause analysis",
+                        "log_evidence": "Refer to log snippet provided in the request"
+                    }
+                ],
+                "recommended_actions": {
+                    "checks": ["Review full analysis text for specific checks to perform"],
+                    "commands": {
+                        request.platform: ["See full analysis text for specific commands"]
+                    },
+                    "configuration_fixes": ["See full analysis text for configuration recommendations"]
+                },
+                "impact_assessment": "See full analysis text for impact assessment",
+                "full_analysis": answer,
+                "note": "Structured JSON parsing unavailable. Full analysis text provided. The AI sub-agent response is in the 'full_analysis' field."
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cloud logs analysis error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to analyze cloud logs: {str(e)}"
+        )
+
+
 @router.get("/temenos/jwt-info")
 async def get_jwt_info(settings: Settings = Depends(get_settings)):
     """
@@ -771,5 +1546,150 @@ async def get_jwt_info(settings: Settings = Depends(get_settings)):
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving JWT information: {str(e)}"
+        )
+
+
+@router.post("/azure/export")
+async def export_resource_groups(request: ExportRequest):
+    """
+    Export selected resource groups as ARM templates (JSON).
+    
+    Args:
+        request: Export request with subscription ID and resource group names
+        
+    Returns:
+        ARM template JSON for the selected resource groups
+    """
+    try:
+        subscription_id = request.subscription_id
+        resource_group_names = request.resource_group_names
+        
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="Subscription ID is required")
+        
+        if not resource_group_names or len(resource_group_names) == 0:
+            raise HTTPException(status_code=400, detail="At least one resource group name is required")
+        
+        # Get Azure service instance
+        if subscription_id not in azure_service_cache:
+            azure_service_cache[subscription_id] = AzureService(subscription_id)
+        azure_service = azure_service_cache[subscription_id]
+        
+        # Export ARM templates for each resource group
+        exported_templates = []
+        
+        for rg_name in resource_group_names:
+            try:
+                logger.info(f"Exporting ARM template for resource group: {rg_name}")
+                
+                # Use Azure Resource Manager REST API to export template
+                credential = azure_service.credential
+                token_response = credential.get_token("https://management.azure.com/.default")
+                access_token = token_response.token
+                
+                export_url = f"https://management.azure.com/subscriptions/{subscription_id}/resourceGroups/{rg_name}/exportTemplate?api-version=2021-04-01"
+                headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+                
+                export_payload = {
+                    "resources": ["*"],
+                    "options": "IncludeParameterDefaultValue,IncludeComments"
+                }
+                
+                export_response = requests.post(export_url, headers=headers, json=export_payload, timeout=60)
+                
+                # Check for errors in response
+                if export_response.status_code >= 400:
+                    error_detail = {}
+                    try:
+                        error_detail = export_response.json()
+                    except:
+                        error_detail = {"message": export_response.text[:500]}
+                    
+                    raise Exception(f"Azure API error ({export_response.status_code}): {error_detail.get('error', {}).get('message', export_response.text[:200])}")
+                
+                export_response.raise_for_status()
+                response_data = export_response.json()
+                
+                # Azure exportTemplate API returns the template directly or wrapped in a 'template' property
+                template_data = response_data.get('template', response_data)
+                
+                # Ensure we have a valid template structure
+                if not template_data or (not isinstance(template_data, dict)):
+                    raise Exception("Invalid template structure returned from Azure API")
+                
+                exported_templates.append({
+                    "resource_group": rg_name,
+                    "template": template_data,
+                    "status": "success"
+                })
+                
+                logger.info(f"✓ Successfully exported ARM template for {rg_name}")
+                
+            except Exception as e:
+                logger.error(f"Failed to export ARM template for {rg_name}: {e}", exc_info=True)
+                exported_templates.append({
+                    "resource_group": rg_name,
+                    "template": None,
+                    "status": "error",
+                    "error": str(e)
+                })
+        
+        return {
+            "status": "success",
+            "data": exported_templates,
+            "count": len(exported_templates)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting resource groups: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": "export_error"
+            }
+        )
+
+
+@router.post("/temenos/briefing")
+async def generate_briefing(request: BriefingRequest):
+    """
+    Generate perfect RAG briefing for a Temenos component.
+    
+    Args:
+        request: Briefing request with product family, component name, and aliases
+        
+    Returns:
+        Structured briefing JSON with citations
+    """
+    try:
+        briefing_service = RAGBriefingService()
+        
+        briefing = await briefing_service.generate_briefing(
+            product_family=request.product_family,
+            component_name=request.component_name,
+            aliases=request.aliases or []
+        )
+        
+        return {
+            "status": "success",
+            "data": briefing
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating briefing: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": "briefing_error"
+            }
         )
 

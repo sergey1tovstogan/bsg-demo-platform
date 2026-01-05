@@ -17,6 +17,7 @@ import type {
 interface RuntimeConfig {
   apiUrl: string
   environment?: string
+  grafanaBaseUrl?: string
 }
 
 // Load runtime configuration from config.json
@@ -515,7 +516,7 @@ class ApiService {
     }
   }
 
-  async getAzureResourceGroups(subscriptionId: string) {
+  async getAzureResourceGroups(subscriptionId: string, refresh: boolean = false) {
     const response = await this.client.get<ApiResponse<{
       data: Array<{
         id: string
@@ -524,7 +525,8 @@ class ApiService {
         tags?: Record<string, string>
       }>
       count: number
-    }>>(`/deployment/azure/resource-groups?subscriptionId=${subscriptionId}`)
+      cached?: boolean
+    }>>(`/deployment/azure/resource-groups?subscriptionId=${subscriptionId}&refresh=${refresh}`)
     return response.data
   }
 
@@ -547,12 +549,13 @@ class ApiService {
     return response.data
   }
 
-  async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[]) {
-    console.log('[API] getAKSNamespaces called with:', { subscriptionId, resourceGroupNames })
+  async getAKSNamespaces(subscriptionId: string, resourceGroupNames: string[], refresh: boolean = true) {
+    console.log('[API] getAKSNamespaces called with:', { subscriptionId, resourceGroupNames, refresh })
     const url = '/deployment/aks/namespaces'
     const payload = {
       subscription_id: subscriptionId,
-      resource_group_names: resourceGroupNames
+      resource_group_names: resourceGroupNames,
+      refresh: refresh // Force refresh to get latest namespaces from actual clusters
     }
     console.log('[API] POST', url, payload)
     try {
@@ -572,6 +575,39 @@ class ApiService {
       console.error('[API] Error response:', error.response?.data)
       throw error
     }
+  }
+
+  async getResourceGroupCosts(
+    subscriptionId: string, 
+    resourceGroupNames: string[],
+    startDate?: string,
+    endDate?: string,
+    signal?: AbortSignal
+  ) {
+    const response = await this.client.post<ApiResponse<{
+      data: Array<{
+        resource_group: string
+        total_cost: number
+        services: Record<string, number>
+        error?: string
+        start_date?: string
+        end_date?: string
+        projections?: {
+          full_month: number
+          annual: number
+          month_progress: number
+          days_passed: number
+          days_in_month: number
+        }
+      }>
+      count: number
+    }>>('/deployment/azure/costs', {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames,
+      start_date: startDate,
+      end_date: endDate
+    }, { signal }) // Pass abort signal to axios for request cancellation
+    return response.data
   }
 
   async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[], forceRefresh?: boolean) {
@@ -608,6 +644,45 @@ class ApiService {
 
   async getDeploymentContent() {
     const response = await this.client.get<ApiResponse<any>>('/components/deployment/content')
+    return response.data
+  }
+
+  async analyzeCloudLogs(params: {
+    platform: 'aks' | 'aca'
+    component_name: string
+    environment: string
+    log_snippet: string
+    symptoms?: string
+    recent_changes?: string
+    resource_group?: string
+    subscription_id?: string
+  }) {
+    const response = await this.client.post<ApiResponse<{
+      summary: string
+      classification: {
+        platform: 'aks' | 'aca'
+        layer: string[]
+        severity: 'Info' | 'Warning' | 'Major' | 'Critical'
+        category: string
+      }
+      root_causes: Array<{
+        hypothesis: string
+        log_evidence: string
+      }>
+      recommended_actions: {
+        checks: string[]
+        commands: {
+          aks?: string[]
+          aca?: string[]
+        }
+        configuration_fixes: string[]
+      }
+      impact_assessment: string
+      insufficient_info?: {
+        message: string
+        follow_up_questions: string[]
+      }
+    }>>('/deployment/cloud-logs/analyze', params)
     return response.data
   }
 
@@ -687,7 +762,116 @@ class ApiService {
     }>>('/deployment/temenos/jwt-info')
     return response.data
   }
+
+  // Integration Proxy APIs
+  async proxyRequest(targetUrl: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'GET', body?: any, userId?: string) {
+    const config: any = {
+      params: { url: targetUrl },
+      headers: {
+        'X-User-Id': userId || 'demo_user',
+        'Content-Type': 'application/json'
+      }
+    }
+
+    if (body && method !== 'GET') {
+      config.data = body
+    }
+
+    const response = await this.client.request({
+      method,
+      url: '/integration/proxy',
+      ...config,
+      timeout: 30000
+    })
+
+    return response.data
+  }
+
+  async getIntegrationConfig() {
+    const response = await this.client.get<ApiResponse<{ temenos_api_key: string }>>('/integration/config')
+    return response.data
+  }
+
+  async getUserApiKey(userId?: string) {
+    const response = await this.client.get<ApiResponse<{
+      success: boolean
+      has_key: boolean
+      api_key: string
+      updated_at: string | null
+    }>>('/integration/api-key', {
+      headers: {
+        'X-User-Id': userId || 'demo_user'
+      }
+    })
+    return response.data
+  }
+
+  async saveUserApiKey(apiKey: string, userId?: string) {
+    const response = await this.client.post<ApiResponse<{
+      success: boolean
+      message: string
+      updated: boolean
+    }>>('/integration/api-key',
+    { api_key: apiKey },
+    {
+      headers: {
+        'X-User-Id': userId || 'demo_user'
+      }
+    })
+    return response.data
+  }
+
+  async updateRagJwtToken(token: string) {
+    const response = await this.client.post<ApiResponse<{ status: string; message: string }>>(
+      '/settings/rag/jwt-token',
+      { token }
+    )
+    return response.data
+  }
+
+  async getRagJwtToken() {
+    const response = await this.client.get<ApiResponse<{ token: string | null }>>(
+      '/settings/rag/jwt-token'
+    )
+    return response.data
+  }
+
+  async exportResourceGroups(subscriptionId: string, resourceGroupNames: string[]) {
+    const response = await this.client.post<ApiResponse<{
+      data: Array<{
+        resource_group: string
+        template: any
+        status: string
+        error?: string
+      }>
+      count: number
+    }>>('/deployment/azure/export', {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames
+    })
+    return response.data
+  }
+
+  async generateBriefing(productFamily: string, componentName: string, aliases: string[] = []) {
+    const response = await this.client.post<ApiResponse<any>>('/deployment/temenos/briefing', {
+      product_family: productFamily,
+      component_name: componentName,
+      aliases
+    })
+    return response.data
+  }
 }
 
 export const apiService = new ApiService()
+
+// Export function to get runtime config for use in other components
+export const getRuntimeConfig = async (): Promise<RuntimeConfig> => {
+  return loadRuntimeConfig()
+}
+
+// Export function to get Grafana base URL
+export const getGrafanaBaseUrl = async (): Promise<string> => {
+  const config = await loadRuntimeConfig()
+  return config.grafanaBaseUrl || 'https://mdsworkbench.temenos.com'
+}
 

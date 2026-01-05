@@ -19,22 +19,36 @@ if %errorlevel% == 0 (
     pause >nul
 )
 
-netstat -ano | findstr ":5173" >nul
+netstat -ano | findstr ":3000" >nul
 if %errorlevel% == 0 (
-    echo [WARNING] Port 5173 is already in use!
+    echo [WARNING] Port 3000 is already in use!
     echo   Frontend may already be running.
     echo   Press Ctrl+C to cancel, or any key to continue...
     pause >nul
 )
 
 echo [1/3] Starting Backend Server...
-start "BSG Backend" cmd /k "cd /d %~dp0backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+set BACKEND_DIR=%~dp0..\backend
+if not exist "%BACKEND_DIR%" (
+    echo [ERROR] Backend directory not found: %BACKEND_DIR%
+    echo Please ensure you're running this script from the scripts folder.
+    pause
+    exit /b 1
+)
+start "BSG Backend" cmd /k "cd /d %BACKEND_DIR% && echo Starting backend at %CD% && py -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
 timeout /t 3 /nobreak >nul
 echo   Backend starting in new window...
 echo.
 
 echo [2/3] Starting Frontend Server...
-start "BSG Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
+set FRONTEND_DIR=%~dp0..\frontend
+if not exist "%FRONTEND_DIR%" (
+    echo [ERROR] Frontend directory not found: %FRONTEND_DIR%
+    echo Please ensure you're running this script from the scripts folder.
+    pause
+    exit /b 1
+)
+start "BSG Frontend" cmd /k "cd /d %FRONTEND_DIR% && echo Starting frontend at %CD% && npm run dev"
 timeout /t 3 /nobreak >nul
 echo   Frontend starting in new window...
 echo.
@@ -48,7 +62,7 @@ echo   Services Started!
 echo ========================================
 echo.
 echo Backend:  http://localhost:8000
-echo Frontend: http://localhost:5173
+echo Frontend: http://localhost:3000
 echo API Docs: http://localhost:8000/docs
 echo.
 echo Two command windows have opened:
@@ -56,7 +70,7 @@ echo   - BSG Backend  (backend server)
 echo   - BSG Frontend (frontend server)
 echo.
 echo Wait a few seconds for services to fully start, then:
-echo   1. Open http://localhost:5173 in your browser
+echo   1. Open http://localhost:3000 in your browser
 echo   2. Go to Demo -^> Deployment Analyzer
 echo   3. Connect to Azure and analyze deployments
 echo.

@@ -1,5 +1,6 @@
 {
   "apiUrl": "/api/v1",
-  "environment": "development"
+  "environment": "development",
+  "grafanaBaseUrl": "https://mdsworkbench.temenos.com"
 }
 

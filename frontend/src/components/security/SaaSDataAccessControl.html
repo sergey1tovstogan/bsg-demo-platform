@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temenos SaaS Data Access Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 18px;
+            color: #000;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .section-1 {
+            background: #ADD8E6;
+            padding: 60px 40px 30px 40px;
+            flex: 0 0 auto;
+        }
+        
+        .section-1-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .section-1-content {
+            display: flex;
+            gap: 40px;
+            justify-content: space-around;
+        }
+        
+        .section-1-left,
+        .section-1-right {
+            flex: 1;
+        }
+        
+        .section-1-left p {
+            font-size: 16px;
+            color: #000;
+            margin-bottom: 15px;
+        }
+        
+        .section-1-bullets {
+            list-style-type: disc;
+            padding-left: 25px;
+            font-size: 16px;
+            color: #000;
+            line-height: 1.8;
+        }
+        
+        .section-1-bullets li {
+            margin-bottom: 8px;
+        }
+        
+        .section-2 {
+            background: #E6D9FF;
+            padding: 30px 40px 100px 40px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .section-2-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .section-2-bullets {
+            list-style-type: disc;
+            padding-left: 25px;
+            font-size: 16px;
+            color: #000;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+        
+        .section-2-bullets li {
+            margin-bottom: 10px;
+        }
+        
+        .workflow-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+        
+        .workflow-box {
+            position: absolute;
+            background: #1E3A8A;
+            color: #ffffff;
+            padding: 15px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 150px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .workflow-box-1 {
+            top: 0;
+            left: 50px;
+        }
+        
+        .workflow-box-2 {
+            top: 120px;
+            left: 50px;
+        }
+        
+        .workflow-box-3 {
+            top: 240px;
+            left: 50px;
+        }
+        
+        .workflow-box-4 {
+            top: 240px;
+            left: 350px;
+        }
+        
+        .workflow-box-5 {
+            top: 120px;
+            left: 350px;
+        }
+        
+        .workflow-box-6 {
+            top: 0;
+            left: 350px;
+        }
+        
+        .workflow-box-7 {
+            top: 0;
+            left: 650px;
+        }
+        
+        .workflow-arrow {
+            position: absolute;
+            stroke: #9333ea;
+            stroke-width: 3;
+            fill: none;
+            marker-end: url(#arrowhead-purple);
+        }
+        
+        .audit-label {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            right: 100px;
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .action-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+        }
+        
+        .action-button:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-label">Temenos SaaS Data Access Control</div>
+    
+    <!-- Section 1: 24x7 Cloud Command Centre -->
+    <div class="section-1">
+        <div class="section-1-title">24x7 Cloud Command Centre</div>
+        <div class="section-1-content">
+            <div class="section-1-left">
+                <p>Real-time monitoring to provide:</p>
+                <ul class="section-1-bullets">
+                    <li>Infrastructure Support;</li>
+                    <li>Application Support;</li>
+                </ul>
+            </div>
+            <div class="section-1-right">
+                <ul class="section-1-bullets">
+                    <li>Operation and management of performance tools.</li>
+                    <li>Collection and reporting of performance & availability events and trends;</li>
+                    <li>Responding to performance incidents</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section 2: Privileged Identity Management (PIM) -->
+    <div class="section-2">
+        <div class="section-2-title">Privileged Identity Management (PIM)</div>
+        <ul class="section-2-bullets">
+            <li>Leveraged for infra support users requiring higher privilege login for support and management</li>
+            <li>Access Control is governed by the Cloud Security Team.</li>
+            <li>Default no access to client data, least privilege policy.</li>
+            <li>All access requests tracked in Temenos Service Desk.</li>
+            <li>Infrastructure access is time restricted based on a specific business justification</li>
+            <li>Daily reports from the Temenos Service Desk Ticketing System for monitoring</li>
+            <li>Access is subject to the following approval workflow* :</li>
+        </ul>
+        
+        <div class="workflow-container">
+            <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0; z-index: 1;">
+                <defs>
+                    <marker id="arrowhead-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#9333ea" />
+                    </marker>
+                </defs>
+                
+                <!-- Arrow from workflow-box-1 to workflow-box-2 (bottom center to top center) -->
+                <line x1="125" y1="50" x2="125" y2="120" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-2 to workflow-box-3 (bottom center to top center) -->
+                <line x1="125" y1="170" x2="125" y2="240" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-3 to workflow-box-4 (right center to left center) -->
+                <line x1="200" y1="265" x2="350" y2="265" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-4 to workflow-box-5 (top center to bottom center) -->
+                <line x1="425" y1="240" x2="425" y2="170" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-5 to workflow-box-6 (top center to bottom center) -->
+                <line x1="425" y1="120" x2="425" y2="50" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+                
+                <!-- Arrow from workflow-box-6 to workflow-box-7 (right center to left center) -->
+                <line x1="500" y1="25" x2="650" y2="25" stroke="#9333ea" stroke-width="4" fill="none" marker-end="url(#arrowhead-purple)" />
+            </svg>
+            
+            <div class="workflow-box workflow-box-1" style="z-index: 2;">Access Requested</div>
+            <div class="workflow-box workflow-box-2" style="z-index: 2;">Cloud Review</div>
+            <div class="workflow-box workflow-box-3" style="z-index: 2;">Security Review</div>
+            <div class="workflow-box workflow-box-4" style="z-index: 2;">Entitlement Granted</div>
+            <div class="workflow-box workflow-box-5" style="z-index: 2;">Role Activated</div>
+            <div class="workflow-box workflow-box-6" style="z-index: 2;">Work Commences</div>
+            <div class="workflow-box workflow-box-7" style="z-index: 2;">Role Expires / Deactivated</div>
+        </div>
+        
+        <div class="audit-label">*As audited under SOC2, CAIQ</div>
+    </div>
+    
+    <button class="action-button" onclick="window.parent.postMessage({type: 'showPAM'}, '*');">Privileged Access Management PAM</button>
+</body>
+</html>
+

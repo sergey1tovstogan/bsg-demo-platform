@@ -1,26 +1,42 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BookOpen, Video, MessageSquare, Play } from 'lucide-react'
 import { ContentViewer } from '../components/ContentViewer'
-import { VideoPlayer } from '../components/VideoPlayer'
 import { Chatbot } from '../components/Chatbot'
 import { DemoFrame } from '../components/DemoFrame'
 import { ObservabilityContent } from '../components/observability/ObservabilityContent'
 import { DeploymentAnalyzer } from '../components/deployment/DeploymentAnalyzer'
 import { DeploymentContentViewer } from '../components/deployment/DeploymentContentViewer'
 import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
+import { ChatbotWithQuestions } from '../components/data-architecture/ChatbotWithQuestions'
+import { DesignTimeContentViewer } from '../components/design-time/DesignTimeContentViewer'
+import { LayoutShowcaseContent } from '../components/layout-showcase/LayoutShowcaseContent'
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
   componentId: ComponentId
+  initialSelectedCard?: number // For security component sub-sections
+  initialTab?: 'content' | 'video' | 'demo' | 'chatbot' // For specific tabs
 }
 
 type Tab = 'content' | 'video' | 'demo' | 'chatbot'
 
-export function ComponentPage({ componentId }: ComponentPageProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('content')
+export function ComponentPage({ componentId, initialSelectedCard, initialTab }: ComponentPageProps) {
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'content')
+  
+  // Update activeTab when initialTab prop changes
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab)
+    }
+  }, [initialTab])
 
+  // For layout-showcase, only show content tab
   // For deployment component, exclude video tab and rename chatbot
-  const tabs = componentId === 'deployment' 
+  const tabs = componentId === 'layout-showcase'
+    ? [
+        { id: 'content' as Tab, label: 'Design System', icon: BookOpen },
+      ]
+    : componentId === 'deployment'
     ? [
         { id: 'content' as Tab, label: 'Content', icon: BookOpen },
         { id: 'demo' as Tab, label: 'Demo', icon: Play },
@@ -59,25 +75,41 @@ export function ComponentPage({ componentId }: ComponentPageProps) {
       {/* Tab Content */}
       <div>
         {activeTab === 'content' && (
-          componentId === 'observability' ? (
+          componentId === 'layout-showcase' ? (
+            <LayoutShowcaseContent />
+          ) : componentId === 'observability' ? (
             <ObservabilityContent />
           ) : componentId === 'deployment' ? (
             <DeploymentContentViewer />
           ) : componentId === 'data-architecture' ? (
             <DataArchitectureContent />
+          ) : componentId === 'design-time' ? (
+            <DesignTimeContentViewer />
           ) : (
-            <ContentViewer componentId={componentId} />
+            <ContentViewer componentId={componentId} initialSelectedCard={initialSelectedCard} />
           )
         )}
-        {activeTab === 'video' && <VideoPlayer componentId={componentId} />}
+        {activeTab === 'video' && (
+          componentId === 'deployment' ? (
+            <DeploymentAnalyzer />
+          ) : (
+            <DemoFrame componentId={componentId} view="video" />
+          )
+        )}
         {activeTab === 'demo' && (
           componentId === 'deployment' ? (
             <DeploymentAnalyzer />
           ) : (
-            <DemoFrame componentId={componentId} />
+            <DemoFrame componentId={componentId} view="demo" />
           )
         )}
-        {activeTab === 'chatbot' && <Chatbot componentId={componentId} />}
+        {activeTab === 'chatbot' && (
+          componentId === 'data-architecture' ? (
+            <ChatbotWithQuestions componentId={componentId} />
+          ) : (
+            <Chatbot componentId={componentId} />
+          )
+        )}
       </div>
     </div>
   )

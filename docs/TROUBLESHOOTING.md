@@ -86,9 +86,12 @@ If Managed Identity doesn't work, configure Service Principal credentials:
 ### Verify Configuration
 
 After configuration, test the connection:
-```powershell
-.\tools\check-backend-status.ps1
+```bash
+curl http://localhost:8000/api/v1/health
 ```
+
+Or check the backend logs in Azure Portal:
+- App Services → `bsg-demo-platform-app` → Log stream
 
 Then try connecting to Azure from the web app again.
 
@@ -286,9 +289,13 @@ If working, you should see namespaces like: adapterservice, deposits202507, even
 **Problem**: GitHub Actions deployment times out after 30+ minutes.
 
 **Solution**:
-- ✅ **FIXED**: Timeout increased to 45 minutes
-- Package cleanup optimized to reduce deployment size
+- ✅ **FIXED**: Timeout optimized to 30 minutes (deployments are now faster)
+- ✅ **OPTIMIZED**: SCM wait reduced from 60s to 10s + smart polling
+- ✅ **OPTIMIZED**: Health check reduced from 90s to 30s + smart polling
+- ✅ **OPTIMIZED**: Package cleanup enhanced to reduce deployment size
+- ✅ **OPTIMIZED**: Pre-built package deployment (no Oryx build)
 - Check workflow logs for specific step causing delay
+- Expected deployment time: ~5-8 minutes (subsequent), ~10-15 minutes (first time)
 
 ## Common Issues
 
@@ -343,34 +350,58 @@ curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/j
 2. Check CORS configuration in backend
 3. Verify CORS middleware is enabled
 
-## Quick Diagnostic Script
+## Quick Diagnostic Commands
 
-Run this PowerShell script to check everything:
+Run these commands to check everything:
 
-```powershell
-# Check backend accessibility
-try {
-    $health = Invoke-RestMethod -Uri "https://bsg-demo-platform-app.azurewebsites.net/api/v1/health" -TimeoutSec 10
-    Write-Host "✓ Backend is accessible" -ForegroundColor Green
-} catch {
-    Write-Host "✗ Backend is NOT accessible: $($_.Exception.Message)" -ForegroundColor Red
-}
-
-# Check JWT token status (if backend is accessible)
-try {
-    $jwtInfo = Invoke-RestMethod -Uri "https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/jwt-info" -TimeoutSec 10
-    if ($jwtInfo.data.configured) {
-        Write-Host "✓ RAG_JWT_TOKEN is configured" -ForegroundColor Green
-        if ($jwtInfo.data.has_expiration -and $jwtInfo.data.is_expired) {
-            Write-Host "⚠ JWT token is EXPIRED" -ForegroundColor Yellow
-        }
-    } else {
-        Write-Host "✗ RAG_JWT_TOKEN is NOT configured" -ForegroundColor Red
-    }
-} catch {
-    Write-Host "⚠ Could not check JWT status: $($_.Exception.Message)" -ForegroundColor Yellow
-}
+**Check backend accessibility:**
+```bash
+curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/health
 ```
+
+**Check JWT token status:**
+```bash
+curl https://bsg-demo-platform-app.azurewebsites.net/api/v1/deployment/temenos/jwt-info
+```
+
+**Or use Azure Portal:**
+- App Services → `bsg-demo-platform-app` → Log stream
+- Check for errors in the logs
+
+## Deployment Performance Issues
+
+### Slow Deployment Times
+
+**If deployments are taking too long:**
+
+1. **Check GitHub Actions workflow:**
+   - The workflow has been optimized for faster deployments
+   - SCM wait: ~10s initial + smart polling (instead of 60s fixed)
+   - Health check: ~30s initial + smart polling (instead of 90s fixed)
+   - Package size optimized with enhanced `.deploymentignore`
+
+2. **Verify package size:**
+   - Check the "Check package size before deployment" step in GitHub Actions
+   - Large packages (>100MB) may slow deployment
+   - Ensure `.deploymentignore` is excluding unnecessary files
+
+3. **Check Azure App Service status:**
+   ```bash
+   az webapp show \
+     --name bsg-demo-platform-app \
+     --resource-group bsg-demo-platform \
+     --query "{state: state, sku: sku}"
+   ```
+
+4. **Review deployment logs:**
+   - Check GitHub Actions logs for specific slow steps
+   - Look for SCM container restart issues
+   - Check for dependency installation delays
+
+**Expected deployment times:**
+- **First deployment**: ~10-15 minutes (includes dependency installation)
+- **Subsequent deployments**: ~5-8 minutes (with optimizations)
+- **With optimizations**: ~3-5 minutes faster than before
 
 ---
 

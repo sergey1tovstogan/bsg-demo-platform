@@ -1,20 +1,29 @@
+import { useState, useEffect } from 'react'
 import { BarChart3, Activity, ExternalLink } from 'lucide-react'
-
-const GRAFANA_DASHBOARDS_URL = 'https://transactwb.temenos.com/grafana/dashboards'
-const DASHBOARD_1_URL = 'https://transactwb.temenos.com/grafana/d/mrtS77BGz/channel-transaction-summary?orgId=1'
-const DASHBOARD_2_URL = 'https://transactwb.temenos.com/grafana/d/dwgixTnnzj/iris-monitor?orgId=1'
+import { getGrafanaBaseUrl } from '../../services/api'
 
 export function ObservabilityDemo() {
+  const [grafanaBaseUrl, setGrafanaBaseUrl] = useState('https://mdsworkbench.temenos.com')
+
+  useEffect(() => {
+    // Load Grafana base URL from config
+    getGrafanaBaseUrl().then(setGrafanaBaseUrl).catch(err => {
+      console.error('Failed to load Grafana config, using default:', err)
+    })
+  }, [])
+
   const openGrafanaDashboards = () => {
-    window.open(GRAFANA_DASHBOARDS_URL, '_blank', 'noopener,noreferrer')
+    window.open(`${grafanaBaseUrl}/grafana/dashboards`, '_blank', 'noopener,noreferrer')
   }
 
   const openDashboard1 = () => {
-    window.open(DASHBOARD_1_URL, '_blank', 'noopener,noreferrer,width=1400,height=900')
+    // Channel Transaction Summary
+    window.open(`${grafanaBaseUrl}/grafana/d/mrtS77BGz/channel-transaction-summary?orgId=1`, '_blank', 'noopener,noreferrer,width=1400,height=900')
   }
 
   const openDashboard2 = () => {
-    window.open(DASHBOARD_2_URL, '_blank', 'noopener,noreferrer,width=1400,height=900')
+    // IRIS Monitor
+    window.open(`${grafanaBaseUrl}/grafana/d/dwgixTnnzj/iris-monitor?orgId=1`, '_blank', 'noopener,noreferrer,width=1400,height=900')
   }
 
   return (
@@ -52,10 +61,10 @@ export function ObservabilityDemo() {
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold text-[#283054] mb-1">Channel Transaction Summary</h3>
-              <p className="text-sm text-[#4A5568]">View transaction metrics and channel performance</p>
+              <h3 className="text-xl font-bold text-[#283054] dark:text-white mb-1">Channel Transaction Summary</h3>
+              <p className="text-sm text-[#4A5568] dark:text-gray-300">View transaction metrics and channel performance</p>
             </div>
-            <ExternalLink className="w-5 h-5 text-[#4A5568] group-hover:text-[#283054] transition-colors" />
+            <ExternalLink className="w-5 h-5 text-[#4A5568] dark:text-gray-400 group-hover:text-[#283054] dark:group-hover:text-white transition-colors" />
           </div>
         </button>
 
@@ -68,10 +77,10 @@ export function ObservabilityDemo() {
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold text-[#283054] mb-1">IRIS Monitor</h3>
-              <p className="text-sm text-[#4A5568]">Monitor IRIS system metrics and health</p>
+              <h3 className="text-xl font-bold text-[#283054] dark:text-white mb-1">IRIS Monitor</h3>
+              <p className="text-sm text-[#4A5568] dark:text-gray-300">Monitor IRIS system metrics and health</p>
             </div>
-            <ExternalLink className="w-5 h-5 text-[#4A5568] group-hover:text-[#283054] transition-colors" />
+            <ExternalLink className="w-5 h-5 text-[#4A5568] dark:text-gray-400 group-hover:text-[#283054] dark:group-hover:text-white transition-colors" />
           </div>
         </button>
       </div>

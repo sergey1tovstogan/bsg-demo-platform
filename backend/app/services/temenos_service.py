@@ -39,7 +39,8 @@ class TemenosComponentInfo:
         functional_overview: str,
         capabilities: List[str],
         related_services: List[str],
-        relationships: Optional[List[ComponentRelationship]] = None
+        relationships: Optional[List[ComponentRelationship]] = None,
+        data_source: Optional[str] = None  # "rag_fresh", "rag_cached", "fallback", "cache"
     ):
         self.component_name = component_name
         self.component_type = component_type
@@ -48,6 +49,7 @@ class TemenosComponentInfo:
         self.capabilities = capabilities
         self.related_services = related_services
         self.relationships = relationships or []
+        self.data_source = data_source or "cache"  # Default to cache
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -57,7 +59,8 @@ class TemenosComponentInfo:
             "functionalOverview": self.functional_overview,
             "capabilities": self.capabilities,
             "relatedServices": self.related_services,
-            "relationships": [r.to_dict() for r in self.relationships]
+            "relationships": [r.to_dict() for r in self.relationships],
+            "dataSource": self.data_source  # Include data source in response
         }
 
 
@@ -103,23 +106,15 @@ class TemenosService:
             logger.warning("Component identification will work from namespace/name only (no RAG queries)")
             self.rag_adapter = None
         
-        # Cache for RAG responses - key: component_name, value: TemenosComponentInfo
+        # In-memory cache for RAG responses - key: component_name, value: TemenosComponentInfo
+        # This is a fast local cache, but we also use persistent cache via CacheService
         self._component_cache: Dict[str, TemenosComponentInfo] = {}
         
         # Track if RAG was available at initialization (to detect when it becomes available)
         self._rag_was_available = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
         
-        # If RAG is now available but wasn't before (or cache has minimal responses), clear cache
-        if self._rag_was_available and len(self._component_cache) > 0:
-            # Check if cached entries are minimal (from non-RAG fallback)
-            # If so, clear them to force fresh RAG queries
-            has_minimal_entries = any(
-                info.architectural_overview.startswith(f"{info.component_name} is a Temenos microservice component deployed")
-                for info in self._component_cache.values()
-            )
-            if has_minimal_entries:
-                logger.info("Clearing cache with minimal entries - RAG is now available, will fetch fresh data")
-                self._component_cache.clear()
+        # Cache service for persistent caching (will be initialized lazily)
+        self._cache_service = None
 
     def _is_potential_temenos_component(self, service: AzureResource) -> bool:
         """Quick check if service might be a Temenos component."""
@@ -158,10 +153,11 @@ class TemenosService:
             r"transact", r"payments", r"wealth", r"digital", r"analytics",
             r"datahub", r"modular", r"tap", r"adapter", r"genericconfig",
             r"eventstore", r"stmtgen", r"notification", r"audit", r"file",
-            r"workflow", r"integration", r"temenos"
+            r"workflow", r"integration", r"temenos", r"deposits", r"lending",
+            r"party", r"holdings", r"stmt", r"statement", r"core", r"banking"
         ]
         
-        # Must match Temenos pattern AND be a relevant resource type
+        # Must match Temenos pattern
         has_temenos_name = any(re.search(pattern, name) for pattern in temenos_patterns)
         
         # Focus on these resource types that can be Temenos components
@@ -182,7 +178,7 @@ class TemenosService:
         if "managedclusters/pods" in resource_type.lower():
             # Pods are already filtered by namespace, so include them
             # Also check if namespace in properties indicates Temenos component
-            namespace = service.properties.get("namespace", "")
+            namespace = service.properties.get("namespace", "") or service.properties.get("namespace_name", "") or service.tags.get("namespace", "")
             if namespace:
                 # Check if namespace matches Temenos patterns
                 temenos_namespace_patterns = [
@@ -191,11 +187,25 @@ class TemenosService:
                     r"audit", r"file", r"workflow", r"deposits", r"lending", r"webingress", r"ingress"
                 ]
                 if any(re.search(pattern, namespace, re.IGNORECASE) for pattern in temenos_namespace_patterns):
+                    logger.debug(f"Including pod {service.name} - namespace '{namespace}' matches Temenos pattern")
                     return True
-            return True  # Include all pods since they're already filtered by namespace discovery
+            # Include all pods since they're already filtered by namespace discovery
+            logger.debug(f"Including pod {service.name} - pods are pre-filtered by namespace discovery")
+            return True
         
-        # Include if: has Temenos name OR is a relevant type with Temenos name
-        return has_temenos_name or (is_relevant_type and has_temenos_name)
+        # Include if: has Temenos name OR is a relevant resource type
+        # This is less restrictive - relevant types (AKS, SQL, etc.) are included even without Temenos name
+        # because they might be Temenos components based on context
+        if is_relevant_type:
+            logger.debug(f"Including {service.name} - relevant resource type: {resource_type}")
+            return True
+        
+        if has_temenos_name:
+            logger.debug(f"Including {service.name} - name matches Temenos pattern")
+            return True
+        
+        logger.debug(f"Excluding {service.name} - not a relevant type and name doesn't match Temenos patterns")
+        return False
 
     def _extract_component_name(self, service: AzureResource) -> Optional[Dict[str, str]]:
         """Extract component name from Azure service."""
@@ -442,9 +452,24 @@ class TemenosService:
         return "core"
 
     def _build_architectural_query(self, component_name: str, category: str) -> str:
-        """Build comprehensive architectural query - requesting ALL available information."""
+        """
+        Build comprehensive architectural query with aliases and variations.
+        Ensures all microservices get proper RAG queries.
+        """
+        # Add aliases for better RAG matching
+        aliases_map = {
+            "Generic Config Microservice": ["Generic Config", "Generic Configuration", "Config Microservice", "Configuration Service", "genericconfig"],
+            "Event Store Microservice": ["Event Store", "EventStore", "Event Hub", "Event Router", "eventstore"],
+            "Statement Generation Microservice": ["Statement Generation", "StmtGen", "Statement Service", "stmtgen"],
+            "Adapter Microservice": ["Adapter Service", "Adapter", "Integration Adapter"],
+            "Holdings Microservice": ["Holdings", "Holdings Service"],
+            "Party V2 Microservice": ["Party V2", "Party Service", "Party", "partyv2"]
+        }
+        component_aliases = aliases_map.get(component_name, [])
+        alias_text = f" Also known as: {', '.join(component_aliases)}" if component_aliases else ""
+        
         if category == "microservice":
-            return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED architectural overview of {component_name} in Temenos Transact. 
+            return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED architectural overview of {component_name} in Temenos Transact.{alias_text} 
 
 Include EVERYTHING you know about:
 - Complete architecture and all design patterns used
@@ -481,8 +506,33 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
 
     def _build_functional_query(self, component_name: str, category: str) -> str:
         """Build comprehensive functional query - requesting ALL available information."""
+        # Add common aliases/variations for better RAG matching
+        aliases = {
+            "Generic Config Microservice": ["Generic Config", "Generic Configuration", "Config Microservice", "Configuration Service"],
+            "Event Store Microservice": ["Event Store", "EventStore", "Event Hub", "Event Router"],
+            "Statement Generation Microservice": ["Statement Generation", "StmtGen", "Statement Service"],
+            "Adapter Microservice": ["Adapter Service", "Adapter", "Integration Adapter"],
+            "Holdings Microservice": ["Holdings", "Holdings Service"],
+            "Party V2 Microservice": ["Party V2", "Party Service", "Party"]
+        }
+        
+        component_aliases = aliases.get(component_name, [])
+        alias_text = f" Also known as: {', '.join(component_aliases)}" if component_aliases else ""
+        
+        # Add aliases for better RAG matching
+        aliases_map = {
+            "Generic Config Microservice": ["Generic Config", "Generic Configuration", "Config Microservice", "Configuration Service", "genericconfig"],
+            "Event Store Microservice": ["Event Store", "EventStore", "Event Hub", "Event Router", "eventstore"],
+            "Statement Generation Microservice": ["Statement Generation", "StmtGen", "Statement Service", "stmtgen"],
+            "Adapter Microservice": ["Adapter Service", "Adapter", "Integration Adapter"],
+            "Holdings Microservice": ["Holdings", "Holdings Service"],
+            "Party V2 Microservice": ["Party V2", "Party Service", "Party", "partyv2"]
+        }
+        component_aliases = aliases_map.get(component_name, [])
+        alias_text = f" Also known as: {', '.join(component_aliases)}" if component_aliases else ""
+        
         if category == "microservice":
-            return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED functional overview of {component_name} in Temenos Transact. 
+            return f"""Provide a COMPLETE, COMPREHENSIVE, and DETAILED functional overview of {component_name} in Temenos Transact.{alias_text}{alias_text} 
 
 Include EVERYTHING you know about:
 - ALL core functional capabilities and responsibilities (list all)
@@ -657,6 +707,13 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
         
         return "Azure Resource"
 
+    async def _get_cache_service(self):
+        """Get cache service instance (lazy initialization)."""
+        if self._cache_service is None:
+            from app.services.cache_service import get_cache_service
+            self._cache_service = await get_cache_service()
+        return self._cache_service
+    
     async def identify_component(
         self, service: AzureResource, all_services: Optional[List[AzureResource]] = None, use_cache: bool = True, force_refresh: bool = False
     ) -> Optional[TemenosComponentInfo]:
@@ -685,7 +742,35 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             
             logger.info(f"Identifying component for {service.name}: {component_name}")
             
-            # Check cache first (unless force_refresh is True)
+            # Check persistent cache first (unless force_refresh is True)
+            # If force_refresh, skip cache entirely and fetch fresh from RAG
+            if force_refresh:
+                logger.info(f"force_refresh=True for {component_name}, skipping ALL caches and fetching fresh from RAG")
+            elif use_cache:
+                try:
+                    cache_service = await self._get_cache_service()
+                    cached_data = await cache_service.get_component_info(component_name)
+                    if cached_data:
+                        logger.info(f"Using cached component info (persistent) for {component_name}")
+                        # Reconstruct TemenosComponentInfo from cached data
+                        cached_component_info = TemenosComponentInfo(
+                            component_name=cached_data.get("component_name", component_name),
+                            component_type=self._determine_component_type(service),
+                            architectural_overview=cached_data.get("architectural_overview", ""),
+                            functional_overview=cached_data.get("functional_overview", ""),
+                            capabilities=cached_data.get("capabilities", []),
+                            related_services=cached_data.get("related_services", []),
+                            relationships=[],  # Relationships not cached for now
+                            data_source="cache"
+                        )
+                        # Also update in-memory cache
+                        cache_key = component_name.lower()
+                        self._component_cache[cache_key] = cached_component_info
+                        return cached_component_info
+                except Exception as e:
+                    logger.warning(f"Error reading from persistent cache: {e}, continuing...")
+            
+            # Check in-memory cache (unless force_refresh is True)
             cache_key = component_name.lower()
             if use_cache and not force_refresh and cache_key in self._component_cache:
                 cached_info = self._component_cache[cache_key]
@@ -708,13 +793,31 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                         functional_overview=cached_info.functional_overview,
                         capabilities=cached_info.capabilities,
                         related_services=cached_info.related_services,
-                        relationships=cached_info.relationships
+                        relationships=cached_info.relationships,
+                        data_source=cached_info.data_source or "cache"  # Preserve data source from cache
                     )
             
             # Check if RAG adapter is available (has JWT token)
+            # If force_refresh is True, try to refresh the JWT token from settings
+            if force_refresh and self.rag_adapter:
+                try:
+                    from app.api.settings import get_rag_jwt_token_value
+                    # Try to refresh JWT token from settings (async)
+                    try:
+                        new_token = await get_rag_jwt_token_value()
+                        if new_token:
+                            self.rag_adapter.jwt_token = new_token
+                            logger.info(f"✓ Refreshed RAG JWT token for {component_name} (force_refresh=True)")
+                        else:
+                            logger.warning(f"Could not refresh JWT token - token is None")
+                    except Exception as e:
+                        logger.warning(f"Could not refresh JWT token: {e}, using existing token")
+                except Exception as e:
+                    logger.warning(f"Error refreshing JWT token: {e}")
+            
             has_rag = self.rag_adapter is not None and hasattr(self.rag_adapter, 'jwt_token') and self.rag_adapter.jwt_token
             
-            logger.info(f"RAG availability check for {component_name}:")
+            logger.info(f"RAG availability check for {component_name} (force_refresh={force_refresh}):")
             logger.info(f"  rag_adapter is None: {self.rag_adapter is None}")
             if self.rag_adapter:
                 logger.info(f"  has jwt_token attr: {hasattr(self.rag_adapter, 'jwt_token')}")
@@ -723,7 +826,48 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             logger.info(f"  Final has_rag: {has_rag}")
             
             if not has_rag:
-                # If RAG is not available, create component info from namespace/name only
+                # If RAG is not available, use cached data if available, otherwise use minimal fallback
+                if force_refresh:
+                    logger.warning(f"  ⚠ force_refresh=True but RAG is not available - cannot fetch fresh data")
+                    # Try to get cached data as fallback (but mark it appropriately)
+                    try:
+                        cache_service = await self._get_cache_service()
+                        cached_data = await cache_service.get_component_info(component_name)
+                        if cached_data:
+                            logger.info(f"  Returning cached data since RAG is not available (force_refresh requested)")
+                            return TemenosComponentInfo(
+                                component_name=cached_data.get("component_name", component_name),
+                                component_type=self._determine_component_type(service),
+                                architectural_overview=cached_data.get("architectural_overview", ""),
+                                functional_overview=cached_data.get("functional_overview", ""),
+                                capabilities=cached_data.get("capabilities", []),
+                                related_services=cached_data.get("related_services", []),
+                                relationships=[],
+                                data_source="rag_cached"  # Mark as cached since RAG unavailable
+                            )
+                    except Exception as e:
+                        logger.warning(f"Could not retrieve cached data: {e}")
+                    
+                    # Also check in-memory cache as fallback
+                    if cache_key in self._component_cache:
+                        cached_info = self._component_cache[cache_key]
+                        # Only return cached if it's not minimal fallback
+                        is_minimal = cached_info.architectural_overview.startswith(f"{component_name} is a Temenos microservice component deployed") and len(cached_info.architectural_overview) < 500
+                        if not is_minimal:
+                            logger.info(f"  Returning in-memory cached data (non-minimal) since RAG is not available")
+                            # Return with updated data_source
+                            return TemenosComponentInfo(
+                                component_name=cached_info.component_name,
+                                component_type=self._determine_component_type(service),
+                                architectural_overview=cached_info.architectural_overview,
+                                functional_overview=cached_info.functional_overview,
+                                capabilities=cached_info.capabilities,
+                                related_services=cached_info.related_services,
+                                relationships=cached_info.relationships,
+                                data_source="rag_cached"  # Mark as cached since RAG unavailable
+                            )
+                
+                # If no cached data or cached data is minimal, create minimal fallback
                 logger.warning(f"✗ RAG not available for {component_name}, using minimal fallback description")
                 component_info = TemenosComponentInfo(
                     component_name=component_name,
@@ -732,11 +876,12 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
                     functional_overview=f"{component_name} provides core banking functionality as part of the Temenos Transact platform.",
                     capabilities=[f"Core {component_name} functionality"],
                     related_services=[],
-                    relationships=[]
+                    relationships=[],
+                    data_source="fallback"
                 )
                 logger.info(f"Successfully identified component (without RAG): {component_name} for {service.name}")
-                # Cache even non-RAG responses
-                if use_cache:
+                # Don't cache minimal fallback when force_refresh is True
+                if use_cache and not force_refresh:
                     self._component_cache[cache_key] = component_info
                 return component_info
             
@@ -745,56 +890,103 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             functional_query = self._build_functional_query(component_name, component_category)
             
             # Query RAG API with timeout - use asyncio.wait_for for timeout
+            # Check cache first to avoid unnecessary RAG API calls
             import asyncio
-            logger.info(f"Querying RAG for {component_name} - Architectural query...")
-            logger.info(f"  Query: {architectural_query[:200]}...")
-            try:
-                architectural_response = await asyncio.wait_for(
-                    self._query_rag(
-                        question=architectural_query,
-                        region="global",
-                        rag_model_id="ModularBanking, TechnologyOverview",
-                        context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
-                    ),
-                    timeout=60.0  # Increased timeout to 60s for complete comprehensive responses
-                )
-                logger.info(f"✓ Architectural query completed for {component_name}")
-                logger.info(f"  Response type: {type(architectural_response)}")
-                logger.info(f"  Response keys: {list(architectural_response.keys()) if isinstance(architectural_response, dict) else 'N/A'}")
-                if isinstance(architectural_response, dict) and "data" in architectural_response:
-                    answer_preview = str(architectural_response.get("data", {}).get("answer", ""))[:300]
-                    logger.info(f"  Answer preview: {answer_preview}...")
-            except asyncio.TimeoutError:
-                logger.warning(f"⚠ Architectural query timeout for {service.name} after 60s")
-                architectural_response = {"data": {"answer": "Information not available - timeout"}}
-            except Exception as e:
-                logger.error(f"✗ Architectural query failed for {service.name}: {e}", exc_info=True)
-                architectural_response = {"data": {"answer": "Information not available - error"}}
+            cache_service = await self._get_cache_service()
             
-            logger.info(f"Querying RAG for {component_name} - Functional query...")
-            logger.info(f"  Query: {functional_query[:200]}...")
-            try:
-                functional_response = await asyncio.wait_for(
-                    self._query_rag(
-                        question=functional_query,
-                        region="global",
-                        rag_model_id="ModularBanking, FuncTransactGeneric",
-                        context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
-                    ),
-                    timeout=60.0  # Increased timeout to 60s for complete comprehensive responses
+            # Try to get cached architectural response (ALWAYS skip cache if force_refresh)
+            architectural_response = None
+            rag_fresh_arch = False
+            if force_refresh:
+                logger.info(f"force_refresh=True: Skipping cache and fetching fresh architectural RAG data for {component_name}")
+                rag_fresh_arch = True
+            elif use_cache:
+                cached_arch = await cache_service.get_rag_response(
+                    component_name, "architectural", "ModularBanking, TechnologyOverview"
                 )
-                logger.info(f"✓ Functional query completed for {component_name}")
-                logger.info(f"  Response type: {type(functional_response)}")
-                logger.info(f"  Response keys: {list(functional_response.keys()) if isinstance(functional_response, dict) else 'N/A'}")
-                if isinstance(functional_response, dict) and "data" in functional_response:
-                    answer_preview = str(functional_response.get("data", {}).get("answer", ""))[:300]
-                    logger.info(f"  Answer preview: {answer_preview}...")
-            except asyncio.TimeoutError:
-                logger.warning(f"⚠ Functional query timeout for {service.name} after 60s")
-                functional_response = {"data": {"answer": "Information not available - timeout"}}
-            except Exception as e:
-                logger.error(f"✗ Functional query failed for {service.name}: {e}", exc_info=True)
-                functional_response = {"data": {"answer": "Information not available - error"}}
+                if cached_arch:
+                    logger.info(f"Using cached architectural RAG response for {component_name}")
+                    architectural_response = cached_arch
+            
+            if not architectural_response:
+                rag_fresh_arch = True  # Mark that we're fetching fresh RAG data
+                logger.info(f"Querying RAG for {component_name} - Architectural query...")
+                logger.info(f"  Query: {architectural_query[:200]}...")
+                try:
+                    architectural_response = await asyncio.wait_for(
+                        self._query_rag(
+                            question=architectural_query,
+                            region="global",
+                            rag_model_id="ModularBanking, TechnologyOverview",
+                            context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
+                        ),
+                        timeout=60.0  # Increased timeout to 60s for complete comprehensive responses
+                    )
+                    logger.info(f"✓ Architectural query completed for {component_name}")
+                    logger.info(f"  Response type: {type(architectural_response)}")
+                    logger.info(f"  Response keys: {list(architectural_response.keys()) if isinstance(architectural_response, dict) else 'N/A'}")
+                    if isinstance(architectural_response, dict) and "data" in architectural_response:
+                        answer_preview = str(architectural_response.get("data", {}).get("answer", ""))[:300]
+                        logger.info(f"  Answer preview: {answer_preview}...")
+                    
+                    # Cache the response
+                    if use_cache:
+                        await cache_service.set_rag_response(
+                            component_name, "architectural", architectural_response, "ModularBanking, TechnologyOverview"
+                        )
+                except asyncio.TimeoutError:
+                    logger.warning(f"⚠ Architectural query timeout for {service.name} after 60s")
+                    architectural_response = {"data": {"answer": "Information not available - timeout"}}
+                except Exception as e:
+                    logger.error(f"✗ Architectural query failed for {service.name}: {e}", exc_info=True)
+                    architectural_response = {"data": {"answer": "Information not available - error"}}
+            
+            # Try to get cached functional response (ALWAYS skip cache if force_refresh)
+            functional_response = None
+            rag_fresh_func = False
+            if force_refresh:
+                logger.info(f"force_refresh=True: Skipping cache and fetching fresh functional RAG data for {component_name}")
+                rag_fresh_func = True
+            elif use_cache:
+                cached_func = await cache_service.get_rag_response(
+                    component_name, "functional", "ModularBanking, FuncTransactGeneric"
+                )
+                if cached_func:
+                    logger.info(f"Using cached functional RAG response for {component_name}")
+                    functional_response = cached_func
+            
+            if not functional_response:
+                rag_fresh_func = True  # Mark that we're fetching fresh RAG data
+                logger.info(f"Querying RAG for {component_name} - Functional query...")
+                logger.info(f"  Query: {functional_query[:200]}...")
+                try:
+                    functional_response = await asyncio.wait_for(
+                        self._query_rag(
+                            question=functional_query,
+                            region="global",
+                            rag_model_id="ModularBanking, FuncTransactGeneric",
+                            context="This is a Temenos microservice component in a core banking system deployment. Provide comprehensive, detailed, and thorough information."
+                        ),
+                        timeout=60.0  # Increased timeout to 60s for complete comprehensive responses
+                    )
+                    logger.info(f"✓ Functional query completed for {component_name}")
+                    logger.info(f"  Response type: {type(functional_response)}")
+                    logger.info(f"  Response keys: {list(functional_response.keys()) if isinstance(functional_response, dict) else 'N/A'}")
+                    if isinstance(functional_response, dict) and "data" in functional_response:
+                        answer_preview = str(functional_response.get("data", {}).get("answer", ""))[:300]
+                        logger.info(f"  Answer preview: {answer_preview}...")
+                    
+                    # Cache the response (but NOT if force_refresh - we want fresh data next time too)
+                    if use_cache and not force_refresh:
+                        await cache_service.set_rag_response(
+                            component_name, "functional", functional_response, "ModularBanking, FuncTransactGeneric"
+                        )
+                except asyncio.TimeoutError:
+                    logger.warning(f"⚠ Functional query timeout for {service.name} after 60s")
+                    functional_response = {"data": {"answer": "Information not available - timeout"}}
+                except Exception as e:
+                    logger.error(f"✗ Functional query failed for {service.name}: {e}", exc_info=True)
+                    functional_response = {"data": {"answer": "Information not available - error"}}
             
             architectural_text = architectural_response.get("data", {}).get("answer", "Information not available")
             functional_text = functional_response.get("data", {}).get("answer", "Information not available")
@@ -807,6 +999,55 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             # Format responses - but don't truncate too aggressively
             arch_formatted = self._format_rag_response(architectural_text)
             func_formatted = self._format_rag_response(functional_text)
+            
+            # Deduplicate and structure responses to remove redundancy
+            try:
+                from app.services.rag_deduplication_service import RAGDeduplicationService
+                dedup_service = RAGDeduplicationService()
+                structured = dedup_service.process_rag_responses(architectural_text, functional_text)
+                
+                # Build deduplicated architectural overview
+                arch_parts = []
+                if structured["executive_summary"]:
+                    arch_parts.append(structured["executive_summary"])
+                
+                if structured["patterns"]:
+                    arch_parts.append("\n## Patterns & Guarantees\n")
+                    for pattern in structured["patterns"]:
+                        arch_parts.append(f"**{pattern['pattern']}**: {pattern['what_it_ensures']}")
+                
+                if structured["components"]:
+                    arch_parts.append("\n## Key Components\n")
+                    for comp in structured["components"]:
+                        arch_parts.append(f"- **{comp['name']}**: {comp['description']}")
+                
+                if structured["deployment"]:
+                    arch_parts.append("\n## Deployment\n")
+                    arch_parts.extend([f"- {d}" for d in structured["deployment"]])
+                
+                # Build deduplicated functional overview
+                func_parts = []
+                if structured["capabilities"]:
+                    func_parts.append("## Core Capabilities\n")
+                    func_parts.extend([f"- {cap}" for cap in structured["capabilities"]])
+                
+                if structured["use_cases"]:
+                    func_parts.append("\n## Use Cases\n")
+                    func_parts.extend([f"- {uc}" for uc in structured["use_cases"]])
+                
+                if structured["interfaces"]:
+                    func_parts.append("\n## Interfaces\n")
+                    func_parts.extend([f"- {intf}" for intf in structured["interfaces"]])
+                
+                # Use deduplicated versions if they have content
+                if arch_parts:
+                    arch_formatted = "\n".join(arch_parts)
+                if func_parts:
+                    func_formatted = "\n".join(func_parts)
+                
+                logger.info(f"Deduplicated response: arch={len(arch_formatted)} chars, func={len(func_formatted)} chars")
+            except Exception as e:
+                logger.warning(f"Failed to deduplicate RAG responses: {e}, using original format")
             
             # Log formatted lengths
             logger.info(f"Formatted response lengths: arch={len(arch_formatted)}, func={len(func_formatted)}")
@@ -856,6 +1097,11 @@ Integration:
 - Supports event-driven architectures
 - Enables distributed system patterns"""
             
+            # Determine data source: if either architectural or functional was fresh, mark as rag_fresh
+            data_source = "rag_fresh" if (rag_fresh_arch or rag_fresh_func) else "rag_cached"
+            if rag_fresh_arch or rag_fresh_func:
+                logger.info(f"✓ Successfully fetched fresh RAG data for {component_name} (arch: {rag_fresh_arch}, func: {rag_fresh_func})")
+            
             component_info = TemenosComponentInfo(
                 component_name=component_name,
                 component_type=self._determine_component_type(service),
@@ -863,7 +1109,8 @@ Integration:
                 functional_overview=func_formatted,
                 capabilities=self._extract_capabilities(functional_text) if functional_text != "Information not available" else [f"Core {component_name} functionality"],
                 related_services=[],
-                relationships=[]
+                relationships=[],
+                data_source=data_source
             )
             
             # Cache the component info
@@ -918,8 +1165,8 @@ Integration:
         
         logger.info(f"Processing {len(potential_services)} potential Temenos components out of {total} total services")
         
-        # Process in batches - smaller batches for faster feedback
-        batch_size = 3
+        # Process in batches - optimize batch size for better throughput when cache is used
+        batch_size = 5  # Increased from 3 for better throughput when cache is used
         
         for i in range(0, len(potential_services), batch_size):
             batch = potential_services[i:i + batch_size]
@@ -954,10 +1201,10 @@ Integration:
                         error=str(e)
                     ))
             
-            # Small delay between batches
+            # Small delay between batches (reduced since cache reduces load)
             if i + batch_size < len(potential_services):
                 import asyncio
-                await asyncio.sleep(0.2)  # Reduced delay
+                await asyncio.sleep(0.1)  # Reduced delay
         
         # Add all skipped services to results as unclassified
         skipped_services = [s for s in services if s not in potential_services]

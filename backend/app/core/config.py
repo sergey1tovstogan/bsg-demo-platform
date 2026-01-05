@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=False, description="Debug mode")
 
     # API Settings
-    API_V1_PREFIX: str = "/api/v1"
+    API_V1_PREFIX: str = "/api/v1"  # Changed from "api/v1" to "/api/v1" (was causing double slash in routes)
     HOST: str = Field(default="0.0.0.0", description="API host")
     PORT: int = Field(
         default_factory=lambda: int(os.getenv("PORT", "8000")),
@@ -106,7 +106,7 @@ class Settings(BaseSettings):
     RAG_TYPE: str = Field(default="temenos", description="RAG provider type: temenos, openai, etc.")
     RAG_JWT_TOKEN: Optional[str] = Field(
         default=None,
-        description="JWT token for RAG tool API authentication (tbsg.temenos.com)"
+        description="JWT token for RAG tool API authentication (tbsg.temenos.com). Optional - can be set via Settings API instead."
     )
     RAG_API_URL: str = Field(
         default="https://tbsg.temenos.com",

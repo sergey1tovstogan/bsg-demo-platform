@@ -1,16 +1,43 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Code2, Radio, Database as DatabaseIcon, Loader2 } from 'lucide-react'
 import { apiService } from '../services/api'
-import type { ComponentId, DemoConfig, DemoSession } from '../types'
+import type { ComponentId } from '../types'
 import { DatabaseRecords } from './DatabaseRecords'
 import { ObservabilityDemo } from './observability/ObservabilityDemo'
 import { IntegrationDemo } from './IntegrationDemo'
+import { SecurityDemo } from './SecurityDemo.tsx'
+
+type DemoView = 'demo' | 'video'
 
 interface DemoFrameProps {
   componentId: ComponentId
+  view?: DemoView
 }
 
-export function DemoFrame({ componentId }: DemoFrameProps) {
+export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
+  // All hooks must be called before any conditional returns (React Rules of Hooks)
+  const [loading, setLoading] = useState(true)
+
+  const loadDemoConfig = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getDemoConfig(componentId)
+      // Config loaded but not used yet - reserved for future use
+      console.log('Demo config loaded:', response.data)
+    } catch (err: unknown) {
+      // If demo config doesn't exist, that's okay - show placeholder
+      console.log('No demo config available')
+    } finally {
+      setLoading(false)
+    }
+  }, [componentId])
+
+  useEffect(() => {
+    loadDemoConfig()
+  }, [loadDemoConfig])
+
+  // Session cleanup removed - session is not used
+
   // Use specialized component for observability
   if (componentId === 'observability') {
     return <ObservabilityDemo />
@@ -19,6 +46,11 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
   // Use integration demo for integration component
   if (componentId === 'integration') {
     return <IntegrationDemo />
+  }
+
+  // Dedicated handling for security demo/video placeholders
+  if (componentId === 'security') {
+    return <SecurityDemo mode={view} />
   }
 
   // Only show Data Architecture specific content for data-architecture component
@@ -76,40 +108,6 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
     )
   }
 
-  // For other components, try to load demo config
-  const [_demoConfig, setDemoConfig] = useState<DemoConfig | null>(null)
-  const [_session, _setSession] = useState<DemoSession | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [_connecting, _setConnecting] = useState(false)
-  const [_error, _setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    loadDemoConfig()
-  }, [componentId])
-
-  useEffect(() => {
-    return () => {
-      // Cleanup: disconnect on unmount
-      if (_session?.session_id) {
-        apiService.disconnectDemo(componentId, _session.session_id).catch(console.error)
-      }
-    }
-  }, [_session, componentId])
-
-  const loadDemoConfig = async () => {
-    try {
-      setLoading(true)
-      _setError(null)
-      const response = await apiService.getDemoConfig(componentId)
-      setDemoConfig(response.data) // setDemoConfig is used
-    } catch (err: any) {
-      // If demo config doesn't exist, that's okay - show placeholder
-      _setError(null)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   // Demo connection functions - reserved for future use
   // const connectDemo = async () => { ... }
   // const disconnectDemo = async () => { ... }
@@ -122,15 +120,21 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
     )
   }
 
-  // For all other components, show a generic demo placeholder
+  // For all other components, show a generic placeholder depending on view
   return (
     <div className="flex items-center justify-center min-h-[400px]">
       <div className="text-center text-gray-400">
         <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
           <Code2 className="w-12 h-12 opacity-30" />
         </div>
-        <p className="text-lg font-medium text-gray-500 mb-2">Demo Coming Soon</p>
-        <p className="text-sm">Interactive demo content will be available here</p>
+        <p className="text-lg font-medium text-gray-500 mb-2">
+          {view === 'video' ? 'Video Coming Soon' : 'Demo Coming Soon'}
+        </p>
+        <p className="text-sm">
+          {view === 'video'
+            ? 'Demo video content will be available here'
+            : 'Demo content will be available here'}
+        </p>
       </div>
     </div>
   )

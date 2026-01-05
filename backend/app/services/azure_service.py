@@ -42,7 +42,8 @@ class AzureResource:
         location: str,
         resource_group: str,
         tags: Optional[Dict[str, str]] = None,
-        properties: Optional[Dict[str, Any]] = None
+        properties: Optional[Dict[str, Any]] = None,
+        description: Optional[str] = None
     ):
         self.id = id
         self.name = name
@@ -51,13 +52,14 @@ class AzureResource:
         self.resource_group = resource_group
         self.tags = tags or {}
         self.properties = properties or {}
+        self.description = description
 
     def to_dict(self) -> Dict[str, Any]:
         # Build Azure Portal URL
         # Format: https://portal.azure.com/#@<tenant>/resource<resource_id>
         portal_url = f"https://portal.azure.com/#resource{self.id}"
         
-        return {
+        result = {
             "id": self.id,
             "name": self.name,
             "type": self.type,
@@ -67,6 +69,12 @@ class AzureResource:
             "properties": self.properties,
             "portalUrl": portal_url  # Add Azure Portal URL
         }
+        
+        # Add description if available
+        if self.description:
+            result["description"] = self.description
+        
+        return result
 
 
 class AzureService:

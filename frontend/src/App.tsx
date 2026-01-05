@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
 import { SettingsModal } from './components/SettingsModal'
@@ -6,12 +6,16 @@ import { ComingSoonModal } from './components/ComingSoonModal'
 import { HomePage } from './pages/HomePage'
 import { ComponentPage } from './pages/ComponentPage'
 import type { ComponentId } from './types'
+import type { SearchResult } from './utils/searchMapping'
 
 function App() {
   const [currentComponent, setCurrentComponent] = useState<ComponentId | null>(null)
+  const [selectedCard, setSelectedCard] = useState<number | undefined>(undefined)
+  const [activeTab, setActiveTab] = useState<'content' | 'video' | 'demo' | 'chatbot' | undefined>(undefined)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pendingFeature, setPendingFeature] = useState<string | null>(null)
+  const collapseSidebarRef = useRef<(() => void) | null>(null)
 
   // Load theme from localStorage on mount
   useEffect(() => {
@@ -43,20 +47,37 @@ function App() {
 
   const handleComponentChange = (componentId: ComponentId) => {
     setCurrentComponent(componentId)
+    setSelectedCard(undefined) // Reset selected card when changing components
+    setActiveTab(undefined) // Reset active tab when changing components
   }
 
   const handleHomeClick = () => {
     setCurrentComponent(null)
+    setSelectedCard(undefined)
+    setActiveTab(undefined)
+  }
+
+  const handleSearch = (result: SearchResult) => {
+    setCurrentComponent(result.componentId)
+    setSelectedCard(result.selectedCard)
+    setActiveTab(result.tab)
+    // Collapse sidebar when navigating via search
+    if (collapseSidebarRef.current) {
+      collapseSidebarRef.current()
+    }
   }
 
   return (
-    <div className={`min-h-screen flex ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#F8FAFC]'}`}>
+    <div className={`min-h-screen flex transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
       {/* Sidebar */}
       <Sidebar
         currentComponent={currentComponent}
         onComponentChange={handleComponentChange}
         onHomeClick={handleHomeClick}
         onSettingsClick={() => setSettingsOpen(true)}
+        onCollapseRef={(collapseFn) => {
+          collapseSidebarRef.current = collapseFn
+        }}
       />
 
       {/* Settings Modal */}
@@ -73,32 +94,51 @@ function App() {
       />
 
       {/* Main Content Area */}
-      <main className={`flex-1 ml-20 relative overflow-hidden transition-all duration-300 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-[#F8FAFC]'}`}>
-        {/* Background Watermark */}
-        <div className="fixed inset-0 pointer-events-none z-0">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className={`text-[400px] font-light select-none opacity-30 ${theme === 'dark' ? 'text-[#1e293b]' : 'text-[#D1D5DB]'}`}>
+      <main 
+        className="flex-1 ml-20 relative overflow-hidden transition-all duration-300"
+        onClick={() => {
+          // Collapse sidebar immediately when clicking anywhere on main content
+          if (collapseSidebarRef.current) {
+            collapseSidebarRef.current()
+          }
+        }}
+      >
+        {/* Modern Background Elements */}
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+          {/* Main Gradient Orb */}
+          <div className={`absolute top-[-20%] right-[-10%] w-[800px] h-[800px] rounded-full blur-[120px] opacity-20 animate-pulse-slow ${theme === 'dark' ? 'bg-blue-600' : 'bg-blue-400'
+            }`}></div>
+
+          {/* Secondary Gradient Orb */}
+          <div className={`absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full blur-[100px] opacity-20 animate-pulse-slow animation-delay-400 ${theme === 'dark' ? 'bg-violet-600' : 'bg-violet-400'
+            }`}></div>
+
+          {/* Watermark */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+            <span className="text-[400px] font-bold select-none tracking-tighter">
               BSG
             </span>
           </div>
-          {/* Gradient Curve from Bottom Right */}
-          <div className={`absolute bottom-0 right-0 w-[800px] h-[600px] bg-gradient-to-tl rounded-full blur-3xl opacity-40 ${
-            theme === 'dark'
-              ? 'from-[#283054] via-[#283054]/20 to-transparent'
-              : 'from-[#283054] via-[#283054]/10 to-transparent'
-          }`}></div>
         </div>
 
         {/* Content Container */}
-        <div className="relative z-10 px-8 py-8 h-full overflow-y-auto">
-          <Header />
-
-          <div className="max-w-7xl">
-            {currentComponent ? (
-              <ComponentPage componentId={currentComponent} />
-            ) : (
-              <HomePage onSelectComponent={handleComponentChange} />
-            )}
+        <div className="relative z-10 px-8 py-8 h-full overflow-y-auto custom-scrollbar">
+          <div className="max-w-7xl mx-auto">
+            <div className="animate-fade-in">
+              {currentComponent ? (
+                <ComponentPage
+                  componentId={currentComponent}
+                  initialSelectedCard={selectedCard}
+                  initialTab={activeTab}
+                />
+              ) : (
+                <HomePage
+                  onSelectComponent={handleComponentChange}
+                  onSettingsClick={() => setSettingsOpen(true)}
+                  searchBar={<Header onSearch={handleSearch} showSearch={true} />}
+                />
+              )}
+            </div>
           </div>
         </div>
       </main>
@@ -107,4 +147,3 @@ function App() {
 }
 
 export default App
-

@@ -30,8 +30,9 @@ All documentation is organized by topic:
 
 The documentation directory has been cleaned up:
 - **Removed**: 23 empty or outdated temporary fix documentation files
-- **Kept**: 10 core documentation files with actual content
-- **Total**: Reduced from 33 files to 10 essential files
+- **Removed**: All PowerShell (.ps1) scripts (kept only batch .bat scripts)
+- **Kept**: 8 core documentation files with actual content
+- **Updated**: All documentation to reference batch scripts instead of PowerShell
 
 ## 📝 Contributing
 
