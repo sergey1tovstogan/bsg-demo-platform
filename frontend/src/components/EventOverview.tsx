@@ -212,33 +212,31 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
 
       {/* Highlight Section - Always visible */}
       <div className="mb-6">
-        <div className="relative overflow-hidden rounded-lg py-3 px-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #14b8a6 50%, #764ba2 100%)' }}>
-          <div className="relative z-10 flex items-center space-x-4">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6">
+          <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   {/* Information icon */}
                   <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M12 16v-4M12 8h.01" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-lg font-medium text-white leading-snug text-center">
-                Provide a modern, real-time integration mechanism that enables seamless communication and data sharing across the banking ecosystem
+            <div className="flex-1">
+              <p className="text-xl font-normal text-slate-900 dark:text-slate-100 leading-relaxed">
+                A modern, real-time integration mechanism that enables seamless communication and data sharing across the banking ecosystem
               </p>
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
         </div>
       </div>
 
       {/* Event Framework Diagram */}
       <div
-        className="relative rounded-lg overflow-hidden"
+        className="relative rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700"
         style={{
-          minHeight: '450px',
-          background: 'linear-gradient(135deg, #667eea 0%, #14b8a6 50%, #764ba2 100%)'
+          minHeight: '450px'
         }}
         onMouseLeave={() => {
           if (!pinnedTooltip) {
@@ -246,37 +244,20 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
           }
         }}
       >
-        {/* Modern pattern overlay */}
-        <div className="absolute inset-0" style={{
-          backgroundImage: `
-            radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
-            radial-gradient(circle at 40% 20%, rgba(255,255,255,0.05) 0%, transparent 50%)
-          `
-        }}></div>
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px'
-        }}></div>
-
         {/* Content - Three panels: Left features, Middle diagram, Right features */}
-        <div className="relative z-10 flex pt-8">
+        <div className="flex pt-8">
           {/* Left Panel - Features */}
           <div className="w-[30%] p-6 space-y-4 flex flex-col justify-center">
             {/* Pub/sub events */}
             <div
-              className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'pubsub-events' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+              className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'pubsub-events' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
               onMouseEnter={() => handleFeatureCardHover('pubsub-events')}
               onMouseLeave={handleFeatureCardLeave}
               onClick={() => handleFeatureCardClick('pubsub-events')}
             >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-teal-500 rounded-2xl flex items-center justify-center">
+                  <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                     <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       {/* Hexagon shape */}
                       <path d="M12 2L19 6V18L12 22L5 18V6L12 2Z" strokeLinecap="round" strokeLinejoin="round" />
@@ -296,14 +277,14 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
 
             {/* Immediate handling */}
             <div
-              className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'immediate-handling' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+              className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'immediate-handling' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
               onMouseEnter={() => handleFeatureCardHover('immediate-handling')}
               onMouseLeave={handleFeatureCardLeave}
               onClick={() => handleFeatureCardClick('immediate-handling')}
             >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-teal-500 rounded-2xl flex items-center justify-center">
+                  <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                     <svg className="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24">
                       {/* Lightning bolt icon - symbol of speed */}
                       <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" />
@@ -320,14 +301,14 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
 
             {/* Scale and volumes */}
             <div
-              className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'scale-volumes' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+              className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'scale-volumes' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
               onMouseEnter={() => handleFeatureCardHover('scale-volumes')}
               onMouseLeave={handleFeatureCardLeave}
               onClick={() => handleFeatureCardClick('scale-volumes')}
             >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-teal-500 rounded-2xl flex items-center justify-center">
+                  <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                     <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                       {/* Growing bar chart showing scalability */}
                       <path d="M3 20V16M8 20V12M13 20V8M18 20V4" strokeLinecap="round" strokeLinejoin="round" />
@@ -352,7 +333,7 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
               <div className="flex flex-col items-center relative" style={{ gap: '5px', marginRight: 'auto', marginLeft: '-180px' }}>
                 {/* Temenos Business Logic Box */}
                 <div
-                  className={`bg-white dark:bg-slate-800 rounded-lg p-3.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'temenos-business-logic' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+                  className={`bg-white dark:bg-slate-800 rounded-lg p-3.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'temenos-business-logic' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '120px', minHeight: '204px' }}
                   onMouseEnter={() => handleFeatureCardHover('temenos-business-logic')}
                   onMouseLeave={handleFeatureCardLeave}
@@ -370,7 +351,7 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
 
                 {/* Thin Events Box - Rotated and positioned to the right */}
                 <div
-                  className={`absolute bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded shadow-sm flex items-center justify-center cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'events-box' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+                  className={`absolute bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded shadow-sm flex items-center justify-center cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'events-box' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{
                     width: '30px',
                     height: '162px',
@@ -392,16 +373,16 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
                   <svg width="100" height="5" style={{ overflow: 'visible' }}>
                     <defs>
                       <marker id="arrowEvent1" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
-                        <polygon points="0,0 6,3 0,6" fill="#FFFFFF" />
+                        <polygon points="0,0 6,3 0,6" fill="#0066CC" />
                       </marker>
                     </defs>
-                    <line x1="0" y1="2.5" x2="98" y2="2.5" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowEvent1)" strokeDasharray="6,3">
+                    <line x1="0" y1="2.5" x2="98" y2="2.5" stroke="#0066CC" strokeWidth="2.5" markerEnd="url(#arrowEvent1)" strokeDasharray="6,3">
                       <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
                     </line>
                   </svg>
                   <div
                     className={`absolute text-[11px] font-semibold whitespace-nowrap cursor-pointer hover:underline transition-all ${pinnedTooltip === 'data-event' ? 'underline' : ''}`}
-                    style={{ left: '5px', top: '-16px', color: '#FFFFFF' }}
+                    style={{ left: '5px', top: '-16px', color: '#0066CC' }}
                     onMouseEnter={() => handleFeatureCardHover('data-event')}
                     onMouseLeave={handleFeatureCardLeave}
                     onClick={() => handleFeatureCardClick('data-event')}
@@ -443,16 +424,16 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
                   <svg width="100" height="5" style={{ overflow: 'visible' }}>
                     <defs>
                       <marker id="arrowEvent2" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
-                        <polygon points="0,0 6,3 0,6" fill="#FFFFFF" />
+                        <polygon points="0,0 6,3 0,6" fill="#0066CC" />
                       </marker>
                     </defs>
-                    <line x1="0" y1="2.5" x2="98" y2="2.5" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowEvent2)" strokeDasharray="6,3">
+                    <line x1="0" y1="2.5" x2="98" y2="2.5" stroke="#0066CC" strokeWidth="2.5" markerEnd="url(#arrowEvent2)" strokeDasharray="6,3">
                       <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
                     </line>
                   </svg>
                   <div
                     className={`absolute text-[11px] font-semibold whitespace-nowrap cursor-pointer hover:underline transition-all ${pinnedTooltip === 'business-event' ? 'underline' : ''}`}
-                    style={{ left: '5px', top: '-16px', color: '#FFFFFF' }}
+                    style={{ left: '5px', top: '-16px', color: '#0066CC' }}
                     onMouseEnter={() => handleFeatureCardHover('business-event')}
                     onMouseLeave={handleFeatureCardLeave}
                     onClick={() => handleFeatureCardClick('business-event')}
@@ -466,16 +447,16 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
                   <svg width="100" height="5" style={{ overflow: 'visible' }}>
                     <defs>
                       <marker id="arrowEvent3" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
-                        <polygon points="0,0 6,3 0,6" fill="#FFFFFF" />
+                        <polygon points="0,0 6,3 0,6" fill="#0066CC" />
                       </marker>
                     </defs>
-                    <line x1="0" y1="2.5" x2="98" y2="2.5" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowEvent3)" strokeDasharray="6,3">
+                    <line x1="0" y1="2.5" x2="98" y2="2.5" stroke="#0066CC" strokeWidth="2.5" markerEnd="url(#arrowEvent3)" strokeDasharray="6,3">
                       <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
                     </line>
                   </svg>
                   <div
                     className={`absolute text-[11px] font-semibold whitespace-nowrap cursor-pointer hover:underline transition-all ${pinnedTooltip === 'integration-business-event' ? 'underline' : ''}`}
-                    style={{ left: '5px', top: '-16px', color: '#FFFFFF' }}
+                    style={{ left: '5px', top: '-16px', color: '#0066CC' }}
                     onMouseEnter={() => handleFeatureCardHover('integration-business-event')}
                     onMouseLeave={handleFeatureCardLeave}
                     onClick={() => handleFeatureCardClick('integration-business-event')}
@@ -487,7 +468,7 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
                 {/* Pub/Sub - Kafka Box */}
                 <div className="absolute" style={{ top: '36px', left: '100%', marginLeft: '130px' }}>
                   <div
-                    className={`bg-white dark:bg-slate-800 rounded-lg p-2 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'pubsub-kafka' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+                    className={`bg-white dark:bg-slate-800 rounded-lg p-2 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'pubsub-kafka' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                     style={{ width: '72px', height: '80px' }}
                     onMouseEnter={() => handleFeatureCardHover('pubsub-kafka')}
                     onMouseLeave={handleFeatureCardLeave}
@@ -502,7 +483,7 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
                 {/* MQ Broker Box */}
                 <div className="absolute" style={{ top: '148px', left: '100%', marginLeft: '130px' }}>
                   <div
-                    className={`bg-white dark:bg-slate-800 rounded-lg p-2 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'mq-broker' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+                    className={`bg-white dark:bg-slate-800 rounded-lg p-2 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'mq-broker' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                     style={{ width: '72px', height: '35px' }}
                     onMouseEnter={() => handleFeatureCardHover('mq-broker')}
                     onMouseLeave={handleFeatureCardLeave}
@@ -521,14 +502,14 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
           <div className="w-[30%] p-6 space-y-4 flex flex-col justify-center">
             {/* Smooth integration */}
             <div
-              className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'smooth-integration' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+              className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'smooth-integration' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
               onMouseEnter={() => handleFeatureCardHover('smooth-integration')}
               onMouseLeave={handleFeatureCardLeave}
               onClick={() => handleFeatureCardClick('smooth-integration')}
             >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-teal-500 rounded-2xl flex items-center justify-center">
+                  <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                     <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                       {/* Arrow pointing right (top) */}
                       <path d="M4 9h12m0 0l-4-4m4 4l-4 4" strokeLinecap="round" strokeLinejoin="round" />
@@ -547,14 +528,14 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
 
             {/* Standardized schema */}
             <div
-              className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'standardized-schema' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+              className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'standardized-schema' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
               onMouseEnter={() => handleFeatureCardHover('standardized-schema')}
               onMouseLeave={handleFeatureCardLeave}
               onClick={() => handleFeatureCardClick('standardized-schema')}
             >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-teal-500 rounded-2xl flex items-center justify-center">
+                  <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                     <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       {/* Globe with orbit ring */}
                       <circle cx="12" cy="12" r="8" strokeWidth="2" />
@@ -575,14 +556,14 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
 
             {/* Extensibility */}
             <div
-              className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'extensibility' ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+              className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'extensibility' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
               onMouseEnter={() => handleFeatureCardHover('extensibility')}
               onMouseLeave={handleFeatureCardLeave}
               onClick={() => handleFeatureCardClick('extensibility')}
             >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-teal-500 rounded-2xl flex items-center justify-center">
+                  <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                     <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       {/* Folder with expand arrows */}
                       <path d="M3 7a2 2 0 012-2h4.586a1 1 0 01.707.293l1.414 1.414a1 1 0 00.707.293H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" strokeLinecap="round" strokeLinejoin="round" />
@@ -605,7 +586,7 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
       {/* Tooltip Display - Below the background */}
       <div className="mt-4 relative" style={{ height: '200px' }}>
         <div
-          className={`absolute top-0 left-0 right-0 p-4 bg-white dark:bg-slate-800 border-2 border-teal-500 rounded-lg shadow-lg text-sm transition-opacity duration-300 ${activeTooltip ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          className={`absolute top-0 left-0 right-0 p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-sm transition-opacity duration-300 ${activeTooltip ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           style={{ maxHeight: '200px', overflowY: 'auto' }}
           onMouseEnter={() => {
             // Clear any existing timeout when hovering over tooltip to keep it visible
@@ -616,11 +597,11 @@ export function EventOverview({ hideTitle = false }: { hideTitle?: boolean }) {
           }}
         >
           <div className="flex items-start space-x-2">
-            <Info className="w-5 h-5 text-teal-500 flex-shrink-0 mt-0.5" />
+            <Info className="w-5 h-5 text-[#00A3E0] flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               {activeTooltip && (
                 <div>
-                  <h3 className="font-bold text-teal-900 dark:text-teal-300 mb-2">
+                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
                     {tooltips.find(t => t.id === activeTooltip)?.title}
                   </h3>
                   <p className="text-gray-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">

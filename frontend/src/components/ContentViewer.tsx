@@ -59,30 +59,30 @@ export function ContentViewer({ componentId, initialSelectedCard }: ContentViewe
       <div className="card">
         {/* Tab Navigation as Title */}
         <div className="mb-6">
-          <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm inline-block">
-            <div className="flex space-x-4">
+          <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm inline-block">
+            <div className="flex gap-1">
             <button
               onClick={() => setActiveTab('api')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center gap-2 px-5 py-3 rounded-t-lg transition-all duration-200 font-semibold ${
                 activeTab === 'api'
-                  ? 'bg-indigo-600 text-white shadow-md transform scale-105'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#003366] text-white shadow-md border-b-3 border-[#00A3E0] scale-105'
+                  : 'bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100 hover:-translate-y-0.5'
               }`}
             >
               <svg className="w-5 h-5" viewBox="0 0 100 100" fill="none">
                 {/* Gear with API text */}
                 <path fill={activeTab === 'api' ? 'white' : 'currentColor'} d="M50,10 L53,10 L53,18 L58,18 L61,14 L63.5,16.5 L59.5,20.5 L65,26 L69,22 L71.5,24.5 L67.5,28.5 L73,34 L77,30 L79.5,32.5 L75.5,36.5 L82,42 L82,47 L90,47 L90,53 L82,53 L82,58 L86,61 L83.5,63.5 L79.5,59.5 L74,65 L78,69 L75.5,71.5 L71.5,67.5 L66,73 L70,77 L67.5,79.5 L63.5,75.5 L58,82 L53,82 L53,90 L47,90 L47,82 L42,82 L39,86 L36.5,83.5 L40.5,79.5 L35,74 L31,78 L28.5,75.5 L32.5,71.5 L27,66 L23,70 L20.5,67.5 L24.5,63.5 L18,58 L18,53 L10,53 L10,47 L18,47 L18,42 L14,39 L16.5,36.5 L20.5,40.5 L26,35 L22,31 L24.5,28.5 L28.5,32.5 L34,27 L30,23 L32.5,20.5 L36.5,24.5 L42,18 L47,18 L47,10 Z M50,28 A22,22 0 1,0 50,72 A22,22 0 1,0 50,28 Z" />
-                <circle cx="50" cy="50" r="16" fill={activeTab === 'api' ? '#818CF8' : 'currentColor'} />
+                <circle cx="50" cy="50" r="16" fill={activeTab === 'api' ? '#003366' : 'currentColor'} />
                 <text x="50" y="56" fontSize="14" fontWeight="bold" fill={activeTab === 'api' ? 'white' : 'currentColor'} textAnchor="middle" fontFamily="Arial, sans-serif">API</text>
               </svg>
               <span className="font-medium">API Overview</span>
             </button>
             <button
               onClick={() => setActiveTab('event')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center gap-2 px-5 py-3 rounded-t-lg transition-all duration-200 font-semibold ${
                 activeTab === 'event'
-                  ? 'bg-indigo-600 text-white shadow-md transform scale-105'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#003366] text-white shadow-md border-b-3 border-[#00A3E0] scale-105'
+                  : 'bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100 hover:-translate-y-0.5'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

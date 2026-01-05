@@ -47,11 +47,11 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
     <div className="space-y-6">
       {/* SharePoint Video Links - Only for Integration component */}
       {componentId === 'integration' && (
-        <div className="card bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200">
+        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800">
           <div className="flex items-center justify-between mb-4">
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-purple-900 mb-2">New API creation (Customer) via Workbench</h3>
-              <p className="text-sm text-purple-700 mb-3">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">New API creation (Customer) via Workbench</h3>
+              <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
                 Watch the comprehensive demo video on SharePoint
               </p>
             </div>
@@ -59,18 +59,18 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
               href="https://temenosgroup.sharepoint.com/:v:/g/temenosteams/Technical_BSG/ESgc8dewQ_ZPhZnVzTTyXYsBg9F74YtaGagFOCl1CJrBpQ?e=xSPAtQ&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center space-x-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md hover:shadow-lg font-medium"
+              className="flex items-center space-x-2 px-6 py-3 bg-[#003366] text-white rounded-lg hover:bg-[#004080] transition-colors shadow-md hover:shadow-lg font-semibold"
             >
               <ExternalLink className="w-5 h-5" />
               <span style={{ color: '#FFFFFF' }}>Watch on SharePoint</span>
             </a>
           </div>
 
-          <div className="border-t border-purple-200 pt-4">
+          <div className="border-t border-blue-200 dark:border-blue-700 pt-4">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-purple-900 mb-2">New API creation (Payment) via Workbench with RVT and GIT</h3>
-                <p className="text-sm text-purple-700 mb-3">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">New API creation (Payment) via Workbench with RVT and GIT</h3>
+                <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
                   Complete walkthrough of Payment API implementation
                 </p>
               </div>
@@ -78,10 +78,30 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
                 href="https://temenosgroup.sharepoint.com/temenosteams/technology/def/DS%20%20Documents/Design%20Framework/Presentations/Workbench2.0/WB24_EF_PaymentAPI_full.webm"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md hover:shadow-lg font-medium"
+                className="flex items-center space-x-2 px-6 py-3 bg-[#003366] text-white rounded-lg hover:bg-[#004080] transition-colors shadow-md hover:shadow-lg font-semibold"
               >
                 <ExternalLink className="w-5 h-5" />
                 <span style={{ color: '#FFFFFF' }}>Watch on SharePoint</span>
+              </a>
+            </div>
+          </div>
+
+          <div className="border-t border-blue-200 dark:border-blue-700 pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">API Extension with Workbench Copilot</h3>
+                <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
+                  Leveraging the Workbench AI to build python script and release validation test (RVT)
+                </p>
+              </div>
+              <a
+                href="https://temenosgroup.sharepoint.com/sites/MDS277/_layouts/15/stream.aspx?id=%2Fsites%2FMDS277%2FShared%20Documents%2FGeneral%2Fcopilot%2FTCF2025%5FTechnologyBreaktout%5Fvideo%2Emp4&ga=1&referrer=StreamWebApp%2EWeb&referrerScenario=AddressBarCopied%2Eview%2E33850bd9%2D3812%2D4aec%2D8fe8%2D8ff81b9f571a"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-2 px-6 py-3 bg-[#003366] text-white rounded-lg hover:bg-[#004080] transition-colors shadow-md hover:shadow-lg font-semibold"
+              >
+                <ExternalLink className="w-5 h-5" />
+                <span style={{ color: '#FFFFFF' }}>Watch on MDS</span>
               </a>
             </div>
           </div>
@@ -95,19 +115,9 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* Error State */}
-      {error && (
-        <div className="card">
-          <p className="text-red-600">{error}</p>
-        </div>
-      )}
+      {/* Error State - Suppressed as SharePoint videos are shown above */}
 
-      {/* No Videos Message */}
-      {!loading && !error && videos.length === 0 && (
-        <div className="card">
-          <p className="text-[#4A5568]">No additional videos available for this component.</p>
-        </div>
-      )}
+      {/* No Videos Message - Suppressed as SharePoint videos are shown above */}
 
       {/* Video Player */}
       {!loading && selectedVideo && videoUrl && (
