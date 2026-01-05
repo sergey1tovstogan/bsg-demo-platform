@@ -5,12 +5,16 @@ import type { ComponentId } from '../types'
 import { ObservabilityDemo } from './observability/ObservabilityDemo'
 import { IntegrationDemo } from './IntegrationDemo'
 import { TemenosTransactionSimulator } from './data-architecture/demo/TemenosTransactionSimulator'
+import { SecurityDemo } from './SecurityDemo.tsx'
+
+type DemoView = 'demo' | 'video'
 
 interface DemoFrameProps {
   componentId: ComponentId
+  view?: DemoView
 }
 
-export function DemoFrame({ componentId }: DemoFrameProps) {
+export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
   // All hooks must be called before any conditional returns (React Rules of Hooks)
   const [loading, setLoading] = useState(true)
 
@@ -44,6 +48,11 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
     return <IntegrationDemo />
   }
 
+  // Dedicated handling for security demo/video placeholders
+  if (componentId === 'security') {
+    return <SecurityDemo mode={view} />
+  }
+
   // Render Temenos Transaction Simulator for data-architecture component
   if (componentId === 'data-architecture') {
     return <TemenosTransactionSimulator />
@@ -61,15 +70,21 @@ export function DemoFrame({ componentId }: DemoFrameProps) {
     )
   }
 
-  // For all other components, show a generic demo placeholder
+  // For all other components, show a generic placeholder depending on view
   return (
     <div className="flex items-center justify-center min-h-[400px]">
       <div className="text-center text-gray-400">
         <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
           <Code2 className="w-12 h-12 opacity-30" />
         </div>
-        <p className="text-lg font-medium text-gray-500 mb-2">Demo Coming Soon</p>
-        <p className="text-sm">Interactive demo content will be available here</p>
+        <p className="text-lg font-medium text-gray-500 mb-2">
+          {view === 'video' ? 'Video Coming Soon' : 'Demo Coming Soon'}
+        </p>
+        <p className="text-sm">
+          {view === 'video'
+            ? 'Demo video content will be available here'
+            : 'Demo content will be available here'}
+        </p>
       </div>
     </div>
   )

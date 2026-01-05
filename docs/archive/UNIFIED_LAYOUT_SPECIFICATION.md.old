@@ -183,21 +183,63 @@ Slate 100: #F1F5F9 - Primary text emphasis
 Slate 50:  #F8FAFC - Highest contrast text
 ```
 
-### 3.3 Component Category Colors
+### 3.3 Card Color Themes
 
-Each card type maintains its identity color for icons and accents:
+**Important:** Card color themes are separate from business categories. A card's business category (integration, security, etc.) is independent from its visual color theme.
 
+#### Available Color Themes
+
+These color themes can be applied to any card regardless of its business category:
+
+| Theme Name | Primary Color | Hex Code | Usage |
+|------------|---------------|----------|-------|
+| `blue` | Blue 500 | #3B82F6 | Icons, accents, category badges |
+| `emerald` | Emerald 500 | #10B981 | Icons, accents, category badges |
+| `violet` | Violet 500 | #8B5CF6 | Icons, accents, category badges |
+| `red` | Red 500 | #EF4444 | Icons, accents, category badges |
+| `amber` | Amber 500 | #F59E0B | Icons, accents, category badges |
+| `indigo` | Indigo 500 | #6366F1 | Icons, accents, category badges |
+| `cyan` | Cyan 500 | #06B6D4 | Icons, accents, category badges |
+| `pink` | Pink 500 | #EC4899 | Icons, accents, category badges |
+| `green` | Green 500 | #10B981 | Icons, accents, category badges |
+| `orange` | Orange 500 | #F97316 | Icons, accents, category badges |
+
+**Principle:** Color themes provide visual identity and wayfinding but do not override primary brand colors (Temenos Navy) for interactive elements like buttons and active tabs.
+
+#### Common Business Category Mappings (Suggested, Not Required)
+
+These are **suggested** pairings based on conventional associations. Content creators can choose any color theme for their card:
+
+| Business Category | Suggested Color Theme | Rationale |
+|-------------------|----------------------|-----------|
+| Integration | `blue` | Associated with connectivity |
+| Data Architecture | `emerald` | Associated with data/growth |
+| Deployment | `violet` | Associated with cloud/transformation |
+| Security | `red` | Associated with alerts/protection |
+| Observability | `amber` | Associated with monitoring/warnings |
+| Design Time | `indigo` | Associated with creativity/design |
+
+#### Example in Content Template
+
+**Correct Separation of Concerns:**
+```yaml
+card:
+  id: "security-advanced"
+  name: "Advanced Security"
+  category: "security"        # Business category (what it's about)
+  color_theme: "red"          # Visual styling (how it looks)
+  icon: "Shield"
 ```
-Integration:      #3B82F6 (Blue 500)
-Data Architecture: #10B981 (Emerald 500)
-Deployment:       #8B5CF6 (Violet 500)
-Security:         #EF4444 (Red 500)
-Observability:    #F59E0B (Amber 500)
-Design Time:      #6366F1 (Indigo 500)
-```
 
-**Usage:** Component icons, card highlights, category badges
-**Principle:** Identity colors provide visual wayfinding but do not override primary brand for interactive elements
+**Another Example - Same Business Category, Different Color:**
+```yaml
+card:
+  id: "security-basics"
+  name: "Security Basics"
+  category: "security"        # Same business category
+  color_theme: "indigo"       # Different color theme
+  icon: "ShieldCheck"
+```
 
 ### 3.4 CSS Custom Properties
 

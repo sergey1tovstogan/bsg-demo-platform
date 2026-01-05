@@ -64,7 +64,7 @@ export function useDataFlow({
 }: UseDataFlowProps): UseDataFlowReturn {
   const [activeDataFlows, setActiveDataFlows] = useState<DataFlowDot[]>([])
   const [shouldStart, setShouldStartInternal] = useState(shouldStartSpawning)
-  const spawningIntervalRef = useRef<number | null>(null)
+  const spawningIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Sync external shouldStartSpawning with internal state
   useEffect(() => {

@@ -106,7 +106,7 @@ class Settings(BaseSettings):
     RAG_TYPE: str = Field(default="temenos", description="RAG provider type: temenos, openai, etc.")
     RAG_JWT_TOKEN: Optional[str] = Field(
         default=None,
-        description="JWT token for RAG tool API authentication (tbsg.temenos.com)"
+        description="JWT token for RAG tool API authentication (tbsg.temenos.com). Optional - can be set via Settings API instead."
     )
     RAG_API_URL: str = Field(
         default="https://tbsg.temenos.com",
