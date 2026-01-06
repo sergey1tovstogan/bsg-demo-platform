@@ -10,13 +10,18 @@ const CACHE_KEY = 'data_architecture_chatbot_questions_cache_v2'
 const CACHE_TIMESTAMP_KEY = 'data_architecture_chatbot_questions_cache_timestamp_v2'
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days
 
+interface SourceItem {
+  title?: string
+  url?: string
+}
+
 interface QuestionItem {
   order: number
   category: string
   title: string
   question: string
   answer?: string
-  sources?: any[]
+  sources?: SourceItem[]
 }
 
 interface ChatbotWithQuestionsProps {
@@ -41,6 +46,7 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
     } else {
       loadRAGContent()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadCachedContent = () => {
@@ -59,7 +65,7 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
     return null
   }
 
-  const saveCachedContent = (content: any) => {
+  const saveCachedContent = (content: QuestionItem[]) => {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(content))
       localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
@@ -147,7 +153,7 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
           })
 
           const ragData = response.data && typeof response.data === 'object' && 'data' in response.data
-            ? (response.data as any).data
+            ? (response.data as { data: { answer?: string; sources?: SourceItem[] } }).data
             : response.data
 
           if (ragData?.answer) {
@@ -163,15 +169,16 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
             errors.push(`No answer returned for: "${questionItem.title}"`)
             console.warn(`No answer in RAG response for question: ${questionItem.title}`, response)
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           let errorMsg = 'Unknown error'
-          if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
+          const error = err as { code?: string; message?: string; response?: { data?: { detail?: string | { error?: string; message?: string } } } }
+          if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
             errorMsg = 'Network Error - Unable to reach the backend API. Please check if the backend service is running and accessible.'
-          } else if (err.response?.data?.detail) {
-            const detail = err.response.data.detail
+          } else if (error.response?.data?.detail) {
+            const detail = error.response.data.detail
             errorMsg = typeof detail === 'object' ? (detail.error || detail.message || JSON.stringify(detail)) : detail
-          } else if (err.message) {
-            errorMsg = err.message
+          } else if (error.message) {
+            errorMsg = error.message
           }
           errors.push(`Failed to query "${questionItem.title}": ${errorMsg}`)
           console.warn(`Failed to query RAG for question: ${questionItem.title}`, err)
@@ -199,9 +206,10 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
           setError(`No content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('RAG query error:', err)
-      const errorMsg = err.response?.data?.detail?.error || err.response?.data?.error || err.message || 'Failed to load RAG information'
+      const error = err as { message?: string; response?: { data?: { detail?: { error?: string }; error?: string } } }
+      const errorMsg = error.response?.data?.detail?.error || error.response?.data?.error || error.message || 'Failed to load RAG information'
 
       if (forceRefresh) {
         const cachedContent = loadCachedContent()
@@ -418,7 +426,7 @@ function QuestionBack({ item }: { item: QuestionItem }) {
         <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-600">
           <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Sources:</p>
           <ul className="list-disc list-inside space-y-1 text-xs text-gray-600 dark:text-gray-400">
-            {item.sources.map((source: any, sidx: number) => (
+            {item.sources.map((source: SourceItem, sidx: number) => (
               <li key={sidx}>{source.title || source.url || 'Temenos Documentation'}</li>
             ))}
           </ul>

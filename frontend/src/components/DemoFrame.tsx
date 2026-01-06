@@ -76,6 +76,9 @@ export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
 
   // Render Temenos Transaction Simulator for data-architecture component
   if (componentId === 'data-architecture') {
+    if (view === 'video') {
+      return <VideoPlayer componentId={componentId} />
+    }
     return <TemenosTransactionSimulator />
   }
 

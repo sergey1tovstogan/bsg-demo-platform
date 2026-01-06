@@ -22,7 +22,7 @@ function sanitizeSwiftName(name: string): string {
   
   // Remove any characters that are not valid SWIFT characters
   // Valid: A-Z, 0-9, / - ? : ( ) . , ' + Space
-  sanitized = sanitized.replace(/[^A-Z0-9\/\-\?\(\)\.\,\'\s\+]/g, '')
+  sanitized = sanitized.replace(/[^A-Z0-9/\-?().,'\\s+]/g, '')
   
   // Replace multiple spaces with single space
   sanitized = sanitized.replace(/\s+/g, ' ')
@@ -556,6 +556,7 @@ class RealApiService implements ITransactionApiService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async sendPayment(_payload: PaymentPayload): Promise<ApiResponse<Payment>> {
     try {
       // TODO: Implement real API call
