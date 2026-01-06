@@ -46,6 +46,9 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
     email?: string
   } | null>(null)
   const [jwtLoading, setJwtLoading] = useState(true)
+  const [showRefreshTokenModal, setShowRefreshTokenModal] = useState(false)
+  const [newJwtToken, setNewJwtToken] = useState('')
+  const [isSavingToken, setIsSavingToken] = useState(false)
   const [kafkaPrompt, setKafkaPrompt] = useState('What are the Kafka capabilities in Temenos platform for event-driven architecture and messaging, including CloudEvents support?')
   const [publicCatalogPrompt, setPublicCatalogPrompt] = useState('What is the Temenos public API catalog and what are its key capabilities for banks and developers?')
   const [openStandardsPrompt, setOpenStandardsPrompt] = useState('Elaborate about API and related open standards such as Berlin Group, OpenAPI and PSD2')
@@ -405,7 +408,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
       if (part.startsWith('**') && part.endsWith('**')) {
         // Remove ** and render as bold
         const boldText = part.slice(2, -2)
-        return <strong key={index} className="font-bold text-purple-900">{boldText}</strong>
+        return <strong key={index} className="font-bold text-[#003366] dark:text-[#00A3E0]">{boldText}</strong>
       }
       return <span key={index}>{part}</span>
     })
@@ -424,7 +427,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         <div className="mt-6 flex justify-end">
           <button
             onClick={() => setShowDemoSettings(!showDemoSettings)}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
+            className="px-6 py-3 bg-[#003366] hover:bg-[#004080] text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 active:bg-[#002244] transition-all duration-200 flex items-center space-x-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="3" />
@@ -437,8 +440,8 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
         {/* Demo Settings Panel */}
         {showDemoSettings && (
-          <div className="mt-4 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-lg">
-            <h3 className="text-lg font-bold text-purple-900 mb-3">Demo Settings</h3>
+          <div className="mt-4 p-6 bg-white dark:bg-slate-800 border-2 border-[#00A3E0] rounded-lg shadow-lg">
+            <h3 className="text-xl font-semibold text-[#003366] dark:text-slate-100 mb-3">Demo Settings</h3>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -449,7 +452,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <button
                   onClick={refreshKafkaTooltip}
                   disabled={isRefreshing}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow-md transition-all flex items-center space-x-2"
+                  className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
                 >
                   {isRefreshing ? (
                     <>
@@ -476,7 +479,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <button
                   onClick={refreshPublicCatalogTooltip}
                   disabled={isRefreshingCatalog}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow-md transition-all flex items-center space-x-2"
+                  className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
                 >
                   {isRefreshingCatalog ? (
                     <>
@@ -503,7 +506,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <button
                   onClick={refreshOpenStandardsTooltip}
                   disabled={isRefreshingOpenStandards}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg shadow-md transition-all flex items-center space-x-2"
+                  className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
                 >
                   {isRefreshingOpenStandards ? (
                     <>
@@ -524,8 +527,51 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             </div>
 
             {/* JWT Token Information - at the end with purple background */}
-            <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
-              <h4 className="text-sm font-bold text-purple-900 mb-3">RAG API JWT Token Status</h4>
+            <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-[#00A3E0]">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-lg font-semibold text-[#003366] dark:text-slate-100">RAG API JWT Token Status</h4>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={async () => {
+                      setJwtLoading(true)
+                      try {
+                        const response = await apiService.getJWTInfo()
+                        setJwtInfo(response.data)
+                      } catch (err) {
+                        console.error('Failed to refresh JWT info:', err)
+                      } finally {
+                        setJwtLoading(false)
+                      }
+                    }}
+                    disabled={jwtLoading}
+                    className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
+                  >
+                    {jwtLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M21 12a9 9 0 11-6.219-8.56" strokeLinecap="round" />
+                          <path d="M15 3v6h6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <span>Update</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowRefreshTokenModal(true)}
+                    className="px-6 py-3 bg-[#00A3E0] hover:bg-[#0088C0] text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>Refresh Token</span>
+                  </button>
+                </div>
+              </div>
               {jwtLoading ? (
                 <div className="flex items-center space-x-2 text-gray-600">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -534,12 +580,12 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               ) : jwtInfo ? (
                 <div className="space-y-1">
                   {jwtInfo.email && (
-                    <p className="text-xs text-gray-700">
+                    <p className="text-xs text-gray-700 dark:text-slate-300">
                       <span className="font-semibold">User:</span> {jwtInfo.email}
                     </p>
                   )}
                   {jwtInfo.expires_at && (
-                    <p className="text-xs text-gray-700">
+                    <p className="text-xs text-gray-700 dark:text-slate-300">
                       <span className="font-semibold">Expires:</span> {new Date(jwtInfo.expires_at).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
@@ -572,7 +618,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-gray-600">JWT token information not available</p>
+                <p className="text-xs text-gray-600 dark:text-slate-400">JWT token information not available</p>
               )}
             </div>
           </div>
@@ -587,16 +633,16 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <p className="text-sm text-gray-600 mt-1">Please review the content below before approving the update</p>
               </div>
               <div className="flex-1 overflow-y-auto p-6">
-                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600">
                   <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
                   <textarea
                     value={kafkaPrompt}
                     onChange={(e) => setKafkaPrompt(e.target.value)}
-                    className="w-full p-3 border border-blue-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
                     rows={3}
                     placeholder="Enter your RAG query prompt..."
                   />
-                  <p className="text-xs text-blue-700 mt-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                     <span className="font-semibold">Tip:</span> You can edit this prompt and click "Refresh" again to get a new response
                   </p>
                 </div>
@@ -624,16 +670,16 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <p className="text-sm text-gray-600 mt-1">Please review the content below before approving the update</p>
               </div>
               <div className="flex-1 overflow-y-auto p-6">
-                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600">
                   <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
                   <textarea
                     value={publicCatalogPrompt}
                     onChange={(e) => setPublicCatalogPrompt(e.target.value)}
-                    className="w-full p-3 border border-blue-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
                     rows={3}
                     placeholder="Enter your RAG query prompt..."
                   />
-                  <p className="text-xs text-blue-700 mt-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                     <span className="font-semibold">Tip:</span> You can edit this prompt and click "Refresh" again to get a new response
                   </p>
                 </div>
@@ -661,16 +707,16 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <p className="text-sm text-gray-600 mt-1">Please review the content below before approving the update</p>
               </div>
               <div className="flex-1 overflow-y-auto p-6">
-                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600">
                   <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
                   <textarea
                     value={openStandardsPrompt}
                     onChange={(e) => setOpenStandardsPrompt(e.target.value)}
-                    className="w-full p-3 border border-blue-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
                     rows={3}
                     placeholder="Enter your RAG query prompt..."
                   />
-                  <p className="text-xs text-blue-700 mt-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                     <span className="font-semibold">Tip:</span> You can edit this prompt and click "Refresh" again to get a new response
                   </p>
                 </div>
@@ -684,6 +730,89 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <button onClick={approveOpenStandardsContent} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md transition-all font-medium flex items-center space-x-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   <span>Approve & Update Cache</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Refresh JWT Token Modal */}
+        {showRefreshTokenModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full">
+              {/* Modal Header */}
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900">Update RAG API JWT Token</h2>
+                <p className="text-sm text-gray-600 mt-1">Enter your new JWT token below</p>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6">
+                <label htmlFor="jwt-token-input" className="block text-sm font-medium text-gray-700 mb-2">
+                  JWT Token
+                </label>
+                <textarea
+                  id="jwt-token-input"
+                  value={newJwtToken}
+                  onChange={(e) => setNewJwtToken(e.target.value)}
+                  placeholder="Paste your JWT token here..."
+                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0066CC] focus:border-transparent resize-none font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  This token will be used for RAG API queries. Make sure it's valid and not expired.
+                </p>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowRefreshTokenModal(false)
+                    setNewJwtToken('')
+                  }}
+                  disabled={isSavingToken}
+                  className="px-6 py-3 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-semibold rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!newJwtToken.trim()) {
+                      alert('Please enter a JWT token')
+                      return
+                    }
+                    setIsSavingToken(true)
+                    try {
+                      await apiService.saveUserJWTToken(newJwtToken.trim())
+                      // Refresh JWT info after saving
+                      const response = await apiService.getJWTInfo()
+                      setJwtInfo(response.data)
+                      setShowRefreshTokenModal(false)
+                      setNewJwtToken('')
+                      alert('JWT token updated successfully!')
+                    } catch (err) {
+                      console.error('Failed to save JWT token:', err)
+                      alert('Failed to save JWT token. Please try again.')
+                    } finally {
+                      setIsSavingToken(false)
+                    }
+                  }}
+                  disabled={isSavingToken || !newJwtToken.trim()}
+                  className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
+                >
+                  {isSavingToken ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span>Save Token</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -704,33 +833,31 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
       {/* Highlight Section - Always visible */}
       <div className="mb-6">
-        <div className="relative overflow-hidden rounded-lg py-3 px-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)' }}>
-          <div className="relative z-10 flex items-center space-x-4">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6">
+          <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   {/* Information icon */}
                   <circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M12 16v-4M12 8h.01" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-lg font-medium text-white leading-snug text-center">
+            <div className="flex-1">
+              <p className="text-xl font-normal text-slate-900 dark:text-slate-100 leading-relaxed">
                 APIs empower Banks to connect effortlessly with external platforms, accelerating innovation and enhancing customer experiences
               </p>
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
         </div>
       </div>
 
       {/* API Framework Diagram */}
       <div
-        className="relative rounded-lg overflow-hidden flex"
+        className="relative rounded-xl overflow-hidden flex bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700"
         style={{
-          minHeight: '450px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
+          minHeight: '450px'
         }}
         onMouseLeave={() => {
           if (!pinnedTooltip && !kafkaTooltipPinned) {
@@ -738,40 +865,23 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
           }
         }}
       >
-        {/* Modern pattern overlay */}
-        <div className="absolute inset-0" style={{
-          backgroundImage: `
-            radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
-            radial-gradient(circle at 40% 20%, rgba(255,255,255,0.05) 0%, transparent 50%)
-          `
-        }}></div>
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px'
-        }}></div>
-
         {/* Left Panel - Features */}
-        <div className="w-[30%] p-6 space-y-4 z-10 flex flex-col justify-center">
+        <div className="w-[30%] p-6 space-y-4 flex flex-col justify-center">
           {/* API Icon & Text */}
           <div
-            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'expose-data' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'expose-data' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('expose-data')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('expose-data')}
           >
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
+                <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                   <svg className="w-full h-full p-1.5" viewBox="0 0 100 100" fill="none">
                     {/* Clean symmetrical gear with 8 teeth */}
                     <path fill="white" d="M50,10 L53,10 L53,18 L58,18 L61,14 L63.5,16.5 L59.5,20.5 L65,26 L69,22 L71.5,24.5 L67.5,28.5 L73,34 L77,30 L79.5,32.5 L75.5,36.5 L82,42 L82,47 L90,47 L90,53 L82,53 L82,58 L86,61 L83.5,63.5 L79.5,59.5 L74,65 L78,69 L75.5,71.5 L71.5,67.5 L66,73 L70,77 L67.5,79.5 L63.5,75.5 L58,82 L53,82 L53,90 L47,90 L47,82 L42,82 L39,86 L36.5,83.5 L40.5,79.5 L35,74 L31,78 L28.5,75.5 L32.5,71.5 L27,66 L23,70 L20.5,67.5 L24.5,63.5 L18,58 L18,53 L10,53 L10,47 L18,47 L18,42 L14,39 L16.5,36.5 L20.5,40.5 L26,35 L22,31 L24.5,28.5 L28.5,32.5 L34,27 L30,23 L32.5,20.5 L36.5,24.5 L42,18 L47,18 L47,10 Z M50,28 A22,22 0 1,0 50,72 A22,22 0 1,0 50,28 Z" />
-                    {/* Inner circle for text - purple background */}
-                    <circle cx="50" cy="50" r="16" fill="#7C3AED" />
+                    {/* Inner circle for text - Temenos Navy background */}
+                    <circle cx="50" cy="50" r="16" fill="#003366" />
                     {/* API text - white */}
                     <text x="50" y="56" fontSize="14" fontWeight="bold" fill="white" textAnchor="middle" fontFamily="Arial, sans-serif">API</text>
                   </svg>
@@ -786,7 +896,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
           {/* Shopping Cart Icon & Text - Public API Catalog */}
           <div
-            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative group ${pinnedTooltip === 'api-catalog' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${pinnedTooltip === 'api-catalog' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('api-catalog')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('api-catalog')}
@@ -794,7 +904,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div
-                  className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center cursor-pointer relative"
+                  className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center cursor-pointer relative"
                   onClick={(e) => {
                     e.stopPropagation()
                     window.open('https://developer.temenos.com/all-product-apis', '_blank')
@@ -804,7 +914,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                     <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                   <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ExternalLink className="w-4 h-4 text-white bg-purple-700 rounded-full p-0.5" />
+                    <ExternalLink className="w-4 h-4 text-white bg-[#002244] rounded-full p-0.5" />
                   </div>
                 </div>
               </div>
@@ -817,14 +927,14 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
           {/* Open Standards Icon & Text */}
           <div
-            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'open-standards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'open-standards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('open-standards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('open-standards')}
           >
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
+                <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                   <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
@@ -864,7 +974,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
           <div className="relative flex flex-col items-center justify-center" style={{ minHeight: '200px', gap: '38px' }}>
             {/* Bank's System Box - spans width of both columns */}
             <div
-              className={`bg-white dark:bg-slate-800 rounded-lg shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${bankSystemTooltipPinned ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+              className={`bg-white dark:bg-slate-800 rounded-lg shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${bankSystemTooltipPinned ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
               style={{ width: '320px', padding: '11px 16px' }}
               onMouseEnter={() => {
                 if (!bankSystemTooltipPinned && !pinnedTooltip && !kafkaTooltipPinned && !businessLogicTooltipPinned && !businessMicroservicesTooltipPinned) {
@@ -931,14 +1041,14 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               <svg width="5" height="45" style={{ overflow: 'visible' }}>
                 <defs>
                   <marker id="arrowCommand" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                    <polygon points="0,0 6,3 0,6" fill="#FFFFFF" />
+                    <polygon points="0,0 6,3 0,6" fill="#0066CC" />
                   </marker>
                 </defs>
-                <line x1="2.5" y1="0" x2="2.5" y2="43" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowCommand)" strokeDasharray="6,3">
+                <line x1="2.5" y1="0" x2="2.5" y2="43" stroke="#0066CC" strokeWidth="2.5" markerEnd="url(#arrowCommand)" strokeDasharray="6,3">
                   <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
                 </line>
               </svg>
-              <div className="absolute text-[11px] font-semibold whitespace-nowrap" style={{ right: '10px', top: '12px', color: '#FFFFFF' }}>command</div>
+              <div className="absolute text-[11px] font-semibold whitespace-nowrap" style={{ right: '10px', top: '12px', color: '#0066CC' }}>command</div>
             </div>
 
             {/* Response Arrow - from right API to Bank's System */}
@@ -946,14 +1056,14 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               <svg width="5" height="44" style={{ overflow: 'visible' }}>
                 <defs>
                   <marker id="arrowResponse" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto-start-reverse">
-                    <polygon points="0,0 6,3 0,6" fill="#FFFFFF" />
+                    <polygon points="0,0 6,3 0,6" fill="#0066CC" />
                   </marker>
                 </defs>
-                <line x1="2.5" y1="42" x2="2.5" y2="1" stroke="#FFFFFF" strokeWidth="2.5" markerEnd="url(#arrowResponse)" strokeDasharray="6,3">
+                <line x1="2.5" y1="42" x2="2.5" y2="1" stroke="#0066CC" strokeWidth="2.5" markerEnd="url(#arrowResponse)" strokeDasharray="6,3">
                   <animate attributeName="stroke-dashoffset" from="0" to="-9" dur="0.8s" repeatCount="indefinite" />
                 </line>
               </svg>
-              <div className="absolute text-[11px] font-semibold whitespace-nowrap" style={{ left: '10px', top: '8px', color: '#FFFFFF' }}>query</div>
+              <div className="absolute text-[11px] font-semibold whitespace-nowrap" style={{ left: '10px', top: '8px', color: '#0066CC' }}>query</div>
             </div>
 
             {/* Gray Response Arrow - from Bank's System back to API (next to command arrow) */}
@@ -976,7 +1086,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               <div className="flex flex-col items-center relative" style={{ gap: '5px' }}>
                 {/* Thin API Box */}
                 <div
-                  className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'api-framework' ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+                  className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'api-framework' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '150px' }}
                   onMouseEnter={() => handleFeatureCardHover('api-framework')}
                   onMouseLeave={handleFeatureCardLeave}
@@ -987,7 +1097,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
                 {/* Temenos Business Logic Box */}
                 <div
-                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${businessLogicTooltipPinned ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${businessLogicTooltipPinned ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '150px' }}
                   onMouseEnter={() => {
                     if (!businessLogicTooltipPinned && !pinnedTooltip && !kafkaTooltipPinned) {
@@ -1055,14 +1165,14 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <svg width="204" height="54" style={{ overflow: 'visible' }}>
                   <defs>
                     <marker id="arrowUShape" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
-                      <polygon points="0,0 6,3 0,6" fill="#FFFFFF" />
+                      <polygon points="0,0 6,3 0,6" fill="#0066CC" />
                     </marker>
                   </defs>
                   {/* U-shaped path starting from outside the boxes */}
                   <path
                     d="M 0,7 Q 0,47 7,47 L 197,47 Q 204,47 204,7"
                     fill="none"
-                    stroke="#FFFFFF"
+                    stroke="#0066CC"
                     strokeWidth="2.5"
                     markerEnd="url(#arrowUShape)"
                     strokeDasharray="6,3"
@@ -1125,7 +1235,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 }}
               >
                 <div
-                  className={`bg-white dark:bg-slate-800 rounded-lg p-2 shadow-md border-2 border-[#097BED] hover:shadow-lg transition-all ${kafkaTooltipPinned ? 'ring-2 ring-teal-500 ring-opacity-50' : ''}`}
+                  className={`bg-white dark:bg-slate-800 rounded-lg p-2 shadow-md border-2 border-[#097BED] hover:shadow-lg transition-all ${kafkaTooltipPinned ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ width: '60px', height: '30px' }}
                 >
                   <div className="text-center flex flex-col justify-center h-full">
@@ -1141,7 +1251,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               <div className="flex flex-col items-center relative" style={{ gap: '5px' }}>
                 {/* Thin API Box */}
                 <div
-                  className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'microservices-api' ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+                  className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'microservices-api' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '150px' }}
                   onMouseEnter={() => handleFeatureCardHover('microservices-api')}
                   onMouseLeave={handleFeatureCardLeave}
@@ -1152,7 +1262,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
                 {/* Business Microservices Box */}
                 <div
-                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${businessMicroservicesTooltipPinned ? 'ring-2 ring-purple-400 ring-opacity-50' : ''}`}
+                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${businessMicroservicesTooltipPinned ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '150px' }}
                   onMouseEnter={() => {
                     if (!businessMicroservicesTooltipPinned && !pinnedTooltip && !kafkaTooltipPinned && !businessLogicTooltipPinned) {
@@ -1224,7 +1334,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         <div className="w-[30%] p-6 space-y-4 z-10 flex flex-col justify-center">
           {/* Desktop/Wizard Icon & Text */}
           <div
-            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative group ${pinnedTooltip === 'graphical-wizards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${pinnedTooltip === 'graphical-wizards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('graphical-wizards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('graphical-wizards')}
@@ -1232,7 +1342,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div
-                  className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center relative cursor-pointer"
+                  className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center relative cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowApiWizardsGallery(true)
@@ -1244,7 +1354,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                     <path d="M7 8h4M7 11h2M7 14h3" strokeWidth="1.5" />
                     <path d="M17 10l-2 2 2 2" strokeWidth="2.5" />
                   </svg>
-                  <ExternalLink className="w-4 h-4 text-white absolute -top-1 -right-1 bg-purple-700 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-4 h-4 text-white absolute -top-1 -right-1 bg-[#002244] rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
               <div className="flex-1 min-w-0">
@@ -1256,14 +1366,14 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
           {/* Security Shield Icon & Text */}
           <div
-            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'security-standards' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'security-standards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('security-standards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('security-standards')}
           >
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
+                <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                   <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     <path d="M9 12l2 2 4-4" strokeWidth="2.5" strokeLinecap="round" />
@@ -1279,14 +1389,14 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
           {/* Upgradability Icon & Text */}
           <div
-            className={`bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer relative ${pinnedTooltip === 'upgradability' ? 'ring-2 ring-purple-500 ring-opacity-50' : ''}`}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'upgradability' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('upgradability')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('upgradability')}
           >
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
+                <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
                   <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="9" />
                     <path d="M12 6v6l4 2" strokeLinecap="round" />
@@ -1301,7 +1411,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                     e.stopPropagation()
                     setShowApiVersioning(true)
                   }}
-                  className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors ml-2"
+                  className="text-[#0066CC] dark:text-[#00A3E0] hover:text-[#003366] dark:hover:text-[#0066CC] transition-colors ml-2"
                   title="View API Versioning details"
                 >
                   <Link className="w-5 h-5" />
@@ -1312,10 +1422,10 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         </div>
       </div>
 
-      {/* Tooltip Display - Below the purple background */}
+      {/* Tooltip Display - Below the diagram background */}
       <div className="mt-4 relative" style={{ height: '250px' }}>
         <div
-          className={`absolute top-0 left-0 right-0 p-4 bg-white dark:bg-slate-800 border-2 border-purple-500 rounded-lg shadow-lg text-sm transition-opacity duration-300 ${(activeTooltip || showKafkaTooltip || showBusinessLogicTooltip || showBusinessMicroservicesTooltip || showBankSystemTooltip) ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          className={`absolute top-0 left-0 right-0 p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-sm transition-opacity duration-300 ${(activeTooltip || showKafkaTooltip || showBusinessLogicTooltip || showBusinessMicroservicesTooltip || showBankSystemTooltip) ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           style={{ maxHeight: '250px', overflowY: 'auto' }}
           onMouseEnter={() => {
             // Clear any existing timeout when hovering over tooltip to keep it visible
@@ -1326,11 +1436,11 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
           }}
         >
           <div className="flex items-start space-x-2">
-            <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+            <Info className="w-5 h-5 text-[#00A3E0] flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               {showKafkaTooltip && (
                 <div>
-                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
+                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
                     Kafka - Event-Driven Architecture
                   </h3>
                   {kafkaTooltipLoading ? (
@@ -1347,7 +1457,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               )}
               {showBusinessLogicTooltip && !showKafkaTooltip && (
                 <div>
-                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
+                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
                     Temenos Business Logic
                   </h3>
                   <div className="text-gray-800 dark:text-slate-200 leading-relaxed space-y-3">
@@ -1359,7 +1469,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               )}
               {showBusinessMicroservicesTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && (
                 <div>
-                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
+                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
                     Business Microservices
                   </h3>
                   <div className="text-gray-800 dark:text-slate-200 leading-relaxed space-y-3">
@@ -1381,7 +1491,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               )}
               {showBankSystemTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && !showBusinessMicroservicesTooltip && (
                 <div>
-                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
+                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
                     Bank's System
                   </h3>
                   <div className="text-gray-800 dark:text-slate-200 leading-relaxed space-y-3">
@@ -1391,7 +1501,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               )}
               {activeTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && !showBusinessMicroservicesTooltip && !showBankSystemTooltip && (
                 <div>
-                  <h3 className="font-bold text-purple-900 dark:text-purple-300 mb-2">
+                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
                     {tooltips.find(t => t.id === activeTooltip)?.title}
                   </h3>
                   <div className="text-gray-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
@@ -1413,7 +1523,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
           <div className="mt-6 flex justify-end">
         <button
           onClick={() => setShowDemoSettings(!showDemoSettings)}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
+          className="px-6 py-3 bg-[#003366] hover:bg-[#004080] text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 active:bg-[#002244] transition-all duration-200 flex items-center space-x-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="3" />
@@ -1426,8 +1536,8 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
       {/* Demo Settings Panel */}
       {showDemoSettings && (
-        <div className="mt-4 p-4 bg-white border-2 border-purple-500 rounded-lg shadow-lg">
-          <h3 className="text-lg font-bold text-purple-900 mb-3">Demo Settings</h3>
+        <div className="mt-4 p-6 bg-white dark:bg-slate-800 border-2 border-[#00A3E0] rounded-lg shadow-lg">
+          <h3 className="text-xl font-semibold text-[#003366] dark:text-slate-100 mb-3">Demo Settings</h3>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1513,8 +1623,51 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
           </div>
 
           {/* JWT Token Information - at the end with purple background */}
-          <div className="mt-4 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
-            <h4 className="text-sm font-bold text-purple-900 mb-3">RAG API JWT Token Status</h4>
+          <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-[#00A3E0]">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-lg font-semibold text-[#003366] dark:text-slate-100">RAG API JWT Token Status</h4>
+              <div className="flex space-x-2">
+                <button
+                  onClick={async () => {
+                    setJwtLoading(true)
+                    try {
+                      const response = await apiService.getJWTInfo()
+                      setJwtInfo(response.data)
+                    } catch (err) {
+                      console.error('Failed to refresh JWT info:', err)
+                    } finally {
+                      setJwtLoading(false)
+                    }
+                  }}
+                  disabled={jwtLoading}
+                  className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
+                >
+                  {jwtLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M21 12a9 9 0 11-6.219-8.56" strokeLinecap="round" />
+                        <path d="M15 3v6h6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span>Update</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowRefreshTokenModal(true)}
+                  className="px-6 py-3 bg-[#00A3E0] hover:bg-[#0088C0] text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span>Refresh Token</span>
+                </button>
+              </div>
+            </div>
             {jwtLoading ? (
               <div className="flex items-center space-x-2 text-gray-600">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -1523,12 +1676,12 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             ) : jwtInfo ? (
               <div className="space-y-1">
                 {jwtInfo.email && (
-                  <p className="text-xs text-gray-700">
+                  <p className="text-xs text-gray-700 dark:text-slate-300">
                     <span className="font-semibold">User:</span> {jwtInfo.email}
                   </p>
                 )}
                 {jwtInfo.expires_at && (
-                  <p className="text-xs text-gray-700">
+                  <p className="text-xs text-gray-700 dark:text-slate-300">
                     <span className="font-semibold">Expires:</span> {new Date(jwtInfo.expires_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
@@ -1561,7 +1714,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 )}
               </div>
             ) : (
-              <p className="text-xs text-gray-600">JWT token information not available</p>
+              <p className="text-xs text-gray-600 dark:text-slate-400">JWT token information not available</p>
             )}
           </div>
         </div>
@@ -1580,7 +1733,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
               {/* RAG Prompt Section */}
-              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600">
                 <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
                 <textarea
                   value={kafkaPrompt}
@@ -1637,7 +1790,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
               {/* RAG Prompt Section */}
-              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600">
                 <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
                 <textarea
                   value={publicCatalogPrompt}
@@ -1694,7 +1847,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
               {/* RAG Prompt Section */}
-              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600">
                 <h3 className="text-sm font-bold text-blue-900 mb-2">RAG API Prompt Used:</h3>
                 <textarea
                   value={openStandardsPrompt}
@@ -1740,6 +1893,89 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         </>
       )}
 
+      {/* Refresh JWT Token Modal */}
+      {showRefreshTokenModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Update RAG API JWT Token</h2>
+              <p className="text-sm text-gray-600 mt-1">Enter your new JWT token below</p>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <label htmlFor="jwt-token-input" className="block text-sm font-medium text-gray-700 mb-2">
+                JWT Token
+              </label>
+              <textarea
+                id="jwt-token-input"
+                value={newJwtToken}
+                onChange={(e) => setNewJwtToken(e.target.value)}
+                placeholder="Paste your JWT token here..."
+                className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0066CC] focus:border-transparent resize-none font-mono text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                This token will be used for RAG API queries. Make sure it's valid and not expired.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRefreshTokenModal(false)
+                  setNewJwtToken('')
+                }}
+                disabled={isSavingToken}
+                className="px-6 py-3 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-semibold rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!newJwtToken.trim()) {
+                    alert('Please enter a JWT token')
+                    return
+                  }
+                  setIsSavingToken(true)
+                  try {
+                    await apiService.saveUserJWTToken(newJwtToken.trim())
+                    // Refresh JWT info after saving
+                    const response = await apiService.getJWTInfo()
+                    setJwtInfo(response.data)
+                    setShowRefreshTokenModal(false)
+                    setNewJwtToken('')
+                    alert('JWT token updated successfully!')
+                  } catch (err) {
+                    console.error('Failed to save JWT token:', err)
+                    alert('Failed to save JWT token. Please try again.')
+                  } finally {
+                    setIsSavingToken(false)
+                  }
+                }}
+                disabled={isSavingToken || !newJwtToken.trim()}
+                className="px-6 py-3 bg-[#0066CC] hover:bg-[#0052A3] disabled:bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
+              >
+                {isSavingToken ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>Save Token</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* API Wizards Gallery Modal */}
       {showApiWizardsGallery && (
         <ApiWizardsGallery onClose={() => setShowApiWizardsGallery(false)} />
@@ -1747,3 +1983,4 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
     </div>
   )
 }
+ 

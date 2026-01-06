@@ -76,17 +76,19 @@ class TemenosRAGAdapter(RAGAdapter):
         question: str,
         region: str = "global",
         rag_model_id: Optional[str] = None,
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        jwt_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Query the Temenos RAG API.
-        
+
         Args:
             question: The question to ask
             region: Region context (default: "global")
             rag_model_id: Model ID to use (optional)
             context: Additional context (optional)
-            
+            jwt_token: Custom JWT token to use for this request (optional, uses default if not provided)
+
         Returns:
             Response dictionary with answer and sources
         """
@@ -94,9 +96,12 @@ class TemenosRAGAdapter(RAGAdapter):
         await self._ensure_token()
         
         try:
+            # Use custom token if provided, otherwise use default
+            token = jwt_token if jwt_token else self.jwt_token
+
             url = f"{self.api_base}/query"
             headers = {
-                "Authorization": f"Bearer {self.jwt_token}",
+                "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json"
             }
             payload = {
