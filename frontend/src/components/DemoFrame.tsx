@@ -6,6 +6,7 @@ import { DatabaseRecords } from './DatabaseRecords'
 import { ObservabilityDemo } from './observability/ObservabilityDemo'
 import { IntegrationDemo } from './IntegrationDemo'
 import { SecurityDemo } from './SecurityDemo.tsx'
+import { VideoPlayer } from './VideoPlayer'
 
 type DemoView = 'demo' | 'video'
 
@@ -62,6 +63,9 @@ export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
 
   // Use integration demo for integration component
   if (componentId === 'integration') {
+    if (view === 'video') {
+      return <VideoPlayer componentId={componentId} />
+    }
     return <IntegrationDemo />
   }
 
