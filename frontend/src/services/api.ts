@@ -51,13 +51,13 @@ const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
       }
     } catch (error) {
       console.warn('[API] Error loading config.json:', error)
-      // If we're on Azure Static Web Apps, try to construct backend URL
+      // If we're on Azure Static Web Apps, use relative URL (API is on same domain)
       if (typeof window !== 'undefined') {
         const hostname = window.location.hostname
         if (hostname.includes('azurestaticapps.net')) {
-          console.log('[API] Detected Azure Static Web Apps, using default backend URL')
+          console.log('[API] Detected Azure Static Web Apps, using relative API URL')
           return {
-            apiUrl: 'https://bsg-demo-platform-app.azurewebsites.net/api/v1',
+            apiUrl: '/api/v1',
             environment: 'production'
           }
         }
