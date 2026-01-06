@@ -11,7 +11,7 @@ export function ApiVersioning({ onBack }: ApiVersioningProps) {
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="flex items-center space-x-2 text-purple-600 hover:text-purple-800 transition-colors mb-6"
+        className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Back to API Overview</span>
@@ -20,7 +20,7 @@ export function ApiVersioning({ onBack }: ApiVersioningProps) {
       {/* Page Title */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold dark:text-white text-[#283054] mb-2">API Versioning</h2>
-        <div className="h-1 w-20 bg-purple-600 rounded"></div>
+        <div className="h-1 w-20 bg-blue-600 rounded"></div>
       </div>
 
       {/* Main Content */}
@@ -33,9 +33,9 @@ export function ApiVersioning({ onBack }: ApiVersioningProps) {
           The versioning is integral to the comprehensive REST API framework that covers most functionalities needed by financial institutions. Developers can access these APIs via the Temenos developer portal, which provides detailed documentation and a shared sandbox environment for testing. Additionally, banks can create custom APIs using the Workbench low-code tool, which aligns with the versioning strategy to maintain consistency and compatibility.
         </p>
 
-          <div className="bg-purple-50 border-l-4 border-purple-600 p-4 rounded-r-lg">
-            <h3 className="font-bold text-purple-900 mb-2">Business Benefit</h3>
-            <p className="text-purple-900">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-l-4 border-blue-600 p-4 rounded-r-lg">
+            <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-2">Business Benefit</h3>
+            <p className="text-blue-900 dark:text-blue-100">
               This clear and structured API versioning approach minimizes integration disruptions and supports seamless evolution of banking services. It empowers banks to innovate confidently, knowing their systems remain stable and compatible with Temenos' continuous enhancements.
             </p>
           </div>
@@ -54,7 +54,7 @@ export function ApiVersioning({ onBack }: ApiVersioningProps) {
                     href="https://semver.org"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-purple-600 hover:text-purple-800 underline"
+                    className="text-blue-600 hover:text-blue-800 underline"
                   >
                     semver.org
                   </a>
@@ -82,26 +82,26 @@ export function ApiVersioning({ onBack }: ApiVersioningProps) {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300">
               <thead>
-                <tr className="bg-purple-600 text-white">
+                <tr className="bg-blue-600 text-white">
                   <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Sample Version</th>
                   <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Scenario</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="border border-gray-300 px-4 py-2 font-mono font-semibold text-purple-700">v1.0.0</td>
+                  <td className="border border-gray-300 px-4 py-2 font-mono font-semibold text-blue-700 dark:text-blue-400">v1.0.0</td>
                   <td className="border border-gray-300 px-4 py-2 dark:text-gray-300 text-gray-700">Initial version</td>
                 </tr>
                 <tr className="bg-gray-50 dark:bg-gray-750 hover:bg-gray-100 dark:hover:bg-gray-700">
-                  <td className="border border-gray-300 px-4 py-2 font-mono font-semibold text-purple-700">v1.0.1</td>
+                  <td className="border border-gray-300 px-4 py-2 font-mono font-semibold text-blue-700 dark:text-blue-400">v1.0.1</td>
                   <td className="border border-gray-300 px-4 py-2 dark:text-gray-300 text-gray-700">Adding a new field to an existing API</td>
                 </tr>
                 <tr className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="border border-gray-300 px-4 py-2 font-mono font-semibold text-purple-700">v1.1.0</td>
+                  <td className="border border-gray-300 px-4 py-2 font-mono font-semibold text-blue-700 dark:text-blue-400">v1.1.0</td>
                   <td className="border border-gray-300 px-4 py-2 dark:text-gray-300 text-gray-700">Adding a new endpoint to the existing service</td>
                 </tr>
                 <tr className="bg-gray-50 dark:bg-gray-750 hover:bg-gray-100 dark:hover:bg-gray-700">
-                  <td className="border border-gray-300 px-4 py-2 font-mono font-semibold text-purple-700">v2.0.0</td>
+                  <td className="border border-gray-300 px-4 py-2 font-mono font-semibold text-blue-700 dark:text-blue-400">v2.0.0</td>
                   <td className="border border-gray-300 px-4 py-2 dark:text-gray-300 text-gray-700">Adding a breaking change. For example, adding a mandatory selection criteria to an existing API</td>
                 </tr>
               </tbody>
@@ -112,8 +112,8 @@ export function ApiVersioning({ onBack }: ApiVersioningProps) {
         {/* Example */}
         <div className="mt-6">
           <h3 className="text-xl font-bold dark:text-white text-[#283054] mb-4">Example</h3>
-          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border-l-4 border-purple-600">
-            <code className="text-purple-700 font-mono text-lg">/api/v1.0.1/party/customers</code>
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border-l-4 border-blue-600">
+            <code className="text-blue-700 dark:text-blue-400 font-mono text-lg">/api/v1.0.1/party/customers</code>
           </div>
         </div>
       </div>
