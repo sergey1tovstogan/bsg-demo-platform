@@ -1,9 +1,14 @@
 // KafkaEventStream - Live Kafka event stream viewer
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Trash2, Pause, Play, Zap, Database, ArrowRight } from 'lucide-react'
+import { Trash2, Pause, Play, Zap, Database, ArrowRight, Layers } from 'lucide-react'
 import type { KafkaEventStreamProps, KafkaEvent } from './types'
-import { UI_CONFIG } from '../config/simulation.config'
+import { UI_CONFIG, EVENT_DISPLAY_CONFIG } from '../config/simulation.config'
+import { EventBusinessContext } from './EventBusinessContext'
+import { EventTransactionGroup } from './EventTransactionGroup'
+import { EventHighlighter } from './EventHighlighter'
+import { extractBusinessContext, hasBusinessContext } from '../services/businessContextExtractor'
+import { groupEventsByCustomer } from '../services/eventAggregator'
 
 /**
  * Event type badge
@@ -142,50 +147,66 @@ const KafkaEventEntry: React.FC<{ event: KafkaEvent; index: number }> = ({ event
     } as Intl.DateTimeFormatOptions)
   }
 
+  // Extract business context if available
+  const showBusinessContext = EVENT_DISPLAY_CONFIG.SHOW_BUSINESS_CONTEXT && hasBusinessContext(event)
+  const businessContext = showBusinessContext ? extractBusinessContext(event) : null
+
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      transition={{ delay: index * 0.05 }}
-      className="border-l-2 border-green-500 pl-4 py-3 hover:bg-green-50/30 dark:hover:bg-green-950/30 transition-colors"
-    >
-      {/* Event header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3 flex-1">
-          {/* Event type badge */}
-          <EventTypeBadge type={event.type} />
+    <EventHighlighter eventId={event.id} eventTimestamp={event.timestamp}>
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 20 }}
+        transition={{ delay: index * 0.05 }}
+        className="border-l-2 border-green-500 pl-4 py-3 hover:bg-green-50/30 dark:hover:bg-green-950/30 transition-colors"
+      >
+        {/* Event header */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3 flex-1">
+            {/* Event type badge */}
+            <EventTypeBadge type={event.type} />
 
-          {/* Topic name */}
-          <span className="text-sm text-green-700 dark:text-green-400 font-mono">{event.topic}</span>
+            {/* Topic name */}
+            <span className="text-sm text-green-700 dark:text-green-400 font-mono">{event.topic}</span>
 
-          {/* Customer ID Badge (if available) */}
-          {event.payload?.entityid && (
-            <span className="text-xs bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-mono border border-blue-300 dark:border-blue-500/30">
-              Customer: {event.payload.entityid}
-            </span>
-          )}
+            {/* Customer ID Badge (if available) */}
+            {event.payload?.entityid && (
+              <span className="text-xs bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-mono border border-blue-300 dark:border-blue-500/30">
+                Customer: {event.payload.entityid}
+              </span>
+            )}
 
-          {/* Event ID */}
-          <span className="text-xs text-slate-500 dark:text-slate-500 font-mono">ID: {event.id}</span>
+            {/* Event ID */}
+            <span className="text-xs text-slate-500 dark:text-slate-500 font-mono">ID: {event.id}</span>
+          </div>
+
+          {/* Timestamp */}
+          <span className="text-xs text-slate-500 dark:text-slate-500 font-mono">{formatTimestamp(event.timestamp)}</span>
         </div>
 
-        {/* Timestamp */}
-        <span className="text-xs text-slate-500 dark:text-slate-500 font-mono">{formatTimestamp(event.timestamp)}</span>
-      </div>
+        {/* Event metadata */}
+        <EventMetadata event={event} />
 
-      {/* Event metadata */}
-      <EventMetadata event={event} />
+        {/* Business context (if available) */}
+        {businessContext && (
+          <div className="mt-3">
+            <EventBusinessContext context={businessContext} />
+          </div>
+        )}
 
-      {/* Payload preview */}
-      <PayloadPreview payload={event.payload} isFirst={index === 0} />
-    </motion.div>
+        {/* Payload preview */}
+        <PayloadPreview payload={event.payload} isFirst={index === 0} />
+      </motion.div>
+    </EventHighlighter>
   )
 }
 
 /**
  * KafkaEventStream Component - Main Kafka event stream viewer
  */
+// localStorage key for persisting grouping preference
+const GROUPING_STORAGE_KEY = 'kafka-event-grouping'
+
 export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
   events,
   onClear,
@@ -194,6 +215,24 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [localPaused, setLocalPaused] = useState(isPaused)
+  const [groupingEnabled, setGroupingEnabled] = useState(() => {
+    // Initialize from localStorage, fallback to config default
+    const stored = localStorage.getItem(GROUPING_STORAGE_KEY)
+    return stored !== null ? stored === 'true' : EVENT_DISPLAY_CONFIG.ENABLE_EVENT_GROUPING
+  })
+
+  // Group events if grouping is enabled
+  const eventGroups = useMemo(() => {
+    if (groupingEnabled && events.length > 0) {
+      return groupEventsByCustomer(events)
+    }
+    return []
+  }, [events, groupingEnabled])
+
+  // Persist grouping preference to localStorage
+  useEffect(() => {
+    localStorage.setItem(GROUPING_STORAGE_KEY, String(groupingEnabled))
+  }, [groupingEnabled])
 
   // Auto-scroll to bottom when new events arrive (unless paused)
   useEffect(() => {
@@ -238,6 +277,19 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
 
           {/* Controls */}
           <div className="flex items-center gap-2">
+            {/* Grouping toggle button */}
+            <button
+              onClick={() => setGroupingEnabled(!groupingEnabled)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                groupingEnabled
+                  ? 'bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-green-100/60 dark:hover:bg-green-950/60'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              {groupingEnabled ? 'Grouped' : 'List'}
+            </button>
+
             {/* Pause/Resume button */}
             <button
               onClick={handlePauseToggle}
@@ -287,7 +339,21 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
             <p className="text-sm">No events emitted yet</p>
             <p className="text-xs mt-1">Execute a transaction to see Kafka events here</p>
           </div>
+        ) : groupingEnabled && eventGroups.length > 0 ? (
+          // Grouped view
+          <div className="space-y-4">
+            <AnimatePresence mode="popLayout">
+              {eventGroups.map((group) => (
+                <EventTransactionGroup
+                  key={group.id}
+                  group={group}
+                  renderEvent={(event, index) => <KafkaEventEntry key={event.id} event={event} index={index} />}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
         ) : (
+          // List view
           <AnimatePresence mode="popLayout">
             {events.map((event, index) => (
               <KafkaEventEntry key={event.id} event={event} index={index} />

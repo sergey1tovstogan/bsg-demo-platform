@@ -9,7 +9,6 @@ import { useState, useEffect } from 'react'
 import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download } from 'lucide-react'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
-import { StructuredRAGDisplay } from './StructuredRAGDisplay'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -58,10 +57,6 @@ export function DeploymentAnalyzer() {
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
 
   // Function to mask subscription ID for display
-  const maskSubscriptionId = (id: string): string => {
-    if (!id || id.length < 12) return id
-    return `${id.substring(0, 8)}...${id.substring(id.length - 4)}`
-  }
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
   const [services, setServices] = useState<AzureResource[]>([])
   const [clusterNamespaces, setClusterNamespaces] = useState<Array<{ 
@@ -685,6 +680,7 @@ export function DeploymentAnalyzer() {
             setLogAnalyzerOpen(true)
           }}
           selectedResourceGroups={selectedResourceGroups}
+          subscriptionId={subscriptionId}
         />
       )}
 
@@ -1027,8 +1023,8 @@ function ResourceGroupSelector({
                       e.stopPropagation()
                       try {
                         const exportData = await apiService.exportResourceGroups(subscriptionId, [rg.name])
-                        if (exportData.data && exportData.data.length > 0) {
-                          const exportItem = exportData.data[0]
+                        if (exportData.data && exportData.data.data.length > 0) {
+                          const exportItem = exportData.data.data[0]
                           if (exportItem.status === 'success' && exportItem.template) {
                             const blob = new Blob([JSON.stringify(exportItem.template, null, 2)], { type: 'application/json' })
                             const url = URL.createObjectURL(blob)
@@ -1051,7 +1047,6 @@ function ResourceGroupSelector({
                     }}
                     className="p-1.5 text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded transition-colors"
                     title={`Export ${rg.name} as ARM template`}
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <Download className="w-4 h-4" />
                   </button>
@@ -1310,6 +1305,7 @@ function ServiceAnalysis({
   includeCosts,
   onOpenLogAnalyzer,
   selectedResourceGroups,
+  subscriptionId,
   onUpdateAnalysisResults
 }: {
   services: AzureResource[]
@@ -1331,6 +1327,7 @@ function ServiceAnalysis({
   includeCosts: boolean
   onOpenLogAnalyzer: (resourceGroup: string) => void
   selectedResourceGroups: string[]
+  subscriptionId: string
   onUpdateAnalysisResults?: (updatedResults: AnalysisResult[]) => void
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
@@ -1354,18 +1351,6 @@ function ServiceAnalysis({
 
   const selectedResult = identifiedComponents.find(r => r.service.id === selectedComponent) || identifiedComponents[0]
   
-  const handleComponentUpdate = (updatedResult: AnalysisResult) => {
-    // Update both local state and parent state
-    const updatedResults = analysisResultsState.map(r => 
-      r.service.id === updatedResult.service.id ? updatedResult : r
-    )
-    setAnalysisResultsState(updatedResults)
-    
-    // Update parent state by calling a callback if available
-    // Since we're in ServiceAnalysis component, we need to propagate up
-    // For now, update local state which will trigger re-render
-    // The parent's analysisResults prop will be updated on next analysis
-  }
 
   // Show error if present
   if (error) {
@@ -1439,12 +1424,12 @@ function ServiceAnalysis({
                 onClick={async () => {
                   try {
                     const exportData = await apiService.exportResourceGroups(subscriptionId, selectedResourceGroups)
-                    if (exportData.data && exportData.data.length > 0) {
-                      const successfulExports = exportData.data.filter(item => item.status === 'success' && item.template)
-                      const failedExports = exportData.data.filter(item => item.status === 'error')
+                    if (exportData.data && exportData.data.data.length > 0) {
+                      const successfulExports = exportData.data.data.filter((item: { status: string; template: any; resource_group: string }) => item.status === 'success' && item.template)
+                      const failedExports = exportData.data.data.filter((item: { status: string; template?: any; resource_group: string }) => item.status === 'error')
                       
                       if (failedExports.length > 0) {
-                        const failedRGs = failedExports.map(item => item.resource_group).join(', ')
+                        const failedRGs = failedExports.map((item: { resource_group: string }) => item.resource_group).join(', ')
                         console.warn(`Failed to export some resource groups: ${failedRGs}`)
                       }
                       
@@ -1472,7 +1457,7 @@ function ServiceAnalysis({
                         const combinedParameters: Record<string, any> = {}
                         const combinedVariables: Record<string, any> = {}
                         
-                        successfulExports.forEach((item, index) => {
+                        successfulExports.forEach((item: { template: any; resource_group: string }, _index: number) => {
                           const template = item.template
                           if (template) {
                             // Collect resources
@@ -1802,7 +1787,7 @@ function formatRAGText(text: string): JSX.Element | null {
     // Remove empty table rows
     .replace(/\|\s*\|\s*\|\s*\|/g, '')
     // Convert markdown tables to cleaner format
-    .replace(/\|([^|]+)\|([^|]+)\|([^|]+)\|/g, (match, col1, col2, col3) => {
+    .replace(/\|([^|]+)\|([^|]+)\|([^|]+)\|/g, (_match, col1, col2, col3) => {
       // Convert table rows to bullet points with better formatting
       const c1 = col1.trim()
       const c2 = col2.trim()
@@ -2181,28 +2166,14 @@ function ComponentDetailPanel({
 
       {/* Structured Information Display */}
       <div className="space-y-6">
-        {/* Use structured display if we have RAG content */}
-        {componentInfo.architecturalOverview && 
-         componentInfo.architecturalOverview.trim() && 
-         !componentInfo.architecturalOverview.includes("Information not available") ? (
-          <StructuredRAGDisplay
-            architecturalOverview={componentInfo.architecturalOverview}
-            functionalOverview={componentInfo.functionalOverview || ""}
-            capabilities={componentInfo.capabilities || []}
-          />
-        ) : (
-          <>
-            {/* Fallback to old display if no structured content */}
-            <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-              <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
-                  ? formatRAGText(componentInfo.architecturalOverview)
-                  : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
-              </div>
-            </div>
-          </>
-        )}
+        <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
+          <div className="prose prose-sm max-w-none dark:prose-invert">
+            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
+              ? formatRAGText(componentInfo.architecturalOverview)
+              : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
+          </div>
+        </div>
 
         {/* Deployment Architecture */}
         {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') ||

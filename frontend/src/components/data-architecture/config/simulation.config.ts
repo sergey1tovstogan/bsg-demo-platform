@@ -98,6 +98,37 @@ export const UI_CONFIG = {
 }
 
 /**
+ * Event Display Configuration
+ */
+export const EVENT_DISPLAY_CONFIG = {
+  // Grouping settings
+  ENABLE_EVENT_GROUPING: true,
+  GROUP_BY: 'customerId' as 'customerId' | 'correlationId' | 'transactionId',
+  GROUP_TIME_WINDOW_MS: 30000, // Events within 30s are grouped together
+
+  // Display preferences
+  SHOW_BUSINESS_CONTEXT: true,
+  SHOW_CORRELATION_IDS: true,
+  SHOW_TIMING_INFO: true,
+  COMPACT_MODE: false,
+
+  // Highlighting
+  HIGHLIGHT_NEW_EVENTS: true,
+  HIGHLIGHT_DURATION_MS: 3000,
+
+  // Filtering
+  DEFAULT_FILTER: 'all' as 'all' | 'business' | 'data',
+  ENABLE_SEARCH: true,
+
+  // Business field extraction by event category
+  BUSINESS_FIELDS: {
+    customer: ['customerName', 'entityid', 'email', 'nationality', 'customerId', 'name'],
+    account: ['accountId', 'accountType', 'balance', 'currency', 'customerId'],
+    payment: ['paymentId', 'amount', 'currency', 'reference', 'status', 'fromAccount', 'toAccount']
+  }
+}
+
+/**
  * Transaction Configuration
  */
 export const TRANSACTION_CONFIG = {

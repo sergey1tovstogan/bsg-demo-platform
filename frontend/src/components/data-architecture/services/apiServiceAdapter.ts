@@ -599,7 +599,7 @@ export class ApiServiceAdapter implements ITransactionApiService {
    * Switch between mock and real API at runtime
    * DISABLED: Always uses real API
    */
-  switchMode(useMock: boolean, config?: { baseUrl?: string; mockConfig?: any }): void {
+  switchMode(_useMock: boolean, config?: { baseUrl?: string; mockConfig?: any }): void {
     // Always use real API - mock mode disabled
     this.service = new RealApiService(config?.baseUrl)
   }

@@ -246,6 +246,7 @@ export interface ApiResponse<T> {
   data: T
   error?: string
   events?: KafkaEvent[]
+  fullResponse?: any
 }
 
 /**
@@ -297,4 +298,40 @@ export interface ViewInArchitectureButtonProps {
   onNavigate: () => void
   disabled?: boolean
   eventType?: 'business' | 'data'
+}
+
+/**
+ * Event group for transaction-based grouping
+ */
+export interface EventGroup {
+  id: string
+  customerId?: string
+  correlationId?: string
+  transactionType?: TransactionType
+  events: KafkaEvent[]
+  startTime: number
+  endTime: number
+  duration: number
+}
+
+/**
+ * Business context extracted from event payload
+ */
+export interface EventBusinessContext {
+  category: 'customer' | 'account' | 'payment'
+  entityId?: string
+  entityName?: string
+  primaryFields: Record<string, any>
+  formattedSummary: string
+}
+
+/**
+ * Transaction metrics for grouped events
+ */
+export interface TransactionMetrics {
+  totalEvents: number
+  businessEvents: number
+  dataEvents: number
+  duration: number
+  successful: boolean
 }

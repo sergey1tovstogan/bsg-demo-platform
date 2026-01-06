@@ -251,10 +251,10 @@ export class BriefingGenerator {
    * This is handled by the backend, but we keep the interface for consistency.
    */
   async synthesizeBriefing(
-    facts: Fact[],
-    chunks: RAGChunk[],
-    productFamily: string,
-    componentName: string
+    _facts: Fact[],
+    _chunks: RAGChunk[],
+    _productFamily: string,
+    _componentName: string
   ): Promise<BriefingJSON> {
     // The actual synthesis is done by the backend
     // This is a placeholder that would call the backend API

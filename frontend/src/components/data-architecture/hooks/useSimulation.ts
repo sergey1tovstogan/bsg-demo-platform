@@ -213,8 +213,8 @@ export const useSimulation = () => {
 
         // If in real mode, poll for actual events from Event Store API
         if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
-          debugLog('Polling for real events from Event Store API (FILTERING DISABLED FOR DEBUGGING)')
-          const realEvents = await pollRealEventsAfterTransaction(startTime) // Removed customerId parameter
+          debugLog('Polling for real events from Event Store API')
+          const realEvents = await pollRealEventsAfterTransaction(startTime, customerId)
           
           debugLog(`Event Store API returned ${realEvents.length} events`)
           console.log('[DEBUG] Real events from Event Store:', realEvents)

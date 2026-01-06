@@ -170,7 +170,7 @@ export function mapToTemenosTopic(topic: string, eventType: string): string {
 /**
  * Categorize event as 'business' or 'data' based on type
  */
-export function categorizeEvent(eventType: string, data?: any): 'business' | 'data' {
+export function categorizeEvent(eventType: string, _data?: any): 'business' | 'data' {
   const eventTypeLower = eventType.toLowerCase()
 
   // Check for business event patterns
@@ -194,7 +194,7 @@ export function categorizeEvent(eventType: string, data?: any): 'business' | 'da
 /**
  * Extract transaction type from event for UI display
  */
-export function extractTransactionType(eventType: string, data?: any): TransactionType | undefined {
+export function extractTransactionType(eventType: string, _data?: any): TransactionType | undefined {
   const eventTypeLower = eventType.toLowerCase()
 
   if (eventTypeLower.includes('customer')) {
