@@ -11,7 +11,6 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
   const [videos, setVideos] = useState<Video[]>([])
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadVideos()
@@ -20,14 +19,14 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
   const loadVideos = async () => {
     try {
       setLoading(true)
-      setError(null)
       const response = await apiService.getVideos(componentId)
       setVideos(response.data || [])
       if (response.data && response.data.length > 0) {
         setSelectedVideo(response.data[0])
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load videos')
+      // Error suppressed - SharePoint videos are shown as primary content
+      console.error('Failed to load videos:', err)
     } finally {
       setLoading(false)
     }
