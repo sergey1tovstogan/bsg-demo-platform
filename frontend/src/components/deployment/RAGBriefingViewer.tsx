@@ -5,9 +5,6 @@
  */
 
 import { useState } from 'react'
-import { 
-  FileText, Copy, AlertTriangle, CheckCircle2, 
-  XCircle, BookOpen, Shield, Cpu, Network, Settings, 
 import {
   FileText, Copy, AlertTriangle, CheckCircle2,
   XCircle, BookOpen, Shield, Cpu, Network, Settings,
@@ -155,7 +152,6 @@ export function RAGBriefingViewer({ briefing, onClose }: RAGBriefingViewerProps)
 
 // Executive Summary Tab
 function ExecutiveSummaryTab({ briefing }: { briefing: Briefing }) {
-function ExecutiveSummaryTab({ briefing, renderCitationTags: _renderCitationTags }: { briefing: Briefing; renderCitationTags: (citations: string[]) => JSX.Element | null }) {
   const { executive_summary } = briefing
   const confidenceColors = {
     high: 'text-green-600 dark:text-green-400',

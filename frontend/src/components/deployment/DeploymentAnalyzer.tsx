@@ -1023,7 +1023,6 @@ function ResourceGroupSelector({
                       e.stopPropagation()
                       try {
                         const exportData = await apiService.exportResourceGroups(subscriptionId, [rg.name])
-                        if (exportData.data && exportData.data.data.length > 0) {
                         if (exportData.data && exportData.data.data && exportData.data.data.length > 0) {
                           const exportItem = exportData.data.data[0]
                           if (exportItem.status === 'success' && exportItem.template) {
@@ -1308,8 +1307,6 @@ function ServiceAnalysis({
   selectedResourceGroups,
   subscriptionId,
   onUpdateAnalysisResults
-  onUpdateAnalysisResults,
-  subscriptionId
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
@@ -1332,7 +1329,6 @@ function ServiceAnalysis({
   selectedResourceGroups: string[]
   subscriptionId: string
   onUpdateAnalysisResults?: (updatedResults: AnalysisResult[]) => void
-  subscriptionId: string
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
 
@@ -1428,12 +1424,6 @@ function ServiceAnalysis({
                 onClick={async () => {
                   try {
                     const exportData = await apiService.exportResourceGroups(subscriptionId, selectedResourceGroups)
-                    if (exportData.data && exportData.data.data.length > 0) {
-                      const successfulExports = exportData.data.data.filter((item: { status: string; template: any; resource_group: string }) => item.status === 'success' && item.template)
-                      const failedExports = exportData.data.data.filter((item: { status: string; template?: any; resource_group: string }) => item.status === 'error')
-                      
-                      if (failedExports.length > 0) {
-                        const failedRGs = failedExports.map((item: { resource_group: string }) => item.resource_group).join(', ')
                     if (exportData.data && exportData.data.data && exportData.data.data.length > 0) {
                       const successfulExports = exportData.data.data.filter((item: any) => item.status === 'success' && item.template)
                       const failedExports = exportData.data.data.filter((item: any) => item.status === 'error')
@@ -1468,7 +1458,6 @@ function ServiceAnalysis({
                         const combinedVariables: Record<string, any> = {}
                         
                         successfulExports.forEach((item: { template: any; resource_group: string }, _index: number) => {
-                        successfulExports.forEach((item) => {
                           const template = item.template
                           if (template) {
                             // Collect resources
