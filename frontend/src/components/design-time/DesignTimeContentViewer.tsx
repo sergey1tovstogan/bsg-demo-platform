@@ -383,6 +383,7 @@ export function DesignTimeContentViewer() {
                         {item.title || item.question}
                       </h3>
                       <div className="text-gray-800 dark:text-gray-200">
+                        {/* eslint-disable @typescript-eslint/no-unused-vars */}
                         <ReactMarkdown
                           components={{
                             h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-purple-900 dark:text-purple-400 mt-6 mb-4" {...props} />,

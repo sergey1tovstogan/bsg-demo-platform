@@ -104,15 +104,16 @@ function formatSummary(
   if (!payload) return 'No details available'
 
   switch (category) {
-    case 'customer':
+    case 'customer': {
       const customerName = payload.customerName || payload.name || 'Unknown Customer'
       const email = payload.email ? ` (${payload.email})` : ''
       const customerId = payload.customerId || payload.entityid
       return customerId
         ? `${customerName}${email} - ID: ${customerId}`
         : `${customerName}${email}`
+    }
 
-    case 'account':
+    case 'account': {
       // Check nested Temenos structure first
       const nestedDetails = extractNestedAccountDetails(payload)
       const accountId = nestedDetails.accountId || payload.accountId || payload.entityid || 'Unknown'
@@ -127,8 +128,9 @@ function formatSummary(
 
       const statusText = status ? ` (${status})` : ''
       return `${formattedType} - ${accountId}${statusText}`
+    }
 
-    case 'payment':
+    case 'payment': {
       const paymentId = payload.paymentId || payload.transactionId || 'Unknown'
       const amount = payload.amount !== undefined
         ? formatCurrency(payload.amount, payload.currency)
@@ -136,6 +138,7 @@ function formatSummary(
       const reference = payload.reference ? ` - ${payload.reference}` : ''
       const paymentStatus = payload.status ? ` (${payload.status})` : ''
       return `Payment ${paymentId}: ${amount}${reference}${paymentStatus}`
+    }
 
     default:
       return 'Event details'

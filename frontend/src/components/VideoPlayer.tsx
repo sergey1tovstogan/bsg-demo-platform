@@ -12,10 +12,6 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadVideos()
-  }, [componentId])
-
   const loadVideos = async () => {
     try {
       setLoading(true)
@@ -24,13 +20,18 @@ export function VideoPlayer({ componentId }: VideoPlayerProps) {
       if (response.data && response.data.length > 0) {
         setSelectedVideo(response.data[0])
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Error suppressed - SharePoint videos are shown as primary content
       console.error('Failed to load videos:', err)
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadVideos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [componentId])
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)

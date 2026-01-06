@@ -170,7 +170,8 @@ export function mapToTemenosTopic(topic: string, eventType: string): string {
 /**
  * Categorize event as 'business' or 'data' based on type
  */
-export function categorizeEvent(eventType: string, _data?: any): 'business' | 'data' {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function categorizeEvent(eventType: string, _data?: unknown): 'business' | 'data' {
   const eventTypeLower = eventType.toLowerCase()
 
   // Check for business event patterns
@@ -194,7 +195,8 @@ export function categorizeEvent(eventType: string, _data?: any): 'business' | 'd
 /**
  * Extract transaction type from event for UI display
  */
-export function extractTransactionType(eventType: string, _data?: any): TransactionType | undefined {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function extractTransactionType(eventType: string, _data?: unknown): TransactionType | undefined {
   const eventTypeLower = eventType.toLowerCase()
 
   if (eventTypeLower.includes('customer')) {

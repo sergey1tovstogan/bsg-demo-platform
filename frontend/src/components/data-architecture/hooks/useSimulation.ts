@@ -385,7 +385,6 @@ export const useSimulation = () => {
 
         // Store account ID
         const accountId = response.data.accountId
-        const customerId = simulationState.getTransactionId('customerId')
         simulationState.setTransactionId('accountId', accountId)
 
         // Check if we're in real API mode
@@ -537,7 +536,6 @@ export const useSimulation = () => {
         // Store payment ID
         const paymentId = response.data.paymentId
         const accountId = simulationState.getTransactionId('accountId')
-        const customerId = simulationState.getTransactionId('customerId')
         simulationState.setTransactionId('paymentId', paymentId)
 
         // Check if we're in real API mode
