@@ -4,11 +4,13 @@ Deployment API Endpoints
 Provides Azure deployment analysis endpoints.
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Header
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
+from app.core.database import get_database
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.services.azure_service import AzureService, AzureResourceGroup, AzureResource
 from app.services.temenos_service import TemenosService, TemenosAnalysisResult
 from app.services.aks_service import AKSService
@@ -52,6 +54,11 @@ class NamespacesRequest(BaseModel):
     subscription_id: str = Field(..., description="Azure subscription ID")
     resource_group_names: List[str] = Field(..., description="List of resource group names")
     refresh: bool = Field(False, description="Force refresh, bypass cache")
+
+
+class JWTUpdate(BaseModel):
+    """Model for JWT token update request."""
+    jwt_token: str
 
 
 class ExportRequest(BaseModel):
@@ -1060,13 +1067,22 @@ async def temenos_health():
 
 
 @router.post("/temenos/query")
-async def query_rag(request: Dict[str, Any]):
+async def query_rag(
+    request: Dict[str, Any],
+    user_id: Optional[str] = Header(None, alias="X-User-Id"),
+    settings: Settings = Depends(get_settings),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
     """
     Query Temenos RAG API directly.
-    
+    Uses user's stored JWT token if available, falls back to system token.
+
     Args:
         request: Query request with question, region, RAGmodelId, and optional context
-        
+        user_id: User identifier from header (optional for demo)
+        settings: Application settings
+        db: Database connection
+
     Returns:
         RAG API response
     """
@@ -1075,19 +1091,34 @@ async def query_rag(request: Dict[str, Any]):
         region = request.get("region", "global")
         rag_model_id = request.get("RAGmodelId")
         context = request.get("context")
-        
+
         if not question or not rag_model_id:
             raise HTTPException(
                 status_code=400,
                 detail="question and RAGmodelId are required"
             )
-        
+
+        # Use a default user_id for demo purposes if not provided
+        if not user_id:
+            user_id = "demo_user"
+
+        # Try to get user's JWT token from database first
+        jwt_token = None
+        jwt_doc = await db.deployment.find_one({"user_id": user_id, "type": "jwt_token"})
+        if jwt_doc and jwt_doc.get("jwt_token"):
+            jwt_token = jwt_doc.get("jwt_token")
+            logger.info(f"Using user's stored JWT token for RAG query (user: {user_id})")
+        elif settings.RAG_JWT_TOKEN:
+            jwt_token = settings.RAG_JWT_TOKEN
+            logger.info("Using system default JWT token for RAG query")
+
         temenos_service = TemenosService()
         result = await temenos_service.query_rag(
             question=question,
             region=region,
             rag_model_id=rag_model_id,
-            context=context
+            context=context,
+            jwt_token=jwt_token
         )
         
         return {
@@ -1470,9 +1501,14 @@ async def analyze_cloud_logs(request: CloudLogsAnalyzeRequest):
 
 
 @router.get("/temenos/jwt-info")
-async def get_jwt_info(settings: Settings = Depends(get_settings)):
+async def get_jwt_info(
+    user_id: Optional[str] = Header(None, alias="X-User-Id"),
+    settings: Settings = Depends(get_settings),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
     """
     Get JWT token information including expiration status.
+    Uses user's stored token if available, falls back to system token.
 
     Returns:
         JWT token expiration information
@@ -1481,7 +1517,20 @@ async def get_jwt_info(settings: Settings = Depends(get_settings)):
     from datetime import datetime
 
     try:
-        if not settings.RAG_JWT_TOKEN:
+        # Use a default user_id for demo purposes if not provided
+        if not user_id:
+            user_id = "demo_user"
+
+        # Try to get user's JWT token from database first
+        jwt_token = None
+        jwt_doc = await db.deployment.find_one({"user_id": user_id, "type": "jwt_token"})
+        if jwt_doc and jwt_doc.get("jwt_token"):
+            jwt_token = jwt_doc.get("jwt_token")
+            logger.info(f"Using user's stored JWT token for {user_id}")
+        elif settings.RAG_JWT_TOKEN:
+            jwt_token = settings.RAG_JWT_TOKEN
+            logger.info("Using system default JWT token")
+        else:
             raise HTTPException(
                 status_code=500,
                 detail="RAG_JWT_TOKEN not configured"
@@ -1489,7 +1538,7 @@ async def get_jwt_info(settings: Settings = Depends(get_settings)):
 
         # Decode JWT without verification to get payload
         payload = jwt.decode(
-            settings.RAG_JWT_TOKEN,
+            jwt_token,
             options={"verify_signature": False}
         )
 
@@ -1539,57 +1588,145 @@ async def get_jwt_info(settings: Settings = Depends(get_settings)):
         )
 
 
+@router.get("/temenos/jwt-token")
+async def get_user_jwt_token(
+    user_id: Optional[str] = Header(None, alias="X-User-Id"),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+) -> Dict[str, Any]:
+    """
+    Get the user's stored JWT token.
+
+    Args:
+        user_id: User identifier from header (optional for demo)
+        db: Database connection
+
+    Returns:
+        User's JWT token information
+    """
+    try:
+        # Use a default user_id for demo purposes if not provided
+        if not user_id:
+            user_id = "demo_user"
+
+        # Find the user's JWT token in the deployment collection
+        jwt_doc = await db.deployment.find_one({"user_id": user_id, "type": "jwt_token"})
+
+        if jwt_doc:
+            return {
+                "success": True,
+                "has_token": True,
+                "jwt_token": jwt_doc.get("jwt_token", ""),
+                "updated_at": jwt_doc.get("updated_at")
+            }
+        else:
+            return {
+                "success": True,
+                "has_token": False,
+                "jwt_token": "",
+                "updated_at": None
+            }
+    except Exception as e:
+        logger.error(f"Error retrieving JWT token: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve JWT token: {str(e)}")
+
+
+@router.post("/temenos/jwt-token")
+async def save_user_jwt_token(
+    token_data: JWTUpdate,
+    user_id: Optional[str] = Header(None, alias="X-User-Id"),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+) -> Dict[str, Any]:
+    """
+    Save or update the user's JWT token.
+
+    Args:
+        token_data: JWT token data
+        user_id: User identifier from header (optional for demo)
+        db: Database connection
+
+    Returns:
+        Success confirmation
+    """
+    try:
+        # Use a default user_id for demo purposes if not provided
+        if not user_id:
+            user_id = "demo_user"
+
+        # Upsert the JWT token
+        result = await db.deployment.update_one(
+            {"user_id": user_id, "type": "jwt_token"},
+            {
+                "$set": {
+                    "user_id": user_id,
+                    "type": "jwt_token",
+                    "jwt_token": token_data.jwt_token,
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+            },
+            upsert=True
+        )
+
+        return {
+            "success": True,
+            "message": "JWT token saved successfully",
+            "updated": result.modified_count > 0 or result.upserted_id is not None
+        }
+    except Exception as e:
+        logger.error(f"Error saving JWT token: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save JWT token: {str(e)}")
+
+
 @router.post("/azure/export")
 async def export_resource_groups(request: ExportRequest):
     """
     Export selected resource groups as ARM templates (JSON).
-    
+
     Args:
         request: Export request with subscription ID and resource group names
-        
+
     Returns:
         ARM template JSON for the selected resource groups
     """
     try:
         subscription_id = request.subscription_id
         resource_group_names = request.resource_group_names
-        
+
         if not subscription_id:
             raise HTTPException(status_code=400, detail="Subscription ID is required")
-        
+
         if not resource_group_names or len(resource_group_names) == 0:
             raise HTTPException(status_code=400, detail="At least one resource group name is required")
-        
+
         # Get Azure service instance
         if subscription_id not in azure_service_cache:
             azure_service_cache[subscription_id] = AzureService(subscription_id)
         azure_service = azure_service_cache[subscription_id]
-        
+
         # Export ARM templates for each resource group
         exported_templates = []
-        
+
         for rg_name in resource_group_names:
             try:
                 logger.info(f"Exporting ARM template for resource group: {rg_name}")
-                
+
                 # Use Azure Resource Manager REST API to export template
                 credential = azure_service.credential
                 token_response = credential.get_token("https://management.azure.com/.default")
                 access_token = token_response.token
-                
+
                 export_url = f"https://management.azure.com/subscriptions/{subscription_id}/resourceGroups/{rg_name}/exportTemplate?api-version=2021-04-01"
                 headers = {
                     "Authorization": f"Bearer {access_token}",
                     "Content-Type": "application/json"
                 }
-                
+
                 export_payload = {
                     "resources": ["*"],
                     "options": "IncludeParameterDefaultValue,IncludeComments"
                 }
-                
+
                 export_response = requests.post(export_url, headers=headers, json=export_payload, timeout=60)
-                
+
                 # Check for errors in response
                 if export_response.status_code >= 400:
                     error_detail = {}
@@ -1597,27 +1734,27 @@ async def export_resource_groups(request: ExportRequest):
                         error_detail = export_response.json()
                     except:
                         error_detail = {"message": export_response.text[:500]}
-                    
+
                     raise Exception(f"Azure API error ({export_response.status_code}): {error_detail.get('error', {}).get('message', export_response.text[:200])}")
-                
+
                 export_response.raise_for_status()
                 response_data = export_response.json()
-                
+
                 # Azure exportTemplate API returns the template directly or wrapped in a 'template' property
                 template_data = response_data.get('template', response_data)
-                
+
                 # Ensure we have a valid template structure
                 if not template_data or (not isinstance(template_data, dict)):
                     raise Exception("Invalid template structure returned from Azure API")
-                
+
                 exported_templates.append({
                     "resource_group": rg_name,
                     "template": template_data,
                     "status": "success"
                 })
-                
+
                 logger.info(f"✓ Successfully exported ARM template for {rg_name}")
-                
+
             except Exception as e:
                 logger.error(f"Failed to export ARM template for {rg_name}: {e}", exc_info=True)
                 exported_templates.append({
@@ -1626,13 +1763,13 @@ async def export_resource_groups(request: ExportRequest):
                     "status": "error",
                     "error": str(e)
                 })
-        
+
         return {
             "status": "success",
             "data": exported_templates,
             "count": len(exported_templates)
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1651,27 +1788,27 @@ async def export_resource_groups(request: ExportRequest):
 async def generate_briefing(request: BriefingRequest):
     """
     Generate perfect RAG briefing for a Temenos component.
-    
+
     Args:
         request: Briefing request with product family, component name, and aliases
-        
+
     Returns:
         Structured briefing JSON with citations
     """
     try:
         briefing_service = RAGBriefingService()
-        
+
         briefing = await briefing_service.generate_briefing(
             product_family=request.product_family,
             component_name=request.component_name,
             aliases=request.aliases or []
         )
-        
+
         return {
             "status": "success",
             "data": briefing
         }
-        
+
     except Exception as e:
         logger.error(f"Error generating briefing: {e}", exc_info=True)
         raise HTTPException(

@@ -1024,6 +1024,7 @@ function ResourceGroupSelector({
                       try {
                         const exportData = await apiService.exportResourceGroups(subscriptionId, [rg.name])
                         if (exportData.data && exportData.data.data.length > 0) {
+                        if (exportData.data && exportData.data.data && exportData.data.data.length > 0) {
                           const exportItem = exportData.data.data[0]
                           if (exportItem.status === 'success' && exportItem.template) {
                             const blob = new Blob([JSON.stringify(exportItem.template, null, 2)], { type: 'application/json' })
@@ -1307,6 +1308,8 @@ function ServiceAnalysis({
   selectedResourceGroups,
   subscriptionId,
   onUpdateAnalysisResults
+  onUpdateAnalysisResults,
+  subscriptionId
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
@@ -1329,6 +1332,7 @@ function ServiceAnalysis({
   selectedResourceGroups: string[]
   subscriptionId: string
   onUpdateAnalysisResults?: (updatedResults: AnalysisResult[]) => void
+  subscriptionId: string
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
 
@@ -1430,6 +1434,12 @@ function ServiceAnalysis({
                       
                       if (failedExports.length > 0) {
                         const failedRGs = failedExports.map((item: { resource_group: string }) => item.resource_group).join(', ')
+                    if (exportData.data && exportData.data.data && exportData.data.data.length > 0) {
+                      const successfulExports = exportData.data.data.filter((item: any) => item.status === 'success' && item.template)
+                      const failedExports = exportData.data.data.filter((item: any) => item.status === 'error')
+
+                      if (failedExports.length > 0) {
+                        const failedRGs = failedExports.map((item: any) => item.resource_group).join(', ')
                         console.warn(`Failed to export some resource groups: ${failedRGs}`)
                       }
                       
@@ -1458,6 +1468,7 @@ function ServiceAnalysis({
                         const combinedVariables: Record<string, any> = {}
                         
                         successfulExports.forEach((item: { template: any; resource_group: string }, _index: number) => {
+                        successfulExports.forEach((item) => {
                           const template = item.template
                           if (template) {
                             // Collect resources
@@ -2164,7 +2175,7 @@ function ComponentDetailPanel({
       </div>
 
 
-      {/* Structured Information Display */}
+      {/* Architecture Overview */}
       <div className="space-y-6">
         <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
           <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>

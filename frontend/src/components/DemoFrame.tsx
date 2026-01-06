@@ -6,6 +6,7 @@ import { ObservabilityDemo } from './observability/ObservabilityDemo'
 import { IntegrationDemo } from './IntegrationDemo'
 import { TemenosTransactionSimulator } from './data-architecture/demo/TemenosTransactionSimulator'
 import { SecurityDemo } from './SecurityDemo.tsx'
+import { VideoPlayer } from './VideoPlayer'
 
 type DemoView = 'demo' | 'video'
 
@@ -40,11 +41,31 @@ export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
 
   // Use specialized component for observability
   if (componentId === 'observability') {
+    if (view === 'video') {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center text-gray-400">
+            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+              <Code2 className="w-12 h-12 opacity-30" />
+            </div>
+            <p className="text-lg font-medium text-gray-500 dark:text-gray-400 mb-2">
+              Coming soon...
+            </p>
+            <p className="text-sm">
+              Video content will be available here
+            </p>
+          </div>
+        </div>
+      )
+    }
     return <ObservabilityDemo />
   }
 
   // Use integration demo for integration component
   if (componentId === 'integration') {
+    if (view === 'video') {
+      return <VideoPlayer componentId={componentId} />
+    }
     return <IntegrationDemo />
   }
 
