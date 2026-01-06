@@ -3,29 +3,41 @@ import type { KafkaEvent, EventGroup, TransactionMetrics, TransactionType } from
 import { EVENT_DISPLAY_CONFIG } from '../config/simulation.config'
 
 /**
- * Extracts customer ID from event payload (handles nested Temenos structures)
+ * Extracts entity ID from event payload for grouping.
+ * 
+ * Grouping is based on the entityid field which contains:
+ * - CustomerID (e.g., "190633") for customer events
+ * - AccountID (e.g., "AA25105LJ7HX") for account events
+ * 
+ * Events with subject="dataevent" are data events and should be grouped by entityid.
  */
-function getCustomerId(event: KafkaEvent): string | undefined {
+function getEntityId(event: KafkaEvent): string | undefined {
   if (!event.payload) return undefined
 
-  // Check top-level fields first
+  // Primary grouping: use entityid directly (works for both Customer and Account events)
+  if (event.payload.entityid) {
+    return String(event.payload.entityid)
+  }
+
+  // Fallback: check customerId field
   if (event.payload.customerId) {
     return String(event.payload.customerId)
   }
 
-  // For account events, check nested Temenos structure
+  // Fallback: check nested Temenos structure for account events
   if (event.payload.data?.applicationContext?.applicationData?.Customer?.[0]?.customer) {
     return String(event.payload.data.applicationContext.applicationData.Customer[0].customer)
   }
 
-  // For customer events, entityid is the customer ID
-  if (event.topic?.includes('party') || event.topic?.includes('customer')) {
-    if (event.payload.entityid) {
-      return String(event.payload.entityid)
-    }
-  }
-
   return undefined
+}
+
+/**
+ * Legacy alias for backward compatibility
+ * @deprecated Use getEntityId instead
+ */
+function getCustomerId(event: KafkaEvent): string | undefined {
+  return getEntityId(event)
 }
 
 /**
@@ -37,7 +49,7 @@ function getCorrelationId(event: KafkaEvent): string | undefined {
 }
 
 /**
- * Determines transaction type from event topic and payload
+ * Determines transaction type from event topic, entityname, and payload
  */
 function determineTransactionType(event: KafkaEvent): TransactionType | undefined {
   // First check if event already has transactionType
@@ -46,15 +58,20 @@ function determineTransactionType(event: KafkaEvent): TransactionType | undefine
   }
 
   // Determine from topic
-  const topic = event.topic.toLowerCase()
+  const topic = (event.topic || '').toLowerCase()
+  const entityName = (event.payload?.entityname || '').toLowerCase()
 
-  if (topic.includes('party') || topic.includes('customer')) {
+  if (topic.includes('party') || topic.includes('customer') || entityName.includes('customer')) {
     return 'CREATE_CUSTOMER'
   }
-  if (topic.includes('holding') || topic.includes('account')) {
+  // Check for AA (Arrangement Architecture) entities - these are accounts in Temenos
+  if (topic.includes('holding') || topic.includes('account') || 
+      entityName.includes('account') || entityName.startsWith('aa') || 
+      entityName.includes('aa_') || entityName.includes('_aa_')) {
     return 'OPEN_ACCOUNT'
   }
-  if (topic.includes('payment') || topic.includes('order')) {
+  if (topic.includes('payment') || topic.includes('order') || 
+      entityName.includes('funds') || entityName.includes('transfer')) {
     return 'SEND_PAYMENT'
   }
 
@@ -75,8 +92,13 @@ export function groupEventsByCustomer(events: KafkaEvent[]): EventGroup[] {
     let groupKey: string | undefined
 
     switch (groupBy) {
+      case 'entityId':
+        // Group by entityid (works for CustomerID and AccountID)
+        groupKey = getEntityId(event)
+        break
       case 'customerId':
-        groupKey = getCustomerId(event)
+        // Legacy: same as entityId
+        groupKey = getEntityId(event)
         break
       case 'correlationId':
         groupKey = getCorrelationId(event)

@@ -23,11 +23,20 @@ import {
 
 /**
  * Poll for real events from Event Store API after a transaction
+ * 
+ * Filtering rules:
+ * - Classification: subject="dataevent" for data events, subject="businessevent" for business events
+ * - Entity matching: Based on transaction type:
+ *   - CREATE_CUSTOMER: entityid = CustomerID
+ *   - OPEN_ACCOUNT: entityid = AccountID
+ *   - SEND_PAYMENT: entityid = PaymentID or AccountID
+ * 
+ * Note: Event timestamps from Temenos may be BEFORE the API response returns,
+ * so we use a time window rather than strict "after transaction" filtering.
  */
 async function pollRealEventsAfterTransaction(
   transactionStartTime: number,
-  customerId?: string,
-  _accountId?: string // Prefixed with _ to indicate intentionally unused
+  entityId?: string  // The entity ID to match (CustomerID, AccountID, etc.)
 ): Promise<KafkaEvent[]> {
   if (!EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
     return []
@@ -37,9 +46,9 @@ async function pollRealEventsAfterTransaction(
     // Wait a bit for events to propagate to Event Hub
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    // Fetch recent events filtered by customer ID
-    console.log('[DEBUG] Fetching events from Event Store for customer:', customerId)
-    const result = await eventStoreService.fetchRecentEvents(2, 50, customerId)
+    // Fetch recent events without filters - we'll filter client-side by entityid
+    console.log('[DEBUG] Fetching all recent events from Event Store')
+    const result = await eventStoreService.fetchRecentEvents(2, 50)
 
     console.log('[DEBUG] Event Store response:', {
       success: result.success,
@@ -59,23 +68,30 @@ async function pollRealEventsAfterTransaction(
       return []
     }
 
-    // Filter by customer ID and timestamp
-    const transactionTime = transactionStartTime
+    // Filter events by entityid and time window
+    // Events may have timestamps slightly BEFORE the frontend transaction start time
+    const timeWindowMs = 60000 // 60 second window before transaction
+    const minTime = transactionStartTime - timeWindowMs
+    
     const filteredEvents = result.events.filter((event) => {
-      // Filter by customer ID - match entityid field in payload
-      const eventCustomerId = event.payload?.entityid
-      const matchesCustomer = customerId
-        ? eventCustomerId && String(eventCustomerId) === String(customerId)
-        : true
-      // Event must be after transaction started and match customer ID
-      return matchesCustomer && event.timestamp >= transactionTime
+      const eventEntityId = event.payload?.entityid ? String(event.payload.entityid) : ''
+      
+      // Match by entityId (dynamically set based on transaction type)
+      const matchesEntity = entityId ? eventEntityId === String(entityId) : true
+      
+      // Event must be within the time window
+      const withinTimeWindow = event.timestamp >= minTime
+      
+      return matchesEntity && withinTimeWindow
     })
 
-    console.log('[DEBUG] Filtered events (by customer ID and timestamp):', {
+    console.log('[DEBUG] Filtered events by entityId:', {
       totalReceived: result.events.length,
-      afterTransaction: filteredEvents.length,
-      customerId: customerId,
-      transactionTime: new Date(transactionTime).toISOString()
+      filtered: filteredEvents.length,
+      entityId,
+      transactionTime: new Date(transactionStartTime).toISOString(),
+      timeWindowStart: new Date(minTime).toISOString(),
+      allEventEntityIds: result.events.map(e => e.payload?.entityid)
     })
 
     return filteredEvents
@@ -212,8 +228,9 @@ export const useSimulation = () => {
         }
 
         // If in real mode, poll for actual events from Event Store API
+        // For CREATE_CUSTOMER, filter by customerId (entityid = CustomerID)
         if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
-          debugLog('Polling for real events from Event Store API')
+          debugLog('Polling for real events from Event Store API for customer: ' + customerId)
           const realEvents = await pollRealEventsAfterTransaction(startTime, customerId)
           
           debugLog(`Event Store API returned ${realEvents.length} events`)
@@ -392,9 +409,10 @@ export const useSimulation = () => {
         }
 
         // If in real mode, poll for actual events from Event Store API
+        // For OPEN_ACCOUNT, filter by accountId (entityid = AccountID)
         if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
-          debugLog('Polling for real events from Event Store API')
-          const realEvents = await pollRealEventsAfterTransaction(startTime, customerId, accountId)
+          debugLog('Polling for real events from Event Store API for account: ' + accountId)
+          const realEvents = await pollRealEventsAfterTransaction(startTime, accountId)
           
           if (realEvents.length > 0) {
             debugLog(`Found ${realEvents.length} real events from Event Store`)
@@ -543,9 +561,10 @@ export const useSimulation = () => {
         }
 
         // If in real mode, poll for actual events from Event Store API
+        // For SEND_PAYMENT, filter by accountId (entityid = AccountID for payment events)
         if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
-          debugLog('Polling for real events from Event Store API')
-          const realEvents = await pollRealEventsAfterTransaction(startTime, customerId, accountId)
+          debugLog('Polling for real events from Event Store API for account: ' + accountId)
+          const realEvents = await pollRealEventsAfterTransaction(startTime, accountId)
           
           if (realEvents.length > 0) {
             debugLog(`Found ${realEvents.length} real events from Event Store`)

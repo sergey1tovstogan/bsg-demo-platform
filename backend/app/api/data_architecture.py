@@ -232,8 +232,47 @@ async def get_demo_configuration():
 
 
 # =============================================================================
-# Future Endpoints (Placeholder)
+# Debug Endpoints
 # =============================================================================
+
+@router.get("/events/debug")
+async def debug_events():
+    """
+    Debug endpoint to see all buffered events with their raw structure.
+    
+    This helps troubleshoot why certain events may not be appearing in the UI.
+    """
+    try:
+        service = get_data_architecture_service()
+        events = await service.eventhub_adapter.get_events(limit=100)
+        
+        # Create detailed debug info for each event
+        debug_info = []
+        for event in events:
+            debug_info.append({
+                "id": event.get("id"),
+                "entityid": event.get("payload", {}).get("entityid"),
+                "entityname": event.get("payload", {}).get("entityname"),
+                "type": event.get("type"),
+                "topic": event.get("topic"),
+                "transactionType": event.get("transactionType"),
+                "subject": event.get("payload", {}).get("subject"),
+                "payload_keys": list(event.get("payload", {}).keys()) if event.get("payload") else []
+            })
+        
+        return {
+            "success": True,
+            "total_buffered": len(events),
+            "events": debug_info
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 
 # @router.get("/content")
 # async def get_component_content():

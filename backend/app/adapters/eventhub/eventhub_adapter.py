@@ -62,25 +62,46 @@ class AzureEventHubAdapter(EventHubAdapter):
         self._lock = asyncio.Lock()
 
     async def start(self) -> None:
-        """Start the Event Hub consumer."""
+        """Start the Event Hub consumer with hybrid config (MongoDB + .env fallback)."""
         if self._running:
             logger.warning("Event Hub consumer is already running")
             return
 
-        if not settings.EVENTHUB_CONNECTION_STRING:
-            logger.error("EVENTHUB_CONNECTION_STRING not configured - Event Hub consumer will not start")
+        # Try to get config from MongoDB first, then fallback to .env
+        try:
+            from app.api.settings import get_eventhub_config_from_db
+            config = await get_eventhub_config_from_db()
+        except Exception as e:
+            logger.warning(f"Failed to get config from hybrid source: {e}, trying direct .env")
+            config = None
+
+        # Fallback to direct .env reading if hybrid config failed
+        if not config:
+            if not settings.EVENTHUB_CONNECTION_STRING:
+                logger.error("EVENTHUB_CONNECTION_STRING not configured in MongoDB or .env - Event Hub consumer will not start")
+                return
+            config = {
+                "connection_string": settings.EVENTHUB_CONNECTION_STRING,
+                "name": settings.EVENTHUB_NAME,
+                "consumer_group": settings.EVENTHUB_CONSUMER_GROUP,
+                "buffer_size": settings.EVENTHUB_BUFFER_SIZE
+            }
+
+        # Validate required config
+        if not config.get("connection_string"):
+            logger.error("EventHub connection_string not configured - Event Hub consumer will not start")
             return
 
         try:
             self._client = EventHubConsumerClient.from_connection_string(
-                conn_str=settings.EVENTHUB_CONNECTION_STRING,
-                consumer_group=settings.EVENTHUB_CONSUMER_GROUP,
-                eventhub_name=settings.EVENTHUB_NAME
+                conn_str=config["connection_string"],
+                consumer_group=config.get("consumer_group", "$Default"),
+                eventhub_name=config["name"]
             )
 
             self._running = True
             self._consumer_task = asyncio.create_task(self._consume_events())
-            logger.info(f"Event Hub consumer started for topic: {settings.EVENTHUB_NAME}")
+            logger.info(f"Event Hub consumer started for topic: {config['name']}")
 
         except Exception as e:
             logger.error(f"Failed to start Event Hub consumer: {e}")
@@ -241,7 +262,10 @@ class AzureEventHubAdapter(EventHubAdapter):
                 if kafka_event:
                     async with self._lock:
                         self._buffer.append(kafka_event)
-                    logger.debug(f"Buffered event: {kafka_event.id} (customerId: {kafka_event.payload.get('entityid', 'N/A')})")
+                    logger.info(f"Buffered event: {kafka_event.id} | entityid={kafka_event.payload.get('entityid', 'N/A')} | entityname={kafka_event.payload.get('entityname', 'N/A')} | topic={kafka_event.topic} | type={kafka_event.type}")
+                else:
+                    # Log why event was skipped (for debugging)
+                    logger.debug(f"Event skipped during transformation (binary/non-JSON)")
 
                 # Update checkpoint after processing
                 await partition_context.update_checkpoint(event)
@@ -291,16 +315,21 @@ class AzureEventHubAdapter(EventHubAdapter):
             # Get raw bytes from body (body is an iterator/generator)
             try:
                 body_bytes = b"".join(event_data.body)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to read event body: {e}")
                 body_bytes = None
             
             if not body_bytes:
                 logger.debug("Event has no body data - skipping")
                 return None
             
+            # Log raw event info for debugging
+            first_bytes = body_bytes[:50] if len(body_bytes) > 50 else body_bytes
+            logger.info(f"Raw event received: length={len(body_bytes)}, first_bytes={first_bytes!r}")
+            
             # Check for binary/Avro data (common prefixes: 0x00, 0xac, 0xc3, 0xc4)
             if body_bytes[0] in (0x00, 0xac, 0xc3, 0xc4):
-                logger.debug(f"Skipping binary event (likely Avro serialized): first byte 0x{body_bytes[0]:02x}")
+                logger.info(f"Skipping binary event (likely Avro serialized): first byte 0x{body_bytes[0]:02x}, length={len(body_bytes)}")
                 return None
             
             # Try to decode as UTF-8 and parse as JSON
@@ -308,11 +337,11 @@ class AzureEventHubAdapter(EventHubAdapter):
                 body_str = body_bytes.decode('utf-8')
                 event_json = json.loads(body_str)
             except (UnicodeDecodeError, json.JSONDecodeError) as e:
-                logger.debug(f"Event body could not be parsed as JSON: {e}")
+                logger.warning(f"Event body could not be parsed as JSON: {e}, raw={body_bytes[:200]!r}")
                 return None
             
             if not isinstance(event_json, dict):
-                logger.debug("Event body is not a JSON object - skipping")
+                logger.warning(f"Event body is not a JSON object - skipping: {type(event_json)}")
                 return None
 
             # Extract fields
@@ -320,6 +349,10 @@ class AzureEventHubAdapter(EventHubAdapter):
             entity_id = event_json.get("entityid", "")
             entity_name = event_json.get("entityname", "")
             event_type = event_json.get("type", "")
+            subject = event_json.get("subject", "")
+            
+            # Debug logging to trace events
+            logger.info(f"Processing event: entityid={entity_id}, entityname={entity_name}, type={event_type}, subject={subject}")
 
             # Parse timestamp
             time_str = event_json.get("time", "")
@@ -335,15 +368,16 @@ class AzureEventHubAdapter(EventHubAdapter):
             # Map entityname to topic
             topic = self._map_entity_to_topic(entity_name, event_type)
 
-            # Determine event category
-            event_category = self._categorize_event(event_type, event_json.get("data", {}))
+            # Determine event category - use subject field for classification
+            subject = event_json.get("subject", "")
+            event_category = self._categorize_event(event_type, event_json.get("data", {}), subject)
 
             # Extract partition and offset
             partition = partition_context.partition_id if partition_context and hasattr(partition_context, 'partition_id') else 0
             offset = int(event_data.offset) if hasattr(event_data, 'offset') and event_data.offset else 0
 
-            # Extract transaction type
-            transaction_type = self._extract_transaction_type(event_type, event_json.get("data", {}))
+            # Extract transaction type (pass entity_name for better matching)
+            transaction_type = self._extract_transaction_type(event_type, event_json.get("data", {}), entity_name)
 
             # Create KafkaEvent with full payload
             return KafkaEvent(
@@ -372,14 +406,15 @@ class AzureEventHubAdapter(EventHubAdapter):
                 return "temenos.party.customers.created"
             return "temenos.party.customers.updated"
 
-        # Map account entities
-        if "account" in entity_lower:
-            if "opened" in event_type_lower or "created" in event_type_lower:
+        # Map account entities (AA_ARRANGEMENT, FBNK_AA_ARR, etc.)
+        # Temenos uses "AA" prefix for Arrangement Architecture (accounts)
+        if "account" in entity_lower or "aa_" in entity_lower or "_aa_" in entity_lower or entity_lower.startswith("aa"):
+            if "opened" in event_type_lower or "created" in event_type_lower or "write" in event_type_lower:
                 return "temenos.holdings.accounts.opened"
             return "temenos.holdings.accounts.updated"
 
-        # Map payment entities
-        if "payment" in entity_lower or "payment" in event_type_lower:
+        # Map payment entities (FUNDS.TRANSFER, etc.)
+        if "payment" in entity_lower or "payment" in event_type_lower or "funds" in entity_lower or "transfer" in entity_lower:
             if "initiated" in event_type_lower:
                 return "temenos.order.payments.initiated"
             if "completed" in event_type_lower:
@@ -389,8 +424,25 @@ class AzureEventHubAdapter(EventHubAdapter):
         # Default: use entity name with temenos prefix
         return f"temenos.data.{entity_name.lower()}"
 
-    def _categorize_event(self, event_type: str, data: Any) -> str:
-        """Categorize event as 'business' or 'data' based on type and content."""
+    def _categorize_event(self, event_type: str, data: Any, subject: str = "") -> str:
+        """
+        Categorize event as 'business' or 'data' based on subject field.
+        
+        Classification rules (based on subject field):
+        - subject == "dataevent" -> data event
+        - subject == "businessevent" -> business event
+        - Fallback: check event_type keywords
+        """
+        # Primary classification: use subject field
+        subject_lower = subject.lower() if subject else ""
+        
+        if subject_lower == "dataevent":
+            return "data"
+        
+        if subject_lower == "businessevent":
+            return "business"
+        
+        # Fallback: check event_type keywords if subject not recognized
         event_type_lower = event_type.lower()
 
         # Business events - domain/business logic events
@@ -405,24 +457,26 @@ class AzureEventHubAdapter(EventHubAdapter):
             if keyword in event_type_lower:
                 return "business"
 
-        # Data events - sync/replication events
+        # Data events - sync/replication events (fallback check on event_type)
         data_keywords = ["sync", "replicated", "data.", "cdc", "change", "data_event"]
         for keyword in data_keywords:
             if keyword in event_type_lower:
                 return "data"
 
-        # Default to business for unknown types
-        return "business"
+        # Default to data for unknown types (most Temenos events are data events)
+        return "data"
 
-    def _extract_transaction_type(self, event_type: str, data: Any) -> Optional[str]:
+    def _extract_transaction_type(self, event_type: str, data: Any, entity_name: str = "") -> Optional[str]:
         """Extract transaction type from event for UI display."""
         event_type_lower = event_type.lower()
+        entity_lower = entity_name.lower() if entity_name else ""
 
-        if "customer" in event_type_lower:
+        if "customer" in event_type_lower or "customer" in entity_lower:
             return "CREATE_CUSTOMER"
-        if "account" in event_type_lower:
+        # Check for AA (Arrangement Architecture) entities - these are accounts
+        if "account" in event_type_lower or "account" in entity_lower or "aa_" in entity_lower or "_aa_" in entity_lower or entity_lower.startswith("aa"):
             return "OPEN_ACCOUNT"
-        if "payment" in event_type_lower:
+        if "payment" in event_type_lower or "funds" in entity_lower or "transfer" in entity_lower:
             return "SEND_PAYMENT"
 
         # Check eventContext in data

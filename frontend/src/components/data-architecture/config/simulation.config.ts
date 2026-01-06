@@ -103,7 +103,8 @@ export const UI_CONFIG = {
 export const EVENT_DISPLAY_CONFIG = {
   // Grouping settings
   ENABLE_EVENT_GROUPING: true,
-  GROUP_BY: 'customerId' as 'customerId' | 'correlationId' | 'transactionId',
+  // entityId groups by entityid field (works for both CustomerID and AccountID)
+  GROUP_BY: 'entityId' as 'entityId' | 'customerId' | 'correlationId' | 'transactionId',
   GROUP_TIME_WINDOW_MS: 30000, // Events within 30s are grouped together
 
   // Display preferences

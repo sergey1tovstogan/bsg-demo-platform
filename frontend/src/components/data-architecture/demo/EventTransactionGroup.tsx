@@ -1,5 +1,5 @@
 // Event Transaction Group Component - Groups and displays events by transaction
-import React, { useState } from 'react'
+import React, { useState, forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, ChevronRight, Clock, Activity } from 'lucide-react'
 import type { EventGroup, KafkaEvent } from './types'
@@ -90,15 +90,17 @@ function formatTime(timestamp: number): string {
 
 /**
  * Main EventTransactionGroup component
+ * Uses forwardRef to support AnimatePresence exit animations
  */
-export const EventTransactionGroup: React.FC<EventTransactionGroupProps> = ({ group, renderEvent }) => {
+export const EventTransactionGroup = forwardRef<HTMLDivElement, EventTransactionGroupProps>(
+  ({ group, renderEvent }, ref) => {
   const [isExpanded, setIsExpanded] = useState(true)
 
   const label = getGroupLabel(group)
   const startTime = formatTime(group.startTime)
 
   return (
-    <div className="border border-gray-700/50 rounded-lg bg-gray-800/30 overflow-hidden">
+    <div ref={ref} className="border border-gray-700/50 rounded-lg bg-gray-800/30 overflow-hidden">
       {/* Group header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -173,9 +175,11 @@ export const EventTransactionGroup: React.FC<EventTransactionGroupProps> = ({ gr
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>
     </div>
   )
-}
+})
+
+EventTransactionGroup.displayName = 'EventTransactionGroup'
 
 export default EventTransactionGroup
