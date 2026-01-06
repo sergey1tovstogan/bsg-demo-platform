@@ -193,28 +193,28 @@ export function checkCitationCoverage(briefing: Briefing): { passed: boolean; wa
   const warnings: string[] = []
 
   // Check patterns
-  briefing.architecture.core_patterns.forEach((pattern) => {
+  briefing.architecture.core_patterns.forEach((pattern, _idx) => {
     if (pattern.citations.length === 0) {
       warnings.push(`Pattern "${pattern.pattern}" has no citations`)
     }
   })
 
   // Check capabilities
-  briefing.functional_overview.capabilities.forEach((cap) => {
+  briefing.functional_overview.capabilities.forEach((cap, _idx) => {
     if (cap.citations.length === 0) {
       warnings.push(`Capability "${cap.capability}" has no citations`)
     }
   })
 
   // Check APIs
-  briefing.interfaces.apis.forEach((api) => {
+  briefing.interfaces.apis.forEach((api, _idx) => {
     if (api.citations.length === 0) {
       warnings.push(`API "${api.name}" has no citations`)
     }
   })
 
   // Check dependencies
-  briefing.deployment_and_ops.dependencies.forEach((dep) => {
+  briefing.deployment_and_ops.dependencies.forEach((dep, _idx) => {
     if (dep.citations.length === 0) {
       warnings.push(`Dependency "${dep.dependency}" has no citations`)
     }

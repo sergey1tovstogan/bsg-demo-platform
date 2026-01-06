@@ -7,7 +7,8 @@ import {
   type ApiLog,
   type KafkaEvent,
   type AnimationTrigger,
-  type TransactionType
+  type TransactionType,
+  type Customer
 } from '../demo/types'
 
 /**
@@ -88,6 +89,26 @@ export const useSimulationState = () => {
     },
     []
   )
+
+  /**
+   * Set full customer data (for reuse in subsequent API calls)
+   */
+  const setCustomerData = useCallback((customer: Customer) => {
+    setState((prev) => ({
+      ...prev,
+      transactions: {
+        ...prev.transactions,
+        customerData: customer
+      }
+    }))
+  }, [])
+
+  /**
+   * Get full customer data
+   */
+  const getCustomerData = useCallback((): Customer | undefined => {
+    return state.transactions.customerData
+  }, [state.transactions.customerData])
 
   /**
    * Add API log entry
@@ -258,6 +279,7 @@ export const useSimulationState = () => {
     setStage,
     setStepStatus,
     setTransactionId,
+    setCustomerData,
     addApiLog,
     addKafkaEvent,
     addKafkaEvents,
@@ -273,6 +295,7 @@ export const useSimulationState = () => {
     isStepAvailable,
     getCurrentStepStatus,
     getTransactionId,
+    getCustomerData,
     isSimulationComplete,
     getProgress,
     getStats

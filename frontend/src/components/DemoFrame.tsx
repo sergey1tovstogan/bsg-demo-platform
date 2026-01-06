@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Code2, Radio, Database as DatabaseIcon, Loader2 } from 'lucide-react'
+import { Code2, Loader2 } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { ComponentId } from '../types'
-import { DatabaseRecords } from './DatabaseRecords'
 import { ObservabilityDemo } from './observability/ObservabilityDemo'
 import { IntegrationDemo } from './IntegrationDemo'
+import { TemenosTransactionSimulator } from './data-architecture/demo/TemenosTransactionSimulator'
 import { SecurityDemo } from './SecurityDemo.tsx'
 import { VideoPlayer } from './VideoPlayer'
 
@@ -74,59 +74,9 @@ export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
     return <SecurityDemo mode={view} />
   }
 
-  // Only show Data Architecture specific content for data-architecture component
+  // Render Temenos Transaction Simulator for data-architecture component
   if (componentId === 'data-architecture') {
-    return (
-      <div className="space-y-6">
-        {/* Top Tier - APIs and Events */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* APIs Section */}
-          <div className="card min-h-[400px] flex flex-col">
-            <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-200">
-              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Code2 className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-[#283054]">APIs</h3>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center text-gray-400">
-                <Code2 className="w-16 h-16 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">API content will appear here</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Events Section */}
-          <div className="card min-h-[400px] flex flex-col">
-            <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-200">
-              <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
-                <Radio className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-[#283054]">Events</h3>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center text-gray-400">
-                <Radio className="w-16 h-16 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">Event content will appear here</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Tier - Database Records */}
-        <div className="card min-h-[500px] flex flex-col">
-          <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-200">
-            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-              <DatabaseIcon className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-[#283054]">Database Records</h3>
-          </div>
-          <div className="flex-1">
-            <DatabaseRecords componentId={componentId} />
-          </div>
-        </div>
-      </div>
-    )
+    return <TemenosTransactionSimulator />
   }
 
   // Demo connection functions - reserved for future use

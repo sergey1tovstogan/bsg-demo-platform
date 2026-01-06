@@ -174,9 +174,11 @@ Thumbs.db
 *.sln
 *.sw?
 
-# Keep .claude and .cursor directories
-!.claude/
+# Keep .cursor directory for Cursor IDE settings
 !.cursor/
+
+# Ignore .claude directory (AI development plans, not needed in repo)
+.claude/
 
 # Logs
 logs/
@@ -235,3 +237,4 @@ prn
 PRN
 aux
 AUX
+backend/# Optional

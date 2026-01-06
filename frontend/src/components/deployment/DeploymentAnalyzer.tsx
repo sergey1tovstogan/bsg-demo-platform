@@ -55,6 +55,8 @@ interface AnalysisResult {
 export function DeploymentAnalyzer() {
   const [currentStep, setCurrentStep] = useState<Step>('subscription')
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
+
+  // Function to mask subscription ID for display
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
   const [services, setServices] = useState<AzureResource[]>([])
   const [clusterNamespaces, setClusterNamespaces] = useState<Array<{ 
@@ -1303,8 +1305,8 @@ function ServiceAnalysis({
   includeCosts,
   onOpenLogAnalyzer,
   selectedResourceGroups,
-  onUpdateAnalysisResults,
-  subscriptionId
+  subscriptionId,
+  onUpdateAnalysisResults
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
@@ -1325,8 +1327,8 @@ function ServiceAnalysis({
   includeCosts: boolean
   onOpenLogAnalyzer: (resourceGroup: string) => void
   selectedResourceGroups: string[]
-  onUpdateAnalysisResults?: (updatedResults: AnalysisResult[]) => void
   subscriptionId: string
+  onUpdateAnalysisResults?: (updatedResults: AnalysisResult[]) => void
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
 
@@ -1348,6 +1350,7 @@ function ServiceAnalysis({
   }, [identifiedComponents, selectedComponent])
 
   const selectedResult = identifiedComponents.find(r => r.service.id === selectedComponent) || identifiedComponents[0]
+  
 
   // Show error if present
   if (error) {
@@ -1454,7 +1457,7 @@ function ServiceAnalysis({
                         const combinedParameters: Record<string, any> = {}
                         const combinedVariables: Record<string, any> = {}
                         
-                        successfulExports.forEach((item) => {
+                        successfulExports.forEach((item: { template: any; resource_group: string }, _index: number) => {
                           const template = item.template
                           if (template) {
                             // Collect resources

@@ -5,19 +5,53 @@ import type { TransactionType } from '../demo/types'
  * API Configuration
  */
 export const API_CONFIG = {
-  // Toggle between mock and real API
-  USE_MOCK_API: true,
+  // Always use real API - mock mode disabled
+  USE_MOCK_API: false,
 
   // Real API settings
-  REAL_API_BASE_URL: 'http://transactingress.northeurope.cloudapp.azure.com/irf-provider-container/api',
+  REAL_API_BASE_URL: 'http://transactingress.northeurope.cloudapp.azure.com:80/irf-provider-container/api',
   REAL_API_TIMEOUT: 30000, // 30 seconds
 
-  // Mock API settings
+  // UI toggle visibility - disabled since we only use real mode
+  SHOW_API_TOGGLE: false, // Hide mock/real toggle in UI
+
+  // Mock API settings - kept for reference but not used
   MOCK_API_CONFIG: {
     networkDelay: 1500, // 1.5 seconds to simulate realistic network latency
     failureRate: 0.05, // 5% chance of random errors
     kafkaEventDelay: 200 // 200ms delay for Kafka event emission
   }
+}
+
+/**
+ * Event Store API Configuration (Azure Event Hub via Event Store API)
+ */
+export const EVENT_STORE_CONFIG = {
+  // Backend proxy URL for Event Store API (component-specific endpoints)
+  // Use full URL for local development, or relative URL if backend is proxied
+  BACKEND_PROXY_URL: typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:8000/api/v1/components/data-architecture'  // Full URL for local dev
+    : '/api/v1/components/data-architecture',  // Relative URL for production (proxied)
+
+  // Polling settings
+  POLLING_INTERVAL: 3000, // Poll every 3 seconds
+  MAX_EVENTS_PER_REQUEST: 50, // Maximum events to fetch per request
+  DEFAULT_TIME_RANGE_MINUTES: 30, // Default time range for fetching events
+
+  // Always enable real events - mock mode disabled
+  ENABLE_REAL_EVENTS: true, // Always fetch real events from Event Hub
+
+  // Event display settings
+  AUTO_SCROLL_EVENTS: true, // Auto-scroll event list on new events
+  MAX_DISPLAYED_EVENTS: 100, // Maximum events to display in UI
+
+  // Connection settings
+  CONNECTION_TIMEOUT: 10000, // 10 seconds timeout for connections
+  RETRY_ATTEMPTS: 3, // Number of retry attempts on failure
+  RETRY_DELAY: 1000, // Delay between retries in ms
+
+  // Topic filters (optional - leave empty to show all)
+  TOPIC_FILTERS: [] as string[] // e.g., ['temenos.party', 'temenos.order']
 }
 
 /**
@@ -64,6 +98,38 @@ export const UI_CONFIG = {
 }
 
 /**
+ * Event Display Configuration
+ */
+export const EVENT_DISPLAY_CONFIG = {
+  // Grouping settings
+  ENABLE_EVENT_GROUPING: true,
+  // entityId groups by entityid field (works for both CustomerID and AccountID)
+  GROUP_BY: 'entityId' as 'entityId' | 'customerId' | 'correlationId' | 'transactionId',
+  GROUP_TIME_WINDOW_MS: 30000, // Events within 30s are grouped together
+
+  // Display preferences
+  SHOW_BUSINESS_CONTEXT: true,
+  SHOW_CORRELATION_IDS: true,
+  SHOW_TIMING_INFO: true,
+  COMPACT_MODE: false,
+
+  // Highlighting
+  HIGHLIGHT_NEW_EVENTS: true,
+  HIGHLIGHT_DURATION_MS: 3000,
+
+  // Filtering
+  DEFAULT_FILTER: 'all' as 'all' | 'business' | 'data',
+  ENABLE_SEARCH: true,
+
+  // Business field extraction by event category
+  BUSINESS_FIELDS: {
+    customer: ['customerName', 'entityid', 'email', 'nationality', 'customerId', 'name'],
+    account: ['accountId', 'accountType', 'balance', 'currency', 'customerId'],
+    payment: ['paymentId', 'amount', 'currency', 'reference', 'status', 'fromAccount', 'toAccount']
+  }
+}
+
+/**
  * Transaction Configuration
  */
 export const TRANSACTION_CONFIG = {
@@ -101,8 +167,8 @@ export const KAFKA_TOPICS = {
  * API Endpoint Configuration
  */
 export const API_ENDPOINTS = {
-  CREATE_CUSTOMER: '/v1.0.0/party/customers',
-  OPEN_ACCOUNT: '/v1.2.0/holdings/accounts',
+  CREATE_CUSTOMER: '/v5.7.0/party/customers', // Updated to v5.7.0
+  OPEN_ACCOUNT: '/v9.4.0/holdings/accounts/currentAccounts', // Using v9.4.0 holdings API for current account opening
   SEND_PAYMENT: '/v1.0.0/order/paymentOrders'
 } as const
 

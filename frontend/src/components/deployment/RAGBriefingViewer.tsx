@@ -137,7 +137,7 @@ export function RAGBriefingViewer({ briefing, onClose }: RAGBriefingViewerProps)
 
       {/* Tab Content */}
       <div className="mt-4">
-        {activeTab === 'executive' && <ExecutiveSummaryTab briefing={briefing} renderCitationTags={renderCitationTags} />}
+        {activeTab === 'executive' && <ExecutiveSummaryTab briefing={briefing} />}
         {activeTab === 'architecture' && <ArchitectureTab briefing={briefing} renderCitationTags={renderCitationTags} />}
         {activeTab === 'functional' && <FunctionalOverviewTab briefing={briefing} renderCitationTags={renderCitationTags} />}
         {activeTab === 'interfaces' && <InterfacesTab briefing={briefing} renderCitationTags={renderCitationTags} />}
@@ -151,7 +151,7 @@ export function RAGBriefingViewer({ briefing, onClose }: RAGBriefingViewerProps)
 }
 
 // Executive Summary Tab
-function ExecutiveSummaryTab({ briefing, renderCitationTags: _renderCitationTags }: { briefing: Briefing; renderCitationTags: (citations: string[]) => JSX.Element | null }) {
+function ExecutiveSummaryTab({ briefing }: { briefing: Briefing }) {
   const { executive_summary } = briefing
   const confidenceColors = {
     high: 'text-green-600 dark:text-green-400',
