@@ -1457,7 +1457,7 @@ function ServiceAnalysis({
                         const combinedParameters: Record<string, any> = {}
                         const combinedVariables: Record<string, any> = {}
                         
-                        successfulExports.forEach((item: { template: any; resource_group: string }, _index: number) => {
+                        successfulExports.forEach((item: { template: any; resource_group: string }) => {
                           const template = item.template
                           if (template) {
                             // Collect resources
@@ -1781,7 +1781,7 @@ function formatRAGText(text: string): JSX.Element | null {
   if (!text || !text.trim()) return null
 
   // Clean up text: remove ugly markdown table separators and format tables better
-  let cleanedText = text
+  const cleanedText = text
     // Remove markdown table separator lines (like |-------------------|------------------|-----------------|)
     .replace(/\|[\s\-|:]+\|/g, '')
     // Remove empty table rows

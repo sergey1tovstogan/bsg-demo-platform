@@ -250,12 +250,14 @@ export class BriefingGenerator {
    * Synthesize briefing JSON from facts (PASS 2).
    * This is handled by the backend, but we keep the interface for consistency.
    */
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   async synthesizeBriefing(
     _facts: Fact[],
     _chunks: RAGChunk[],
     _productFamily: string,
     _componentName: string
   ): Promise<BriefingJSON> {
+    /* eslint-enable @typescript-eslint/no-unused-vars */
     // The actual synthesis is done by the backend
     // This is a placeholder that would call the backend API
     throw new Error('Synthesis should be done via backend API')
