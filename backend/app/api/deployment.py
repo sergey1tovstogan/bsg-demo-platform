@@ -15,8 +15,12 @@ from app.services.azure_service import AzureService, AzureResourceGroup, AzureRe
 from app.services.temenos_service import TemenosService, TemenosAnalysisResult
 from app.services.aks_service import AKSService
 from app.services.cost_service import CostService
+from app.services.azure_service_info import get_azure_service_description, get_azure_service_descriptions_batch
+from app.services.rag_briefing_service import RAGBriefingService
+from app.core.database import get_database
 import asyncio
 import time
+import requests
 from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/deployment", tags=["deployment"])
@@ -55,6 +59,19 @@ class NamespacesRequest(BaseModel):
 class JWTUpdate(BaseModel):
     """Model for JWT token update request."""
     jwt_token: str
+
+
+class ExportRequest(BaseModel):
+    """Request model for exporting resource groups as ARM templates."""
+    subscription_id: str = Field(..., description="Azure subscription ID")
+    resource_group_names: List[str] = Field(..., description="List of resource group names to export")
+
+
+class BriefingRequest(BaseModel):
+    """Request model for generating RAG briefing."""
+    product_family: str = Field(..., description="Product family (e.g., 'Temenos Transact')")
+    component_name: str = Field(..., description="Component name (e.g., 'Event Store Microservice')")
+    aliases: Optional[List[str]] = Field(default_factory=list, description="List of alternate names for the component")
 
 
 class ClusterDiagnosticsRequest(BaseModel):
@@ -933,6 +950,20 @@ async def _analyze_services_impl(request: AnalyzeRequest):
         # Deduplicate components (simplified version)
         deduplicated_results = _deduplicate_components(results)
         
+        # Add Azure service descriptions for non-Temenos services
+        try:
+            db = await get_database().__anext__()
+            unidentified_services = [r for r in deduplicated_results if not r.component_info]
+            if unidentified_services:
+                service_types = list(set([r.service.type for r in unidentified_services]))
+                descriptions = await get_azure_service_descriptions_batch(service_types, db)
+                # Add descriptions to results
+                for result in unidentified_services:
+                    if result.service.type in descriptions:
+                        result.service.description = descriptions[result.service.type]
+        except (StopAsyncIteration, Exception) as e:
+            logger.debug(f"Could not add Azure service descriptions: {e}")
+        
         return {
             "status": "success",
             "data": [r.to_dict() for r in deduplicated_results],
@@ -1653,4 +1684,149 @@ async def save_user_jwt_token(
     except Exception as e:
         logger.error(f"Error saving JWT token: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save JWT token: {str(e)}")
+
+
+@router.post("/azure/export")
+async def export_resource_groups(request: ExportRequest):
+    """
+    Export selected resource groups as ARM templates (JSON).
+
+    Args:
+        request: Export request with subscription ID and resource group names
+
+    Returns:
+        ARM template JSON for the selected resource groups
+    """
+    try:
+        subscription_id = request.subscription_id
+        resource_group_names = request.resource_group_names
+
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="Subscription ID is required")
+
+        if not resource_group_names or len(resource_group_names) == 0:
+            raise HTTPException(status_code=400, detail="At least one resource group name is required")
+
+        # Get Azure service instance
+        if subscription_id not in azure_service_cache:
+            azure_service_cache[subscription_id] = AzureService(subscription_id)
+        azure_service = azure_service_cache[subscription_id]
+
+        # Export ARM templates for each resource group
+        exported_templates = []
+
+        for rg_name in resource_group_names:
+            try:
+                logger.info(f"Exporting ARM template for resource group: {rg_name}")
+
+                # Use Azure Resource Manager REST API to export template
+                credential = azure_service.credential
+                token_response = credential.get_token("https://management.azure.com/.default")
+                access_token = token_response.token
+
+                export_url = f"https://management.azure.com/subscriptions/{subscription_id}/resourceGroups/{rg_name}/exportTemplate?api-version=2021-04-01"
+                headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+
+                export_payload = {
+                    "resources": ["*"],
+                    "options": "IncludeParameterDefaultValue,IncludeComments"
+                }
+
+                export_response = requests.post(export_url, headers=headers, json=export_payload, timeout=60)
+
+                # Check for errors in response
+                if export_response.status_code >= 400:
+                    error_detail = {}
+                    try:
+                        error_detail = export_response.json()
+                    except:
+                        error_detail = {"message": export_response.text[:500]}
+
+                    raise Exception(f"Azure API error ({export_response.status_code}): {error_detail.get('error', {}).get('message', export_response.text[:200])}")
+
+                export_response.raise_for_status()
+                response_data = export_response.json()
+
+                # Azure exportTemplate API returns the template directly or wrapped in a 'template' property
+                template_data = response_data.get('template', response_data)
+
+                # Ensure we have a valid template structure
+                if not template_data or (not isinstance(template_data, dict)):
+                    raise Exception("Invalid template structure returned from Azure API")
+
+                exported_templates.append({
+                    "resource_group": rg_name,
+                    "template": template_data,
+                    "status": "success"
+                })
+
+                logger.info(f"✓ Successfully exported ARM template for {rg_name}")
+
+            except Exception as e:
+                logger.error(f"Failed to export ARM template for {rg_name}: {e}", exc_info=True)
+                exported_templates.append({
+                    "resource_group": rg_name,
+                    "template": None,
+                    "status": "error",
+                    "error": str(e)
+                })
+
+        return {
+            "status": "success",
+            "data": exported_templates,
+            "count": len(exported_templates)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting resource groups: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": "export_error"
+            }
+        )
+
+
+@router.post("/temenos/briefing")
+async def generate_briefing(request: BriefingRequest):
+    """
+    Generate perfect RAG briefing for a Temenos component.
+
+    Args:
+        request: Briefing request with product family, component name, and aliases
+
+    Returns:
+        Structured briefing JSON with citations
+    """
+    try:
+        briefing_service = RAGBriefingService()
+
+        briefing = await briefing_service.generate_briefing(
+            product_family=request.product_family,
+            component_name=request.component_name,
+            aliases=request.aliases or []
+        )
+
+        return {
+            "status": "success",
+            "data": briefing
+        }
+
+    except Exception as e:
+        logger.error(f"Error generating briefing: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": "briefing_error"
+            }
+        )
 
