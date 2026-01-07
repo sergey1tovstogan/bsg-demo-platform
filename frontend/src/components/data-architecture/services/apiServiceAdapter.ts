@@ -241,17 +241,19 @@ class RealApiService implements ITransactionApiService {
         ? 'http://localhost:8000/api/v1/integration/proxy'
         : '/api/v1/integration/proxy'
 
-      // Build URL with query parameter - always use encodeURIComponent for the Temenos URL
-      // This ensures proper encoding of special characters in the URL
-      const fullProxyUrl = `${proxyBaseUrl}?url=${encodeURIComponent(temenosUrl)}`
-
-      const requestBody = JSON.stringify(temenosPayload)
+      // For POST requests, send URL in body to avoid Azure Static Web Apps query parameter issues
+      // The backend proxy supports both query parameter and body-based URL
+      const proxyRequestBody = {
+        url: temenosUrl,
+        ...temenosPayload
+      }
+      const requestBody = JSON.stringify(proxyRequestBody)
       
-      console.log('[RealApiService] Creating customer via proxy:', { fullProxyUrl, temenosUrl, temenosPayload, requestBody })
+      console.log('[RealApiService] Creating customer via proxy:', { proxyBaseUrl, temenosUrl, temenosPayload, requestBody })
 
       // Use backend proxy to avoid CORS and Mixed Content issues
-      // Note: Using fetch with POST and query parameters (matching openAccount pattern)
-      const response = await fetch(fullProxyUrl, {
+      // Send URL in request body for POST to work around Azure Static Web Apps limitations
+      const response = await fetch(proxyBaseUrl, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -438,24 +440,26 @@ class RealApiService implements ITransactionApiService {
       // Log the exact payload being sent for debugging
       console.log('[RealApiService] Temenos holdings account payload structure (v9.4.0):', JSON.stringify(temenosPayload, null, 2))
 
-      // Use backend proxy to avoid CORS issues (consistent with IntegrationDemo)
+      // Use backend proxy to avoid CORS issues (consistent with createCustomer)
       // Using v9.4.0 holdings API for current account opening
       const temenosUrl = `${this.baseUrl}/v9.4.0/holdings/accounts/currentAccounts`
       const proxyBaseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
         ? 'http://localhost:8000/api/v1/integration/proxy'
         : '/api/v1/integration/proxy'
 
-      // Build URL with query parameter - always use encodeURIComponent for the Temenos URL
-      // This ensures proper encoding of special characters in the URL
-      const fullProxyUrl = `${proxyBaseUrl}?url=${encodeURIComponent(temenosUrl)}`
+      // For POST requests, send URL in body to avoid Azure Static Web Apps query parameter issues
+      // The backend proxy supports both query parameter and body-based URL
+      const proxyRequestBody = {
+        url: temenosUrl,
+        ...temenosPayload
+      }
+      const requestBody = JSON.stringify(proxyRequestBody)
 
-      const requestBody = JSON.stringify(temenosPayload)
-
-      console.log('[RealApiService] Opening account via proxy:', { fullProxyUrl, temenosUrl, temenosPayload, requestBody })
+      console.log('[RealApiService] Opening account via proxy:', { proxyBaseUrl, temenosUrl, temenosPayload, requestBody })
 
       // Use backend proxy to avoid CORS issues
-      // Note: Using fetch with POST and query parameters (matching IntegrationDemo axios pattern)
-      const response = await fetch(fullProxyUrl, {
+      // Send URL in request body for POST to work around Azure Static Web Apps limitations
+      const response = await fetch(proxyBaseUrl, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

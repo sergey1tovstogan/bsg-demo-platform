@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import os
+import json
 
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
@@ -128,11 +129,11 @@ from fastapi import HTTPException, APIRouter
 # Create a dedicated router for proxy endpoint
 proxy_router = APIRouter()
 
-async def _handle_proxy(request: Request, url: str, user_id: Optional[str], db: AsyncIOMotorDatabase) -> Dict[str, Any]:
+async def _handle_proxy(request: Request, url: str, user_id: Optional[str], db: AsyncIOMotorDatabase, body: Optional[bytes] = None) -> Dict[str, Any]:
     """Handle proxy requests for all HTTP methods."""
     try:
-        body = None
-        if request.method in ["POST", "PUT", "PATCH"]:
+        # If body wasn't provided, read it from request (for GET/DELETE, body will be None)
+        if body is None and request.method in ["POST", "PUT", "PATCH"]:
             body = await request.body()
 
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -164,12 +165,45 @@ async def _handle_proxy(request: Request, url: str, user_id: Optional[str], db: 
 @proxy_router.api_route("/proxy", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def proxy_all_methods(
     request: Request,
-    url: str,
+    url: Optional[str] = None,
     user_id: Optional[str] = Header(None, alias="X-User-Id"),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ) -> Dict[str, Any]:
-    """Proxy requests to external APIs with all HTTP methods."""
-    return await _handle_proxy(request, url, user_id, db)
+    """
+    Proxy requests to external APIs with all HTTP methods.
+    
+    The target URL can be provided either:
+    - As a query parameter: ?url=https://example.com/api
+    - In the request body (for POST/PUT/PATCH): {"url": "https://example.com/api", "body": {...}}
+    
+    This dual approach works around Azure Static Web Apps limitations with POST requests and query parameters.
+    """
+    body_content = None
+    
+    # Try to get URL from query parameter first
+    if not url:
+        # For POST/PUT/PATCH, also try to get URL from request body
+        if request.method in ["POST", "PUT", "PATCH"]:
+            try:
+                body_data = await request.json()
+                if isinstance(body_data, dict) and "url" in body_data:
+                    url = body_data.get("url")
+                    # Remove url from body_data so it doesn't get sent to the target API
+                    body_data.pop("url", None)
+                    # Convert back to bytes for forwarding
+                    body_content = json.dumps(body_data).encode('utf-8')
+            except:
+                # If body is not JSON or doesn't have url, continue with None
+                # In this case, we'll read the body again in _handle_proxy
+                pass
+    
+    if not url:
+        raise HTTPException(
+            status_code=400,
+            detail="URL parameter is required. Provide it as query parameter (?url=...) or in request body ({\"url\": \"...\"})"
+        )
+    
+    return await _handle_proxy(request, url, user_id, db, body_content)
 
 # DIAGNOSTIC: Simple test POST endpoint
 @app.post("/test-post")
