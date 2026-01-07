@@ -291,7 +291,7 @@ class RealApiService implements ITransactionApiService {
         console.error('[RealApiService] 405 Method Not Allowed from proxy:', {
           status: response.status,
           statusText: response.statusText,
-          proxyUrl: fullProxyUrl,
+          proxyUrl: proxyBaseUrl,
           temenosUrl: temenosUrl,
           responseText,
           headers: Object.fromEntries(response.headers.entries())
@@ -497,7 +497,7 @@ class RealApiService implements ITransactionApiService {
         console.error('[RealApiService] 405 Method Not Allowed from proxy:', {
           status: response.status,
           statusText: response.statusText,
-          proxyUrl: fullProxyUrl,
+          proxyUrl: proxyBaseUrl,
           temenosUrl: temenosUrl,
           responseText,
           headers: Object.fromEntries(response.headers.entries())
