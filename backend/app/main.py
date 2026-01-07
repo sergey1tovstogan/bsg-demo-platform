@@ -17,7 +17,7 @@ from app.core.database import init_db, close_db, get_database
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
-from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events, data_architecture
+from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events, data_architecture, payments
 from app.api import settings as settings_api
 from app.adapters.eventhub import get_eventhub_adapter
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -190,6 +190,7 @@ app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
 app.include_router(cache.router, prefix=settings.API_V1_PREFIX)
 app.include_router(settings_api.router, prefix=settings.API_V1_PREFIX)
+app.include_router(payments.router, prefix=settings.API_V1_PREFIX)
 
 # Component-specific API routers
 app.include_router(data_architecture.router, prefix=settings.API_V1_PREFIX)

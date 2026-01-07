@@ -122,14 +122,11 @@ export interface TemenosCustomerResponse {
 }
 
 /**
- * Account opening payload
+ * Account opening payload - only fields actually used by Temenos API
  */
 export interface AccountPayload {
   customerId: string
-  accountType: 'SAVINGS' | 'CHECKING' | 'CURRENT'
-  initialDeposit: number
-  currency: string
-  // Optional: Full customer data for APIs that require it (e.g., Temenos holdings/origination)
+  // Optional: Full customer data for validation
   customerData?: Customer
 }
 
@@ -155,6 +152,7 @@ export interface PaymentPayload {
   amount: number
   currency: string
   reference: string
+  customerId?: string  // Optional: for customer context in instant payments
 }
 
 /**

@@ -57,7 +57,7 @@ export const EventHighlighter: React.FC<EventHighlighterProps> = ({
       }}
       className="relative"
     >
-      {/* Pulse background effect */}
+      {/* Pulse background effect - Temenos Cyan accent */}
       <motion.div
         className="absolute inset-0 rounded-lg pointer-events-none"
         initial={{ opacity: 0 }}
@@ -71,21 +71,21 @@ export const EventHighlighter: React.FC<EventHighlighterProps> = ({
           times: [0, 0.1, 0.5, 1]
         }}
         style={{
-          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0) 70%)',
+          background: 'radial-gradient(circle, rgba(0, 163, 224, 0.3) 0%, rgba(0, 163, 224, 0) 70%)', // Temenos Cyan
           filter: 'blur(8px)'
         }}
       />
 
-      {/* Glow border effect */}
+      {/* Glow border effect - Temenos Cyan */}
       <motion.div
         className="absolute inset-0 rounded-lg pointer-events-none border-2"
-        initial={{ opacity: 0, borderColor: 'rgba(59, 130, 246, 0)' }}
+        initial={{ opacity: 0, borderColor: 'rgba(0, 163, 224, 0)' }}
         animate={{
           opacity: [1, 0.6, 0],
           borderColor: [
-            'rgba(59, 130, 246, 0.5)',
-            'rgba(59, 130, 246, 0.3)',
-            'rgba(59, 130, 246, 0)'
+            'rgba(0, 163, 224, 0.5)', // Temenos Cyan
+            'rgba(0, 163, 224, 0.3)',
+            'rgba(0, 163, 224, 0)'
           ]
         }}
         transition={{
@@ -134,7 +134,7 @@ export const EventHighlighterSimple: React.FC<EventHighlighterProps> = ({
 
   return (
     <div className="relative animate-pulse">
-      <div className="absolute inset-0 bg-blue-500/10 rounded-lg pointer-events-none" />
+      <div className="absolute inset-0 bg-[#00A3E0]/10 rounded-lg pointer-events-none" /> {/* Temenos Cyan */}
       {children}
     </div>
   )

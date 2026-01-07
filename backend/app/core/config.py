@@ -40,13 +40,13 @@ class Settings(BaseSettings):
     DB_MIN_POOL_SIZE: int = Field(default=10, description="Minimum connection pool size")
     DB_CONNECT_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
 
-    # MSSQL External Database
-    MSSQL_HOST: str = Field(default="10.1.4.135", description="MSSQL server host")
+    # MSSQL External Database - TDH (ODS/SDS)
+    MSSQL_HOST: str = Field(default="bsgtdh-sql-r2510.database.windows.net", description="MSSQL server host")
     MSSQL_PORT: int = Field(default=1433, description="MSSQL server port")
-    MSSQL_USER: str = Field(default="dist1", description="MSSQL username")
-    MSSQL_PASSWORD: str = Field(default="dist1", description="MSSQL password")
-    MSSQL_DATABASE: str = Field(default="ODS", description="MSSQL database name")
-    MSSQL_SCHEMA: str = Field(default="ODS", description="MSSQL default schema")
+    MSSQL_USER: str = Field(default="tdhadmin", description="MSSQL username")
+    MSSQL_PASSWORD: str = Field(default="TDH@R25.10.4#SecurePass!", description="MSSQL password")
+    MSSQL_DATABASE: str = Field(default="ODS", description="MSSQL database name (ODS or SDS)")
+    MSSQL_SCHEMA: str = Field(default="ODS", description="MSSQL default schema (ODS or SDS)")
 
     # External API Integration
     TEMENOS_DEV_PORTAL_APIKEY: str = Field(default="", description="Temenos Developer Portal API Key")
@@ -135,6 +135,20 @@ class Settings(BaseSettings):
     EVENTHUB_BUFFER_SIZE: int = Field(
         default=1000,
         description="Maximum number of events to buffer in memory"
+    )
+
+    # Payment Service Settings
+    PAYMENT_TYPE: str = Field(
+        default="temenos",
+        description="Payment provider type: temenos, etc."
+    )
+    PAYMENT_API_BASE_URL: str = Field(
+        default="http://transactingress.northeurope.cloudapp.azure.com/irf-provider-container/api",
+        description="Payment API base URL"
+    )
+    PAYMENT_API_TIMEOUT: int = Field(
+        default=30,
+        description="Payment API timeout in seconds"
     )
 
     model_config = SettingsConfigDict(

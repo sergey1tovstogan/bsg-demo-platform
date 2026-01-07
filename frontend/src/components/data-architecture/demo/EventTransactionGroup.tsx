@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, ChevronRight, Clock, Activity } from 'lucide-react'
 import type { EventGroup, KafkaEvent } from './types'
 import { calculateTransactionMetrics, getGroupLabel } from '../services/eventAggregator'
-import { THEME_CONFIG } from '../config/simulation.config'
 
 interface EventTransactionGroupProps {
   group: EventGroup
@@ -13,33 +12,61 @@ interface EventTransactionGroupProps {
 
 /**
  * Transaction type icon and color
+ * Using high-contrast colors that are accessible and color-blind friendly
  */
 const TransactionBadge: React.FC<{ transactionType?: string }> = ({ transactionType }) => {
   const getConfig = () => {
     switch (transactionType) {
       case 'CREATE_CUSTOMER':
-        return { label: 'Customer', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', icon: '👤' }
+        return { 
+          label: 'Customer', 
+          // Violet/purple - distinct from other colors, good for color blindness
+          bgClass: 'bg-violet-100 dark:bg-violet-900/40',
+          textClass: 'text-violet-700 dark:text-violet-300',
+          borderClass: 'border-violet-300 dark:border-violet-600',
+          icon: '👤' 
+        }
       case 'OPEN_ACCOUNT':
-        return { label: 'Account', color: 'bg-green-500/20 text-green-300 border-green-500/30', icon: '💳' }
+        return { 
+          label: 'Account', 
+          // Teal/cyan - distinct and accessible
+          bgClass: 'bg-cyan-100 dark:bg-cyan-900/40',
+          textClass: 'text-cyan-700 dark:text-cyan-300',
+          borderClass: 'border-cyan-300 dark:border-cyan-600',
+          icon: '💳' 
+        }
       case 'SEND_PAYMENT':
-        return { label: 'Payment', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', icon: '💸' }
+        return { 
+          label: 'Payment', 
+          // Orange - distinct from green/red, good for color blindness
+          bgClass: 'bg-orange-100 dark:bg-orange-900/40',
+          textClass: 'text-orange-700 dark:text-orange-300',
+          borderClass: 'border-orange-300 dark:border-orange-600',
+          icon: '💸' 
+        }
       default:
-        return { label: 'Transaction', color: 'bg-gray-500/20 text-gray-300 border-gray-500/30', icon: '📋' }
+        return { 
+          label: 'Transaction', 
+          bgClass: 'bg-slate-100 dark:bg-slate-700',
+          textClass: 'text-slate-700 dark:text-slate-300',
+          borderClass: 'border-slate-300 dark:border-slate-600',
+          icon: '📋' 
+        }
     }
   }
 
-  const { label, color, icon } = getConfig()
+  const { label, bgClass, textClass, borderClass, icon } = getConfig()
 
   return (
-    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded border ${color}`}>
+    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${bgClass} ${borderClass}`}>
       <span className="text-sm">{icon}</span>
-      <span className="text-xs font-medium">{label}</span>
+      <span className={`text-xs font-semibold ${textClass}`}>{label}</span>
     </div>
   )
 }
 
 /**
- * Metrics display component
+ * Metrics display component - high contrast for accessibility
  */
 const MetricsDisplay: React.FC<{ group: EventGroup }> = ({ group }) => {
   const metrics = calculateTransactionMetrics(group)
@@ -47,19 +74,19 @@ const MetricsDisplay: React.FC<{ group: EventGroup }> = ({ group }) => {
   return (
     <div className="flex items-center gap-4 text-xs">
       <div className="flex items-center gap-1.5">
-        <Activity size={12} className="text-gray-400" />
-        <span className="text-gray-400">Events:</span>
-        <span className="text-gray-200 font-medium">{metrics.totalEvents}</span>
-        <span className="text-gray-500">
+        <Activity size={12} className="text-slate-500 dark:text-slate-400" />
+        <span className="text-slate-500 dark:text-slate-400">Events:</span>
+        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{metrics.totalEvents}</span>
+        <span className="text-slate-500 dark:text-slate-400">
           ({metrics.businessEvents} business, {metrics.dataEvents} data)
         </span>
       </div>
 
       {metrics.duration > 0 && (
         <div className="flex items-center gap-1.5">
-          <Clock size={12} className="text-gray-400" />
-          <span className="text-gray-400">Duration:</span>
-          <span className="text-gray-200 font-medium">{formatDuration(metrics.duration)}</span>
+          <Clock size={12} className="text-slate-500 dark:text-slate-400" />
+          <span className="text-slate-500 dark:text-slate-400">Duration:</span>
+          <span className="text-slate-700 dark:text-slate-200 font-semibold">{formatDuration(metrics.duration)}</span>
         </div>
       )}
     </div>
@@ -100,15 +127,15 @@ export const EventTransactionGroup = forwardRef<HTMLDivElement, EventTransaction
   const startTime = formatTime(group.startTime)
 
   return (
-    <div ref={ref} className="border border-gray-700/50 rounded-lg bg-gray-800/30 overflow-hidden">
+    <div ref={ref} className="border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
       {/* Group header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/20 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
       >
         <div className="flex items-center gap-3">
           {/* Expand/collapse icon */}
-          <div className="text-gray-400">
+          <div className="text-slate-500 dark:text-slate-400">
             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </div>
 
@@ -117,8 +144,8 @@ export const EventTransactionGroup = forwardRef<HTMLDivElement, EventTransaction
 
           {/* Group info */}
           <div className="flex flex-col items-start gap-1">
-            <span className="text-sm font-medium text-gray-200">{label}</span>
-            <span className="text-xs text-gray-400">{startTime}</span>
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{label}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{startTime}</span>
           </div>
         </div>
 
@@ -138,14 +165,14 @@ export const EventTransactionGroup = forwardRef<HTMLDivElement, EventTransaction
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="border-t border-gray-700/30">
+            <div className="border-t border-slate-200 dark:border-slate-700">
               {/* Timeline connector */}
-              <div className="relative px-4 py-2">
-                {/* Vertical line */}
+              <div className="relative px-4 py-3 bg-slate-50 dark:bg-slate-900/50">
+                {/* Vertical line - using brand colors */}
                 <div
-                  className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-gray-600 via-gray-700 to-gray-600"
+                  className="absolute left-8 top-0 bottom-0 w-0.5"
                   style={{
-                    background: `linear-gradient(to bottom, ${THEME_CONFIG.BUSINESS_EVENT_COLOR}40, ${THEME_CONFIG.DATA_EVENT_COLOR}40)`
+                    background: `linear-gradient(to bottom, #00A3E0, #003366)`
                   }}
                 />
 
@@ -153,14 +180,14 @@ export const EventTransactionGroup = forwardRef<HTMLDivElement, EventTransaction
                 <div className="space-y-3 relative">
                   {group.events.map((event, index) => (
                     <div key={event.id} className="flex items-start gap-3 relative">
-                      {/* Timeline node */}
+                      {/* Timeline node - using distinct colors for accessibility */}
                       <div
-                        className="w-2 h-2 rounded-full border-2 bg-gray-900 z-10 mt-2 flex-shrink-0"
+                        className="w-3 h-3 rounded-full border-2 bg-white dark:bg-slate-800 z-10 mt-2 flex-shrink-0 shadow-sm"
                         style={{
                           borderColor:
                             event.type === 'business'
-                              ? THEME_CONFIG.BUSINESS_EVENT_COLOR
-                              : THEME_CONFIG.DATA_EVENT_COLOR
+                              ? '#003366' // Temenos Navy for business events
+                              : '#00A3E0' // Temenos Cyan for data events
                         }}
                       />
 

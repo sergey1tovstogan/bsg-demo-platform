@@ -8,6 +8,7 @@ interface EventBusinessContextProps {
 
 /**
  * Category badge component with color coding
+ * Using high-contrast, accessible colors matching EventTransactionGroup
  */
 const CategoryBadge: React.FC<{ category: 'customer' | 'account' | 'payment' }> = ({ category }) => {
   const getCategoryConfig = () => {
@@ -16,27 +17,36 @@ const CategoryBadge: React.FC<{ category: 'customer' | 'account' | 'payment' }> 
         return {
           label: 'Customer',
           icon: '👤',
-          color: 'bg-blue-500/30 text-blue-100 border-blue-400/50 dark:bg-blue-600/30 dark:text-blue-200 dark:border-blue-500/50'
+          // Violet - distinct from other colors, good for color blindness
+          bgClass: 'bg-violet-100 dark:bg-violet-900/40',
+          textClass: 'text-violet-700 dark:text-violet-300',
+          borderClass: 'border-violet-300 dark:border-violet-600'
         }
       case 'account':
         return {
           label: 'Account',
           icon: '💳',
-          color: 'bg-emerald-500/30 text-emerald-100 border-emerald-400/50 dark:bg-emerald-600/30 dark:text-emerald-200 dark:border-emerald-500/50'
+          // Cyan - distinct and accessible (Temenos accent)
+          bgClass: 'bg-cyan-100 dark:bg-cyan-900/40',
+          textClass: 'text-cyan-700 dark:text-cyan-300',
+          borderClass: 'border-cyan-300 dark:border-cyan-600'
         }
       case 'payment':
         return {
           label: 'Payment',
           icon: '💸',
-          color: 'bg-amber-500/30 text-amber-100 border-amber-400/50 dark:bg-amber-600/30 dark:text-amber-200 dark:border-amber-500/50'
+          // Orange - distinct from green/red, good for color blindness
+          bgClass: 'bg-orange-100 dark:bg-orange-900/40',
+          textClass: 'text-orange-700 dark:text-orange-300',
+          borderClass: 'border-orange-300 dark:border-orange-600'
         }
     }
   }
 
-  const { label, icon, color } = getCategoryConfig()
+  const { label, icon, bgClass, textClass, borderClass } = getCategoryConfig()
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${color}`}>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border ${bgClass} ${textClass} ${borderClass}`}>
       <span>{icon}</span>
       {label}
     </span>

@@ -359,15 +359,14 @@ class RealApiService implements ITransactionApiService {
       console.log('[RealApiService] Opening account for customer:', {
         customerId: payload.customerId,
         customerMnemonic: payload.customerData.customerMnemonic,
-        customerName: payload.customerData.name,
-        currency: payload.currency
+        customerName: payload.customerData.name
       })
 
       // Transform to Temenos Holdings API format (v9.4.0)
       // Using v9.4.0/holdings/accounts/currentAccounts endpoint
       // IMPORTANT: Exact structure from working Postman example
-      const today = new Date()
-      const effectiveDate = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`
+      // Hardcoded effective date: 2025/04/15 in YYYYMMDD format
+      const effectiveDate = '20250415'
 
       const temenosPayload = {
         header: {},
@@ -519,30 +518,32 @@ class RealApiService implements ITransactionApiService {
         }
       }
 
-      // Transform the API response to match our Account interface
-      // Holdings API v9.4.0 returns: {header: {id, status}, body: {accountId, customerId, ...}}
+      // Return real response from Temenos API - no fallbacks or generated data
+      // Holdings API v9.4.0 returns: {header: {id, status, audit}, body: {...}}
       const responseBody = responseData.body || responseData
       
-      // Extract account ID from header or body
-      const accountId = responseData.header?.id || responseBody?.accountId || responseData.accountId || responseData.id || `ACC${Date.now()}`
+      // Extract account ID from header (standard Temenos response structure)
+      const accountId = responseData.header?.id || responseBody?.accountId || responseData.accountId || responseData.id
       
+      // Build account data from real response only
       const account: Account = {
-        accountId: accountId,
+        accountId: accountId || '',
         customerId: responseBody?.customerId || payload.customerId,
-        accountType: responseBody?.accountType || payload.accountType,
-        balance: responseBody?.balance || responseBody?.openingBalance || payload.initialDeposit || 0,
-        currency: responseBody?.currency || payload.currency || 'EUR',
-        status: responseBody?.accountStatus === 'ACTIVE' || responseData.header?.status === 'success' || responseData.header?.status === 'SUCCESS' ? 'ACTIVE' : 'CLOSED',
-        openedAt: responseData.header?.audit?.timestamp || responseBody?.openingDate || responseData.createdAt || responseData.created_at || responseData.created || new Date().toISOString()
+        accountType: responseBody?.productId || responseBody?.accountType || '',
+        balance: responseBody?.balance || responseBody?.openingBalance || 0,
+        currency: responseBody?.currencyId || responseBody?.currency || '',
+        status: responseData.header?.status === 'success' || responseData.header?.status === 'SUCCESS' ? 'ACTIVE' : 'CLOSED',
+        openedAt: responseData.header?.audit?.timestamp || responseBody?.openingDate || ''
       }
 
-      console.log('[RealApiService] Account opened successfully:', account)
+      console.log('[RealApiService] Account opened successfully - real response:', account)
+      console.log('[RealApiService] Full Temenos response:', responseData)
 
-      // Note: Events are now fetched from Event Store API via backend proxy
-      // after the transaction succeeds, so we don't generate them here
+      // Return real response data
       return {
         success: true,
         data: account,
+        fullResponse: responseData, // Include full Temenos response for display
         events: [] // Events will be fetched from Event Store API
       }
     } catch (err) {
@@ -557,22 +558,102 @@ class RealApiService implements ITransactionApiService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async sendPayment(_payload: PaymentPayload): Promise<ApiResponse<Payment>> {
+  async sendPayment(payload: PaymentPayload): Promise<ApiResponse<Payment>> {
     try {
-      // TODO: Implement real API call
-      // const response = await fetch(`${this.baseUrl}/v1.0.0/order/paymentOrders`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(_payload)
-      // })
-      // return await response.json()
+      // Validate minimal required fields for Temenos instant payment
+      if (!payload.fromAccount || !payload.toAccount || !payload.amount) {
+        return {
+          success: false,
+          data: {} as Payment,
+          error: 'From account, to account, and amount are required for payment'
+        }
+      }
 
-      throw new Error('Real API not yet implemented - use mock mode')
+      // Use backend payment API endpoint (not direct Temenos call)
+      const backendUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+        ? 'http://localhost:8000/api/v1/payments/instant'
+        : '/api/v1/payments/instant'
+
+      console.log('[RealApiService] Creating instant payment:', { backendUrl, payload })
+
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-User-Id': 'demo_user'
+        },
+        body: JSON.stringify({
+          // Minimal required fields for Temenos instant payment
+          debit_account_id: payload.fromAccount,
+          credit_account_id: payload.toAccount,
+          transaction_amount: payload.amount.toString(),
+          currency: payload.currency || 'USD',
+          // payment_order_product_id defaults to ACOTHER in backend
+          reference: payload.reference || `Payment ${Date.now()}`
+        })
+      })
+
+      // Parse response
+      let responseData: any
+      const contentType = response.headers.get('content-type')
+
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          responseData = await response.json()
+        } catch (parseError) {
+          const textResponse = await response.text()
+          console.error('[RealApiService] Failed to parse JSON response:', textResponse)
+          return {
+            success: false,
+            data: {} as Payment,
+            error: `Invalid JSON response: ${textResponse.substring(0, 200)}`
+          }
+        }
+      } else {
+        const textResponse = await response.text()
+        responseData = { message: textResponse }
+      }
+
+      console.log('[RealApiService] Payment API response:', { status: response.status, data: responseData })
+
+      if (!response.ok) {
+        const errorMessage = responseData?.detail?.error || responseData?.error || 'Payment failed'
+        console.error('[RealApiService] Payment error:', responseData)
+
+        return {
+          success: false,
+          data: {} as Payment,
+          error: errorMessage
+        }
+      }
+
+      // Transform response to Payment interface
+      const payment: Payment = {
+        paymentId: responseData.payment_id || responseData.data?.header?.id || `PAY${Date.now()}`,
+        fromAccount: payload.fromAccount,
+        toAccount: payload.toAccount,
+        amount: payload.amount,
+        currency: payload.currency,
+        reference: payload.reference,
+        status: responseData.status === 'success' || responseData.success ? 'COMPLETED' : 'PENDING',
+        timestamp: new Date().toISOString()
+      }
+
+      console.log('[RealApiService] Payment created successfully:', payment)
+
+      return {
+        success: true,
+        data: payment,
+        events: [] // Events will be fetched from Event Store API
+      }
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+      console.error('[RealApiService] Exception creating payment:', err)
       return {
         success: false,
         data: {} as Payment,
-        error: err instanceof Error ? err.message : 'Unknown error occurred'
+        error: `Network or parsing error: ${errorMessage}`
       }
     }
   }

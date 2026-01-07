@@ -228,16 +228,44 @@ export function mergeOverlappingGroups(groups: EventGroup[]): EventGroup[] {
 
 /**
  * Gets a human-readable label for an event group
+ * Uses appropriate entity ID based on transaction type:
+ * - CREATE_CUSTOMER: Customer ID
+ * - OPEN_ACCOUNT: Account ID (from entityid in event payload)
+ * - SEND_PAYMENT: Payment reference
  */
 export function getGroupLabel(group: EventGroup): string {
   const transactionLabel = group.transactionType
     ? group.transactionType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
     : 'Transaction'
 
-  const customerLabel = group.customerId ? ` - Customer ${group.customerId.slice(-8)}` : ''
+  // Get the appropriate entity ID based on transaction type
+  let entityLabel = ''
+  
+  if (group.transactionType === 'OPEN_ACCOUNT') {
+    // For OPEN_ACCOUNT, extract the Account ID from the first event's entityid
+    const accountId = group.events[0]?.payload?.entityid
+    if (accountId) {
+      entityLabel = ` - Account ID: ${accountId}`
+    }
+  } else if (group.transactionType === 'CREATE_CUSTOMER') {
+    // For CREATE_CUSTOMER, show Customer ID
+    const customerId = group.customerId || group.events[0]?.payload?.entityid
+    if (customerId) {
+      entityLabel = ` - Customer ID: ${customerId}`
+    }
+  } else if (group.transactionType === 'SEND_PAYMENT') {
+    // For SEND_PAYMENT, show Payment reference if available
+    const paymentId = group.events[0]?.payload?.entityid || group.events[0]?.payload?.paymentId
+    if (paymentId) {
+      entityLabel = ` - Payment ID: ${paymentId}`
+    }
+  } else if (group.customerId) {
+    // Fallback to customer ID for unknown transaction types
+    entityLabel = ` - ID: ${group.customerId}`
+  }
 
   const eventCount = group.events.length
   const eventLabel = eventCount === 1 ? 'event' : 'events'
 
-  return `${transactionLabel}${customerLabel} (${eventCount} ${eventLabel})`
+  return `${transactionLabel}${entityLabel} (${eventCount} ${eventLabel})`
 }

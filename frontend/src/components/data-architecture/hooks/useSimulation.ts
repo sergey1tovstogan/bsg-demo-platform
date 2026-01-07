@@ -344,9 +344,9 @@ export const useSimulation = () => {
     simulationState.setStepStatus('OPEN_ACCOUNT', 'loading')
     simulationState.setStage(SimulationStage.USER_TO_API)
 
-    // Generate account payload with customer data
+    // Build account payload with real customer data only
     const payload: AccountPayload = {
-      ...mockDataGenerator.generateSampleAccountPayload(customerId),
+      customerId: customerId,
       customerData: customerData
     }
 
@@ -484,6 +484,8 @@ export const useSimulation = () => {
 
     // Check prerequisites
     const accountId = simulationState.getTransactionId('accountId')
+    const customerId = simulationState.getTransactionId('customerId')
+
     if (!accountId) {
       debugLog('SEND_PAYMENT failed: No account ID available')
       return {
@@ -493,12 +495,24 @@ export const useSimulation = () => {
       }
     }
 
+    if (!customerId) {
+      debugLog('SEND_PAYMENT failed: No customer ID available')
+      return {
+        success: false,
+        data: {} as any,
+        error: 'Customer must be created first'
+      }
+    }
+
     // Set loading state
     simulationState.setStepStatus('SEND_PAYMENT', 'loading')
     simulationState.setStage(SimulationStage.USER_TO_API)
 
-    // Generate payment payload
-    const payload: PaymentPayload = mockDataGenerator.generateSamplePaymentPayload(accountId)
+    // Generate payment payload with customer ID
+    const payload: PaymentPayload = {
+      ...mockDataGenerator.generateSamplePaymentPayload(accountId),
+      customerId: customerId
+    }
 
     const startTime = Date.now()
 

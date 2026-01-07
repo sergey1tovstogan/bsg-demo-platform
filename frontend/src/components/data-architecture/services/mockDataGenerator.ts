@@ -68,6 +68,7 @@ export const generateCustomerResponse = (payload: CustomerPayload): Customer => 
 
 /**
  * Generate mock account response from payload
+ * Uses hardcoded values matching Temenos API (CURRENT.ACCOUNT, USD)
  */
 export const generateAccountResponse = (payload: AccountPayload): Account => {
   const now = new Date().toISOString()
@@ -75,9 +76,9 @@ export const generateAccountResponse = (payload: AccountPayload): Account => {
   return {
     accountId: generateAccountId(),
     customerId: payload.customerId,
-    accountType: payload.accountType,
-    balance: payload.initialDeposit,
-    currency: payload.currency,
+    accountType: 'CURRENT.ACCOUNT', // Matches Temenos productId
+    balance: 0,
+    currency: 'USD', // Matches Temenos currencyId
     status: 'ACTIVE',
     openedAt: now
   }
@@ -235,22 +236,18 @@ export const generateSampleCustomerPayload = (): CustomerPayload => {
 }
 
 /**
- * Generate sample account payload for testing - European market
+ * Generate account payload - only customerId is needed
+ * Actual Temenos API values (productId, currencyId, effectiveDate) are hardcoded in the API adapter
  */
 export const generateSampleAccountPayload = (customerId: string): AccountPayload => {
-  const accountTypes: Array<'SAVINGS' | 'CHECKING' | 'CURRENT'> = ['SAVINGS', 'CHECKING', 'CURRENT']
-  const accountType = accountTypes[Math.floor(Math.random() * accountTypes.length)]
-
   return {
-    customerId,
-    accountType,
-    initialDeposit: Math.floor(1000 + Math.random() * 9000),
-    currency: 'EUR' // European currency
+    customerId
   }
 }
 
 /**
- * Generate sample payment payload for testing - European market
+ * Generate sample payment payload for testing
+ * Values match what's actually sent to Temenos API (paymentCurrency: USD)
  */
 export const generateSamplePaymentPayload = (fromAccount: string): PaymentPayload => {
   const toAccount = generateAccountId() // Generate random recipient account
@@ -259,7 +256,7 @@ export const generateSamplePaymentPayload = (fromAccount: string): PaymentPayloa
     fromAccount,
     toAccount,
     amount: Math.floor(100 + Math.random() * 1900),
-    currency: 'EUR', // European currency
+    currency: 'USD', // Matches Temenos paymentCurrency: USD
     reference: `Payment REF-${Date.now()}`
   }
 }

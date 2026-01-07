@@ -103,18 +103,64 @@ class MSSQLService:
         conn = None
         try:
             # Build pyodbc connection string
-            conn_str = (
-                f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-                f"SERVER={self.host},{self.port};"
-                f"DATABASE={self.database};"
-                f"UID={self.user};"
-                f"PWD={self.password};"
-                f"Connection Timeout=30;"
-            )
+            # For Azure SQL Database, we need Encryption and TrustServerCertificate
+            is_azure_sql = '.database.windows.net' in self.host.lower()
+            
+            if is_azure_sql:
+                # Azure SQL Database connection string
+                # Try format without port first (Azure SQL auto-detects port 1433)
+                # If that fails, we can try with port
+                
+                # Build connection string with proper Azure SQL attributes
+                # Note: Azure SQL often works better without explicit port when using full server name
+                conn_str_parts = [
+                    "DRIVER={ODBC Driver 17 for SQL Server}",
+                    f"Server={self.host}",  # Try without port first
+                    f"Database={self.database}",
+                    f"Uid={self.user}",
+                    f"Pwd={self.password}",  # pyodbc handles special characters automatically
+                    "Encrypt=yes",
+                    "TrustServerCertificate=no",
+                    "Connection Timeout=60"
+                ]
+                
+                conn_str = ";".join(conn_str_parts) + ";"
+                
+                logger.info(f"Attempting Azure SQL connection to {self.host}, database: {self.database}")
+                logger.debug(f"Connection string format: Server={self.host} (port auto-detected)")
+            else:
+                # On-premises SQL Server connection string
+                conn_str = (
+                    f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+                    f"SERVER={self.host},{self.port};"
+                    f"DATABASE={self.database};"
+                    f"UID={self.user};"
+                    f"PWD={self.password};"
+                    f"Connection Timeout=30;"
+                )
+                logger.info(f"Attempting SQL Server connection to {self.host}:{self.port}, database: {self.database}")
+            
             conn = pyodbc.connect(conn_str)
+            logger.info(f"Successfully connected to {self.database} on {self.host}")
             yield conn
         except pyodbc.Error as e:
-            logger.error(f"MSSQL connection error: {e}")
+            error_msg = str(e)
+            logger.error(f"MSSQL connection error: {error_msg}")
+            
+            # Provide helpful error message for Azure SQL firewall/VNet issues
+            if is_azure_sql and ('timeout' in error_msg.lower() or 'not accessible' in error_msg.lower()):
+                logger.error(
+                    f"Azure SQL connection failed. This is likely a firewall/VNet configuration issue. "
+                    f"Since Azure Bastion is used, ensure one of the following: "
+                    f"1) VNet subnet is allowed in SQL firewall rules, "
+                    f"2) Private endpoint is configured for SQL, or "
+                    f"3) Service endpoint is enabled. "
+                    f"Server: {self.host}, Database: {self.database}"
+                )
+            
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected connection error: {e}")
             raise
         finally:
             if conn:

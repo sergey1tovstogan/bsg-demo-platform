@@ -9,7 +9,7 @@ export const API_CONFIG = {
   USE_MOCK_API: false,
 
   // Real API settings
-  REAL_API_BASE_URL: 'http://transactingress.northeurope.cloudapp.azure.com:80/irf-provider-container/api',
+  REAL_API_BASE_URL: 'http://transactingress.northeurope.cloudapp.azure.com/irf-provider-container/api',
   REAL_API_TIMEOUT: 30000, // 30 seconds
 
   // UI toggle visibility - disabled since we only use real mode
@@ -169,7 +169,7 @@ export const KAFKA_TOPICS = {
 export const API_ENDPOINTS = {
   CREATE_CUSTOMER: '/v5.7.0/party/customers', // Updated to v5.7.0
   OPEN_ACCOUNT: '/v9.4.0/holdings/accounts/currentAccounts', // Using v9.4.0 holdings API for current account opening
-  SEND_PAYMENT: '/v1.0.0/order/paymentOrders'
+  SEND_PAYMENT: '/v7.0.0/order/paymentOrders/instantPayments' // Updated to v7.0.0 instant payments
 } as const
 
 /**
@@ -186,7 +186,7 @@ export const TRANSACTION_STEPS: Record<TransactionType, {
   CREATE_CUSTOMER: {
     order: 1,
     title: 'Create Customer',
-    description: 'Register a new customer with KYC verification',
+    description: 'Customer Opening a new account',
     endpoint: API_ENDPOINTS.CREATE_CUSTOMER,
     method: 'POST',
     estimatedDuration: 2000
@@ -194,15 +194,15 @@ export const TRANSACTION_STEPS: Record<TransactionType, {
   OPEN_ACCOUNT: {
     order: 2,
     title: 'Open Account',
-    description: 'Create a new account for the customer',
+    description: 'Opening an account for the newly created customer',
     endpoint: API_ENDPOINTS.OPEN_ACCOUNT,
     method: 'POST',
     estimatedDuration: 2500
   },
   SEND_PAYMENT: {
     order: 3,
-    title: 'Send Payment',
-    description: 'Execute a payment transaction from the account',
+    title: 'Send Instant Payment',
+    description: 'Execute an instant payment transaction from the account',
     endpoint: API_ENDPOINTS.SEND_PAYMENT,
     method: 'POST',
     estimatedDuration: 3000
@@ -210,24 +210,73 @@ export const TRANSACTION_STEPS: Record<TransactionType, {
 }
 
 /**
- * Color Theme Configuration
+ * Color Theme Configuration - Temenos Brand Colors
+ * Based on UNIFIED_LAYOUT_SPECIFICATION.txt
  */
 export const THEME_CONFIG = {
-  // Event type colors
-  BUSINESS_EVENT_COLOR: 'rgb(20, 184, 166)', // Teal
-  DATA_EVENT_COLOR: 'rgb(168, 85, 247)', // Purple
+  // Temenos Brand Colors
+  TEMENOS_NAVY: '#003366',      // Primary brand color
+  TEMENOS_BLUE: '#0066CC',      // Secondary brand color
+  TEMENOS_CYAN: '#00A3E0',      // Accent color
 
-  // Status colors
-  IDLE_COLOR: 'rgb(107, 114, 128)', // Gray
-  LOADING_COLOR: 'rgb(59, 130, 246)', // Blue
-  SUCCESS_COLOR: 'rgb(34, 197, 94)', // Green
-  ERROR_COLOR: 'rgb(239, 68, 68)', // Red
+  // Event type colors - using Temenos brand colors for consistency
+  BUSINESS_EVENT_COLOR: '#003366', // Temenos Navy
+  DATA_EVENT_COLOR: '#00A3E0',     // Temenos Cyan
 
-  // UI colors
-  TERMINAL_BG: 'rgb(17, 24, 39)', // Dark gray
-  TERMINAL_TEXT: 'rgb(209, 213, 219)', // Light gray
-  KAFKA_BG: 'rgb(6, 78, 59)', // Dark green
-  KAFKA_TEXT: 'rgb(167, 243, 208)' // Light green
+  // Status colors (functional - from brand spec)
+  IDLE_COLOR: '#64748B',        // Slate 500
+  LOADING_COLOR: '#0066CC',     // Temenos Blue
+  SUCCESS_COLOR: '#10B981',     // Emerald 500
+  ERROR_COLOR: '#EF4444',       // Red 500
+
+  // UI colors - using Slate palette for better contrast
+  TERMINAL_BG: '#0F172A',       // Slate 900
+  TERMINAL_TEXT: '#E2E8F0',     // Slate 200
+  KAFKA_BG: '#1E293B',          // Slate 800
+  KAFKA_TEXT: '#F8FAFC'         // Slate 50
+}
+
+/**
+ * Database Records Configuration
+ */
+export const DATABASE_RECORDS_CONFIG = {
+  // Enable/disable database records tile
+  ENABLED: true,
+
+  // SQL query to execute - fetches customer records from ODS
+  // Shows most recent records first (newest customers appear at top)
+  SQL_QUERY: `SELECT TOP 20 c.[RECID]
+      ,c.[MNEMONIC]
+	  ,cml.[SHORT_NAME]
+      ,cml.[NAME_1]
+      ,cml.[STREET]
+      ,cml.[TOWN_COUNTRY]
+      ,cml.[POST_CODE]
+      ,cml.[COUNTRY]
+      ,c.[SECTOR]
+      ,c.[ACCOUNT_OFFICER]
+      ,c.[INDUSTRY]
+      ,c.[TARGET]
+      ,c.[NATIONALITY]
+      ,c.[CUSTOMER_STATUS]
+      ,c.[RESIDENCE]
+      ,c.[CREATION_TIME_DL]
+      ,c.[BANKING_DATE_DL]
+  FROM [ODS].[FBNK_CUSTOMER] c
+  LEFT JOIN [ODS].[FBNK_CUSTOMER_ML] cml ON c.RECID = cml.RECID
+  ORDER BY c.[CREATION_TIME_DL] DESC`,
+
+  // Description shown in tile header
+  DESCRIPTION: 'Database records synced from Temenos events',
+
+  // Maximum rows to display
+  MAX_ROWS: 20,
+
+  // Auto-refresh when Kafka events are received
+  AUTO_REFRESH: true,
+
+  // Debounce delay for auto-refresh (ms) - prevents too many requests
+  REFRESH_DEBOUNCE_MS: 2000
 }
 
 /**

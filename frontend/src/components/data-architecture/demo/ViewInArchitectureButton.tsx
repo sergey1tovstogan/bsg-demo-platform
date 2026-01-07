@@ -23,25 +23,25 @@ export const ViewInArchitectureButton: React.FC<ViewInArchitectureButtonProps> =
     return <Eye className="w-4 h-4" />
   }
 
-  // Color scheme based on event type
+  // Color scheme based on event type - Temenos brand colors
   const getColorClasses = () => {
     if (eventType === 'business') {
       return {
-        bg: 'from-teal-500 to-teal-600',
-        bgHover: 'hover:from-teal-600 hover:to-teal-700',
-        shadow: 'hover:shadow-teal-500/50'
+        bg: 'from-[#003366] to-[#004080]', // Temenos Navy
+        bgHover: 'hover:from-[#004080] hover:to-[#003366]',
+        shadow: 'hover:shadow-[#003366]/50'
       }
     } else if (eventType === 'data') {
       return {
-        bg: 'from-purple-500 to-purple-600',
-        bgHover: 'hover:from-purple-600 hover:to-purple-700',
-        shadow: 'hover:shadow-purple-500/50'
+        bg: 'from-[#00A3E0] to-[#0087bd]', // Temenos Cyan
+        bgHover: 'hover:from-[#0087bd] hover:to-[#00A3E0]',
+        shadow: 'hover:shadow-[#00A3E0]/50'
       }
     }
     return {
-      bg: 'from-blue-500 to-blue-600',
-      bgHover: 'hover:from-blue-600 hover:to-blue-700',
-      shadow: 'hover:shadow-blue-500/50'
+      bg: 'from-[#003366] to-[#00A3E0]', // Temenos gradient
+      bgHover: 'hover:from-[#004080] hover:to-[#0087bd]',
+      shadow: 'hover:shadow-[#003366]/50'
     }
   }
 

@@ -31,6 +31,49 @@ function extractNestedCustomerId(payload: any): string | undefined {
 }
 
 /**
+ * Extracts customer name from various possible locations in the payload
+ * Temenos events have different structures depending on the entity type
+ */
+function extractCustomerName(payload: any): string | undefined {
+  if (!payload) return undefined
+
+  // Check direct fields first (from API responses or enriched events)
+  if (payload.customerName) return payload.customerName
+  if (payload.name && typeof payload.name === 'string' && !payload.name.includes('_')) return payload.name
+  
+  // Check nested data structures
+  const data = payload.data
+  if (data) {
+    // Check data.customerName or data.name
+    if (data.customerName) return data.customerName
+    if (data.name && typeof data.name === 'string' && !data.name.includes('_')) return data.name
+    
+    // Check Temenos applicationContext for customer details
+    const appData = data.applicationContext?.applicationData
+    if (appData) {
+      // Customer name might be in various Temenos fields
+      if (appData.customerName) return appData.customerName
+      if (appData.shortName) return appData.shortName
+      if (appData.givenNames && appData.familyName) {
+        return `${appData.givenNames} ${appData.familyName}`
+      }
+      if (appData.fullName) return appData.fullName
+    }
+  }
+  
+  // Check businesskey - sometimes contains meaningful info
+  // But skip if it looks like an ID or table name
+  if (payload.businesskey && 
+      typeof payload.businesskey === 'string' && 
+      !payload.businesskey.match(/^\d+$/) && 
+      !payload.businesskey.includes('_')) {
+    return payload.businesskey
+  }
+
+  return undefined
+}
+
+/**
  * Extracts account details from nested Temenos structure
  */
 function extractNestedAccountDetails(payload: any): Record<string, any> {
@@ -105,39 +148,56 @@ function formatSummary(
 
   switch (category) {
     case 'customer': {
-      const customerName = payload.customerName || payload.name || 'Unknown Customer'
+      // Extract customer name from payload (NOT entityname - that's the table name like "Ebnk_customer")
+      const customerName = extractCustomerName(payload)
+      
       const email = payload.email ? ` (${payload.email})` : ''
       const customerId = payload.customerId || payload.entityid
-      return customerId
-        ? `${customerName}${email} - ID: ${customerId}`
-        : `${customerName}${email}`
+      
+      // If we have the customer name, show it; otherwise just show Customer ID
+      if (customerName) {
+        return customerId
+          ? `${customerName}${email} - Customer ID: ${customerId}`
+          : `${customerName}${email}`
+      } else {
+        // No customer name found - show a clean label without "Unknown"
+        return customerId
+          ? `Customer - Customer ID: ${customerId}`
+          : 'Customer'
+      }
     }
 
     case 'account': {
       // Check nested Temenos structure first
       const nestedDetails = extractNestedAccountDetails(payload)
-      const accountId = nestedDetails.accountId || payload.accountId || payload.entityid || 'Unknown'
-      const accountType = nestedDetails.accountType || payload.accountType || payload.type || 'Account'
+      const accountId = nestedDetails.accountId || payload.accountId || payload.entityid
+      const accountType = nestedDetails.accountType || payload.accountType || payload.type || payload.entityname || 'Current Account'
       const status = nestedDetails.status || payload.status || ''
 
       // Format account type to be more readable
       const formattedType = accountType
         .replace(/\./g, ' ')
+        .replace(/_/g, ' ')
         .toLowerCase()
         .replace(/\b\w/g, (l: string) => l.toUpperCase())
 
       const statusText = status ? ` (${status})` : ''
-      return `${formattedType} - ${accountId}${statusText}`
+      return accountId
+        ? `${formattedType} - Account ID: ${accountId}${statusText}`
+        : `${formattedType}${statusText}`
     }
 
     case 'payment': {
-      const paymentId = payload.paymentId || payload.transactionId || 'Unknown'
+      const paymentId = payload.paymentId || payload.transactionId || payload.entityid
       const amount = payload.amount !== undefined
         ? formatCurrency(payload.amount, payload.currency)
-        : 'Unknown Amount'
+        : ''
       const reference = payload.reference ? ` - ${payload.reference}` : ''
       const paymentStatus = payload.status ? ` (${payload.status})` : ''
-      return `Payment ${paymentId}: ${amount}${reference}${paymentStatus}`
+      const amountText = amount ? `: ${amount}` : ''
+      return paymentId
+        ? `Payment - Payment ID: ${paymentId}${amountText}${reference}${paymentStatus}`
+        : `Payment${amountText}${reference}${paymentStatus}`
     }
 
     default:
