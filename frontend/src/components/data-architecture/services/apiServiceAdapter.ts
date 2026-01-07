@@ -234,52 +234,94 @@ class RealApiService implements ITransactionApiService {
       // Log the exact payload being sent for debugging
       console.log('[RealApiService] Temenos payload structure:', JSON.stringify(temenosPayload, null, 2))
 
-      const url = `${this.baseUrl}/v5.7.0/party/customers`
+      // Use backend proxy to avoid CORS and Mixed Content issues (consistent with openAccount)
+      // Using v5.7.0 party API for customer creation
+      const temenosUrl = `${this.baseUrl}/v5.7.0/party/customers`
+      const proxyBaseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+        ? 'http://localhost:8000/api/v1/integration/proxy'
+        : '/api/v1/integration/proxy'
+
+      // Build URL with query parameter - always use encodeURIComponent for the Temenos URL
+      // This ensures proper encoding of special characters in the URL
+      const fullProxyUrl = `${proxyBaseUrl}?url=${encodeURIComponent(temenosUrl)}`
+
       const requestBody = JSON.stringify(temenosPayload)
       
-      console.log('[RealApiService] Creating customer:', { url, temenosPayload, requestBody })
+      console.log('[RealApiService] Creating customer via proxy:', { fullProxyUrl, temenosUrl, temenosPayload, requestBody })
 
-      const response = await fetch(url, {
+      // Use backend proxy to avoid CORS and Mixed Content issues
+      // Note: Using fetch with POST and query parameters (matching openAccount pattern)
+      const response = await fetch(fullProxyUrl, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-User-Id': 'demo_user'
         },
         body: requestBody
       })
 
-      // Try to parse response as JSON, but handle non-JSON responses
-      let responseData: any
+      // Parse proxy response (proxy returns {success, status, data, headers})
+      let proxyResponse: any
       const contentType = response.headers.get('content-type')
+      
+      // Get response text first (we'll parse it as JSON if possible)
+      const responseText = await response.text()
       
       if (contentType && contentType.includes('application/json')) {
         try {
-          responseData = await response.json()
+          proxyResponse = JSON.parse(responseText)
         } catch (parseError) {
-          const textResponse = await response.text()
-          console.error('[RealApiService] Failed to parse JSON response:', textResponse)
+          console.error('[RealApiService] Failed to parse proxy JSON response:', responseText)
           return {
             success: false,
             data: {} as Customer,
-            error: `Invalid JSON response from API (status ${response.status}): ${textResponse.substring(0, 200)}`
+            error: `Invalid JSON response from proxy (status ${response.status}): ${responseText.substring(0, 200)}`
           }
         }
       } else {
-        const textResponse = await response.text()
-        responseData = { message: textResponse }
+        // Non-JSON response - might be an error
+        proxyResponse = { success: false, status: response.status, data: { text: responseText } }
       }
 
-      console.log('[RealApiService] API response:', { status: response.status, data: responseData })
+      // Check for 405 Method Not Allowed specifically
+      if (response.status === 405) {
+        console.error('[RealApiService] 405 Method Not Allowed from proxy:', {
+          status: response.status,
+          statusText: response.statusText,
+          proxyUrl: fullProxyUrl,
+          temenosUrl: temenosUrl,
+          responseText,
+          headers: Object.fromEntries(response.headers.entries())
+        })
+        return {
+          success: false,
+          data: {} as Customer,
+          error: `Proxy endpoint error (405): Method Not Allowed. The proxy endpoint may not be configured correctly or the HTTP method is not supported.`
+        }
+      }
 
-      if (!response.ok) {
+      // Extract the actual Temenos API response from proxy wrapper
+      const responseData = proxyResponse.data || proxyResponse
+      const httpStatus = proxyResponse.status || response.status
+      const isSuccess = proxyResponse.success !== false && httpStatus >= 200 && httpStatus < 300
+
+      console.log('[RealApiService] Proxy response:', { 
+        proxySuccess: proxyResponse.success, 
+        httpStatus, 
+        isSuccess,
+        temenosData: responseData 
+      })
+
+      if (!isSuccess) {
         // Handle 400 and other error statuses with detailed error message
         // Check for errorDetails array in the response
         const errorDetails = responseData?.errorDetails || responseData?.detail || responseData?.error || responseData?.message || responseData?.errors || responseData
         const parsedError = parseTemenosError(errorDetails)
-        const errorMessage = `Temenos API Error (${response.status}): ${parsedError}`
+        const errorMessage = `Temenos API Error (${httpStatus}): ${parsedError}`
         
         console.error('[RealApiService] API error:', {
-          status: response.status,
+          httpStatus,
           errorDetails,
           parsedError,
           fullResponse: responseData
