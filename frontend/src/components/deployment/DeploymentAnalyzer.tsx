@@ -2189,6 +2189,9 @@ function ComponentDetailPanel({
             architecturalOverview={componentInfo.architecturalOverview}
             functionalOverview={componentInfo.functionalOverview || ""}
             capabilities={componentInfo.capabilities || []}
+            componentName={componentInfo.componentName}
+            componentType={componentInfo.componentType}
+            service={service}
           />
         ) : (
           <>
@@ -2239,29 +2242,8 @@ function ComponentDetailPanel({
           </div>
         ) : null}
 
-        {/* Functional Overview */}
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            {componentInfo.functionalOverview && componentInfo.functionalOverview.trim()
-              ? formatRAGText(componentInfo.functionalOverview)
-              : <p className="text-gray-500 dark:text-gray-400 italic">No functional overview available</p>}
-          </div>
-        </div>
-
-        {/* Key Capabilities */}
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">KEY CAPABILITIES</h5>
-          {componentInfo.capabilities && Array.isArray(componentInfo.capabilities) && componentInfo.capabilities.length > 0 ? (
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              {componentInfo.capabilities.map((cap, idx) => (
-                <li key={idx}>{cap}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No capabilities listed</p>
-          )}
-        </div>
+        {/* Functional Overview - REMOVED per user request */}
+        {/* Key Capabilities - REMOVED per user request (now shown in StructuredRAGDisplay as table) */}
 
         {/* Related Services */}
         <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">

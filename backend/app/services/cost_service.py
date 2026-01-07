@@ -39,7 +39,14 @@ class CostService:
     
     def _make_api_request(self, url: str, method: str = "GET", data: Dict = None, max_retries: int = 3) -> Dict:
         """Make authenticated API request to Azure REST API with retry logic."""
-        token = self._get_access_token()
+        try:
+            token = self._get_access_token()
+        except Exception as e:
+            logger.error(f"Failed to get access token for Cost Management API: {e}")
+            return {
+                "error": f"Authentication failed: {str(e)}. Please verify Azure credentials are configured correctly.",
+                "status_code": 401
+            }
         
         headers = {
             "Authorization": f"Bearer {token}",
@@ -76,9 +83,21 @@ class CostService:
                     except:
                         error_detail = {"message": response.text[:200]}
                     
-                    logger.error(f"API request failed with status {response.status_code}: {error_detail}")
+                    # Extract more detailed error message
+                    error_message = "Unknown error"
+                    if isinstance(error_detail, dict):
+                        if 'error' in error_detail and isinstance(error_detail['error'], dict):
+                            error_message = error_detail['error'].get('message', str(error_detail.get('message', 'Unknown error')))
+                        elif 'message' in error_detail:
+                            error_message = error_detail['message']
+                        else:
+                            error_message = str(error_detail)
+                    else:
+                        error_message = str(error_detail)
+                    
+                    logger.error(f"Cost Management API request failed with status {response.status_code}: {error_message}")
                     return {
-                        "error": f"HTTP {response.status_code}: {error_detail.get('error', {}).get('message', response.text[:200])}",
+                        "error": f"HTTP {response.status_code}: {error_message}",
                         "status_code": response.status_code,
                         "detail": error_detail
                     }
@@ -170,101 +189,124 @@ class CostService:
                 }
             }
             
-            # Try resource group scope first
-            rg_scope = f"/subscriptions/{self.subscription_id}/resourceGroups/{resource_group_name}"
-            url = f"{self.base_url}{rg_scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
+            # Try subscription scope first (more reliable for permissions)
+            url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
             result = self._make_api_request(url, "POST", query_definition)
             
             # Check if the result contains an error
             if result.get('error'):
                 error_msg = result.get('error', 'Unknown error')
                 status_code = result.get('status_code', 500)
-                # If it's a 404 or 403, try subscription scope as fallback
+                logger.warning(f"Subscription scope query failed with {status_code}: {error_msg}")
+                
+                # If it's a 404 or 403, try resource group scope as fallback
                 if status_code in [403, 404]:
-                    logger.info(f"Resource group scope failed with {status_code}, trying subscription scope")
-                    url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
+                    logger.info(f"Trying resource group scope as fallback")
+                    rg_scope = f"/subscriptions/{self.subscription_id}/resourceGroups/{resource_group_name}"
+                    url = f"{self.base_url}{rg_scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
                     result = self._make_api_request(url, "POST", query_definition)
                     if result.get('error'):
-                        # Both failed, return error
+                        # Both failed, return error with helpful message
                         return {
                             'resource_group': resource_group_name,
                             'total_cost': 0.0,
                             'services': {},
-                            'error': f'Cost Management API error: {result.get("error")}. Verify you have "Cost Management Reader" role on the subscription.',
+                            'error': f'Cost Management API error: {result.get("error")}. Please verify you have "Cost Management Reader" role on the subscription. Cost data may also take 24-48 hours to appear after resource creation.',
                             'start_date': start_date.isoformat(),
                             'end_date': end_date.isoformat()
                         }
                 else:
-                    # Other errors, return immediately
+                    # Other errors, return with helpful message
                     return {
                         'resource_group': resource_group_name,
                         'total_cost': 0.0,
                         'services': {},
-                        'error': f'Cost Management API error: {error_msg}',
+                        'error': f'Cost Management API error: {error_msg}. Please verify you have "Cost Management Reader" role on the subscription.',
                         'start_date': start_date.isoformat(),
                         'end_date': end_date.isoformat()
                     }
             
-            # If that fails, try subscription scope
-            if not result or not result.get('properties', {}).get('rows'):
-                url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
-                result = self._make_api_request(url, "POST", query_definition)
-                # Check for errors in subscription scope attempt
-                if result.get('error'):
-                    return {
-                        'resource_group': resource_group_name,
-                        'total_cost': 0.0,
-                        'services': {},
-                        'error': f'Cost Management API error: {result.get("error")}. Verify you have "Cost Management Reader" role on the subscription.',
-                        'start_date': start_date.isoformat(),
-                        'end_date': end_date.isoformat()
-                    }
-            
-            if result and 'properties' in result and 'rows' in result['properties'] and result['properties']['rows']:
-                return self._parse_cost_result(result, resource_group_name, start_date, end_date)
-            else:
-                # Try grouped query without filter
-                grouped_query = {
-                    "type": "ActualCost",
-                    "timeframe": "Custom",
-                    "timePeriod": {
-                        "from": start_date.strftime("%Y-%m-%dT00:00:00Z"),
-                        "to": end_date.strftime("%Y-%m-%dT23:59:59Z")
-                    },
-                    "dataset": {
-                        "granularity": "Daily",
-                        "aggregation": {
-                            "totalCost": {
-                                "name": "PreTaxCost",
-                                "function": "Sum"
-                            }
-                        },
-                        "grouping": [
-                            {
-                                "type": "Dimension",
-                                "name": "ResourceGroup"
-                            },
-                            {
-                                "type": "Dimension",
-                                "name": "ServiceName"
-                            }
-                        ]
-                    }
+            # Check if we got valid data
+            # IMPORTANT: Check for error first before checking rows
+            if result.get('error'):
+                # Already handled above, but double-check
+                error_msg = result.get('error', 'Unknown error')
+                return {
+                    'resource_group': resource_group_name,
+                    'total_cost': 0.0,
+                    'services': {},
+                    'error': f'Cost Management API error: {error_msg}. Please verify you have "Cost Management Reader" role on the subscription.',
+                    'start_date': start_date.isoformat(),
+                    'end_date': end_date.isoformat()
                 }
-                
-                grouped_result = self._make_api_request(url, "POST", grouped_query)
-                
-                if grouped_result and 'properties' in grouped_result and 'rows' in grouped_result['properties'] and grouped_result['properties']['rows']:
-                    return self._parse_cost_result(grouped_result, resource_group_name, start_date, end_date)
+            
+            # Check if we got valid data with rows
+            if result and 'properties' in result and 'rows' in result['properties']:
+                rows = result['properties']['rows']
+                if rows and len(rows) > 0:
+                    return self._parse_cost_result(result, resource_group_name, start_date, end_date)
                 else:
-                    return {
-                        'resource_group': resource_group_name,
-                        'total_cost': 0.0,
-                        'services': {},
-                        'error': 'No cost data found for the specified period',
-                        'start_date': start_date.isoformat(),
-                        'end_date': end_date.isoformat()
-                    }
+                    logger.info(f"No cost data rows returned for {resource_group_name}, trying grouped query without filter")
+            else:
+                logger.info(f"No cost data returned for {resource_group_name}, trying grouped query without filter")
+            
+            # Try grouped query without filter as fallback
+            grouped_query = {
+                "type": "ActualCost",
+                "timeframe": "Custom",
+                "timePeriod": {
+                    "from": start_date.strftime("%Y-%m-%dT00:00:00Z"),
+                    "to": end_date.strftime("%Y-%m-%dT23:59:59Z")
+                },
+                "dataset": {
+                    "granularity": "Daily",
+                    "aggregation": {
+                        "totalCost": {
+                            "name": "PreTaxCost",
+                            "function": "Sum"
+                        }
+                    },
+                    "grouping": [
+                        {
+                            "type": "Dimension",
+                            "name": "ResourceGroup"
+                        },
+                        {
+                            "type": "Dimension",
+                            "name": "ServiceName"
+                        }
+                    ]
+                }
+            }
+            
+            grouped_result = self._make_api_request(url, "POST", grouped_query)
+            
+            # Check for errors in grouped result
+            if grouped_result.get('error'):
+                error_msg = grouped_result.get('error', 'Unknown error')
+                return {
+                    'resource_group': resource_group_name,
+                    'total_cost': 0.0,
+                    'services': {},
+                    'error': f'Cost Management API error: {error_msg}. Please verify you have "Cost Management Reader" role on the subscription.',
+                    'start_date': start_date.isoformat(),
+                    'end_date': end_date.isoformat()
+                }
+            
+            if grouped_result and 'properties' in grouped_result and 'rows' in grouped_result['properties']:
+                rows = grouped_result['properties']['rows']
+                if rows and len(rows) > 0:
+                    return self._parse_cost_result(grouped_result, resource_group_name, start_date, end_date)
+            
+            # No data found - return with helpful message
+            return {
+                'resource_group': resource_group_name,
+                'total_cost': 0.0,
+                'services': {},
+                'error': 'No cost data found for the specified period. Cost data may take 24-48 hours to appear after resource creation.',
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat()
+            }
                 
         except Exception as e:
             logger.error(f"Error getting costs for resource group {resource_group_name}: {e}", exc_info=True)
