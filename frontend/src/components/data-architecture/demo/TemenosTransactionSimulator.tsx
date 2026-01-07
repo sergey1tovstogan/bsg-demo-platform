@@ -157,7 +157,12 @@ export const TemenosTransactionSimulator: React.FC = () => {
   useEffect(() => {
     const checkEventHubHealth = async () => {
       try {
-        const response = await fetch('/api/v1/components/data-architecture/events/health')
+        // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
+        // CORS is already configured on the backend to allow Azure Static Web Apps domains
+        const healthUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+          ? 'http://localhost:8000/api/v1/components/data-architecture/events/health'
+          : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/components/data-architecture/events/health'
+        const response = await fetch(healthUrl)
         if (response.ok) {
           const health = await response.json()
           setEventHubHealth(health)

@@ -237,9 +237,11 @@ class RealApiService implements ITransactionApiService {
       // Use backend proxy to avoid CORS and Mixed Content issues (consistent with openAccount)
       // Using v5.7.0 party API for customer creation
       const temenosUrl = `${this.baseUrl}/v5.7.0/party/customers`
+      // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
+      // CORS is already configured on the backend to allow Azure Static Web Apps domains
       const proxyBaseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
         ? 'http://localhost:8000/api/v1/integration/proxy'
-        : '/api/v1/integration/proxy'
+        : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/integration/proxy'
 
       // For POST requests, send URL in body to avoid Azure Static Web Apps query parameter issues
       // The backend proxy supports both query parameter and body-based URL
@@ -443,9 +445,11 @@ class RealApiService implements ITransactionApiService {
       // Use backend proxy to avoid CORS issues (consistent with createCustomer)
       // Using v9.4.0 holdings API for current account opening
       const temenosUrl = `${this.baseUrl}/v9.4.0/holdings/accounts/currentAccounts`
+      // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
+      // CORS is already configured on the backend to allow Azure Static Web Apps domains
       const proxyBaseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
         ? 'http://localhost:8000/api/v1/integration/proxy'
-        : '/api/v1/integration/proxy'
+        : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/integration/proxy'
 
       // For POST requests, send URL in body to avoid Azure Static Web Apps query parameter issues
       // The backend proxy supports both query parameter and body-based URL
@@ -616,9 +620,11 @@ class RealApiService implements ITransactionApiService {
       }
 
       // Use backend payment API endpoint (not direct Temenos call)
+      // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
+      // CORS is already configured on the backend to allow Azure Static Web Apps domains
       const backendUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
         ? 'http://localhost:8000/api/v1/payments/instant'
-        : '/api/v1/payments/instant'
+        : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/payments/instant'
 
       console.log('[RealApiService] Creating instant payment:', { backendUrl, payload })
 

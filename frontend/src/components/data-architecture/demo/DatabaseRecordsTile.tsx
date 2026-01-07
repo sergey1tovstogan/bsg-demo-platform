@@ -34,9 +34,11 @@ interface ConnectionStatus {
  */
 export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
   eventCount,
+  // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
+  // CORS is already configured on the backend to allow Azure Static Web Apps domains
   apiBaseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:8000/api/v1'
-    : '/api/v1',
+    : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1',
   connection = 'tdh_ods'
 }) => {
   const [records, setRecords] = useState<QueryResponse | null>(null)
