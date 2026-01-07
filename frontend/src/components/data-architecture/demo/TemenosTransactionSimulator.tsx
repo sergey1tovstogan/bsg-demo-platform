@@ -12,22 +12,6 @@ import { TRANSACTION_STEPS, API_CONFIG } from '../config/simulation.config'
 // import { apiService } from '../services/apiServiceAdapter' // Unused import
 
 /**
- * Progress bar component - Temenos brand colors
- */
-const ProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
-  return (
-    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-      <motion.div
-        className="h-full bg-gradient-to-r from-[#003366] to-[#00A3E0]"
-        initial={{ width: 0 }}
-        animate={{ width: `${progress}%` }}
-        transition={{ duration: 0.5 }}
-      />
-    </div>
-  )
-}
-
-/**
  * Event Source Indicator component - Temenos brand styling
  * Shows whether events are from Mock or Real API source
  */

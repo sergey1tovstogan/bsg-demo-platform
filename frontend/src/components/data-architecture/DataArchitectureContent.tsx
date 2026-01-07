@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Pause, SkipForward, SkipBack, ArrowRight, Circle, Square } from 'lucide-react'
 import { useCrossTabSync } from './hooks/useCrossTabSync'
@@ -153,7 +153,7 @@ export function DataArchitectureContent() {
   ]
 
   // Define animation sequences for each path (static components are always visible, so not included)
-  const animationSequences: Record<AnimationPath, AnimationStep[]> = {
+  const animationSequences = useMemo<Record<AnimationPath, AnimationStep[]>>(() => ({
     'path-c': [
       // Path 1 (path-c): Events → Pub/Sub → Microservices - Components appear first, then arrows
       { componentId: 'events_left', delay: 0, type: 'component' },
@@ -220,7 +220,7 @@ export function DataArchitectureContent() {
       { componentId: 'arrow-file-etl', delay: 4000, type: 'arrow' },
       { componentId: 'arrow-etl-dwh', delay: 5000, type: 'arrow' },
     ],
-  }
+  }), [])
 
   // Play animation sequence
   const playSequence = useCallback(() => {
