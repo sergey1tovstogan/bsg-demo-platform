@@ -134,6 +134,8 @@ These should be set in Azure App Service **Configuration** → **Application set
 | `DATABASE_NAME` | Database name | No | `bsg_demo` |
 | `RAG_JWT_TOKEN` | JWT token for Temenos RAG API | No | `eyJhbGc...` |
 | `RAG_API_URL` | Temenos RAG API base URL | No | `https://tbsg.temenos.com` |
+
+**Note**: The RAG JWT token can be updated at runtime via the Settings modal in the UI (recommended) or via the `/api/v1/deployment/temenos/update-token` endpoint. The token is cached in browser localStorage for convenience and automatically synchronized with the backend when the Settings modal is opened.
 | `ENVIRONMENT` | Environment name | No | `production` |
 | `DEBUG` | Debug mode | No | `False` |
 

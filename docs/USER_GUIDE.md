@@ -74,6 +74,8 @@ This repository is designed to support the **Business Solution Group (BSG)** in 
    RAG_API_URL=https://tbsg.temenos.com
    ```
 
+   **Note**: The RAG JWT token can also be managed via the Settings modal in the application UI. The token is cached in browser localStorage for convenience and automatically synchronized with the backend when the Settings modal is opened.
+
 ---
 
 ## Running the Application
@@ -89,6 +91,10 @@ This will:
 - Stop any running services
 - Start backend on port 8000
 - Start frontend on port 3000
+
+**Note**: The ports are configured as:
+- Frontend: Port 3000 (configurable in `frontend/vite.config.ts`)
+- Backend: Port 8000 (configurable in `backend/app/core/config.py` or via `PORT` environment variable)
 
 ### Option 2: Manual Start
 
@@ -163,9 +169,12 @@ The **Deployment** component includes an Azure Deployment Analyzer:
 
 **Features:**
 - Automatic Temenos component identification
-- RAG-powered component information
+- RAG-powered component information (cached for performance)
 - Azure resource analysis
 - Kubernetes namespace discovery (using Kubernetes Python client library)
+- ARM template export for Infrastructure as Code (IaC)
+- Cost analysis for resource groups
+- RAG JWT token management via Settings modal
 
 ### BSG-Guru Chatbot
 
@@ -180,6 +189,40 @@ Access the AI chatbot from any component:
 - "What are the Temenos cloud architecture models?"
 - "How does Temenos support cloud-native deployments?"
 - "What are the best practices for deploying Temenos components on Azure?"
+
+### RAG JWT Token Management
+
+The RAG (Retrieval Augmented Generation) API requires a JWT token for authentication. You can manage this token in two ways:
+
+**Option 1: Via Settings Modal (Recommended)**
+1. Click the **Settings** icon (gear) in the top navigation
+2. Scroll to **RAG API JWT Token** section
+3. Enter your JWT token (masked by default, click eye icon to show/hide)
+4. Click **Update RAG Token**
+5. The token is automatically:
+   - Sent to the backend and stored in memory
+   - Cached in browser localStorage for future sessions
+   - Used for all RAG API calls until a new token is provided
+
+**Option 2: Via Environment Variable**
+- Set `RAG_JWT_TOKEN` in `backend/.env` file (for local development)
+- Set `RAG_JWT_TOKEN` in Azure App Service Configuration (for production)
+
+**Token Status:**
+- The Settings modal displays token information:
+  - Expiration status (valid/expired)
+  - Days remaining until expiration
+  - User email and ID
+  - Expiration date
+
+**Token Caching:**
+- The token is cached in browser localStorage (`bsg_rag_jwt_token` key)
+- When you reopen the application, the cached token is automatically loaded and sent to the backend
+- This ensures seamless operation even if the token expires, as you can easily update it via the Settings modal
+
+**Note**: The token is never stored in any files on the server. It's only stored:
+- In browser localStorage (client-side, user-specific)
+- In backend memory (runtime only, lost on restart)
 
 ---
 
@@ -435,6 +478,22 @@ curl -X GET "http://localhost:8000/api/v1/deployment/azure/resource-groups?subsc
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
+**Update RAG JWT Token:**
+```bash
+curl -X POST http://localhost:8000/api/v1/deployment/temenos/update-token \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "token": "your-new-jwt-token"
+  }'
+```
+
+**Get RAG JWT Token Info:**
+```bash
+curl -X GET http://localhost:8000/api/v1/deployment/temenos/jwt-info \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
 ---
 
 ## Environment Variables
@@ -451,6 +510,8 @@ curl -X GET "http://localhost:8000/api/v1/deployment/azure/resource-groups?subsc
 | `RAG_API_URL` | Temenos RAG API base URL | No | `https://tbsg.temenos.com` |
 | `JWT_SECRET_KEY` | Secret key for JWT signing | No | Auto-generated |
 | `PORT` | Backend port | No | `8000` |
+
+**Note**: The RAG JWT token can be updated at runtime via the Settings modal in the UI or via the `/api/v1/deployment/temenos/update-token` endpoint. The token is cached in browser localStorage for convenience.
 
 ### Frontend Environment Variables
 
@@ -485,7 +546,7 @@ az webapp show \
 
 **Verify backend URL:**
 - **Production**: `https://bsg-demo-platform-app.azurewebsites.net/api/v1`
-- **Local**: `http://localhost:8000/api/v1`
+- **Local**: `http://localhost:8000/api/v1` (updated from 8001)
 
 **Check GitHub Secrets:**
 - `AZURE_CREDENTIALS`
@@ -515,6 +576,9 @@ pip install -r requirements.txt
 ```bash
 # Windows
 netstat -ano | findstr :8000
+
+# Check if port 3000 is available for frontend
+netstat -ano | findstr :3000
 ```
 
 ### Frontend Won't Start
@@ -533,15 +597,28 @@ npm install
 
 ### Database Connection Issues
 
+**MongoDB Location:**
+- The application uses **Azure Cosmos DB** with **MongoDB API**
+- Database is hosted in Azure cloud, not locally
+- Connection string format: `mongodb://account:password@host:port/?ssl=true&replicaSet=globaldb&...`
+- Database name: `bsg_demo`
+
 **Verify connection string format:**
 - Must include SSL parameters for Azure Cosmos DB
 - Check for special characters in password
-- Ensure replica set is specified
+- Ensure replica set is specified (`replicaSet=globaldb`)
+
+**Client-Side Storage (localStorage):**
+- The application uses browser **localStorage** for client-side data storage
+- localStorage is browser-specific and stored on the user's machine
+- Data persists until the user clears browser data or uses a different browser
+- Used for: RAG token caching, theme preferences, selected categories, Azure subscription ID caching
+- **Note**: localStorage is separate from MongoDB. MongoDB stores server-side persistent data, while localStorage stores client-side user preferences.
 
 ### CORS Errors
 
 **Check backend CORS configuration:**
-- Backend allows `http://localhost:3000` by default
+- Backend allows `http://localhost:3000` by default (updated from 3001)
 - For production, ensure Azure Static Web Apps domain is in CORS origins
 - Check `backend/app/core/config.py` for CORS settings
 
@@ -642,6 +719,7 @@ The platform is automatically deployed to Azure via GitHub Actions:
 ## Getting Help
 
 - **API Documentation**: http://localhost:8000/docs (when backend is running)
+- **RAG Token Management**: Available via Settings modal in the UI
 - **Architecture Documentation**: See [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Project Structure**: See [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)
 - **Issues**: Create an issue on GitHub

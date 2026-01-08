@@ -40,7 +40,7 @@
    DATABASE_NAME=bsg_demo
    ENVIRONMENT=development
    DEBUG=True
-   RAG_JWT_TOKEN=your_jwt_token_here
+   RAG_JWT_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYXBvc3RvbG9zLmdlb3JnYXMiLCJlbWFpbCI6ImFwb3N0b2xvcy5nZW9yZ2FzQHRlbWVub3MuY29tIiwiZXhwIjoxNzY5NDQ3MDk0LCJpYXQiOjE3NjY4NTUwOTQsImlzcyI6InRic2cudGVtZW5vcy5jb20iLCJhdWQiOiJ0ZW1lbm9zLWFwaSJ9.TDo8Q4H89eG2ucJY6Wz86iL93v1ZHf7wiMY1myW6XC0
    RAG_API_URL=https://tbsg.temenos.com
    ```
 
@@ -129,9 +129,12 @@ The **Deployment** component includes an Azure Deployment Analyzer:
 
 **Features:**
 - Automatic Temenos component identification
-- RAG-powered component information
+- RAG-powered component information (cached for performance)
 - Azure resource analysis
-- Kubernetes namespace discovery (local development only - see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for Azure App Service limitations)
+- Kubernetes namespace discovery (using Kubernetes Python client library)
+- ARM template export for Infrastructure as Code (IaC)
+- Cost analysis for resource groups
+- RAG JWT token management via Settings modal
 
 ### BSG-Guru Chatbot
 
@@ -221,6 +224,22 @@ curl -X POST http://localhost:8000/api/v1/deployment/temenos/analyze \
   }'
 ```
 
+**Update RAG JWT Token:**
+```bash
+curl -X POST http://localhost:8000/api/v1/deployment/temenos/update-token \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "token": "your-new-jwt-token"
+  }'
+```
+
+**Get RAG JWT Token Info:**
+```bash
+curl -X GET http://localhost:8000/api/v1/deployment/temenos/jwt-info \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
 ## Environment Variables
 
 ### Backend Environment Variables
@@ -235,6 +254,8 @@ curl -X POST http://localhost:8000/api/v1/deployment/temenos/analyze \
 | `RAG_API_URL` | Temenos RAG API base URL | No | `https://tbsg.temenos.com` |
 | `JWT_SECRET_KEY` | Secret key for JWT signing | No | Auto-generated |
 | `PORT` | Backend port | No | `8000` |
+
+**Note**: The RAG JWT token can be updated at runtime via the Settings modal in the UI or via the `/api/v1/deployment/temenos/update-token` endpoint. The token is cached in browser localStorage for convenience.
 
 ### Frontend Environment Variables
 
@@ -317,7 +338,9 @@ mongo "mongodb://connection-string"
 
 **Check JWT token:**
 - Token must be valid and not expired
-- Token should be set in `backend/.env` as `RAG_JWT_TOKEN`
+- Token can be set in `backend/.env` as `RAG_JWT_TOKEN` (for initial setup)
+- Token can be updated via Settings modal in the UI (recommended)
+- Token is cached in browser localStorage for convenience
 
 **Test RAG connection:**
 ```bash
@@ -330,10 +353,22 @@ curl -X POST http://localhost:8000/api/v1/deployment/temenos/query \
   }'
 ```
 
+**MongoDB Storage:**
+- The application uses **Azure Cosmos DB** with **MongoDB API** for server-side persistent storage
+- Database location: Azure cloud (`bsg-demo-platform-mongodb.mongo.cosmos.azure.com`)
+- Database name: `bsg_demo`
+- Collections include: `users`, `user_sessions`, `components`, `content`, `cache`, etc.
+
+**Client-Side Storage (localStorage):**
+- The application uses browser **localStorage** for client-side data storage
+- localStorage is browser-specific and stored on the user's machine
+- Used for: RAG token caching (`bsg_rag_jwt_token`), theme preferences (`app-theme`), selected categories (`bsg_selected_categories`), Azure subscription ID caching (`lastAzureSubscriptionId`)
+- **Note**: localStorage is separate from MongoDB. MongoDB stores server-side persistent data, while localStorage stores client-side user preferences.
+
 ### CORS Errors
 
 **Check backend CORS configuration:**
-- Backend allows `http://localhost:3000` by default
+- Backend allows `http://localhost:3000` by default (updated from 3001)
 - For production, ensure Azure Static Web Apps domain is in CORS origins
 - Check `backend/app/core/config.py` for CORS settings
 

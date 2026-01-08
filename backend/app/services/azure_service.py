@@ -141,15 +141,20 @@ class AzureService:
                 # Local development error messages
                 if "CredentialUnavailableError" in error_type or "credential" in error_msg.lower():
                     raise RuntimeError(
-                        "Azure authentication failed. Please ensure:\n"
-                        "1. Azure CLI is installed: https://aka.ms/installazurecliwindows\n"
-                        "2. For interactive login: Run 'az login'\n"
-                        "3. For non-interactive environments: Run 'az login --use-device-code'\n"
-                        "4. OR configure service principal credentials via environment variables:\n"
+                        "Azure authentication failed. You need to log in to Azure CLI first.\n\n"
+                        "Please follow these steps:\n"
+                        "1. Open PowerShell or Command Prompt\n"
+                        "2. Check if Azure CLI is installed: Run 'az --version'\n"
+                        "3. If not installed, download from: https://aka.ms/installazurecliwindows\n"
+                        "4. Login to Azure: Run 'az login --use-device-code'\n"
+                        "5. Complete authentication in browser when prompted\n"
+                        "6. Verify login: Run 'az account show'\n"
+                        f"7. Set the subscription: Run 'az account set --subscription {subscription_id}'\n"
+                        "8. After logging in, refresh the page and try connecting again\n\n"
+                        "Alternative: Configure service principal credentials via environment variables:\n"
                         "   - AZURE_CLIENT_ID\n"
                         "   - AZURE_CLIENT_SECRET\n"
-                        "   - AZURE_TENANT_ID\n"
-                        f"5. Verify subscription ID '{subscription_id}' is correct"
+                        "   - AZURE_TENANT_ID"
                     )
                 else:
                     raise RuntimeError(

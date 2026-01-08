@@ -1,11 +1,118 @@
 import { useState, useEffect } from 'react'
-import { Loader2, Cloud, RefreshCw } from 'lucide-react'
+import { 
+  Loader2, 
+  Cloud, 
+  RefreshCw, 
+  Container, 
+  Database, 
+  MessageSquare, 
+  Server, 
+  Layers,
+  Box,
+  Zap,
+  Network,
+  Shield,
+  Activity,
+  Code,
+  Settings,
+  GitBranch,
+  Cpu,
+  HardDrive,
+  Globe
+} from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 
 const CACHE_KEY = 'deployment_rag_content_cache'
 const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp'
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days (1 month)
+
+// Icon mapping for Azure services and categories
+const SERVICE_ICONS: { [key: string]: any } = {
+  // Container orchestration
+  'Azure Kubernetes Service': Container,
+  'AKS': Container,
+  'Azure Container Apps': Box,
+  'ACA': Box,
+  'Kubernetes': Container,
+  'Container': Container,
+  
+  // Databases
+  'Azure SQL Database': Database,
+  'SQL Database': Database,
+  'Azure Database for PostgreSQL': Database,
+  'PostgreSQL': Database,
+  'MongoDB': Database,
+  'DocumentDB': Database,
+  'RDS': Database,
+  
+  // Messaging
+  'Azure Event Hub': MessageSquare,
+  'Event Hub': MessageSquare,
+  'Apache ActiveMQ': MessageSquare,
+  'ActiveMQ': MessageSquare,
+  'Kinesis': MessageSquare,
+  'Messaging': MessageSquare,
+  
+  // Infrastructure
+  'Azure': Cloud,
+  'AWS': Globe,
+  'Cloud': Cloud,
+  'Server': Server,
+  'Storage': HardDrive,
+  'Network': Network,
+  'Security': Shield,
+  'Monitoring': Activity,
+  
+  // Categories
+  'Container orchestration': Container,
+  'Databases': Database,
+  'Messaging and eventing': MessageSquare,
+  'Data storage': Database,
+  'Infrastructure': Server,
+}
+
+// Category icons and colors
+const CATEGORY_STYLES: { [key: string]: { icon: any, gradient: string, bgColor: string } } = {
+  'Architecture Overview': {
+    icon: Layers,
+    gradient: 'from-indigo-600 to-blue-700',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-900/20'
+  },
+  'Service Selection': {
+    icon: Settings,
+    gradient: 'from-purple-500 to-pink-500',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20'
+  },
+  'Integration & Extensibility': {
+    icon: GitBranch,
+    gradient: 'from-green-500 to-emerald-500',
+    bgColor: 'bg-green-50 dark:bg-green-900/20'
+  }
+}
+
+// Helper function to find icon for a service name
+const getServiceIcon = (text: string): any => {
+  const lowerText = text.toLowerCase()
+  for (const [key, icon] of Object.entries(SERVICE_ICONS)) {
+    if (lowerText.includes(key.toLowerCase())) {
+      return icon
+    }
+  }
+  return Cloud // Default icon
+}
+
+// Helper function to extract service names from markdown content
+const extractServices = (content: string): string[] => {
+  const services: string[] = []
+  const serviceNames = Object.keys(SERVICE_ICONS)
+  for (const service of serviceNames) {
+    if (content.includes(service)) {
+      services.push(service)
+    }
+  }
+  return services
+}
 
 export function DeploymentContentViewer() {
   const [ragContent, setRagContent] = useState<any>(null)
@@ -325,7 +432,7 @@ export function DeploymentContentViewer() {
           <button
             onClick={() => loadRAGContent(true)}
             disabled={ragLoading}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw className={`w-5 h-5 ${ragLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -358,43 +465,124 @@ export function DeploymentContentViewer() {
                 grouped[cat].push(item)
               })
 
-              return Object.entries(grouped).map(([category, items]) => (
-                <div key={category} className="space-y-6">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white border-b-2 border-blue-600 dark:border-blue-400 pb-2">
-                    {category}
-                  </h2>
-                  {items.map((item: any, idx: number) => (
-                    <div
-                      key={`${category}-${idx}`}
-                      className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-300 dark:border-gray-700 shadow-sm"
-                    >
-                      <h3 className="text-xl font-bold mb-4 border-b-2 border-blue-500 dark:border-blue-400 pb-3 text-gray-900 dark:text-white">
-                        {item.title || item.question}
-                      </h3>
-                      <div className="text-gray-800 dark:text-gray-200">
-                        <ReactMarkdown
-                          components={{
-                            h1: ({ ...props }) => <h1 className="text-2xl font-bold text-blue-900 dark:text-blue-400 mt-6 mb-4" {...props} />,
+              return Object.entries(grouped).map(([category, items]) => {
+                const categoryStyle = CATEGORY_STYLES[category] || {
+                  icon: Layers,
+                  gradient: 'from-gray-500 to-gray-600',
+                  bgColor: 'bg-gray-50 dark:bg-gray-800'
+                }
+                const CategoryIcon = categoryStyle.icon
+                
+                return (
+                  <div key={category} className="space-y-6">
+                    {/* Category Header with Icon */}
+                    <div className={`${categoryStyle.bgColor} rounded-xl p-6 border-2 border-transparent bg-gradient-to-r ${categoryStyle.gradient} bg-opacity-10 dark:bg-opacity-20`}>
+                      <div className="flex items-center space-x-4">
+                        <div className={`p-3 rounded-lg bg-gradient-to-br ${categoryStyle.gradient} shadow-lg`}>
+                          <CategoryIcon className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+                            {category}
+                          </h2>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {category === 'Architecture Overview' && 'Cloud infrastructure and service architecture'}
+                            {category === 'Service Selection' && 'Guidance for choosing the right services'}
+                            {category === 'Integration & Extensibility' && 'Integration patterns and extensibility capabilities'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {items.map((item: any, idx: number) => {
+                      const services = extractServices(item.answer || '')
+                      const uniqueServices = Array.from(new Set(services)).slice(0, 6) // Limit to 6 services
+                      
+                      return (
+                        <div
+                          key={`${category}-${idx}`}
+                          className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300"
+                        >
+                          {/* Title with Icon */}
+                          <div className="flex items-start space-x-4 mb-6 pb-4 border-b-2 border-gray-200 dark:border-gray-700">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-700 shadow-md">
+                              <Cloud className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                {item.title || item.question}
+                              </h3>
+                              {/* Service Icons Badge */}
+                              {uniqueServices.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                  {uniqueServices.map((service, sidx) => {
+                                    const ServiceIcon = getServiceIcon(service)
+                                    return (
+                                      <div
+                                        key={sidx}
+                                        className="flex items-center space-x-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-full border border-indigo-200 dark:border-indigo-800"
+                                      >
+                                        <ServiceIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                        <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                                          {service.length > 20 ? service.substring(0, 20) + '...' : service}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="text-gray-800 dark:text-gray-200 prose prose-lg dark:prose-invert max-w-none">
+                            <ReactMarkdown
+                              components={{
+                            h1: ({ ...props }) => <h1 className="text-2xl font-bold text-indigo-900 dark:text-indigo-400 mt-6 mb-4" {...props} />,
                             h2: ({ ...props }) => <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-5 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2" {...props} />,
-                            h3: ({ ...props }) => <h3 className="text-lg font-bold text-blue-700 dark:text-blue-300 mt-4 mb-2" {...props} />,
+                            h3: ({ children, ...props }: any) => {
+                              const serviceName = typeof children === 'string' ? children : children?.toString() || ''
+                              const ServiceIcon = getServiceIcon(serviceName)
+                              return (
+                                <div className="flex items-center space-x-3 mt-6 mb-3">
+                                  <div className="p-1.5 rounded-md bg-gradient-to-br from-indigo-600 to-blue-700">
+                                    <ServiceIcon className="w-5 h-5 text-white" />
+                                  </div>
+                                  <h3 className="text-lg font-bold text-indigo-700 dark:text-indigo-300 m-0" {...props}>
+                                    {children}
+                                  </h3>
+                                </div>
+                              )
+                            },
                             h4: ({ ...props }) => <h4 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1" {...props} />,
-                            ul: ({ ...props }) => <ul className="list-disc list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
-                            ol: ({ ...props }) => <ol className="list-decimal list-outside ml-6 space-y-1 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
-                            li: ({ ...props }) => <li className="leading-relaxed pl-1" {...props} />,
+                            ul: ({ ...props }) => (
+                              <ul className="list-none space-y-2 mb-4 text-gray-700 dark:text-gray-300" {...props} />
+                            ),
+                            ol: ({ ...props }) => (
+                              <ol className="list-decimal list-outside ml-6 space-y-2 mb-4 text-gray-700 dark:text-gray-300" {...props} />
+                            ),
+                            li: ({ children, ...props }: any) => (
+                              <li className="flex items-start space-x-3 leading-relaxed pl-1" {...props}>
+                                <div className="mt-2 flex-shrink-0">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-700 mt-1.5"></div>
+                                </div>
+                                <span className="flex-1">{children}</span>
+                              </li>
+                            ),
                             p: ({ ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
                             strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
-                            blockquote: ({ ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
+                            blockquote: ({ ...props }) => <blockquote className="border-l-4 border-indigo-600 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
                             code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
                             table: ({ ...props }) => (
                               <div className="overflow-x-auto my-6">
                                 <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg shadow-md" {...props} />
                               </div>
                             ),
-                            thead: ({ ...props }) => <thead className="bg-blue-50 dark:bg-blue-900/30" {...props} />,
+                            thead: ({ ...props }) => <thead className="bg-indigo-50 dark:bg-indigo-900/30" {...props} />,
                             tbody: ({ ...props }) => <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props} />,
                             tr: ({ ...props }) => <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" {...props} />,
                             th: ({ ...props }) => (
-                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left text-sm font-bold text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-900/50 first:rounded-tl-lg last:rounded-tr-lg" {...props} />
+                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left text-sm font-bold text-gray-900 dark:text-white bg-indigo-100 dark:bg-indigo-900/50 first:rounded-tl-lg last:rounded-tr-lg" {...props} />
                             ),
                             td: ({ ...props }) => (
                               <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 align-top" {...props} />
@@ -403,21 +591,33 @@ export function DeploymentContentViewer() {
                         >
                           {item.answer}
                         </ReactMarkdown>
-                      </div>
-                      {item.sources && item.sources.length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-600">
-                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Sources:</p>
-                          <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                            {item.sources.map((source: any, sidx: number) => (
-                              <li key={sidx}>{source.title || source.url || 'Temenos Documentation'}</li>
-                            ))}
-                          </ul>
+                          </div>
+                          
+                          {/* Sources */}
+                          {item.sources && item.sources.length > 0 && (
+                            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                              <div className="flex items-center space-x-2 mb-3">
+                                <Activity className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Sources:</p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {item.sources.map((source: any, sidx: number) => (
+                                  <div
+                                    key={sidx}
+                                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+                                  >
+                                    {source.title || source.url || 'Temenos Documentation'}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))
+                      )
+                    })}
+                  </div>
+                )
+              })
             })()}
           </div>
         )}

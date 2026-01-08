@@ -11,23 +11,23 @@ The **BSG Demo Platform** is a full-stack application consisting of a React fron
 ### LOCAL (Windows Machine)
 
 **Frontend (React/Vite):**
-- **Port**: 3000
+- **Port**: 3001
 - **Process**: Node.js
 - **Type**: Development server running directly on your machine
 - **Framework**: React 18+ with Vite
-- **URL**: http://localhost:3000
+- **URL**: http://localhost:3001
 - **To Start**: `cd frontend && npm run dev`
 
 **Backend (FastAPI):**
-- **Port**: 8000
+- **Port**: 8001
 - **Process**: Python
-- **Command**: `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
+- **Command**: `uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload`
 - **Type**: Python process running directly (not in container)
 - **Framework**: FastAPI (Python)
-- **URL**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/api/v1/health
-- **To Start**: `cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
+- **URL**: http://localhost:8001
+- **API Docs**: http://localhost:8001/docs
+- **Health Check**: http://localhost:8001/api/v1/health
+- **To Start**: `cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload`
 
 **Required Environment Variables:**
 ```bash
