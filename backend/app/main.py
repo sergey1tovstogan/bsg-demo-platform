@@ -7,7 +7,7 @@ Main FastAPI application with middleware, routing, and configuration.
 from fastapi import FastAPI, Request, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from contextlib import asynccontextmanager
 import os
 import json
@@ -204,6 +204,16 @@ async def proxy_all_methods(
         )
     
     return await _handle_proxy(request, url, user_id, db, body_content)
+
+# Explicit OPTIONS handler for proxy endpoint to ensure CORS preflight works
+@proxy_router.options("/proxy")
+async def proxy_options():
+    """
+    Handle OPTIONS preflight requests for the proxy endpoint.
+    CORS middleware will add the appropriate headers, but this ensures
+    the endpoint explicitly supports OPTIONS requests.
+    """
+    return Response(status_code=200)
 
 # DIAGNOSTIC: Simple test POST endpoint
 @app.post("/test-post")

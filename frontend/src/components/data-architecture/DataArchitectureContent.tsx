@@ -187,11 +187,6 @@ export function DataArchitectureContent() {
       // Intermittent arrows to DWH appear shortly after
       { componentId: 'arrow-etl-dwh', delay: 3000, type: 'arrow' },
       { componentId: 'arrow-sds-dwh', delay: 3000, type: 'arrow' },
-      // Roadmap components - Spark Process and Azure SQL DB (future features)
-      { componentId: 'spark_process', delay: 3500, type: 'component' },
-      { componentId: 'azure_sql', delay: 3500, type: 'component' },
-      { componentId: 'arrow-datahub-spark', delay: 4000, type: 'arrow' },
-      { componentId: 'arrow-spark-sql', delay: 4000, type: 'arrow' },
     ],
     'path-b': [
       // Path 3 (path-b): EOD Process - File → ETL → Data Warehouse
