@@ -25,9 +25,14 @@ page:
     breadcrumb: "Short"  # Shown in breadcrumbs
 
   # === DESCRIPTIONS ===
-  description:
-    short: "One-line summary"  # For cards and previews
-    long: "Detailed explanation of page content"  # For page header area
+  # Two formats supported:
+  # Format 1: Simple string (for single description)
+  description: "Single string description"
+
+  # Format 2: Object with short and long (for different contexts)
+  # description:
+  #   short: "One-line summary"  # For cards and previews
+  #   long: "Detailed explanation of page content"  # For page header area
 
   # === METADATA (Optional) ===
   metadata:

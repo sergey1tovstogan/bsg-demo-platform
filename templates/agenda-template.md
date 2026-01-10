@@ -49,6 +49,7 @@ agenda:
 
       # Visual (optional)
       image: "/images/optional-image.png"  # Optional image for the item
+      color_theme: "blue"  # Optional: blue, emerald, violet, red, amber, indigo, cyan, pink, green, orange, purple, teal
 ```
 
 ---
@@ -150,6 +151,7 @@ agenda:
         agenda_title: "Welcome"
       description: "Introduction to the platform"
       icon: "Home"
+      color_theme: "blue"
       target:
         type: "page"
         page_id: "welcome"
@@ -160,6 +162,7 @@ agenda:
         agenda_title: "Setup"
       description: "Configure your environment"
       icon: "Settings"
+      color_theme: "emerald"
       target:
         type: "page"
         page_id: "setup"
@@ -170,6 +173,7 @@ agenda:
         agenda_title: "First Steps"
       description: "Create your first project"
       icon: "Rocket"
+      color_theme: "orange"
       target:
         type: "page"
         page_id: "first-steps"

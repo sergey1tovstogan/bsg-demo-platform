@@ -22,9 +22,14 @@ page:
     breadcrumb: "Short"  # Shown in breadcrumbs
 
   # === DESCRIPTIONS ===
-  description:
-    short: "One-line summary"  # For cards and previews
-    long: "Detailed explanation of page content"  # For page header area
+  # Two formats supported:
+  # Format 1: Simple string (for single description)
+  description: "Single string description"
+
+  # Format 2: Object with short and long (for different contexts)
+  # description:
+  #   short: "One-line summary"  # For cards and previews
+  #   long: "Detailed explanation of page content"  # For page header area
 
   # === METADATA (Optional) ===
   metadata:
@@ -96,6 +101,7 @@ navigation:
 - type: "hero"
   heading: "Main Page Heading"
   subtitle: "Supporting subtitle text"
+  align: "center"  # Optional: left, center. Default is left
 ```
 
 ### 2. Text Section
@@ -114,6 +120,7 @@ navigation:
   image: "/images/diagram.png"
   alt: "Descriptive alt text"
   caption: "Optional image caption"
+  width: "full"  # Optional: full, auto. Default is auto
 ```
 
 ### 4. Clickable Image (Navigation)
@@ -161,14 +168,14 @@ navigation:
 - type: "feature_grid"
   columns: 3  # 2, 3, or 4
   features:
-    - name: "Feature Name"
+    - title: "Feature Name"  # Use "title" or "name" (both supported)
       icon: "Key"
       description: "Feature description"
       click_action:
         type: "navigate_to_subpage"
         target: "feature-detail-page"
 
-    - name: "Another Feature"
+    - title: "Another Feature"
       icon: "Lock"
       description: "Another description"
       click_action:
@@ -237,6 +244,8 @@ navigation:
 ```
 
 ### 13. Comparison Grid
+
+**Variant 1: Simple comparison with headings and points**
 ```yaml
 - type: "comparison_grid"
   columns: 2
@@ -250,6 +259,27 @@ navigation:
       points:
         - "Feature X"
         - "Feature Y"
+```
+
+**Variant 2: Advanced comparison with column definitions and labeled rows**
+```yaml
+- type: "comparison_grid"
+  columns:
+    - title: "Monitoring"
+      icon: "AlertCircle"
+      color: "red"
+    - title: "Observability"
+      icon: "Wrench"
+      color: "blue"
+  items:
+    - label: "Core Question"
+      values:
+        - "Is the system healthy?"
+        - "Why is the system behaving this way?"
+    - label: "Focus"
+      values:
+        - "Known failures and thresholds"
+        - "Unknown failures and internal state"
 ```
 
 ### 14. Interactive Diagram (with invisible hotspots)
@@ -288,6 +318,18 @@ navigation:
   alert_type: "info"  # info, success, warning, error
   title: "Important Information"
   content: "Alert message content"
+```
+
+### 17. Steps Section
+```yaml
+- type: "steps"
+  steps:
+    - title: "Step Title"
+      description: "Description of what happens in this step"
+    - title: "Second Step"
+      description: "Description of the next step"
+    - title: "Final Step"
+      description: "Description of the final step"
 ```
 
 ---
