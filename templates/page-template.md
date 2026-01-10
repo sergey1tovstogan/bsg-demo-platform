@@ -252,18 +252,27 @@ navigation:
         - "Feature Y"
 ```
 
-### 14. Interactive Diagram
+### 14. Interactive Diagram (with invisible hotspots)
 ```yaml
 - type: "interactive_diagram"
   image: "/images/architecture-diagram.png"
   hotspots:
-    - x: 100  # X coordinate
-      y: 150  # Y coordinate
-      radius: 30
+    - x: 25            # X coordinate (percentage: 0-100, left to right)
+      y: 50            # Y coordinate (percentage: 0-100, top to bottom)
+      radius: 50       # Click area radius (pixels, 50-60 recommended)
       click_action:
         type: "show_popup"
         popup_id: "component-detail"
       hover_text: "Click to learn more"
+
+    - x: 75            # Right side hotspot
+      y: 50
+      radius: 50
+      click_action:
+        type: "navigate_to_subpage"
+        target: "detail-page"
+      hover_text: "View details"
+# NOTE: Hotspots are invisible. Users find them by hovering (cursor changes to pointer)
 ```
 
 ### 15. Video

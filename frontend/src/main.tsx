@@ -1,7 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { Buffer } from 'buffer'
 import App from './App.tsx'
 import './index.css'
+
+// Polyfill Buffer for browser environment
+globalThis.Buffer = Buffer
 
 // Error boundary for better error handling
 const rootElement = document.getElementById('root')

@@ -14,7 +14,7 @@ export function Breadcrumbs() {
                 const isAgenda = crumb.type === 'agenda';
 
                 return (
-                    <React.Fragment key={crumb.id}>
+                    <React.Fragment key={`${crumb.id}-${index}`}>
                         {index > 0 && (
                             <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                         )}

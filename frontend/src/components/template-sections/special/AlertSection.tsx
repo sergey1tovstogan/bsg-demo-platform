@@ -1,4 +1,6 @@
 import { AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import { AlertSection as AlertSectionType } from '@/lib/template-types';
 
 export function AlertSection({ alert_type, title, content }: AlertSectionType) {
@@ -54,8 +56,10 @@ export function AlertSection({ alert_type, title, content }: AlertSectionType) {
             {title}
           </h3>
         )}
-        <div className={`text-sm ${style.text}`}>
-          {content}
+        <div className={`text-sm ${style.text} prose prose-sm prose-slate dark:prose-invert max-w-none`}>
+          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+            {content}
+          </ReactMarkdown>
         </div>
       </div>
     </div>

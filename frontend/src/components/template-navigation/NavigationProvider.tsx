@@ -16,9 +16,10 @@ interface NavigationContextValue {
   showPopup: (popupId: string) => void;
   closePopup: () => void;
   getPage: (pageId: string) => PageDefinition | undefined;
+  refreshContent: () => void;
 }
 
-const NavigationContext = createContext<NavigationContextValue | null>(null);
+export const NavigationContext = createContext<NavigationContextValue | null>(null);
 
 interface NavigationProviderProps {
   card: CardDefinition;
@@ -32,8 +33,13 @@ export function NavigationProvider({ card, children }: NavigationProviderProps) 
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
   const [pagesMap, setPagesMap] = useState<Map<string, PageDefinition>>(new Map());
   const [agendaData, setAgendaData] = useState<AgendaDefinition | null>(null);
+  const [refreshKey, setRefreshKey] = useState<number>(0);
 
   const { parsePage, parseAgenda } = useTemplateParser();
+
+  const refreshContent = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   // Load content (pages and agenda)
   useEffect(() => {
@@ -43,31 +49,55 @@ export function NavigationProvider({ card, children }: NavigationProviderProps) 
       // 1. Load Agenda
       if (card.agenda && card.agenda.file) {
         try {
-          const agenda = await parseAgenda(card.agenda.file);
+          const agenda = await parseAgenda(card.agenda.file, refreshKey);
           if (mounted) setAgendaData(agenda);
         } catch (e) {
           // console.error('Failed to load agenda', e);
         }
       }
 
-      // 2. Load Pages
+      // 2. Load Pages recursively
       if (card.pages && card.pages.length > 0) {
         const map = new Map<string, PageDefinition>();
-        const builder = new NavigationBuilder([]);
+        const builder = new NavigationBuilder();
+        const loadedFiles = new Set<string>(); // Track loaded files to avoid duplicates
 
         try {
-          const loadedPages = await Promise.all(
-            card.pages.map(ref => parsePage(ref.file))
+          // Recursive function to load a page and all its sub_pages
+          const loadPageRecursively = async (fileRef: { file: string }): Promise<void> => {
+            // Normalize path - ensure it has a leading slash
+            const normalizedPath = fileRef.file.startsWith('/') ? fileRef.file : `/${fileRef.file}`;
+
+            // Avoid loading the same file twice
+            if (loadedFiles.has(normalizedPath)) {
+              return;
+            }
+            loadedFiles.add(normalizedPath);
+
+            const page = await parsePage(normalizedPath, refreshKey);
+            if (!page) return;
+
+            map.set(page.id, page);
+
+            // Recursively load sub_pages if they exist
+            if (page.sub_pages && page.sub_pages.length > 0) {
+              await Promise.all(
+                page.sub_pages.map(subPageRef => loadPageRecursively(subPageRef))
+              );
+            }
+          };
+
+          // Load all top-level pages and their descendants
+          await Promise.all(
+            card.pages.map(ref => loadPageRecursively(ref))
           );
 
           if (!mounted) return;
 
-          loadedPages.forEach(page => {
-            if (page) map.set(page.id, page);
-          });
-
+          console.log(`✅ Loaded ${map.size} pages total:`, Array.from(map.keys()));
           setPagesMap(map);
           const nav = builder.buildHierarchy(card, map);
+          console.log('📊 Navigation hierarchy built:', nav);
           setHierarchy(nav);
         } catch (err) {
           console.error('Failed to load pages:', err);
@@ -78,7 +108,7 @@ export function NavigationProvider({ card, children }: NavigationProviderProps) 
     loadContent();
 
     return () => { mounted = false; };
-  }, [card, parsePage, parseAgenda]);
+  }, [card, parsePage, parseAgenda, refreshKey]);
 
 
   const navigateToPage = (pageId: string) => {
@@ -120,7 +150,7 @@ export function NavigationProvider({ card, children }: NavigationProviderProps) 
   const breadcrumbs = useMemo(() => {
     if (!currentPage || !hierarchy) return [];
     try {
-      const builder = new NavigationBuilder([]);
+      const builder = new NavigationBuilder();
       return builder.buildBreadcrumbs(currentPage, hierarchy);
     } catch (e) {
       console.warn('Breadcrumb generation failed', e);
@@ -141,6 +171,7 @@ export function NavigationProvider({ card, children }: NavigationProviderProps) 
     showPopup,
     closePopup,
     getPage,
+    refreshContent,
   };
 
   return (

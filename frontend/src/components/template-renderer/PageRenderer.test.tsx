@@ -17,6 +17,25 @@ vi.mock('@/components/template-navigation/NavigationButtons', () => ({
     NavigationButtons: () => <div data-testid="nav-buttons">Nav Buttons</div>
 }));
 
+vi.mock('@/components/template-navigation/NavigationProvider', () => ({
+    useNavigation: () => ({
+        card: {
+            settings: {
+                default_animation: 'fade-in',
+                transition_speed: 300,
+            },
+        },
+    }),
+}));
+
+vi.mock('@/hooks/useTemplateAnimation', () => ({
+    useTemplateAnimation: () => ({
+        ref: { current: null },
+        isAnimating: false,
+        trigger: vi.fn(),
+    }),
+}));
+
 const mockPage: PageDefinition = {
     id: 'page-1',
     title: 'Test Page',

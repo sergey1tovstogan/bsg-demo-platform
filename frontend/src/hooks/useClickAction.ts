@@ -6,12 +6,20 @@ export function useClickAction(action?: ClickAction) {
   const { navigateToPage, showPopup } = useNavigation();
 
   return useCallback(() => {
-    if (!action) return;
+    if (!action) {
+      console.warn('No action provided to useClickAction');
+      return;
+    }
+
+    console.log('🔔 Click action triggered:', action);
 
     switch (action.type) {
       case 'navigate_to_subpage':
         if (action.target) {
+          console.log('📍 Navigating to subpage:', action.target);
           navigateToPage(action.target);
+        } else {
+          console.warn('navigate_to_subpage action has no target');
         }
         break;
 

@@ -15,7 +15,8 @@ export function ClickableCardsSection({ cards, columns = 3 }: ClickableCardsSect
           key={index}
           title={card.title}
           description={card.description}
-          action={card.action}
+          action={card.click_action}
+          hoverEffect={card.hover_effect}
         />
       ))}
     </div>
@@ -25,18 +26,42 @@ export function ClickableCardsSection({ cards, columns = 3 }: ClickableCardsSect
 function ClickableCard({
   title,
   description,
-  action
+  action,
+  hoverEffect
 }: {
   title: string;
   description: string;
   action: any;
+  hoverEffect?: string;
 }) {
   const handleClick = useClickAction(action);
+
+  // Get hover effect classes based on hover_effect property
+  const getHoverEffectClasses = (effect?: string): string => {
+    switch (effect) {
+      case 'zoom':
+        return 'hover:scale-105 transition-transform duration-200';
+      case 'lift':
+        return 'hover:-translate-y-1 hover:shadow-xl transition-all duration-200';
+      case 'glow':
+        return 'hover:ring-2 hover:ring-blue-400 hover:ring-opacity-50 transition-all duration-200';
+      case 'border':
+        return 'hover:border-blue-500 dark:hover:border-blue-400 transition-colors duration-200';
+      case 'brightness':
+        return 'hover:brightness-110 transition-all duration-200';
+      default:
+        // Default hover effect (lift style)
+        return 'hover:shadow-lg hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-200';
+    }
+  };
+
+  const hoverEffectClasses = getHoverEffectClasses(hoverEffect);
+  const baseClasses = "p-6 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm";
 
   return (
     <button
       onClick={handleClick}
-      className="p-6 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:border-blue-500 dark:hover:border-blue-400 transition-all text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+      className={`${baseClasses} ${hoverEffectClasses} text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
     >
       <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-2">
         {title}

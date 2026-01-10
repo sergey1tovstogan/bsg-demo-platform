@@ -24,13 +24,14 @@ graph TD
 ```
 
 ### 2.1 File Layer (The "Database")
-- Located in `/content/pages/`
+- Located in `/frontend/public/content/pages/` (**single content location**)
 - **Format:** Markdown with strict YAML frontmatter.
 - **Structure:** Hierarchical folders representing the navigation tree.
 - **Key Files:**
     - `card-definition.md`: Defines a module ("Card") and its settings.
     - `agenda.md`: The landing page for a card.
     - `page-template.md`: Individual content pages.
+- **Important:** Content served from `public/` directory; `/content/...` paths resolve to `frontend/public/content/...`
 
 ### 2.2 Parser Layer (The "Backend" Logic)
 Located in `frontend/src/lib/template-parser/`.

@@ -25,6 +25,7 @@ import { StatsSection } from '@/components/template-sections/special/StatsSectio
 import { GallerySection } from '@/components/template-sections/special/GallerySection';
 import { DownloadSection } from '@/components/template-sections/special/DownloadSection';
 import { CardListSection } from '@/components/template-sections/special/CardListSection';
+import { LoadingSection } from '@/components/template-sections/special/LoadingSection';
 import { EmbedSection } from '@/components/template-sections/content/EmbedSection';
 import { ExpandableSection } from '@/components/template-sections/ExpandableSection';
 import { ExpandableCardSection } from '@/components/template-sections/ExpandableCardSection';
@@ -117,7 +118,7 @@ export function SectionRenderer({ section }: SectionRendererProps) {
     case 'embed':
       return <EmbedSection {...section} />;
 
-    case 'expandable':
+    case 'expandable_section':
       return <ExpandableSection section={section as any} />;
 
     case 'expandable_card':
@@ -125,6 +126,9 @@ export function SectionRenderer({ section }: SectionRendererProps) {
 
     case 'interactive_diagram':
       return <InteractiveDiagramSection section={section as any} />;
+
+    case 'loading':
+      return <LoadingSection {...section} />;
 
     // More section types will be added here as we implement them
 

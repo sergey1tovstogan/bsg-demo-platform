@@ -1,6 +1,7 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { AgendaDefinition } from '@/lib/template-types';
 import { useNavigation } from '@/components/template-navigation/NavigationProvider';
+import { useTemplateAnimation } from '@/hooks/useTemplateAnimation';
 import * as Icons from 'lucide-react';
 
 interface AgendaRendererProps {
@@ -12,10 +13,63 @@ interface AgendaRendererProps {
  * Displays a grid of navigable content items
  */
 export function AgendaRenderer({ agenda }: AgendaRendererProps) {
-    const { navigateToPage } = useNavigation();
+    const { navigateToPage, refreshContent } = useNavigation();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Parse animation settings from agenda definition
+    const animationType = agenda.animation?.type || 'stagger-fade-in';
+    const validAnimationTypes: ('fade-in' | 'slide-in-left' | 'slide-in-right' | 'stagger-fade-in' | 'scale-in')[] =
+        ['fade-in', 'slide-in-left', 'slide-in-right', 'stagger-fade-in', 'scale-in'];
+    const finalAnimationType = validAnimationTypes.includes(animationType as any)
+        ? animationType as 'fade-in' | 'slide-in-left' | 'slide-in-right' | 'stagger-fade-in' | 'scale-in'
+        : 'stagger-fade-in';
+
+    // Parse delay_between_items from string like "10s" or "0.1s" to milliseconds
+    const parseTimeToMs = (timeString?: string): number => {
+        if (!timeString) return 100; // default 100ms
+        const match = timeString.match(/^([\d.]+)(s|ms)$/);
+        if (!match) return 100;
+        const value = parseFloat(match[1]);
+        const unit = match[2];
+        return unit === 's' ? value * 1000 : value;
+    };
+
+    const staggerDelay = parseTimeToMs(agenda.animation?.delay_between_items);
+
+    // Setup animation for grid items
+    const { ref, trigger } = useTemplateAnimation({
+        type: finalAnimationType,
+        duration: 400,
+        easing: 'ease-out',
+        staggerDelay,
+    });
+
+    // Trigger animation on mount or when animation settings change
+    useEffect(() => {
+        trigger();
+    }, [trigger, finalAnimationType, staggerDelay]);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        refreshContent();
+        // Wait a bit for the content to reload
+        setTimeout(() => {
+            setIsRefreshing(false);
+        }, 1000);
+    };
 
     return (
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
+            {/* Refresh Button */}
+            <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="absolute top-4 right-4 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh content"
+            >
+                <Icons.RefreshCw className={`w-5 h-5 text-slate-600 dark:text-slate-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+
             {/* Header */}
             <div className="text-center mb-12">
                 <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white mb-4">
@@ -29,7 +83,7 @@ export function AgendaRenderer({ agenda }: AgendaRendererProps) {
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div ref={ref as React.RefObject<HTMLDivElement>} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {agenda.items.map((item) => {
                     const IconComponent = item.icon && (Icons as any)[item.icon]
                         ? (Icons as any)[item.icon]
@@ -40,7 +94,7 @@ export function AgendaRenderer({ agenda }: AgendaRendererProps) {
                     return (
                         <button
                             key={item.id}
-                            onClick={() => !isLocked && navigateToPage(item.page_id)}
+                            onClick={() => !isLocked && navigateToPage(item.target?.page_id || item.page_id)}
                             disabled={isLocked}
                             className={`
                 group relative flex flex-col items-start p-6 text-left
@@ -65,7 +119,7 @@ export function AgendaRenderer({ agenda }: AgendaRendererProps) {
 
                             {/* Content */}
                             <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                                {item.title}
+                                {item.titles?.agenda_title || item.title}
                             </h3>
 
                             {item.description && (

@@ -10,6 +10,8 @@ import {
   Eye,
   Palette,
   Layout,
+  Grid,
+  PenTool,
   type LucideIcon
 } from 'lucide-react'
 import { ComponentId } from '../types'
@@ -89,6 +91,22 @@ const components: ComponentCard[] = [
     icon: Layout,
     color: 'text-purple-500',
     gradient: 'from-purple-500 to-pink-400',
+  },
+  {
+    id: 'gallery',
+    name: 'Card Gallery',
+    description: 'Browse Cards',
+    icon: Grid,
+    color: 'text-pink-500',
+    gradient: 'from-pink-500 to-rose-400',
+  },
+  {
+    id: 'editor',
+    name: 'Visual Editor',
+    description: 'Create & Edit',
+    icon: PenTool,
+    color: 'text-cyan-500',
+    gradient: 'from-cyan-500 to-blue-400',
   },
 ]
 

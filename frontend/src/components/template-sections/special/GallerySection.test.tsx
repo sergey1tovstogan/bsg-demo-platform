@@ -49,7 +49,7 @@ describe('GallerySection', () => {
       columns: 2
     };
     const { container: twoColContainer } = render(<GallerySection {...twoColProps} />);
-    expect(twoColContainer.querySelector('.sm\\:grid-cols-2')).toBeInTheDocument();
+    expect(twoColContainer.querySelector('.sm\\:grid-cols-2')).not.toBeNull();
 
     const threeColProps: GallerySectionType = {
       type: 'gallery',
@@ -57,7 +57,7 @@ describe('GallerySection', () => {
       columns: 3
     };
     const { container: threeColContainer } = render(<GallerySection {...threeColProps} />);
-    expect(threeColContainer.querySelector('.lg\\:grid-cols-3')).toBeInTheDocument();
+    expect(threeColContainer.querySelector('.lg\\:grid-cols-3')).not.toBeNull();
 
     const fourColProps: GallerySectionType = {
       type: 'gallery',
@@ -65,7 +65,7 @@ describe('GallerySection', () => {
       columns: 4
     };
     const { container: fourColContainer } = render(<GallerySection {...fourColProps} />);
-    expect(fourColContainer.querySelector('.lg\\:grid-cols-4')).toBeInTheDocument();
+    expect(fourColContainer.querySelector('.lg\\:grid-cols-4')).not.toBeNull();
   });
 
   it('should default to 3 columns', () => {
@@ -74,7 +74,7 @@ describe('GallerySection', () => {
       images: [{ src: '/test.jpg', alt: 'Test' }]
     };
     const { container } = render(<GallerySection {...props} />);
-    expect(container.querySelector('.lg\\:grid-cols-3')).toBeInTheDocument();
+    expect(container.querySelector('.lg\\:grid-cols-3')).not.toBeNull();
   });
 
   it('should use semantic figure elements', () => {

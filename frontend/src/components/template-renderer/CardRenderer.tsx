@@ -1,4 +1,3 @@
-import React from 'react';
 import { CardDefinition } from '@/lib/template-types';
 import { NavigationProvider, useNavigation } from '@/components/template-navigation/NavigationProvider';
 import { AgendaRenderer } from './AgendaRenderer';

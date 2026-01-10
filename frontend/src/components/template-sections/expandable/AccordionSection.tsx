@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import { AccordionSection as AccordionSectionType } from '@/lib/template-types';
 
 export function AccordionSection({ items, allow_multiple = false }: AccordionSectionType) {
@@ -46,9 +48,11 @@ export function AccordionSection({ items, allow_multiple = false }: AccordionSec
 
             {isOpen && (
               <div className="px-4 py-3 bg-white dark:bg-slate-900">
-                <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {item.content}
-                </p>
+                <div className="prose prose-slate dark:prose-invert max-w-none prose-sm">
+                  <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                    {item.content}
+                  </ReactMarkdown>
+                </div>
               </div>
             )}
           </div>

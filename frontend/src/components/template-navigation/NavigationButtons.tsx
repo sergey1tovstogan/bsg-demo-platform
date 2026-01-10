@@ -1,12 +1,9 @@
-import React from 'react';
 import { ArrowLeft, ArrowRight, LayoutGrid } from 'lucide-react';
 import { useNavigation } from '@/components/template-navigation/NavigationProvider';
 
 export function NavigationButtons() {
     const {
         backToAgenda,
-        currentPage,
-        hierarchy,
         navigateToPage
     } = useNavigation();
 

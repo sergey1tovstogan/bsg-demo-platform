@@ -399,45 +399,58 @@ popups:
 
 ### Hotspot Clicking
 
-**Click specific areas of an image:**
+**Click specific areas of an image with invisible hotspots:**
 
 ```yaml
 sections:
   - type: "interactive_diagram"
     image: "/images/architecture.png"
     hotspots:
-      # API Gateway hotspot
-      - x: 150  # X coordinate
-        y: 200  # Y coordinate
-        radius: 40  # Click area radius
+      # API Gateway hotspot (left side)
+      - x: 20              # X coordinate (percentage: 0-100)
+        y: 50              # Y coordinate (percentage: 0-100)
+        radius: 50         # Click area radius (pixels)
         click_action:
           type: "show_popup"
           popup_id: "api-gateway-detail"
         hover_text: "API Gateway - Click to learn more"
 
-      # Database hotspot
-      - x: 400
-        y: 300
+      # Database hotspot (center)
+      - x: 50
+        y: 50
         radius: 50
         click_action:
           type: "navigate_to_subpage"
           target: "database-architecture"
         hover_text: "Database Layer"
 
-      # External service hotspot
-      - x: 600
-        y: 150
-        radius: 35
+      # External service hotspot (right side)
+      - x: 80
+        y: 50
+        radius: 50
         click_action:
           type: "external_link"
           target: "https://partner-service.com"
+          open_in_new_tab: true
         hover_text: "Partner Service"
 ```
 
+**IMPORTANT: Coordinate System**
+- `x` and `y` are **percentages** (0-100), not pixels
+- `x: 0` = far left, `x: 100` = far right
+- `y: 0` = top, `y: 100` = bottom
+- `radius` is in **pixels** (typically 30-60 for good UX)
+- Hotspots are **invisible** - users discover them by hovering
+- Cursor changes to pointer when hovering over hotspots
+
 **How to find coordinates:**
-1. Open image in design tool
-2. Note X,Y coordinates
-3. Add to YAML
+1. Open image in browser or design tool
+2. Note the position as a percentage of width/height
+   - Element at left third: x ≈ 33
+   - Element at center: x = 50, y = 50
+   - Element at right quarter: x ≈ 75
+3. Test and adjust coordinates in the browser
+4. Use generous radius (50-60px) to make hotspots easy to find
 
 ---
 
@@ -594,17 +607,17 @@ sections:
   - type: "interactive_diagram"
     image: "/images/flow-diagram.png"
     hotspots:
-      - x: 200
-        y: 100
-        radius: 30
+      - x: 25              # Left side (25% from left)
+        y: 50              # Middle vertically
+        radius: 50
         click_action:
           type: "show_popup"
           popup_id: "step-1-detail"
         hover_text: "Step 1: Authentication"
 
-      - x: 400
-        y: 100
-        radius: 30
+      - x: 75              # Right side (75% from left)
+        y: 50              # Middle vertically
+        radius: 50
         click_action:
           type: "show_popup"
           popup_id: "step-2-detail"

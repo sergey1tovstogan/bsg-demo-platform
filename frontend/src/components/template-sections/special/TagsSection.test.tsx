@@ -23,7 +23,7 @@ describe('TagsSection', () => {
       style: 'default'
     };
     const { container: defaultContainer } = render(<TagsSection {...defaultProps} />);
-    expect(defaultContainer.querySelector('.bg-slate-100')).toBeInTheDocument();
+    expect(defaultContainer.querySelector('.bg-slate-100')).not.toBeNull();
 
     const primaryProps: TagsSectionType = {
       type: 'tags',
@@ -31,7 +31,7 @@ describe('TagsSection', () => {
       style: 'primary'
     };
     const { container: primaryContainer } = render(<TagsSection {...primaryProps} />);
-    expect(primaryContainer.querySelector('.bg-blue-100')).toBeInTheDocument();
+    expect(primaryContainer.querySelector('.bg-blue-100')).not.toBeNull();
 
     const successProps: TagsSectionType = {
       type: 'tags',
@@ -39,7 +39,7 @@ describe('TagsSection', () => {
       style: 'success'
     };
     const { container: successContainer } = render(<TagsSection {...successProps} />);
-    expect(successContainer.querySelector('.bg-green-100')).toBeInTheDocument();
+    expect(successContainer.querySelector('.bg-green-100')).not.toBeNull();
 
     const outlineProps: TagsSectionType = {
       type: 'tags',
@@ -47,7 +47,7 @@ describe('TagsSection', () => {
       style: 'outline'
     };
     const { container: outlineContainer } = render(<TagsSection {...outlineProps} />);
-    expect(outlineContainer.querySelector('.bg-transparent')).toBeInTheDocument();
+    expect(outlineContainer.querySelector('.bg-transparent')).not.toBeNull();
   });
 
   it('should default to default style', () => {
@@ -56,7 +56,7 @@ describe('TagsSection', () => {
       tags: ['Tag']
     };
     const { container } = render(<TagsSection {...props} />);
-    expect(container.querySelector('.bg-slate-100')).toBeInTheDocument();
+    expect(container.querySelector('.bg-slate-100')).not.toBeNull();
   });
 
   it('should use proper ARIA roles', () => {
@@ -67,7 +67,7 @@ describe('TagsSection', () => {
     const { container } = render(<TagsSection {...props} />);
     const list = container.querySelector('[role="list"]');
     const listItems = container.querySelectorAll('[role="listitem"]');
-    expect(list).toBeInTheDocument();
+    expect(list).not.toBeNull();
     expect(listItems).toHaveLength(2);
   });
 

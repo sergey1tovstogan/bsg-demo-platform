@@ -7,9 +7,13 @@ export default defineConfig({
   plugins: [react()],
   cacheDir: '.vite',
   base: '/', // Ensure base path is root for Azure Static Web Apps
+  define: {
+    'global': 'globalThis',
+  },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      'buffer': 'buffer/'
     }
   },
   build: {

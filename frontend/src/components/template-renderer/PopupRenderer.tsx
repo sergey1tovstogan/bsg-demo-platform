@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import { useNavigation } from '@/components/template-navigation/NavigationProvider';
 import { SectionRenderer } from './SectionRenderer';
+import { PopupDefinition, Section } from '@/lib/template-types';
 
 export function PopupRenderer() {
-    const { popupStack, closePopup, card } = useNavigation();
+    const { popupStack, closePopup, currentPage, getPage } = useNavigation();
 
     // Handle escape key
     useEffect(() => {
@@ -21,7 +24,10 @@ export function PopupRenderer() {
     if (popupStack.length === 0) return null;
 
     const currentPopupId = popupStack[popupStack.length - 1];
-    const popup = card.popups?.find(p => p.id === currentPopupId);
+
+    // Find popup from the current page
+    const page = currentPage ? getPage(currentPage) : null;
+    const popup = page?.popups?.find((p: PopupDefinition) => p.id === currentPopupId);
 
     if (!popup) return null;
 
@@ -59,14 +65,22 @@ export function PopupRenderer() {
 
                 {/* Scrollable Content */}
                 <div className="p-6 max-h-[80vh] overflow-y-auto">
-                    <div className="space-y-8">
-                        {popup.content?.map((section, index) => (
-                            <SectionRenderer
-                                key={`${section.type}-${index}`}
-                                section={section}
-                            />
-                        ))}
-                    </div>
+                    {popup.sections ? (
+                        <div className="space-y-8">
+                            {popup.sections.map((section: Section, index: number) => (
+                                <SectionRenderer
+                                    key={`${section.type}-${index}`}
+                                    section={section}
+                                />
+                            ))}
+                        </div>
+                    ) : popup.content ? (
+                        <div className="prose prose-slate dark:prose-invert max-w-none">
+                            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                                {popup.content}
+                            </ReactMarkdown>
+                        </div>
+                    ) : null}
                 </div>
             </div>
         </div>
