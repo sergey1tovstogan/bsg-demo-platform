@@ -78,3 +78,4 @@ kubernetes==28.1.0
 
 # HTTP requests for Azure Cost Management API
 requests==2.31.0
+PyJWT==2.8.0

@@ -1,7 +1,8 @@
 # Project Architecture: Content Template System
 
-**Version:** 1.0 (Based on Phase 2 Specifications)
-**Scope:** Frontend Content Rendering Engine
+**Version:** 1.2 (Updated January 12, 2026)
+**Scope:** Frontend Content Rendering Engine + Backend Authentication + Design System
+**Last Updated:** January 12, 2026
 
 ## 1. High-Level Overview
 
@@ -87,7 +88,193 @@ The system abstracts UI into reusable "Sections".
 > 4. **Mocking**: When unit testing sections, mock `useClickAction` or `usePopup` if they involve interactivity.
 > 5. **Scrolling**: `NavigationProvider` includes a `window.scrollTo(0,0)` on every page change; remember to mock this in Vitest.
 
-## 6. Security & Performance
+## 6. Authentication & Authorization System (NEW - Jan 2026)
+
+### 6.1 Overview
+The system now includes a comprehensive authentication layer for the visual editor and card management features.
+
+### 6.2 Backend Authentication Architecture
+
+```mermaid
+graph TD
+    User[User] -->|Login| API[Auth API]
+    API -->|Authenticate| Service[UserService]
+    Service -->|Query| DB[(MongoDB - auth_users)]
+    Service -->|Verify| PWD[PasswordService]
+    PWD -->|Bcrypt| Hash[Password Hash]
+    Service -->|Success| JWT[JWTService]
+    JWT -->|Create Tokens| Tokens[Access + Refresh]
+    Tokens -->|Return| User
+```
+
+### 6.3 Authentication Components
+
+**Backend Services:**
+- **Location**: `backend/app/services/`
+- **Files**:
+  - `auth_services.py` - Password hashing (bcrypt) & JWT token management
+  - `user_service.py` - User CRUD, authentication, account lockout
+
+**Models:**
+- **Location**: `backend/app/models/auth_user.py`
+- **AuthUser Model**:
+  - Three roles: `guest`, `viewer`, `admin`
+  - Password hash enforcement (bcrypt, 60 chars)
+  - Account lockout after 5 failed attempts
+  - Profile support (name, avatar, timezone)
+  - Secure serialization (passwords excluded by default)
+
+**API Endpoints:**
+- **Location**: `backend/app/api/auth_cards.py`
+- **Routes**:
+  - `POST /api/v1/auth-cards/login` - Authenticate user
+  - `POST /api/v1/auth-cards/logout` - Logout (client-side)
+  - `POST /api/v1/auth-cards/refresh` - Refresh access token
+  - `GET /api/v1/auth-cards/me` - Get current user
+
+### 6.4 Database Schema
+
+**Collection**: `auth_users` (Azure Cosmos DB - MongoDB API)
+
+```javascript
+{
+  "_id": ObjectId,
+  "user_id": "usr_...",
+  "email": "user@example.com",
+  "username": "User Name",
+  "password_hash": "$2b$12$...", // Bcrypt hash
+  "role": "admin" | "viewer" | "guest",
+
+  "profile": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "avatar_url": null,
+    "timezone": "UTC"
+  },
+
+  // Security
+  "is_active": true,
+  "email_verified": true,
+  "failed_login_attempts": 0,
+  "locked_until": null,
+
+  // Timestamps
+  "created_at": ISODate,
+  "updated_at": ISODate,
+  "last_login_at": ISODate
+}
+```
+
+**Indexes:**
+- `role` - Non-unique index for filtering
+- `is_active` - Non-unique index for filtering
+- `created_at` - Index for sorting
+- Email/user_id uniqueness enforced by application logic
+
+### 6.5 Security Features
+
+**Password Security:**
+- Bcrypt hashing (cost factor 12)
+- Minimum 8 characters
+- Complexity requirements (uppercase, lowercase, number, special char)
+- Never stored or returned in plain text
+
+**Token Security:**
+- JWT with HS256 algorithm
+- Access tokens: 15-minute expiry
+- Refresh tokens: 30-day expiry
+- Automatic expiration handling
+
+**Account Protection:**
+- Failed login tracking
+- Automatic lockout after 5 attempts
+- 30-minute lockout duration
+- Last login timestamp tracking
+
+### 6.6 Role-Based Access Control
+
+| Role | Access Level | Capabilities |
+|------|-------------|--------------|
+| **guest** | Public | View published cards only |
+| **viewer** | Authenticated | Configure demo card visibility |
+| **admin** | Full | Edit cards, manage users, import/export |
+
+### 6.7 Test Users
+
+**Available in Database:**
+```
+Admin:  admin@example.com  / Admin  (full access)
+Viewer: viewer@example.com / Viewer (demo configuration)
+```
+
+### 6.8 Integration Points
+
+**Current:**
+- Backend authentication fully implemented
+- Database connected to centralized Azure Cosmos DB
+- API endpoints available at `/api/v1/auth-cards/*`
+
+**Pending:**
+- Frontend AuthContext for global state
+- Login form component
+- Protected route component
+- Visual editor access control
+
+## 7. Design System & Visual Consistency
+
+### 7.1 Unified Layout Specification
+
+**Document:** `templates/UNIFIED_LAYOUT_SPECIFICATION.md`
+**Version:** 1.1
+**Status:** Complete and Ready for Implementation
+
+The Unified Layout Specification defines consistent visual design across all component cards, establishing:
+- **Brand Colors**: Temenos Navy (#003366), Temenos Blue (#0066CC), Temenos Cyan (#00A3E0)
+- **Typography**: Inter font family with standardized type scale (H1-H5, body text variants)
+- **Component Styling**: Buttons, tabs, cards, forms, badges, alerts
+- **Spacing System**: 4px baseline grid with consistent spacing scale
+- **Color System**: Extended palette with functional colors (success, warning, error, info)
+- **Dark Mode**: Full dark mode support with proper contrast ratios
+- **Accessibility**: WCAG 2.1 AA compliance
+
+### 7.2 Design System Showcase
+
+A comprehensive interactive prototype demonstrating all design patterns:
+- **Location**: Design System Showcase card (accessible from homepage)
+- **10 Interactive Pages**: Overview, Typography, Colors, Buttons, Cards, Forms, Navigation, Components, Spacing, Animations
+- **Features**: Live examples, hover effects, dark/light mode switching, copy-paste ready code
+
+### 7.3 Implementation Status
+
+**Completed:**
+- ✅ Unified Layout Specification document (54KB, 1,960 lines)
+- ✅ Design System Showcase component with 10 comprehensive pages
+- ✅ All component patterns documented with Tailwind classes
+- ✅ Alert & notification patterns (Section 6.8)
+- ✅ Gradient accent cards (Section 6.9)
+- ✅ Multiple loading indicators (spinner, bouncing dots, progress bar)
+
+**Pending:**
+- Card-by-card application of unified layout specification
+- Observability card updated with new design system
+- Security card updated with new design system
+
+### 7.4 Key Documentation Files
+
+**Specification:**
+- `templates/UNIFIED_LAYOUT_SPECIFICATION.md` - Complete design system specification
+- `templates/spec/DESIGN_SYSTEM_SHOWCASE_README.md` - Showcase documentation
+- `templates/spec/QUALITY_STANDARDS.md` - Mandatory styling standards
+
+**Authentication Documentation:**
+- `templates/spec/TASK_COMPLETE.md` - Authentication implementation completion summary
+- `templates/spec/AUTHENTICATION_REFERENCE.md` - Quick reference for auth system
+- `templates/spec/AUTHENTICATION_SETUP.md` - Setup guide
+- `templates/spec/AUTHENTICATION_IMPLEMENTATION_SUMMARY.md` - Implementation summary
+
+## 8. Security & Performance
 - **Sanitization**: All Markdown content is sanitized.
 - **Latency**: Navigation is optimized to <50ms by keeping the `pagesMap` in memory after the initial load.
 - **Validation**: Strict schema validation ensures malformed YAML does not crash the UI.
+- **Authentication**: JWT-based authentication with bcrypt password hashing (NEW).
+- **Authorization**: Role-based access control for visual editor and card management (NEW).
