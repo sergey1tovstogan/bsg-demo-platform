@@ -22,8 +22,8 @@ agenda:
 
   # === ANIMATION ===
   animation:
-    type: "stagger-fade-in"  # stagger-fade-in, fade-in, slide-in, none
-    delay_between_items: "0.1s"  # Delay between each item appearing
+    type: "stagger-fade-in"  # fade-in, slide-in-left, slide-in-right, scale-in, stagger-fade-in
+    delay_between_items: "0.1s"  # Time between items (only for stagger-fade-in): "0.05s", "0.1s", "0.2s", "0.5s", "1s" or "50ms", "100ms", etc.
 
   # === AGENDA ITEMS ===
   # Each item represents a clickable navigation element
@@ -49,6 +49,7 @@ agenda:
 
       # Visual (optional)
       image: "/images/optional-image.png"  # Optional image for the item
+      color_theme: "blue"  # Optional: blue, emerald, violet, red, amber, indigo, cyan, pink, green, orange, purple, teal
 ```
 
 ---
@@ -85,11 +86,29 @@ layout:
 ```
 
 ### Step 3: Add Animation (Optional)
-Choose entry animation:
-- `stagger-fade-in` - Items appear one after another (recommended)
-- `fade-in` - All items appear together
-- `slide-in` - Items slide in from side
-- `none` - No animation
+Choose entry animation for your agenda grid:
+
+**✅ Implemented Animation Types:**
+- `stagger-fade-in` - Items fade in sequentially (recommended for grids)
+- `fade-in` - All items fade in together
+- `slide-in-left` - Items slide in from left side
+- `slide-in-right` - Items slide in from right side
+- `scale-in` - Items grow from smaller size
+
+**Configuring Stagger Delay:**
+For `stagger-fade-in`, set `delay_between_items`:
+- `"0.05s"` - Fast (10+ items)
+- `"0.1s"` - Standard (recommended, 5-10 items)
+- `"0.2s"` - Moderate (3-5 items)
+- `"0.5s"` - Slow (2-3 items)
+- `"1s"` - Very slow (dramatic effect)
+
+**Example:**
+```yaml
+animation:
+  type: "stagger-fade-in"
+  delay_between_items: "0.15s"  # 150ms between each item
+```
 
 ### Step 4: Add Agenda Items
 For each topic/page in your card:
@@ -132,6 +151,7 @@ agenda:
         agenda_title: "Welcome"
       description: "Introduction to the platform"
       icon: "Home"
+      color_theme: "blue"
       target:
         type: "page"
         page_id: "welcome"
@@ -142,6 +162,7 @@ agenda:
         agenda_title: "Setup"
       description: "Configure your environment"
       icon: "Settings"
+      color_theme: "emerald"
       target:
         type: "page"
         page_id: "setup"
@@ -152,6 +173,7 @@ agenda:
         agenda_title: "First Steps"
       description: "Create your first project"
       icon: "Rocket"
+      color_theme: "orange"
       target:
         type: "page"
         page_id: "first-steps"
@@ -168,8 +190,7 @@ agenda:
     gap: "medium"
 
   animation:
-    type: "fade-in"
-    delay_between_items: "0s"
+    type: "fade-in"  # All items fade in together
 
   items:
     - id: "authentication"
@@ -283,8 +304,7 @@ agenda:
     gap: "large"
 
   animation:
-    type: "slide-in"
-    delay_between_items: "0.2s"
+    type: "slide-in-right"
 
   items:
     - id: "quickstart"

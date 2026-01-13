@@ -1,49 +1,29 @@
 import { useState, useEffect, useRef } from 'react'
+import { Routes, Route } from 'react-router-dom'
 import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
 import { SettingsModal } from './components/SettingsModal'
 import { ComingSoonModal } from './components/ComingSoonModal'
 import { HomePage } from './pages/HomePage'
 import { ComponentPage } from './pages/ComponentPage'
+import { LoginPage } from './pages/LoginPage'
+import { UserManagement } from './pages/UserManagement'
+import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import type { ComponentId } from './types'
 import type { SearchResult } from './utils/searchMapping'
 
-function App() {
+interface DashboardProps {
+  theme: 'light' | 'dark'
+  onThemeChange: (theme: 'light' | 'dark') => void
+}
+
+function Dashboard({ theme, onThemeChange }: DashboardProps) {
   const [currentComponent, setCurrentComponent] = useState<ComponentId | null>(null)
   const [selectedCard, setSelectedCard] = useState<number | undefined>(undefined)
   const [activeTab, setActiveTab] = useState<'content' | 'video' | 'demo' | 'chatbot' | undefined>(undefined)
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pendingFeature, setPendingFeature] = useState<string | null>(null)
   const collapseSidebarRef = useRef<(() => void) | null>(null)
-
-  // Load theme from localStorage on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('app-theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-      applyTheme(savedTheme)
-    } else {
-      applyTheme('dark') // Default to dark
-    }
-  }, [])
-
-  // Apply theme to document
-  const applyTheme = (newTheme: 'light' | 'dark') => {
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark')
-      document.body.classList.add('dark-theme')
-    } else {
-      document.documentElement.classList.remove('dark')
-      document.body.classList.remove('dark-theme')
-    }
-  }
-
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    setTheme(newTheme)
-    localStorage.setItem('app-theme', newTheme)
-    applyTheme(newTheme)
-  }
 
   const handleComponentChange = (componentId: ComponentId) => {
     setCurrentComponent(componentId)
@@ -68,8 +48,7 @@ function App() {
   }
 
   return (
-    <div className={`min-h-screen flex transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
-      {/* Sidebar */}
+    <>
       <Sidebar
         currentComponent={currentComponent}
         onComponentChange={handleComponentChange}
@@ -80,21 +59,20 @@ function App() {
         }}
       />
 
-      {/* Settings Modal */}
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         currentTheme={theme}
-        onThemeChange={handleThemeChange}
+        onThemeChange={onThemeChange}
       />
+
       <ComingSoonModal
         isOpen={Boolean(pendingFeature)}
         featureName={pendingFeature || ''}
         onClose={() => setPendingFeature(null)}
       />
 
-      {/* Main Content Area */}
-      <main 
+      <main
         className="flex-1 ml-20 relative overflow-hidden transition-all duration-300"
         onClick={() => {
           // Collapse sidebar immediately when clicking anywhere on main content
@@ -142,6 +120,67 @@ function App() {
           </div>
         </div>
       </main>
+    </>
+  )
+}
+
+function App() {
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('app-theme') as 'light' | 'dark' | null
+    if (savedTheme) {
+      setTheme(savedTheme)
+      applyTheme(savedTheme)
+    } else {
+      applyTheme('dark') // Default to dark
+    }
+  }, [])
+
+  // Apply theme to document
+  const applyTheme = (newTheme: 'light' | 'dark') => {
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark')
+      document.body.classList.add('dark-theme')
+    } else {
+      document.documentElement.classList.remove('dark')
+      document.body.classList.remove('dark-theme')
+    }
+  }
+
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme)
+    localStorage.setItem('app-theme', newTheme)
+    applyTheme(newTheme)
+  }
+
+  return (
+    <div className={`min-h-screen flex transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Protected Admin Routes */}
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Dashboard Routes (Catch-all) */}
+        <Route
+          path="/*"
+          element={
+            <Dashboard
+              theme={theme}
+              onThemeChange={handleThemeChange}
+            />
+          }
+        />
+      </Routes>
     </div>
   )
 }

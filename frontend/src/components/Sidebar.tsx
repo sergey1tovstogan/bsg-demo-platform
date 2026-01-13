@@ -10,8 +10,15 @@ import {
   Eye,
   Palette,
   Layout,
+  Grid,
+  PenTool,
+  LogIn,
+  LogOut,
+  Users,
   type LucideIcon
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { ComponentId } from '../types'
 import { clsx } from 'clsx'
 import { useState, useEffect } from 'react'
@@ -90,6 +97,22 @@ const components: ComponentCard[] = [
     color: 'text-purple-500',
     gradient: 'from-purple-500 to-pink-400',
   },
+  {
+    id: 'gallery',
+    name: 'Card Gallery',
+    description: 'Browse Cards',
+    icon: Grid,
+    color: 'text-pink-500',
+    gradient: 'from-pink-500 to-rose-400',
+  },
+  {
+    id: 'editor',
+    name: 'Visual Editor',
+    description: 'Create & Edit',
+    icon: PenTool,
+    color: 'text-cyan-500',
+    gradient: 'from-cyan-500 to-blue-400',
+  },
 ]
 
 export function Sidebar({
@@ -101,6 +124,8 @@ export function Sidebar({
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(true) // Start collapsed
   const [lastInteractionTime, setLastInteractionTime] = useState(Date.now())
+  const { logout, hasRole, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
 
   // Expose collapse function to parent component
   useEffect(() => {
@@ -227,7 +252,13 @@ export function Sidebar({
               Modules
             </p>
           )}
-          {components.map((component) => {
+          {components.filter(component => {
+            const adminOnlyIds = ['layout-showcase', 'gallery', 'editor'];
+            if (adminOnlyIds.includes(component.id)) {
+              return hasRole('admin');
+            }
+            return true;
+          }).map((component) => {
             const Icon = component.icon
             const isActive = currentComponent === component.id
             return (
@@ -272,11 +303,77 @@ export function Sidebar({
               </button>
             )
           })}
+
+          {/* Admin Section */}
+          {hasRole('admin') && (
+            <>
+              {isExpanded && (
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider px-4 mt-4 mb-2">
+                  Administration
+                </p>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleInteraction()
+                  navigate('/admin/users')
+                }}
+                className={clsx(
+                  "group relative w-full flex items-center rounded-xl transition-all duration-200",
+                  isExpanded ? "px-4 py-3 text-left" : "justify-center p-3",
+                  "text-slate-400 hover:bg-white/5 hover:text-white"
+                )}
+                title="User Management"
+              >
+                <div className={clsx(
+                  "flex items-center justify-center rounded-lg transition-all duration-300",
+                  isExpanded ? "w-8 h-8 mr-3" : "w-6 h-6",
+                  "bg-transparent group-hover:bg-white/10"
+                )}>
+                  <Users className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                </div>
+
+                {isExpanded && (
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium text-slate-300 group-hover:text-white truncate">
+                      Users
+                    </span>
+                  </div>
+                )}
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
       {/* Bottom Actions */}
       <div className="p-4 border-t border-white/10 space-y-2">
+        {/* Login/Logout Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleInteraction()
+            if (isAuthenticated) {
+              logout()
+              navigate('/')
+            } else {
+              navigate('/login')
+            }
+          }}
+          className={clsx(
+            "w-full flex items-center rounded-xl transition-all duration-200 text-slate-400 hover:bg-white/5 hover:text-white",
+            isExpanded ? "px-4 py-3 space-x-3" : "justify-center p-3"
+          )}
+          title={isAuthenticated ? "Log Out" : "Log In"}
+        >
+          {isAuthenticated ? (
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+          ) : (
+            <LogIn className="w-5 h-5 flex-shrink-0" />
+          )}
+          {isExpanded && <span className="text-sm font-medium">{isAuthenticated ? "Log Out" : "Log In"}</span>}
+        </button>
+
         <button
           onClick={(e) => {
             e.stopPropagation()

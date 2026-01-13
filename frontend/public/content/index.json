@@ -1,0 +1,75 @@
+{
+    "cards": [
+        {
+            "id": "observability",
+            "title": "Observability Explained",
+            "description": "Master the fundamentals of observability. A comprehensive guide to Metrics, Logs, and Traces.",
+            "icon": "Activity",
+            "path": "/content/pages/cards/observability/card-definition.md",
+            "category": "technical",
+            "tags": [
+                "observability",
+                "monitoring",
+                "architecture"
+            ],
+            "color_theme": "blue"
+        },
+        {
+            "id": "animations-demo",
+            "title": "Animations Showcase",
+            "description": "Interactive demonstration of all animation capabilities: entry, hover, expandable, and loading animations.",
+            "icon": "Sparkles",
+            "path": "/content/examples/animations-demo/card-definition.md",
+            "category": "demo",
+            "tags": [
+                "animations",
+                "demo",
+                "interactive",
+                "examples"
+            ],
+            "color_theme": "purple"
+        },
+        {
+            "id": "simple-product-overview",
+            "title": "Product Overview",
+            "description": "A simple overview of product features and benefits. Demonstrates basic card structure.",
+            "icon": "Box",
+            "path": "/content/examples/simple-card/card-definition.md",
+            "category": "product",
+            "tags": [
+                "product",
+                "beginner",
+                "overview"
+            ],
+            "color_theme": "blue"
+        },
+        {
+            "id": "medium-technical-guide",
+            "title": "Technical Guide",
+            "description": "A detailed guide with hierarchical navigation and interactive elements.",
+            "icon": "BookText",
+            "path": "/content/examples/medium-card/card-definition.md",
+            "category": "documentation",
+            "tags": [
+                "documentation",
+                "technical",
+                "intermediate"
+            ],
+            "color_theme": "violet"
+        },
+        {
+            "id": "complex-documentation",
+            "title": "Complete Documentation",
+            "description": "Full-featured documentation with 5 levels of navigation and library page reuse.",
+            "icon": "BookMarked",
+            "path": "/content/examples/complex-card/card-definition.md",
+            "category": "documentation",
+            "tags": [
+                "documentation",
+                "advanced",
+                "comprehensive"
+            ],
+            "color_theme": "indigo"
+        }
+    ]
+}

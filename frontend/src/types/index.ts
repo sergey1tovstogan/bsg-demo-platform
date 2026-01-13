@@ -28,6 +28,8 @@ export type ComponentId =
   | 'observability'
   | 'design-time'
   | 'layout-showcase'
+  | 'gallery'
+  | 'editor'
 
 export interface Component {
   component_id: ComponentId

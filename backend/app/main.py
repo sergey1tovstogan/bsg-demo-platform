@@ -18,7 +18,7 @@ from app.core.database import init_db, close_db, get_database
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
-from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events, data_architecture, payments
+from app.api import health, auth, auth_v2, users, auth_cards, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events, data_architecture, payments
 from app.api import settings as settings_api
 from app.adapters.eventhub import get_eventhub_adapter
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -117,7 +117,10 @@ register_error_handlers(app)
 
 # Include routers (settings.API_V1_PREFIX already has leading slash)
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
-app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
+# app.include_router(auth.router, prefix=settings.API_V1_PREFIX)  # Old auth - disabled for new RBAC system
+app.include_router(auth_v2.router)  # New RBAC authentication (prefix already in router)
+app.include_router(users.router)  # User management (admin only, prefix already in router)
+app.include_router(auth_cards.router, prefix=settings.API_V1_PREFIX)  # Card template authentication
 app.include_router(database.router, prefix=settings.API_V1_PREFIX)
 app.include_router(components.router, prefix=settings.API_V1_PREFIX)
 

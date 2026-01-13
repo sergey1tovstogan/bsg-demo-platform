@@ -154,7 +154,7 @@ The specification document (`UNIFIED_LAYOUT_SPECIFICATION.md`) has been updated 
 - `/frontend/src/pages/HomePage.tsx` (added showcase card)
 - `/frontend/src/pages/ComponentPage.tsx` (added showcase routing)
 - `/frontend/src/components/Sidebar.tsx` (added showcase menu item)
-- `/UNIFIED_LAYOUT_SPECIFICATION.md` (version 1.1 updates)
+- `/templates/UNIFIED_LAYOUT_SPECIFICATION.md` (version 1.1 updates)
 
 ### Build Status:
 ✅ **Build Successful** - No errors or warnings
