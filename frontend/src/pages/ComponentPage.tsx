@@ -4,6 +4,7 @@ import { ContentViewer } from '../components/ContentViewer'
 import { Chatbot } from '../components/Chatbot'
 import { DemoFrame } from '../components/DemoFrame'
 import { TemplateCardWrapper } from '../components/template-renderer/TemplateCardWrapper'
+import { ObservabilityContent } from '../components/observability/ObservabilityContent'
 import { DeploymentAnalyzer } from '../components/deployment/DeploymentAnalyzer'
 import { DeploymentContentViewer } from '../components/deployment/DeploymentContentViewer'
 import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
@@ -71,15 +72,6 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
     );
   }
 
-  // Observability is now migrated to use TemplateCardWrapper
-  if (componentId === 'observability') {
-    return (
-      <TemplateCardWrapper
-        cardPath="/content/pages/cards/observability/card-definition.md"
-      />
-    );
-  }
-
   // For layout-showcase, only show content tab
   // For deployment component, exclude video tab and rename chatbot
   const tabs = componentId === 'layout-showcase'
@@ -124,6 +116,8 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
         {activeTab === 'content' && (
           componentId === 'layout-showcase' ? (
             <LayoutShowcaseContent />
+          ) : componentId === 'observability' ? (
+            <ObservabilityContent />
           ) : componentId === 'deployment' ? (
             <DeploymentContentViewer />
           ) : componentId === 'data-architecture' ? (
