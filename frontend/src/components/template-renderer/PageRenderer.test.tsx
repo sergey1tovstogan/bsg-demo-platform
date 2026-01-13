@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { PageRenderer } from './PageRenderer';
 import { PageDefinition } from '@/lib/template-types';
 import { vi } from 'vitest';
