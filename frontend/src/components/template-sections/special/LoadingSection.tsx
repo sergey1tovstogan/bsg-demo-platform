@@ -1,9 +1,9 @@
 import { LoadingSection as LoadingSectionType } from '@/lib/template-types';
 import { Loader2 } from 'lucide-react';
 
-interface LoadingSectionProps extends LoadingSectionType {
+type LoadingSectionProps = LoadingSectionType & {
   size?: 'sm' | 'md' | 'lg';
-}
+};
 
 export function LoadingSection({ style = 'spinner', message, size = 'md' }: LoadingSectionProps) {
   const sizeClasses = {

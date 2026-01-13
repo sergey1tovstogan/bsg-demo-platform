@@ -1,4 +1,4 @@
-import { Check, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { ComparisonGridSection as ComparisonGridSectionType } from '@/lib/template-types';
 
 export function ComparisonGridSection({ items, columns }: ComparisonGridSectionType & { columns?: any[] }) {

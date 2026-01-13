@@ -134,7 +134,8 @@ function MockNavigationProvider({ children, page }: { children: React.ReactNode,
         backToAgenda: () => console.log('Navigation disabled in preview'),
         showPopup: () => console.log('Popups disabled in preview'),
         closePopup: () => console.log('Popups disabled in preview'),
-        getPage: () => page
+        getPage: () => page,
+        refreshContent: () => console.log('Refresh disabled in preview')
     };
 
     return (

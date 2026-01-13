@@ -3,13 +3,16 @@ import { useClickAction } from '@/hooks/useClickAction';
 import { useNavigation } from '@/components/template-navigation/NavigationProvider';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
-import { Components } from 'react-markdown';
 
 /**
  * Parse wiki-style links [[label|target]] from content
  */
-function parseInlineLinks(content: string) {
-  const parts: Array<{ type: 'text' | 'link'; content: string; label?: string; target?: string }> = [];
+type LinkPart = { type: 'link'; content: string; label: string; target: string };
+type TextPart = { type: 'text'; content: string };
+type ParsedPart = LinkPart | TextPart;
+
+function parseInlineLinks(content: string): ParsedPart[] {
+  const parts: ParsedPart[] = [];
   const regex = /\[\[([^\]|]+)\|([^\]]+)\]\]/g;
   let lastIndex = 0;
   let match;
@@ -56,11 +59,11 @@ export function TextWithLinksSection({ content, links }: TextWithLinksSectionTyp
             return (
               <p key={lineIndex} className="text-slate-700 dark:text-slate-300 leading-relaxed">
                 {parts.map((part, partIndex) => {
-                  if (part.type === 'link' && part.label && part.target) {
+                  if (part.type === 'link') {
                     return (
                       <button
                         key={`link-${partIndex}`}
-                        onClick={() => navigateToPage(part.target as string)}
+                        onClick={() => navigateToPage(part.target)}
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium underline underline-offset-4 transition-colors"
                       >
                         {part.label}
