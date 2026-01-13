@@ -45,7 +45,7 @@ describe('Section Rendering Integration', () => {
       { type: 'alert', alert_type: 'success', content: 'Success!' }
     ];
 
-    const { container } = render(
+    const { container: _container } = render(
       <>
         {sections.map((section, index) => (
           <SectionRenderer key={index} section={section} />
@@ -65,7 +65,7 @@ describe('Section Rendering Integration', () => {
       subtitle: 'With subtitle',
       align: 'center'
     };
-    const { container } = render(<SectionRenderer section={section} />);
+    const { container: _container } = render(<SectionRenderer section={section} />);
 
     expect(screen.getByText('Centered Hero')).toBeInTheDocument();
     expect(screen.getByText('With subtitle')).toBeInTheDocument();

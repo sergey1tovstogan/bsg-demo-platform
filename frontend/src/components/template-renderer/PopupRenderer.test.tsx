@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PopupRenderer } from './PopupRenderer';
-import { CardDefinition } from '@/lib/template-types';
 import { vi } from 'vitest';
 import * as NavigationProvider from '@/components/template-navigation/NavigationProvider';
 
@@ -38,7 +37,7 @@ describe('PopupRenderer', () => {
             ...defaultContext,
             popupStack: [],
             card: {
-                // @ts-ignore
+                // @ts-expect-error
                 popups: []
             }
         });
@@ -52,7 +51,7 @@ describe('PopupRenderer', () => {
             ...defaultContext,
             popupStack: ['popup-1'],
             card: {
-                // @ts-ignore
+                // @ts-expect-error
                 popups: [
                     {
                         id: 'popup-1',
@@ -73,7 +72,7 @@ describe('PopupRenderer', () => {
             ...defaultContext,
             popupStack: ['popup-1'],
             card: {
-                // @ts-ignore
+                // @ts-expect-error
                 popups: [
                     { id: 'popup-1', title: 'Test Popup', content: [] }
                 ]

@@ -27,7 +27,7 @@ describe('StepsSection', () => {
         { description: 'Step' }
       ]
     };
-    const { container } = render(<StepsSection {...props} />);
+    const { container: _container } = render(<StepsSection {...props} />);
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
   });
@@ -52,7 +52,7 @@ describe('StepsSection', () => {
         { description: 'Just description' }
       ]
     };
-    const { container } = render(<StepsSection {...props} />);
+    const { container: _container } = render(<StepsSection {...props} />);
     expect(screen.getByText('Just description')).toBeInTheDocument();
     const h3 = container.querySelector('h3');
     expect(h3).toBeNull();
@@ -63,7 +63,7 @@ describe('StepsSection', () => {
       type: 'steps',
       steps: [{ description: 'Test' }]
     };
-    const { container } = render(<StepsSection {...props} />);
+    const { container: _container } = render(<StepsSection {...props} />);
     const stepNumber = screen.getByText('1');
     expect(stepNumber).toHaveClass('bg-blue-600', 'rounded-full');
   });

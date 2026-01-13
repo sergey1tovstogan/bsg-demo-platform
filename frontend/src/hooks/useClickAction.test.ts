@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useClickAction } from './useClickAction';
 import { ClickAction } from '@/lib/template-types';
-import * as NavigationProvider from '@/components/template-navigation/NavigationProvider';
 
 // Create mock functions
 const mockNavigate = vi.fn();

@@ -78,7 +78,7 @@ describe('StatsSection', () => {
       type: 'stats',
       stats: [{ value: '1', label: 'Stat' }]
     };
-    const { container } = render(<StatsSection {...props} />);
+    const { container: _container } = render(<StatsSection {...props} />);
     expect(container.querySelector('.lg\\:grid-cols-3')).toBeInTheDocument();
   });
 
@@ -87,7 +87,7 @@ describe('StatsSection', () => {
       type: 'stats',
       stats: [{ value: '100', label: 'Test' }]
     };
-    const { container } = render(<StatsSection {...props} />);
+    const { container: _container } = render(<StatsSection {...props} />);
     const valueElement = screen.getByText('100');
     expect(valueElement).toHaveClass('text-4xl', 'font-bold', 'text-blue-600');
   });
