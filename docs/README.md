@@ -1,45 +1,169 @@
-# BSG Demo Platform Documentation
+# BSG Demo Platform — Documentation Index (Authoritative)
 
-This directory contains all documentation for the BSG Demo Platform.
+This directory is the **single source of truth** for architecture, UX, APIs, configuration,
+and operational behavior of the BSG Demo Platform.
 
-## 📚 Core Documentation
+All contributors — including Claude and Cursor — MUST reference the files in this directory
+instead of restating, guessing, or inventing system behavior.
 
-### Getting Started
-- **[USER_GUIDE.md](USER_GUIDE.md)** (18.9 KB) - Complete user guide for using the platform
-- **[USAGE.md](USAGE.md)** (10.5 KB) - Usage instructions and examples
-- **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** (5.2 KB) - Repository structure and organization
+_Last updated: 2025-12-18_
 
-### Architecture & Design
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** (16.1 KB) - System architecture, components, and design patterns
-- **[AZURE_SERVICES_EXPLAINED.md](AZURE_SERVICES_EXPLAINED.md)** (10.9 KB) - Explanation of Azure services used
+---
 
-### Configuration & Deployment
-- **[AZURE_CONFIGURATION.md](AZURE_CONFIGURATION.md)** (9.8 KB) - Azure setup and configuration guide
+## How to Use This Documentation (IMPORTANT)
 
-### Troubleshooting
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions (includes deployment issues, namespace discovery, token setup, frontend/backend connectivity)
+Before implementing or changing anything, identify **what kind of change** you are making
+and consult the corresponding documentation domain.
 
-## 📋 Documentation Organization
+### Quick routing guide
 
-All documentation is organized by topic:
-- **User-facing**: Guides for end users
-- **Developer**: Technical documentation for developers
-- **Operations**: Deployment, configuration, and troubleshooting
+- **System design, patterns, or boundaries** → `ARCHITECTURE.md`
+- **Repository layout & ownership** → `PROJECT_STRUCTURE.md`
+- **UX, layout, content, or templates** → `UX/README.md`
+- **User flows, demos, or feature usage** → `USER_GUIDE.md`, `USAGE.md`
+- **Cloud providers & managed services** → `providers/README.md`
+- **Configuration & environment variables** → `CONFIGURATION.md`
+- **Security, auth, secrets** → `SECURITY.md`
+- **Logs, health, monitoring** → `OBSERVABILITY.md`
+- **Errors or runtime failures** → `TROUBLESHOOTING.md`
 
-## 🧹 Cleanup Summary
+If a topic is not covered, **propose a documentation update before implementing changes**.
 
-The documentation directory has been cleaned up:
-- **Removed**: 23 empty or outdated temporary fix documentation files
-- **Removed**: All PowerShell (.ps1) scripts (kept only batch .bat scripts)
-- **Kept**: 8 core documentation files with actual content
-- **Updated**: All documentation to reference batch scripts instead of PowerShell
+---
 
-## 📝 Contributing
+## 📚 Documentation Domains
 
-When adding new documentation:
-1. Use clear, descriptive filenames
-2. Include a brief description in this README
-3. Keep documentation up-to-date with code changes
-4. Remove outdated or temporary documentation files
-5. Avoid creating empty placeholder files
+### 🧱 Core Platform Documentation
+Authoritative technical and operational rules.
 
+- **ARCHITECTURE.md**  
+  System architecture, component boundaries, adapter patterns, and core principles.
+
+- **COMPONENTS.md**  
+  Domain components, ownership rules, and responsibilities.
+
+- **CONNECTIVITY.md**  
+  Adapter-only access rules for external systems.
+
+- **DATABASE.md**  
+  Data ownership, collections, and persistence expectations.
+
+- **API_CONVENTIONS.md**  
+  API structure, error envelopes, and authentication conventions.
+
+---
+
+### 🎨 UX & Design
+Authoritative rules and references for layout, content, and presentation.
+
+- **UX/README.md**  
+  Entry point for all UX-related documentation.
+
+- **UX/LAYOUT_SPECIFICATION.md**  
+  Non-negotiable layout, spacing, typography, and accessibility rules.
+
+- **UX/DESIGN_SYSTEM.md**  
+  Design language, component intent, and interaction philosophy.
+
+- **UX/CONTENT_MODEL.md**  
+  Content hierarchy, metadata, and navigation model.
+
+- **UX/TEMPLATE_LIBRARY.md**  
+  Canonical page templates and authoring patterns.
+
+- **UX/SHOWCASE.md**  
+  Reference implementation and visual examples (non-authoritative).
+
+---
+
+### ☁️ Providers & Infrastructure
+Documentation for external platforms and managed services.
+
+- **providers/README.md**  
+  Entry point for provider-specific documentation.
+
+- **providers/AZURE_CONFIGURATION.md**  
+  Operational Azure setup, identity, permissions, and verification.
+
+- **providers/AZURE_SERVICES_EXPLAINED.md**  
+  Conceptual explanation of why Azure services are used.
+
+- **providers/EVENTHUB.md**  
+  Event Hub as a core platform capability.
+
+---
+
+### ▶️ Usage & Demos
+How the platform is used and demonstrated.
+
+- **USER_GUIDE.md**  
+  Conceptual and functional overview for demos and onboarding.
+
+- **USAGE.md**  
+  Quick, task-oriented usage reference.
+
+---
+
+### ⚙️ Local Development & Operations
+Running and operating the platform.
+
+- **LOCAL_DEV.md**  
+  Canonical local development workflow.
+
+- **CONFIGURATION.md**  
+  Environment variable contract and configuration sources.
+
+- **SECURITY.md**  
+  Authentication, authorization, and secret handling rules.
+
+- **OBSERVABILITY.md**  
+  Logging, health checks, and monitoring expectations.
+
+- **TROUBLESHOOTING.md**  
+  Incident-driven diagnosis and recovery guidance.
+
+---
+
+## Documentation Rules (Non‑Negotiable)
+
+- Each document has **one clear responsibility**
+- **No overlap** between documents
+- **Rules live once**, examples never redefine rules
+- Documentation must be updated whenever:
+  - behavior changes
+  - configuration changes
+  - setup changes
+
+If documentation and code disagree, documentation must be updated
+or the deviation must be explicitly documented.
+
+---
+
+## 🧹 Documentation Hygiene
+
+This documentation set is intentionally lean and curated.
+
+Practices enforced:
+- No placeholder or empty files
+- No secrets or credentials in docs
+- Archived material lives in `docs/archive/` and is non-authoritative
+- Historical files must never be referenced as a source of truth
+
+---
+
+## 📝 Contributing to Documentation
+
+When adding or updating documentation:
+
+1. Choose the correct domain (Core, UX, Providers, Operations)
+2. Use clear, descriptive filenames
+3. Add the file to this index with a short description
+4. Update docs whenever behavior, configuration, or setup changes
+5. Remove outdated or duplicate documentation
+
+See:
+- **CONTRIBUTING.md**
+
+---
+Last updated: 2025-12-18
+Maintained by the BSG Team

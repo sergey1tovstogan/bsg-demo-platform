@@ -51,13 +51,13 @@ const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
       }
     } catch (error) {
       console.warn('[API] Error loading config.json:', error)
-      // If we're on Azure Static Web Apps, try to construct backend URL
+      // If we're on Azure Static Web Apps, use relative URL (API is on same domain)
       if (typeof window !== 'undefined') {
         const hostname = window.location.hostname
         if (hostname.includes('azurestaticapps.net')) {
-          console.log('[API] Detected Azure Static Web Apps, using default backend URL')
+          console.log('[API] Detected Azure Static Web Apps, using relative API URL')
           return {
-            apiUrl: 'https://bsg-demo-platform-app.azurewebsites.net/api/v1',
+            apiUrl: '/api/v1',
             environment: 'production'
           }
         }
@@ -763,6 +763,36 @@ class ApiService {
     return response.data
   }
 
+  // JWT Token Management APIs
+  async getUserJWTToken(userId?: string) {
+    const response = await this.client.get<ApiResponse<{
+      success: boolean
+      has_token: boolean
+      jwt_token: string
+      updated_at: string | null
+    }>>('/deployment/temenos/jwt-token', {
+      headers: {
+        'X-User-Id': userId || 'demo_user'
+      }
+    })
+    return response.data
+  }
+
+  async saveUserJWTToken(jwtToken: string, userId?: string) {
+    const response = await this.client.post<ApiResponse<{
+      success: boolean
+      message: string
+      updated: boolean
+    }>>('/deployment/temenos/jwt-token',
+    { jwt_token: jwtToken },
+    {
+      headers: {
+        'X-User-Id': userId || 'demo_user'
+      }
+    })
+    return response.data
+  }
+
   // Integration Proxy APIs
   async proxyRequest(targetUrl: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'GET', body?: any, userId?: string) {
     const config: any = {
@@ -817,6 +847,46 @@ class ApiService {
       headers: {
         'X-User-Id': userId || 'demo_user'
       }
+    })
+    return response.data
+  }
+
+  async updateRagJwtToken(token: string) {
+    const response = await this.client.post<ApiResponse<{ status: string; message: string }>>(
+      '/settings/rag/jwt-token',
+      { token }
+    )
+    return response.data
+  }
+
+  async getRagJwtToken() {
+    const response = await this.client.get<ApiResponse<{ token: string | null }>>(
+      '/settings/rag/jwt-token'
+    )
+    return response.data
+  }
+
+  async exportResourceGroups(subscriptionId: string, resourceGroupNames: string[]) {
+    const response = await this.client.post<ApiResponse<{
+      data: Array<{
+        resource_group: string
+        template: any
+        status: string
+        error?: string
+      }>
+      count: number
+    }>>('/deployment/azure/export', {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames
+    })
+    return response.data
+  }
+
+  async generateBriefing(productFamily: string, componentName: string, aliases: string[] = []) {
+    const response = await this.client.post<ApiResponse<any>>('/deployment/temenos/briefing', {
+      product_family: productFamily,
+      component_name: componentName,
+      aliases
     })
     return response.data
   }

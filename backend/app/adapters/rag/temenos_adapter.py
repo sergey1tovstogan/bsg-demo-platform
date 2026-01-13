@@ -20,38 +20,88 @@ class TemenosRAGAdapter(RAGAdapter):
     
     def __init__(self):
         """Initialize Temenos RAG adapter."""
-        self.jwt_token = settings.RAG_JWT_TOKEN
+        # Try to get token from settings API first, fallback to config
+        self.jwt_token = None
         self.base_url = settings.RAG_API_URL.rstrip('/')
         self.api_base = f"{self.base_url}/api/v1.0"
         
-        if not self.jwt_token:
-            raise ValueError("RAG_JWT_TOKEN environment variable is not set")
+        # Try to load token from database/memory (set via settings API)
+        try:
+            from app.api.settings import get_rag_jwt_token_value
+            import asyncio
+            # Try to get token synchronously if possible, otherwise use config fallback
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, we'll get token on first query
+                    self.jwt_token = None
+                else:
+                    self.jwt_token = loop.run_until_complete(get_rag_jwt_token_value())
+            except RuntimeError:
+                # No event loop, will get token on first query
+                self.jwt_token = None
+        except Exception as e:
+            logger.warning(f"Could not load RAG JWT token from settings: {e}")
         
-        logger.info(f"Temenos RAG adapter initialized with base URL: {self.api_base}")
+        # Fallback to config if not set via settings API
+        if not self.jwt_token:
+            self.jwt_token = settings.RAG_JWT_TOKEN
+        
+        # Don't fail initialization if token is not set - it can be set later via settings API
+        if not self.jwt_token:
+            logger.warning("RAG JWT token not configured. Set it via Settings API or RAG_JWT_TOKEN environment variable.")
+        else:
+            logger.info(f"Temenos RAG adapter initialized with base URL: {self.api_base}")
+    
+    async def _ensure_token(self):
+        """Ensure JWT token is loaded (loads from settings if needed)."""
+        if not self.jwt_token:
+            try:
+                from app.api.settings import get_rag_jwt_token_value
+                token = await get_rag_jwt_token_value()
+                if token:
+                    self.jwt_token = token
+                    logger.info("RAG JWT token loaded from settings")
+                elif settings.RAG_JWT_TOKEN:
+                    self.jwt_token = settings.RAG_JWT_TOKEN
+                    logger.info("RAG JWT token loaded from config")
+            except Exception as e:
+                logger.warning(f"Could not load RAG JWT token: {e}")
+        
+        if not self.jwt_token:
+            raise ValueError("RAG JWT token is not configured. Please set it via Settings API.")
     
     async def query(
         self,
         question: str,
         region: str = "global",
         rag_model_id: Optional[str] = None,
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        jwt_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Query the Temenos RAG API.
-        
+
         Args:
             question: The question to ask
             region: Region context (default: "global")
             rag_model_id: Model ID to use (optional)
             context: Additional context (optional)
-            
+            jwt_token: Custom JWT token to use for this request (optional, uses default if not provided)
+
         Returns:
             Response dictionary with answer and sources
         """
+        # Ensure token is loaded
+        await self._ensure_token()
+        
         try:
+            # Use custom token if provided, otherwise use default
+            token = jwt_token if jwt_token else self.jwt_token
+
             url = f"{self.api_base}/query"
             headers = {
-                "Authorization": f"Bearer {self.jwt_token}",
+                "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json"
             }
             payload = {
@@ -99,6 +149,9 @@ class TemenosRAGAdapter(RAGAdapter):
     async def health_check(self) -> Dict[str, Any]:
         """Check Temenos RAG API health status."""
         try:
+            # Ensure token is loaded
+            await self._ensure_token()
+            
             # Try a simple query to check if API is accessible
             url = f"{self.api_base}/query"
             headers = {

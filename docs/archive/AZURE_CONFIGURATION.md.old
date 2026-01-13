@@ -134,6 +134,9 @@ These should be set in Azure App Service **Configuration** → **Application set
 | `DATABASE_NAME` | Database name | No | `bsg_demo` |
 | `RAG_JWT_TOKEN` | JWT token for Temenos RAG API | No | `eyJhbGc...` |
 | `RAG_API_URL` | Temenos RAG API base URL | No | `https://tbsg.temenos.com` |
+| `EVENTHUB_CONNECTION_STRING` | Azure Event Hub connection string | No | `Endpoint=sb://...` |
+| `EVENTHUB_NAME` | Event Hub topic name | No | `modelbank-event-topic` |
+| `EVENTHUB_CONSUMER_GROUP` | Consumer group name | No | `$Default` |
 | `ENVIRONMENT` | Environment name | No | `production` |
 | `DEBUG` | Debug mode | No | `False` |
 
@@ -156,6 +159,8 @@ az webapp config appsettings set \
     DATABASE_URL="mongodb://..." \
     DATABASE_NAME="bsg_demo" \
     RAG_JWT_TOKEN="eyJhbGc..." \
+    EVENTHUB_CONNECTION_STRING="Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=<policy>;SharedAccessKey=<key>" \
+    EVENTHUB_NAME="modelbank-event-topic" \
     ENVIRONMENT="production"
 ```
 

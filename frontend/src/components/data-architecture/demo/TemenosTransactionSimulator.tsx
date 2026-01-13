@@ -1,64 +1,125 @@
 // TemenosTransactionSimulator - Main transaction simulator container
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, TrendingUp, User, CreditCard, Send, CheckCircle2 } from 'lucide-react'
+import { RefreshCw, TrendingUp, User, CreditCard, Send, CheckCircle2, Wrench, Globe, Cloud, Terminal, Zap } from 'lucide-react'
 import { useSimulation } from '../hooks/useSimulation'
 import { useCrossTabSync } from '../hooks/useCrossTabSync'
 import { StepCard } from './StepCard'
 import { ApiInspector } from './ApiInspector'
 import { KafkaEventStream } from './KafkaEventStream'
-import { TRANSACTION_STEPS } from '../config/simulation.config'
+import { DatabaseRecordsTile } from './DatabaseRecordsTile'
+import { TRANSACTION_STEPS, API_CONFIG } from '../config/simulation.config'
+// import { apiService } from '../services/apiServiceAdapter' // Unused import
 
 /**
- * Progress bar component
+ * Event Source Indicator component - Temenos brand styling
+ * Shows whether events are from Mock or Real API source
  */
-const ProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
+const EventSourceIndicator: React.FC<{
+  mode: 'mock' | 'real'
+  eventCount: number
+  connectionStatus?: 'connected' | 'connecting' | 'disconnected' | 'error'
+  eventHubHealth?: { status: string; buffer_size?: number }
+}> = ({ mode, eventCount, connectionStatus, eventHubHealth }) => {
+  const isMock = mode === 'mock'
+
   return (
-    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-      <motion.div
-        className="h-full bg-gradient-to-r from-teal-500 to-teal-600"
-        initial={{ width: 0 }}
-        animate={{ width: `${progress}%` }}
-        transition={{ duration: 0.5 }}
-      />
+    <div className="flex items-center gap-3">
+      {/* Event Source Badge */}
+      <div
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+          isMock
+            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700'
+            : 'bg-[#00A3E0]/10 text-[#003366] dark:text-[#00A3E0] border-[#00A3E0]/30'
+        }`}
+      >
+        {isMock ? (
+          <>
+            <Wrench className="w-3.5 h-3.5" />
+            <span>Mock Events</span>
+          </>
+        ) : (
+          <>
+            <Cloud className="w-3.5 h-3.5" />
+            <span>Real API Events</span>
+          </>
+        )}
+      </div>
+
+      {/* Event Hub Connection Status */}
+      {!isMock && connectionStatus && (
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div
+            className={`w-2 h-2 rounded-full ${
+              connectionStatus === 'connected'
+                ? 'bg-emerald-500'
+                : connectionStatus === 'connecting'
+                ? 'bg-amber-500 animate-pulse'
+                : connectionStatus === 'error'
+                ? 'bg-red-500'
+                : 'bg-slate-400'
+            }`}
+          />
+          <span className="text-xs text-slate-700 dark:text-slate-300 capitalize font-medium">{connectionStatus}</span>
+          {eventHubHealth?.buffer_size !== undefined && (
+            <span className="text-xs text-slate-500 dark:text-slate-400">| Buffer: {eventHubHealth.buffer_size}</span>
+          )}
+        </div>
+      )}
+
+      {/* Live indicator for real mode */}
+      {!isMock && connectionStatus === 'connected' && (
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-md border border-emerald-200 dark:border-emerald-800">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Live</span>
+        </div>
+      )}
+
+      {/* Event Count */}
+      {eventCount > 0 && (
+        <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+          {eventCount} {eventCount === 1 ? 'event' : 'events'}
+        </span>
+      )}
     </div>
   )
 }
 
 /**
- * Stats display component
+ * Stats display component - Temenos brand styling
  */
 const StatsDisplay: React.FC<{ stats: any }> = ({ stats }) => {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="text-sm text-gray-400 mb-1">Completed Steps</div>
-        <div className="text-2xl font-bold text-white">
-          {stats.completedSteps} / {stats.totalSteps}
+    <div className="grid grid-cols-2 gap-4">
+      {/* API Calls Card */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 rounded-lg bg-[#003366]/10 dark:bg-[#003366]/20 flex items-center justify-center">
+            <Terminal className="w-4 h-4 text-[#003366] dark:text-[#00A3E0]" />
+          </div>
+          <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">API Calls</div>
+        </div>
+        <div className="text-3xl font-bold text-[#003366] dark:text-[#00A3E0]">{stats.totalApiCalls}</div>
+        <div className="text-xs text-slate-600 dark:text-slate-400 mt-2 flex items-center gap-2">
+          <span className="text-emerald-600 dark:text-emerald-400 font-medium">{stats.successfulApiCalls} success</span>
+          <span className="text-slate-400">/</span>
+          <span className="text-red-600 dark:text-red-400 font-medium">{stats.failedApiCalls} failed</span>
         </div>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="text-sm text-gray-400 mb-1">API Calls</div>
-        <div className="text-2xl font-bold text-blue-400">{stats.totalApiCalls}</div>
-        <div className="text-xs text-gray-500 mt-1">
-          {stats.successfulApiCalls} success / {stats.failedApiCalls} failed
+      {/* Kafka Events Card */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 rounded-lg bg-[#00A3E0]/10 dark:bg-[#00A3E0]/20 flex items-center justify-center">
+            <Zap className="w-4 h-4 text-[#00A3E0] dark:text-[#00A3E0]" />
+          </div>
+          <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Kafka Events</div>
         </div>
-      </div>
-
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="text-sm text-gray-400 mb-1">Kafka Events</div>
-        <div className="text-2xl font-bold text-green-400">{stats.totalKafkaEvents}</div>
-        <div className="text-xs text-gray-500 mt-1">
-          {stats.businessEvents} business / {stats.dataEvents} data
-        </div>
-      </div>
-
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-        <div className="text-sm text-gray-400 mb-1">Progress</div>
-        <div className="text-2xl font-bold text-teal-400">{Math.round(stats.progress)}%</div>
-        <div className="mt-2">
-          <ProgressBar progress={stats.progress} />
+        <div className="text-3xl font-bold text-[#00A3E0] dark:text-cyan-400">{stats.totalKafkaEvents}</div>
+        <div className="text-xs text-slate-600 dark:text-slate-400 mt-2 flex items-center gap-2">
+          <span className="text-[#003366] dark:text-slate-300 font-medium">{stats.businessEvents} business</span>
+          <span className="text-slate-400">/</span>
+          <span className="text-[#00A3E0] dark:text-cyan-400 font-medium">{stats.dataEvents} data</span>
         </div>
       </div>
     </div>
@@ -71,7 +132,13 @@ const StatsDisplay: React.FC<{ stats: any }> = ({ stats }) => {
 export const TemenosTransactionSimulator: React.FC = () => {
   const simulation = useSimulation()
   const [kafkaPaused, setKafkaPaused] = useState(false)
+  // Always use real mode - mock mode disabled
+  const [apiMode] = useState<'mock' | 'real'>('real')
   const { sendTriggers } = useCrossTabSync()
+
+  // Event Hub health state
+  const [eventHubHealth, setEventHubHealth] = useState<{ status: string; running?: boolean; buffer_size?: number } | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected' | 'error'>('connecting')
 
   const stats = simulation.getStats()
   const isComplete = simulation.isSimulationComplete()
@@ -85,6 +152,37 @@ export const TemenosTransactionSimulator: React.FC = () => {
       sendTriggers([latestTrigger])
     }
   }, [simulation.state.animationTriggers, sendTriggers])
+
+  // Check Event Hub health periodically
+  useEffect(() => {
+    const checkEventHubHealth = async () => {
+      try {
+        // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
+        // CORS is already configured on the backend to allow Azure Static Web Apps domains
+        const healthUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+          ? 'http://localhost:8000/api/v1/components/data-architecture/events/health'
+          : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/components/data-architecture/events/health'
+        const response = await fetch(healthUrl)
+        if (response.ok) {
+          const health = await response.json()
+          setEventHubHealth(health)
+          setConnectionStatus(health.running ? 'connected' : 'disconnected')
+        } else {
+          setConnectionStatus('error')
+        }
+      } catch (error) {
+        setConnectionStatus('error')
+      }
+    }
+
+    // Check immediately on mount
+    checkEventHubHealth()
+
+    // Then check every 10 seconds
+    const interval = setInterval(checkEventHubHealth, 10000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Handle step execution
   const handleExecuteStep = async (stepNumber: number) => {
@@ -107,49 +205,77 @@ export const TemenosTransactionSimulator: React.FC = () => {
     setKafkaPaused(false)
   }
 
+  // API mode toggle disabled - always use real mode
+  const handleApiModeToggle = useCallback(() => {
+    // Disabled - always uses real mode
+    console.warn('Mock mode is disabled - always using real API')
+  }, [])
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        {/* Header - Temenos brand styling */}
+        <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Temenos Transaction Simulator
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#003366] to-[#00A3E0] flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              Event Driven Data Flow
             </h1>
-            <p className="text-gray-400">
-              Simulate banking operations and visualize data flow through the architecture
+            <p className="text-slate-600 dark:text-slate-400 ml-13">
+              Real-time demo user journey for consuming data events into Data Hub
             </p>
           </div>
 
-          {/* Reset button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleReset}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Reset Simulation
-          </motion.button>
+          {/* Control buttons */}
+          <div className="flex items-center gap-3">
+            {/* API Mode Toggle (shown if configured) */}
+            {/* API Mode Toggle - DISABLED: Always uses real mode */}
+            {false && API_CONFIG.SHOW_API_TOGGLE && (
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700 rounded-lg px-4 py-2 border border-slate-200 dark:border-slate-600">
+                <span className="text-sm text-slate-600 dark:text-slate-400">API Mode:</span>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleApiModeToggle}
+                  className="flex items-center gap-2 px-3 py-1 rounded-md font-semibold text-sm transition-all bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700"
+                >
+                  <Globe className="w-4 h-4" />
+                  Real
+                </motion.button>
+              </div>
+            )}
+
+            {/* Reset button - Temenos secondary button style */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleReset}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-all border-2 border-slate-300 dark:border-slate-600 hover:border-[#003366] dark:hover:border-[#00A3E0] font-semibold shadow-sm"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Reset Demo
+            </motion.button>
+          </div>
         </div>
 
-        {/* Stats */}
-        <StatsDisplay stats={stats} />
-
-        {/* Completion banner */}
+        {/* Completion banner - Temenos brand styling */}
         {isComplete && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-r from-green-500/20 to-teal-500/20 border border-green-500/30 rounded-xl p-6"
+            className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-6 shadow-sm"
           >
             <div className="flex items-center gap-4">
-              <CheckCircle2 className="w-12 h-12 text-green-500" />
+              <div className="w-14 h-14 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+              </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-1">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
                   Simulation Complete! 🎉
                 </h3>
-                <p className="text-gray-300">
+                <p className="text-slate-700 dark:text-slate-300">
                   All transactions executed successfully. Check the API Inspector and Kafka Event
                   Stream for details.
                 </p>
@@ -159,16 +285,21 @@ export const TemenosTransactionSimulator: React.FC = () => {
         )}
 
         {/* Main content grid */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Left column - Transaction steps */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-teal-500" />
-                Transaction Workflow
+        <div className="grid lg:grid-cols-[minmax(0,35%)_minmax(0,1fr)] gap-6 pb-8">
+          {/* Left column - Stats + User journey steps */}
+          <div className="space-y-6 w-full overflow-hidden">
+            {/* Stats - aligned with User Journey */}
+            <StatsDisplay stats={stats} />
+            
+            <div className="w-full bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#003366]/10 dark:bg-[#003366]/20 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-[#003366] dark:text-[#00A3E0]" />
+                </div>
+                User Journey
               </h2>
 
-              <div className="space-y-4">
+              <div className="space-y-4 w-full">
                 {/* Step 1: Create Customer */}
                 <StepCard
                   stepNumber={1}
@@ -182,7 +313,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
                       ? { customerId: simulation.state.transactions.customerId }
                       : undefined
                   }
-                  icon={<User className="w-5 h-5 text-teal-500" />}
+                  icon={<User className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />}
                 />
 
                 {/* Step 2: Open Account */}
@@ -198,7 +329,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
                       ? { accountId: simulation.state.transactions.accountId }
                       : undefined
                   }
-                  icon={<CreditCard className="w-5 h-5 text-teal-500" />}
+                  icon={<CreditCard className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />}
                 />
 
                 {/* Step 3: Send Payment */}
@@ -214,7 +345,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
                       ? { paymentId: simulation.state.transactions.paymentId }
                       : undefined
                   }
-                  icon={<Send className="w-5 h-5 text-teal-500" />}
+                  icon={<Send className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />}
                 />
               </div>
             </div>
@@ -233,6 +364,15 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
             {/* Kafka Event Stream */}
             <div className="h-[500px]">
+              {/* Event Source Indicator */}
+              <div className="mb-2">
+                <EventSourceIndicator
+                  mode={apiMode}
+                  eventCount={simulation.state.kafkaEvents.length}
+                  connectionStatus={connectionStatus}
+                  eventHubHealth={eventHubHealth || undefined}
+                />
+              </div>
               <KafkaEventStream
                 events={simulation.state.kafkaEvents}
                 onClear={simulation.clearKafkaEvents}
@@ -243,14 +383,19 @@ export const TemenosTransactionSimulator: React.FC = () => {
           </div>
         </div>
 
+        {/* Database Records Tile - Full width below grid */}
+        <div className="mt-16">
+          <DatabaseRecordsTile eventCount={simulation.state.kafkaEvents.length} />
+        </div>
+
         {/* Current stage indicator (for debugging) */}
         {simulation.state.stage !== 'IDLE' && simulation.state.stage !== 'FINISHED' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed bottom-6 right-6 bg-blue-500/20 border border-blue-500/30 rounded-lg px-4 py-2 backdrop-blur-sm"
+            className="fixed bottom-6 right-6 bg-[#003366]/10 dark:bg-[#00A3E0]/10 border border-[#003366]/30 dark:border-[#00A3E0]/30 rounded-lg px-4 py-2 backdrop-blur-sm shadow-lg"
           >
-            <div className="text-sm text-blue-400 font-mono">
+            <div className="text-sm text-[#003366] dark:text-[#00A3E0] font-mono font-medium">
               Stage: {simulation.state.stage}
             </div>
           </motion.div>

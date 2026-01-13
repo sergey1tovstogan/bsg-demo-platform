@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Database, RefreshCw } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
@@ -7,11 +7,24 @@ const CACHE_KEY = 'data_architecture_rag_content_cache'
 const CACHE_TIMESTAMP_KEY = 'data_architecture_rag_content_cache_timestamp'
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days
 
+interface RAGContentItem {
+  order: number
+  category: string
+  title: string
+  question: string
+  answer: string
+  sources: Array<{ title?: string; url?: string }>
+}
+
 export function DataArchitectureContentViewer() {
-  const [ragContent, setRagContent] = useState<any>(null)
+  const [ragContent, setRagContent] = useState<RAGContentItem[] | null>(null)
   const [ragLoading, setRagLoading] = useState(true)
   const [ragError, setRagError] = useState<string | null>(null)
   const [isFromCache, setIsFromCache] = useState(false)
+
+  const loadRAGContentCallback = useCallback(() => {
+    loadRAGContent()
+  }, [])
 
   useEffect(() => {
     // Check cache immediately on mount
@@ -23,9 +36,9 @@ export function DataArchitectureContentViewer() {
       setIsFromCache(true)
       console.log('Loaded RAG content from cache')
     } else {
-      loadRAGContent()
+      loadRAGContentCallback()
     }
-  }, [])
+  }, [loadRAGContentCallback])
 
   const loadCachedContent = () => {
     try {
@@ -43,7 +56,7 @@ export function DataArchitectureContentViewer() {
     return null
   }
 
-  const saveCachedContent = (content: any) => {
+  const saveCachedContent = (content: RAGContentItem[]) => {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(content))
       localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
@@ -125,8 +138,8 @@ export function DataArchitectureContentViewer() {
           })
 
           const ragData = response.data && typeof response.data === 'object' && 'data' in response.data
-            ? (response.data as any).data
-            : response.data
+            ? (response.data as { data: { answer?: string; sources?: Array<{ title?: string; url?: string }> } }).data
+            : response.data as { answer?: string; sources?: Array<{ title?: string; url?: string }> } | undefined
 
           if (ragData?.answer) {
             ragResults.push({
@@ -141,15 +154,16 @@ export function DataArchitectureContentViewer() {
             errors.push(`No answer returned for: "${questionItem.title}"`)
             console.warn(`No answer in RAG response for question: ${questionItem.title}`, response)
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           let errorMsg = 'Unknown error'
-          if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
+          const error = err as { code?: string; message?: string; response?: { data?: { detail?: string | { error?: string; message?: string } } } }
+          if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
             errorMsg = 'Network Error - Unable to reach the backend API. Please check if the backend service is running and accessible.'
-          } else if (err.response?.data?.detail) {
-            const detail = err.response.data.detail
+          } else if (error.response?.data?.detail) {
+            const detail = error.response.data.detail
             errorMsg = typeof detail === 'object' ? (detail.error || detail.message || JSON.stringify(detail)) : detail
-          } else if (err.message) {
-            errorMsg = err.message
+          } else if (error.message) {
+            errorMsg = error.message
           }
           errors.push(`Failed to query "${questionItem.title}": ${errorMsg}`)
           console.warn(`Failed to query RAG for question: ${questionItem.title}`, err)
@@ -177,9 +191,10 @@ export function DataArchitectureContentViewer() {
           setRagError(`No content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('RAG query error:', err)
-      const errorMsg = err.response?.data?.detail?.error || err.response?.data?.error || err.message || 'Failed to load RAG information'
+      const error = err as { message?: string; response?: { data?: { detail?: { error?: string }; error?: string } } }
+      const errorMsg = error.response?.data?.detail?.error || error.response?.data?.error || error.message || 'Failed to load RAG information'
 
       if (forceRefresh) {
         const cachedContent = loadCachedContent()
@@ -264,8 +279,8 @@ export function DataArchitectureContentViewer() {
         {ragContent && ragContent.length > 0 && (
           <div className="space-y-8">
             {(() => {
-              const grouped: { [key: string]: any[] } = {}
-              ragContent.forEach((item: any) => {
+              const grouped: { [key: string]: RAGContentItem[] } = {}
+              ragContent.forEach((item) => {
                 const cat = item.category || 'Other'
                 if (!grouped[cat]) grouped[cat] = []
                 grouped[cat].push(item)
@@ -276,7 +291,7 @@ export function DataArchitectureContentViewer() {
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white border-b-2 border-blue-600 dark:border-blue-400 pb-2">
                     {category}
                   </h2>
-                  {items.map((item: any, idx: number) => (
+                  {items.map((item, idx: number) => (
                     <div
                       key={`${category}-${idx}`}
                       className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-300 dark:border-gray-700 shadow-sm"
@@ -307,7 +322,7 @@ export function DataArchitectureContentViewer() {
                         <div className="mt-4 pt-3 border-t border-gray-300 dark:border-gray-600">
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Sources:</p>
                           <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                            {item.sources.map((source: any, sidx: number) => (
+                            {item.sources.map((source, sidx: number) => (
                               <li key={sidx}>{source.title || source.url || 'Temenos Documentation'}</li>
                             ))}
                           </ul>

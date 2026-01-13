@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import os
+import json
 
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
@@ -17,7 +18,9 @@ from app.core.database import init_db, close_db, get_database
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
-from app.api import health, auth, auth_v2, users, auth_cards, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache
+from app.api import health, auth, auth_v2, users, auth_cards, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events, data_architecture, payments
+from app.api import settings as settings_api
+from app.adapters.eventhub import get_eventhub_adapter
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 # Setup logging
@@ -51,10 +54,31 @@ async def lifespan(app: FastAPI):
     logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
     logger.info(f"Rate limiting: {'enabled' if settings.RATE_LIMIT_ENABLED else 'disabled'}")
 
+    # Start Event Hub adapter
+    try:
+        eventhub_adapter = get_eventhub_adapter()
+        await eventhub_adapter.start()
+        logger.info("Event Hub adapter started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start Event Hub adapter: {e}")
+        logger.warning("Application will start but Event Hub features may not work")
+
     yield
 
     # Shutdown
+
+    # Shutdown
     logger.info("Shutting down application")
+
+    # Stop Event Hub adapter
+    try:
+        eventhub_adapter = get_eventhub_adapter()
+        await eventhub_adapter.stop()
+        logger.info("Event Hub adapter stopped successfully")
+    except Exception as e:
+        logger.error(f"Error stopping Event Hub adapter: {e}")
+
+    # Close database connections
     await close_db()
     logger.info("Database connections closed")
 
@@ -108,11 +132,11 @@ from fastapi import HTTPException, APIRouter
 # Create a dedicated router for proxy endpoint
 proxy_router = APIRouter()
 
-async def _handle_proxy(request: Request, url: str, user_id: Optional[str], db: AsyncIOMotorDatabase) -> Dict[str, Any]:
+async def _handle_proxy(request: Request, url: str, user_id: Optional[str], db: AsyncIOMotorDatabase, body: Optional[bytes] = None) -> Dict[str, Any]:
     """Handle proxy requests for all HTTP methods."""
     try:
-        body = None
-        if request.method in ["POST", "PUT", "PATCH"]:
+        # If body wasn't provided, read it from request (for GET/DELETE, body will be None)
+        if body is None and request.method in ["POST", "PUT", "PATCH"]:
             body = await request.body()
 
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -144,12 +168,45 @@ async def _handle_proxy(request: Request, url: str, user_id: Optional[str], db: 
 @proxy_router.api_route("/proxy", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def proxy_all_methods(
     request: Request,
-    url: str,
+    url: Optional[str] = None,
     user_id: Optional[str] = Header(None, alias="X-User-Id"),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ) -> Dict[str, Any]:
-    """Proxy requests to external APIs with all HTTP methods."""
-    return await _handle_proxy(request, url, user_id, db)
+    """
+    Proxy requests to external APIs with all HTTP methods.
+    
+    The target URL can be provided either:
+    - As a query parameter: ?url=https://example.com/api
+    - In the request body (for POST/PUT/PATCH): {"url": "https://example.com/api", "body": {...}}
+    
+    This dual approach works around Azure Static Web Apps limitations with POST requests and query parameters.
+    """
+    body_content = None
+    
+    # Try to get URL from query parameter first
+    if not url:
+        # For POST/PUT/PATCH, also try to get URL from request body
+        if request.method in ["POST", "PUT", "PATCH"]:
+            try:
+                body_data = await request.json()
+                if isinstance(body_data, dict) and "url" in body_data:
+                    url = body_data.get("url")
+                    # Remove url from body_data so it doesn't get sent to the target API
+                    body_data.pop("url", None)
+                    # Convert back to bytes for forwarding
+                    body_content = json.dumps(body_data).encode('utf-8')
+            except:
+                # If body is not JSON or doesn't have url, continue with None
+                # In this case, we'll read the body again in _handle_proxy
+                pass
+    
+    if not url:
+        raise HTTPException(
+            status_code=400,
+            detail="URL parameter is required. Provide it as query parameter (?url=...) or in request body ({\"url\": \"...\"})"
+        )
+    
+    return await _handle_proxy(request, url, user_id, db, body_content)
 
 # DIAGNOSTIC: Simple test POST endpoint
 @app.post("/test-post")
@@ -169,6 +226,15 @@ app.include_router(security.router, prefix=settings.API_V1_PREFIX)
 app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
 app.include_router(cache.router, prefix=settings.API_V1_PREFIX)
+app.include_router(settings_api.router, prefix=settings.API_V1_PREFIX)
+app.include_router(payments.router, prefix=settings.API_V1_PREFIX)
+
+# Component-specific API routers
+app.include_router(data_architecture.router, prefix=settings.API_V1_PREFIX)
+
+# DEPRECATED: Legacy events router - kept for backward compatibility
+# Use /api/v1/components/data-architecture/events instead
+app.include_router(events.router, prefix=settings.API_V1_PREFIX)
 
 # Serve static files (frontend) if directory exists
 static_dir = os.path.join(os.path.dirname(__file__), "static")
