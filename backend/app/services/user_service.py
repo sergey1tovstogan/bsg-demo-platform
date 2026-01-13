@@ -289,3 +289,114 @@ class UserService:
 
         logger.info(f"Password updated for user: {user_id}")
         return result
+
+    async def update_user(
+        self,
+        user_id: str,
+        updates: Dict[str, Any],
+        updated_by: str = "system"
+    ) -> bool:
+        """
+        Update user fields.
+
+        Args:
+            user_id: User ID
+            updates: Dictionary of fields to update
+            updated_by: User ID of updater
+
+        Returns:
+            True if updated successfully
+
+        Raises:
+            UserNotFoundError: If user not found
+        """
+        await self._ensure_connection()
+
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"User '{user_id}' not found")
+
+        # Add metadata
+        updates['updated_by'] = updated_by
+        updates['updated_at'] = utc_now()
+
+        # Update in database
+        result = await self.db_adapter.update_one(
+            self.collection_name,
+            {"user_id": user_id},
+            updates
+        )
+
+        logger.info(f"User updated: {user_id}")
+        return result
+
+    async def delete_user(self, user_id: str) -> bool:
+        """
+        Delete a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            True if deleted successfully
+
+        Raises:
+            UserNotFoundError: If user not found
+        """
+        await self._ensure_connection()
+
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"User '{user_id}' not found")
+
+        # Delete from database
+        result = await self.db_adapter.delete_one(
+            self.collection_name,
+            {"user_id": user_id}
+        )
+
+        logger.info(f"User deleted: {user_id}")
+        return result
+
+    async def reset_user_password(self, user_id: str) -> str:
+        """
+        Reset user password to a temporary value.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Temporary password (plain text)
+
+        Raises:
+            UserNotFoundError: If user not found
+        """
+        await self._ensure_connection()
+
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"User '{user_id}' not found")
+
+        # Generate temporary password
+        import secrets
+        import string
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        temp_password = ''.join(secrets.choice(alphabet) for i in range(12))
+
+        # Hash temporary password
+        temp_hash = hash_password(temp_password)
+
+        # Update in database
+        await self.db_adapter.update_one(
+            self.collection_name,
+            {"user_id": user_id},
+            {
+                "password_hash": temp_hash,
+                "must_change_password": True,
+                "password_changed_at": utc_now(),
+                "updated_at": utc_now()
+            }
+        )
+
+        logger.info(f"Password reset for user: {user_id}")
+        return temp_password

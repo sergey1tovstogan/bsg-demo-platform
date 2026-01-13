@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { Buffer } from 'buffer'
+import { BrowserRouter } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
 import App from './App.tsx'
 import './index.css'
 
@@ -16,7 +18,11 @@ if (!rootElement) {
 try {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <App />
+      <AuthProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AuthProvider>
     </React.StrictMode>,
   )
 } catch (error) {
