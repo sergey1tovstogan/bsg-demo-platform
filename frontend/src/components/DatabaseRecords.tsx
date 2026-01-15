@@ -8,6 +8,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface DatabaseRecordsProps {
   componentId?: string
 }
@@ -28,16 +29,17 @@ interface Column {
 
 interface TableData {
   columns: string[]
-  data: Record<string, any>[]
+  data: Record<string, string | number | boolean | null>[]
   row_count: number
   total_rows?: number
 }
 
-export function DatabaseRecords({ componentId: _componentId }: DatabaseRecordsProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function DatabaseRecords(_props: DatabaseRecordsProps) {
   const [tables, setTables] = useState<Table[]>([])
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
   const [tableData, setTableData] = useState<TableData | null>(null)
-  const [_columns, setColumns] = useState<Column[]>([])
+  const [, setColumns] = useState<Column[]>([])
   const [loading, setLoading] = useState(false)
   const [tablesLoading, setTablesLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

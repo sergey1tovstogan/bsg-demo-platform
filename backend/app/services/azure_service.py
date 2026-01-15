@@ -106,7 +106,9 @@ class AzureService:
                     # Fall back to DefaultAzureCredential if Azure CLI credential fails
                     credential = DefaultAzureCredential()
                     logger.info("Using DefaultAzureCredential (tries multiple credential sources)")
-            
+
+            # Store credential as instance property for export operations
+            self.credential = credential
             self.client = ResourceManagementClient(credential, subscription_id)
             logger.info(f"Azure service initialized for subscription: {subscription_id}")
         except Exception as e:

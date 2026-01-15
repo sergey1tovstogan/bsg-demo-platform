@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: repo-structure-lint
+        name: Repo Structure Lint
+        entry: python tools/repo_structure_lint.py
+        language: system
+        pass_filenames: false

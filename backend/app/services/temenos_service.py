@@ -583,17 +583,19 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
         question: str,
         region: str = "global",
         rag_model_id: str = "ModularBanking, TechnologyOverview",
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        jwt_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """Public method to query RAG API."""
-        return await self._query_rag(question, region, rag_model_id, context)
-    
+        return await self._query_rag(question, region, rag_model_id, context, jwt_token)
+
     async def _query_rag(
         self,
         question: str,
         region: str = "global",
         rag_model_id: str = "ModularBanking, TechnologyOverview",
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        jwt_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """Query the Temenos RAG API via adapter."""
         if self.rag_adapter is None:
@@ -604,7 +606,8 @@ Be EXTREMELY thorough and provide ALL available information. Do not summarize or
             question=question,
             region=region,
             rag_model_id=rag_model_id,
-            context=context
+            context=context,
+            jwt_token=jwt_token
         )
 
     def _consolidate_rag_response(self, text: str, response_type: str = "architectural") -> str:

@@ -21,38 +21,38 @@ const JsonHighlight: React.FC<{ data: any }> = ({ data }) => {
 
   return (
     <pre
-      className="text-xs font-mono text-gray-300 whitespace-pre-wrap break-words"
+      className="text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words"
       dangerouslySetInnerHTML={{ __html: highlighted }}
     />
   )
 }
 
 /**
- * HTTP method badge
+ * HTTP method badge - High contrast, accessible colors
  */
 const MethodBadge: React.FC<{ method: ApiLog['method'] }> = ({ method }) => {
   const getMethodColor = () => {
     switch (method) {
       case 'GET':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+        return 'bg-[#003366] text-white' // Temenos Navy
       case 'POST':
-        return 'bg-green-500/20 text-green-400 border-green-500/30'
+        return 'bg-emerald-600 text-white'
       case 'PUT':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+        return 'bg-amber-600 text-white'
       case 'DELETE':
-        return 'bg-red-500/20 text-red-400 border-red-500/30'
+        return 'bg-red-600 text-white'
     }
   }
 
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getMethodColor()}`}>
+    <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${getMethodColor()}`}>
       {method}
     </span>
   )
 }
 
 /**
- * Status code badge
+ * Status code badge - High contrast for accessibility
  */
 const StatusBadge: React.FC<{ status: 'success' | 'error'; statusCode: number }> = ({
   status,
@@ -60,10 +60,10 @@ const StatusBadge: React.FC<{ status: 'success' | 'error'; statusCode: number }>
 }) => {
   return (
     <span
-      className={`px-2 py-0.5 rounded text-xs font-mono ${
+      className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold ${
         status === 'success'
-          ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-          : 'bg-red-500/20 text-red-400 border border-red-500/30'
+          ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700'
+          : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-700'
       }`}
     >
       {statusCode}
@@ -72,9 +72,9 @@ const StatusBadge: React.FC<{ status: 'success' | 'error'; statusCode: number }>
 }
 
 /**
- * Individual API log entry
+ * Individual API log entry - Temenos brand styling
  */
-const ApiLogEntry: React.FC<{ log: ApiLog }> = ({ log }) => {
+const ApiLogEntry = React.forwardRef<HTMLDivElement, { log: ApiLog }>(({ log }, ref) => {
   const [isExpanded, setIsExpanded] = useState(true)
 
   const formatTimestamp = (timestamp: number) => {
@@ -87,12 +87,16 @@ const ApiLogEntry: React.FC<{ log: ApiLog }> = ({ log }) => {
     } as Intl.DateTimeFormatOptions)
   }
 
+  // Use status-based border color
+  const borderColor = log.status === 'success' ? 'border-l-[#003366]' : 'border-l-red-500'
+
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="border-l-2 border-teal-500 pl-4 py-3 hover:bg-gray-800/50 transition-colors"
+      className={`border-l-3 ${borderColor} pl-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-r-lg`}
     >
       {/* Log header */}
       <div
@@ -102,9 +106,9 @@ const ApiLogEntry: React.FC<{ log: ApiLog }> = ({ log }) => {
         <div className="flex items-center gap-3 flex-1">
           {/* Expand/collapse icon */}
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+            <ChevronDown className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           )}
 
           {/* Status icon */}
@@ -118,17 +122,17 @@ const ApiLogEntry: React.FC<{ log: ApiLog }> = ({ log }) => {
           <MethodBadge method={log.method} />
 
           {/* Endpoint */}
-          <span className="text-sm text-gray-300 font-mono">{log.endpoint}</span>
+          <span className="text-sm text-slate-700 dark:text-slate-300 font-mono">{log.endpoint}</span>
 
           {/* Status code */}
           <StatusBadge status={log.status} statusCode={log.statusCode} />
 
           {/* Duration */}
-          <span className="text-xs text-gray-500 font-mono">{log.duration}ms</span>
+          <span className="text-xs text-slate-500 dark:text-slate-500 font-mono">{log.duration}ms</span>
         </div>
 
         {/* Timestamp */}
-        <span className="text-xs text-gray-500 font-mono">{formatTimestamp(log.timestamp)}</span>
+        <span className="text-xs text-slate-500 dark:text-slate-500 font-mono">{formatTimestamp(log.timestamp)}</span>
       </div>
 
       {/* Expanded content */}
@@ -143,37 +147,40 @@ const ApiLogEntry: React.FC<{ log: ApiLog }> = ({ log }) => {
           >
             {/* Request section */}
             <div>
-              <div className="text-xs text-gray-400 mb-1 font-semibold flex items-center gap-2">
-                <span className="text-blue-400">→</span> REQUEST
+              <div className="text-xs text-slate-600 dark:text-slate-400 mb-1.5 font-semibold flex items-center gap-2">
+                <span className="text-[#003366] dark:text-[#00A3E0]">→</span> REQUEST
               </div>
-              <div className="bg-gray-900 rounded p-3 border border-gray-700">
+              <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
                 <JsonHighlight data={log.request} />
               </div>
             </div>
 
             {/* Response section */}
             <div>
-              <div className="text-xs text-gray-400 mb-1 font-semibold flex items-center gap-2">
-                <span className="text-green-400">←</span> RESPONSE
+              <div className="text-xs text-slate-600 dark:text-slate-400 mb-1.5 font-semibold flex items-center gap-2">
+                <span className="text-emerald-600 dark:text-emerald-400">←</span> RESPONSE
               </div>
-              <div className="bg-gray-900 rounded p-3 border border-gray-700">
+              <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
                 <JsonHighlight data={log.response} />
               </div>
             </div>
 
             {/* Transaction type */}
-            <div className="text-xs text-gray-500 font-mono">
-              Transaction: <span className="text-teal-400">{log.type}</span>
+            <div className="text-xs text-slate-600 dark:text-slate-400 font-mono">
+              Transaction: <span className="text-[#003366] dark:text-[#00A3E0] font-semibold">{log.type}</span>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
   )
-}
+})
+
+ApiLogEntry.displayName = 'ApiLogEntry'
 
 /**
  * ApiInspector Component - Main terminal-style API log viewer
+ * Styled with Temenos brand colors
  */
 export const ApiInspector: React.FC<ApiInspectorProps> = ({ logs, isLoading, onClear }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -186,14 +193,14 @@ export const ApiInspector: React.FC<ApiInspectorProps> = ({ logs, isLoading, onC
   }, [logs])
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-700 overflow-hidden flex flex-col h-full">
-      {/* Header */}
-      <div className="bg-gray-800 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-full shadow-sm">
+      {/* Header - Temenos brand styling */}
+      <div className="bg-slate-50 dark:bg-slate-800 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Terminal className="w-5 h-5 text-teal-500" />
-          <h3 className="text-sm font-semibold text-white">API Inspector</h3>
+          <Terminal className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">API Inspector</h3>
           {logs.length > 0 && (
-            <span className="text-xs text-gray-400 font-mono">
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">
               {logs.length} {logs.length === 1 ? 'request' : 'requests'}
             </span>
           )}
@@ -204,11 +211,11 @@ export const ApiInspector: React.FC<ApiInspectorProps> = ({ logs, isLoading, onC
           onClick={onClear}
           disabled={logs.length === 0}
           className={`
-            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border
             ${
               logs.length === 0
-                ? 'text-gray-600 cursor-not-allowed'
-                : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed border-slate-200 dark:border-slate-700'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-600'
             }
           `}
         >
@@ -220,13 +227,13 @@ export const ApiInspector: React.FC<ApiInspectorProps> = ({ logs, isLoading, onC
       {/* Logs container */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900"
+        className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50 dark:bg-slate-900/50 scrollbar-thin scrollbar-thumb-slate-400 dark:scrollbar-thumb-slate-600 scrollbar-track-slate-200 dark:scrollbar-track-slate-800"
       >
         {logs.length === 0 && !isLoading ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <Terminal className="w-12 h-12 mb-3 opacity-30" />
-            <p className="text-sm">No API requests yet</p>
-            <p className="text-xs mt-1">Execute a transaction to see API logs here</p>
+          <div className="flex flex-col items-center justify-center h-full text-slate-500 dark:text-slate-400">
+            <Terminal className="w-12 h-12 mb-3 text-slate-300 dark:text-slate-600" />
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No API requests yet</p>
+            <p className="text-xs mt-1 text-slate-500 dark:text-slate-500">Execute a transaction to see API logs here</p>
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
@@ -241,32 +248,32 @@ export const ApiInspector: React.FC<ApiInspectorProps> = ({ logs, isLoading, onC
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2 text-blue-400 text-sm py-2"
+            className="flex items-center gap-2 text-[#003366] dark:text-[#00A3E0] text-sm py-2"
           >
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-            <span>Processing request...</span>
+            <div className="w-2 h-2 bg-[#003366] dark:bg-[#00A3E0] rounded-full animate-pulse" />
+            <span className="font-medium">Processing request...</span>
           </motion.div>
         )}
       </div>
 
       {/* Footer with stats */}
       {logs.length > 0 && (
-        <div className="bg-gray-800 px-4 py-2 border-t border-gray-700 flex items-center justify-between text-xs text-gray-400">
+        <div className="bg-slate-50 dark:bg-slate-800 px-4 py-2.5 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
           <span>
             Success:{' '}
-            <span className="text-green-400 font-mono">
+            <span className="text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
               {logs.filter((l) => l.status === 'success').length}
             </span>
           </span>
           <span>
             Failed:{' '}
-            <span className="text-red-400 font-mono">
+            <span className="text-red-600 dark:text-red-400 font-mono font-semibold">
               {logs.filter((l) => l.status === 'error').length}
             </span>
           </span>
           <span>
             Avg Duration:{' '}
-            <span className="text-yellow-400 font-mono">
+            <span className="text-slate-800 dark:text-slate-200 font-mono font-semibold">
               {logs.length > 0
                 ? Math.round(logs.reduce((acc, l) => acc + l.duration, 0) / logs.length)
                 : 0}

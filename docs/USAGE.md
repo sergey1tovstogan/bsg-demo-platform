@@ -1,459 +1,95 @@
-# BSG Demo Platform - Quick Usage Reference
+BSG Demo Platform — USAGE (Quick Reference)
 
-> **Note**: For comprehensive documentation, see [USER_GUIDE.md](./USER_GUIDE.md)
+Purpose
+-------
+This document is a **quick, task-oriented reference** for using the BSG Demo Platform.
+It intentionally stays short and links to authoritative documentation instead of duplicating it.
 
-## Quick Start
+If you are new to the platform, start with USER_GUIDE.md.
 
-### Prerequisites
-
-- **Python 3.11+** installed
-- **Node.js 20+** and npm installed
-- **Git** for version control
-- **Azure CLI** (optional, for Azure deployments)
-- **Command Prompt** (Windows) or **Bash** (Linux/Mac)
-
-### Initial Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/georgasa/bsg-demo-platform.git
-   cd bsg-demo-platform
-   ```
-
-2. **Set up Backend:**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
-
-3. **Set up Frontend:**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-4. **Configure Environment Variables:**
-   
-   Create `backend/.env` file:
-   ```env
-   DATABASE_URL=mongodb://bsg-demo-platform-mongodb:wC418aLYO4SazuhljALVOclZc48spvoHidWukgFDOoBCjO5Z4wjjKPziuJ44TAUyVlOs89HeL4a5ACDbdAs80w==@bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@bsg-demo-platform-mongodb@
-   DATABASE_NAME=bsg_demo
-   ENVIRONMENT=development
-   DEBUG=True
-   RAG_JWT_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYXBvc3RvbG9zLmdlb3JnYXMiLCJlbWFpbCI6ImFwb3N0b2xvcy5nZW9yZ2FzQHRlbWVub3MuY29tIiwiZXhwIjoxNzY5NDQ3MDk0LCJpYXQiOjE3NjY4NTUwOTQsImlzcyI6InRic2cudGVtZW5vcy5jb20iLCJhdWQiOiJ0ZW1lbm9zLWFwaSJ9.TDo8Q4H89eG2ucJY6Wz86iL93v1ZHf7wiMY1myW6XC0
-   RAG_API_URL=https://tbsg.temenos.com
-   ```
-
-## Running the Application
-
-### Option 1: Using Batch Scripts (Windows)
-
-**Start all services:**
-```cmd
-restart-all.bat
-```
-
-This will:
-- Stop any running services
-- Start backend on port 8000
-- Start frontend on port 3000
-
-### Option 2: Manual Start
-
-**Start Backend:**
-```bash
-cd backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-**Start Frontend (in a new terminal):**
-```bash
-cd frontend
-npm run dev
-```
-
-### Option 3: Using Individual Batch Scripts
-
-**Start Backend:**
-```cmd
-cd backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-**Start Frontend:**
-```cmd
-cd frontend
-npm run dev
-```
-
-## Accessing the Application
-
-Once both services are running:
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/api/v1/health
-
-## Using the Platform
-
-### Navigation
-
-The platform is organized into **components**, each focusing on a specific Temenos domain:
-
-1. **Integration** - APIs, Events, and Integration patterns
-2. **Data Architecture** - Data models, flows, and architecture
-3. **Deployment** - Cloud deployments and Azure analysis
-4. **Security** - Security documentation and best practices
-5. **Observability** - Monitoring and observability tools
-6. **Design Time** - Design-time tools and workflows
-
-### Component Features
-
-Each component provides:
-
-- **Content Tab**: Slides, documents, and technical content
-- **Demo Tab**: Interactive demonstrations (if available)
-- **BSG-Guru Tab**: AI-powered chatbot for component-specific questions
-
-### Deployment Analyzer
-
-The **Deployment** component includes an Azure Deployment Analyzer:
-
-1. Click on **Deployment** component
-2. Go to **Demo** tab
-3. Click **Connect to Azure**
-4. Select your Azure subscription
-5. Choose resource groups to analyze
-6. View identified Temenos components with detailed information
-
-**Features:**
-- Automatic Temenos component identification
-- RAG-powered component information (cached for performance)
-- Azure resource analysis
-- Kubernetes namespace discovery (using Kubernetes Python client library)
-- ARM template export for Infrastructure as Code (IaC)
-- Cost analysis for resource groups
-- RAG JWT token management via Settings modal
-
-### BSG-Guru Chatbot
-
-Access the AI chatbot from any component:
-
-1. Navigate to a component
-2. Click **BSG-Guru** tab
-3. Ask questions about the component
-4. Get answers powered by Temenos RAG knowledge base
-
-**Example Questions:**
-- "What are the Temenos cloud architecture models?"
-- "How does Temenos support cloud-native deployments?"
-- "What are the best practices for deploying Temenos components on Azure?"
-
-## API Usage
-
-### Authentication
-
-**Register a new user:**
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "securepassword",
-    "name": "John Doe"
-  }'
-```
-
-**Login:**
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "securepassword"
-  }'
-```
-
-**Use token in requests:**
-```bash
-curl -X GET http://localhost:8000/api/v1/components \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-### Component Content
-
-**Get component content:**
-```bash
-curl -X GET "http://localhost:8000/api/v1/components/deployment/content?page=1&page_size=20" \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-**Get specific content item:**
-```bash
-curl -X GET "http://localhost:8000/api/v1/components/deployment/content/content-id-123" \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-### Azure Deployment Analysis
-
-**Connect to Azure subscription:**
-```bash
-curl -X POST http://localhost:8000/api/v1/deployment/azure/connect \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -d '{
-    "subscription_id": "your-subscription-id"
-  }'
-```
-
-**Get resource groups:**
-```bash
-curl -X GET "http://localhost:8000/api/v1/deployment/azure/resource-groups?subscriptionId=your-subscription-id" \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-**Analyze services:**
-```bash
-curl -X POST http://localhost:8000/api/v1/deployment/temenos/analyze \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -d '{
-    "services": [...],
-    "selected_namespaces": ["default", "temenos"]
-  }'
-```
-
-**Update RAG JWT Token:**
-```bash
-curl -X POST http://localhost:8000/api/v1/deployment/temenos/update-token \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
-  -d '{
-    "token": "your-new-jwt-token"
-  }'
-```
-
-**Get RAG JWT Token Info:**
-```bash
-curl -X GET http://localhost:8000/api/v1/deployment/temenos/jwt-info \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-## Environment Variables
-
-### Backend Environment Variables
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `DATABASE_URL` | MongoDB connection string | Yes | - |
-| `DATABASE_NAME` | Database name | No | `bsg_demo` |
-| `ENVIRONMENT` | Environment (dev/staging/production) | No | `development` |
-| `DEBUG` | Debug mode | No | `False` |
-| `RAG_JWT_TOKEN` | JWT token for Temenos RAG API | No | - |
-| `RAG_API_URL` | Temenos RAG API base URL | No | `https://tbsg.temenos.com` |
-| `JWT_SECRET_KEY` | Secret key for JWT signing | No | Auto-generated |
-| `PORT` | Backend port | No | `8000` |
-
-**Note**: The RAG JWT token can be updated at runtime via the Settings modal in the UI or via the `/api/v1/deployment/temenos/update-token` endpoint. The token is cached in browser localStorage for convenience.
-
-### Frontend Environment Variables
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `VITE_API_URL` | Backend API URL | No | `/api/v1` |
-
-**Note**: In production, `VITE_API_URL` is set during build to point to Azure App Service.
-
-## Troubleshooting
-
-### Backend Won't Start
-
-**Check Python version:**
-```bash
-python --version  # Should be 3.11+
-```
-
-**Check dependencies:**
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-**Check environment variables:**
-```cmd
-# Windows Command Prompt
-echo %DATABASE_URL%
-echo %DATABASE_NAME%
-```
-
-**Check port availability:**
-```bash
-# Windows
-netstat -ano | findstr :8000
-
-# Linux/Mac
-lsof -i :8000
-```
-
-### Frontend Won't Start
-
-**Check Node.js version:**
-```bash
-node --version  # Should be 20+
-```
-
-**Clear node_modules and reinstall:**
-```bash
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
-```
-
-**Check port availability:**
-```bash
-# Windows
-netstat -ano | findstr :3000
-
-# Linux/Mac
-lsof -i :3000
-```
-
-### Database Connection Issues
-
-**Test MongoDB connection:**
-```bash
-# Using MongoDB shell
-mongo "mongodb://connection-string"
-
-# Check backend logs for connection errors
-```
-
-**Verify connection string format:**
-- Must include SSL parameters for Azure Cosmos DB
-- Check for special characters in password
-- Ensure replica set is specified
-
-### RAG API Issues
-
-**Check JWT token:**
-- Token must be valid and not expired
-- Token can be set in `backend/.env` as `RAG_JWT_TOKEN` (for initial setup)
-- Token can be updated via Settings modal in the UI (recommended)
-- Token is cached in browser localStorage for convenience
-
-**Test RAG connection:**
-```bash
-curl -X POST http://localhost:8000/api/v1/deployment/temenos/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "What is Temenos Transact?",
-    "region": "global",
-    "RAGmodelId": "ModularBanking"
-  }'
-```
-
-**MongoDB Storage:**
-- The application uses **Azure Cosmos DB** with **MongoDB API** for server-side persistent storage
-- Database location: Azure cloud (`bsg-demo-platform-mongodb.mongo.cosmos.azure.com`)
-- Database name: `bsg_demo`
-- Collections include: `users`, `user_sessions`, `components`, `content`, `cache`, etc.
-
-**Client-Side Storage (localStorage):**
-- The application uses browser **localStorage** for client-side data storage
-- localStorage is browser-specific and stored on the user's machine
-- Used for: RAG token caching (`bsg_rag_jwt_token`), theme preferences (`app-theme`), selected categories (`bsg_selected_categories`), Azure subscription ID caching (`lastAzureSubscriptionId`)
-- **Note**: localStorage is separate from MongoDB. MongoDB stores server-side persistent data, while localStorage stores client-side user preferences.
-
-### CORS Errors
-
-**Check backend CORS configuration:**
-- Backend allows `http://localhost:3000` by default (updated from 3001)
-- For production, ensure Azure Static Web Apps domain is in CORS origins
-- Check `backend/app/core/config.py` for CORS settings
-
-## Development Workflow
-
-### Making Changes
-
-1. **Create a feature branch:**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-2. **Make your changes:**
-   - Frontend: Edit files in `frontend/src/`
-   - Backend: Edit files in `backend/app/`
-
-3. **Test locally:**
-   - Start both services
-   - Test your changes
-   - Check for errors in console/logs
-
-4. **Commit changes:**
-   ```bash
-   git add .
-   git commit -m "feat: your feature description"
-   ```
-
-5. **Push and create PR:**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-### Code Standards
-
-**Python (Backend):**
-- Follow PEP 8
-- Use type hints
-- Write docstrings
-- Use Pydantic v2 for validation
-
-**TypeScript (Frontend):**
-- Follow ESLint configuration
-- Use TypeScript types
-- Write JSDoc comments
-- Use Tailwind CSS for styling
-
-## Production Deployment
-
-### Azure Deployment
-
-The platform is automatically deployed to Azure via GitHub Actions:
-
-- **Frontend**: Deploys to Azure Static Web Apps on push to `develop`
-- **Backend**: Deploys to Azure App Service on push to `develop`
-
-**Manual deployment:**
-- See `.github/workflows/` for workflow definitions
-- Ensure GitHub Secrets are configured:
-  - `AZURE_STATIC_WEB_APPS_API_TOKEN`
-  - `AZURE_CREDENTIALS`
-  - `RAG_JWT_TOKEN`
-  - `DATABASE_URL`
-
-### Environment Configuration
-
-**Azure App Service Settings:**
-- Set environment variables in Azure Portal
-- Or use Azure CLI:
-  ```bash
-  az webapp config appsettings set \
-    --name bsg-demo-platform-app \
-    --resource-group bsg-demo-platform \
-    --settings DATABASE_URL="..." RAG_JWT_TOKEN="..."
-  ```
-
-## Getting Help
-
-- **Full User Guide**: See [USER_GUIDE.md](./USER_GUIDE.md) for comprehensive documentation
-- **API Documentation**: http://localhost:8000/docs (when backend is running)
-- **Architecture Documentation**: See [ARCHITECTURE.md](./ARCHITECTURE.md)
-- **Troubleshooting**: See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
-- **Issues**: Create an issue on GitHub
+_Last updated: 2025-12-18_
 
 ---
 
-**Last Updated**: November 2025  
-**Maintained By**: BSG Team
+Quick Start (Local)
+-------------------
+1. Clone the repository
+2. Configure `.env` (see CONFIGURATION.md)
+3. Start all services using scripts
 
+Windows (recommended):
+```
+scripts\restart-all.bat
+```
+
+Local endpoints:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- Health: http://localhost:8000/api/v1/health
+
+See LOCAL_DEV.md for full setup details.
+
+---
+
+Using the Platform
+------------------
+The platform is organized into **components**, each representing a Temenos domain.
+
+Common component features:
+- Content: documentation and slides
+- Demo: interactive demonstrations (where available)
+- BSG‑Guru: AI-powered, component-aware chatbot
+
+Authoritative rules for components:
+- COMPONENTS.md
+
+---
+
+Deployment Analyzer (High Level)
+--------------------------------
+The Deployment component allows Azure resource analysis.
+
+Typical flow:
+1. Open Deployment component
+2. Connect to Azure
+3. Select subscription and resource groups
+4. Review detected Temenos components
+
+Notes:
+- Azure permissions and Managed Identity setup are required
+- AKS namespace discovery may differ between local and cloud runtimes
+
+See:
+- AZURE_CONFIGURATION.md
+- TROUBLESHOOTING.md
+
+---
+
+API Usage (Minimal)
+-------------------
+Authentication uses JWT Bearer tokens.
+
+Example:
+```
+GET /api/v1/components
+Authorization: Bearer <token>
+```
+
+Full API rules:
+- API_CONVENTIONS.md
+- OpenAPI: /docs endpoint
+
+---
+
+When to Use This Document
+------------------------
+Use this file when you need:
+- A quick reminder of how to run or access the platform
+- A high-level overview of platform capabilities
+
+For details, always follow links to authoritative docs.
+
+---
+Last updated: 2025-12-18
+Maintained by the BSG Team

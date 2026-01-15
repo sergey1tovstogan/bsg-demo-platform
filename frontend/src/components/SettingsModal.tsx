@@ -5,7 +5,7 @@ import { X, Sun, Moon, Check, Eye, EyeOff, Save } from 'lucide-react'
 import { X, Sun, Moon, Check, Key, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 >>>>>>> origin/feature/component-deployment
 import type { ComponentId } from '../types'
-import { Network, Database, Cloud, Shield, Eye as EyeIcon, Palette } from 'lucide-react'
+import { Network, Database, Cloud, Shield, Palette } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { apiService } from '../services/api'
 

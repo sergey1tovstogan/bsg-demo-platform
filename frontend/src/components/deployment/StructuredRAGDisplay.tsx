@@ -610,246 +610,310 @@ export function StructuredRAGDisplay({
     return unique
   }
   
-  const archSections = parseArchitecturalOverview(architecturalOverview)
-  const funcSections = parseFunctionalOverview(functionalOverview)
-  const parsedCapabilities = parseCapabilities(capabilities)
-  
-  // Extract runtime deployment info from service
-  const runtimeDeployment = service ? {
-    serviceType: service.type || componentType || "",
-    namespace: service.name || "",
-    region: service.location || "",
-    resourceGroup: service.resourceGroup || ""
-  } : null
-  
+  const hasMeaningfulText = (value: string) => {
+    const trimmed = value.trim()
+    return trimmed.length > 0 && !trimmed.includes('Information not available') && !trimmed.includes('I cannot provide')
+  }
+
+  const hasRawArchitecture = hasMeaningfulText(architecturalOverview)
+  const hasRawFunctional = functionalOverview ? hasMeaningfulText(functionalOverview) : false
+
+  const hasArchitectureSections = archSections.sections.length > 0
+  const hasLifecycle = archSections.lifecycle.length > 0
+  const hasComponents = archSections.components.length > 0
+  const hasDeployment = archSections.deployment.length > 0
+  const hasFunctionalSections = funcSections.sections.length > 0
+  const hasCapabilitiesTable = parsedCapabilities.length > 0
+  const hasNonGoals = archSections.nonGoals.length > 0
+
+  const hasRuntimeDeployment =
+    runtimeDeployment &&
+    (runtimeDeployment.serviceType ||
+      runtimeDeployment.namespace ||
+      runtimeDeployment.region ||
+      runtimeDeployment.resourceGroup)
+
+  const renderTable = (table: { headers: string[]; rows: string[][] }) => (
+    <div className="overflow-x-auto shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-slate-700/40">
+          <tr>
+            {table.headers.map((header, hIdx) => (
+              <th key={hIdx} className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {table.rows.map((row, rIdx) => (
+            <tr key={rIdx} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+              {row.map((cell, cIdx) => (
+                <td key={cIdx} className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                  {cell.replace(/\*\*/g, '').trim()}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+
+  const renderParagraphs = (paragraphs: string[]) => (
+    <div className="space-y-3">
+      {paragraphs.map((para, idx) => (
+        <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          {para}
+        </p>
+      ))}
+    </div>
+  )
+
+  const rawParagraphs = (text: string) =>
+    text
+      .split(/\n{2,}/)
+      .map((part) => part.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+
   return (
-    <div className="space-y-6">
-      {/* Compact Architecture View */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-800">
-        <h6 className="font-bold text-purple-900 dark:text-purple-200 text-sm uppercase tracking-wide mb-4">Compact Architecture View</h6>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+    <div className="space-y-5">
+      {/* Quick facts */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-5 border border-purple-200 dark:border-purple-800">
+        <h6 className="font-semibold text-purple-900 dark:text-purple-200 text-xs uppercase tracking-wide mb-3">At a Glance</h6>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <div>
-            <div className="font-semibold text-gray-900 dark:text-white mb-2">Component</div>
-            <div className="text-gray-700 dark:text-gray-300">{componentName || "Unknown"}</div>
+            <div className="font-semibold text-gray-900 dark:text-white">Component</div>
+            <div className="text-gray-700 dark:text-gray-300">{componentName || 'Unknown'}</div>
           </div>
           <div>
-            <div className="font-semibold text-gray-900 dark:text-white mb-2">Platform</div>
+            <div className="font-semibold text-gray-900 dark:text-white">Platform</div>
             <div className="text-gray-700 dark:text-gray-300">Temenos Transact</div>
           </div>
           <div>
-            <div className="font-semibold text-gray-900 dark:text-white mb-2">Logical Role</div>
-            <div className="text-gray-700 dark:text-gray-300">{archSections.executiveSummary.substring(0, 100) || "Core banking microservice"}</div>
+            <div className="font-semibold text-gray-900 dark:text-white">Logical Role</div>
+            <div className="text-gray-700 dark:text-gray-300">
+              {archSections.executiveSummary.substring(0, 120) || 'Core banking microservice'}
+            </div>
           </div>
           <div>
-            <div className="font-semibold text-gray-900 dark:text-white mb-2">Deployment Substrate</div>
-            <div className="text-gray-700 dark:text-gray-300">{componentType || runtimeDeployment?.serviceType || "Azure"}</div>
+            <div className="font-semibold text-gray-900 dark:text-white">Deployment Substrate</div>
+            <div className="text-gray-700 dark:text-gray-300">{componentType || runtimeDeployment?.serviceType || 'Azure'}</div>
           </div>
         </div>
       </div>
-      
-      {/* Executive Summary - Formatted as paragraphs - CANONICAL SECTION */}
-      {/* Always show this section, even if empty (graceful degradation) */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-8 border-2 border-purple-300 dark:border-purple-700 shadow-md">
-        <h5 className="font-bold text-purple-900 dark:text-purple-200 text-xl mb-6 pb-3 border-b-2 border-purple-300 dark:border-purple-600">
+
+      <details open className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
+        <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
           Executive Summary
-        </h5>
-        {archSections.executiveSummary ? (
-          <div className="prose prose-base max-w-none dark:prose-invert">
-            {archSections.executiveSummary.split(/[.!?]+/).filter((s: string) => s.trim().length > 10).map((sentence: string, idx: number) => (
-              <p key={idx} className="text-gray-800 dark:text-gray-200 leading-relaxed mb-4 text-base">
-                {sentence.trim() + (sentence.trim().match(/[.!?]$/) ? '' : '.')}
-              </p>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-600 dark:text-gray-400 italic">Information not available for this component.</p>
-        )}
-      </div>
-      
-      {/* Structured Sections from Architectural Overview - CANONICAL SECTION */}
-      {/* Always show this section structure, even if empty (graceful degradation) */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700 shadow-lg">
-        <h5 className="font-bold text-gray-900 dark:text-white text-xl mb-6 pb-3 border-b-2 border-purple-200 dark:border-purple-700">
+        </summary>
+        <div className="mt-3">
+          {archSections.executiveSummary ? (
+            <div className="space-y-3">
+              {archSections.executiveSummary
+                .split(/[.!?]+/)
+                .filter((s) => s.trim().length > 10)
+                .map((sentence, idx) => (
+                  <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {sentence.trim() + (sentence.trim().match(/[.!?]$/) ? '' : '.')}
+                  </p>
+                ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">Information not available for this component.</p>
+          )}
+        </div>
+      </details>
+
+      <details className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
+        <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
           Architecture & Design
-        </h5>
-        {archSections.sections.length > 0 ? (
-          <div className="space-y-8">
-            {archSections.sections.map((section: any, idx: number) => (
-              <div key={idx} className="border-l-4 border-purple-400 dark:border-purple-600 pl-6 py-2">
+        </summary>
+        <div className="mt-4 space-y-6">
+          {hasArchitectureSections ? (
+            archSections.sections.map((section: any, idx: number) => (
+              <div key={idx} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                 {section.heading && (
-                  <h6 className="font-bold text-gray-900 dark:text-white text-lg mb-4 mt-2">
-                    {section.heading}
-                  </h6>
+                  <h6 className="font-semibold text-gray-900 dark:text-white mb-3">{section.heading}</h6>
                 )}
-                {section.table ? (
-                  <div className="overflow-x-auto shadow-md rounded-lg mt-4">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/30 dark:to-blue-900/30">
-                        <tr>
-                          {section.table.headers.map((header: string, hIdx: number) => (
-                            <th key={hIdx} className="px-6 py-4 text-left text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-                              {header}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {section.table.rows.map((row: string[], rIdx: number) => (
-                          <tr key={rIdx} className="hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
-                            {row.map((cell: string, cIdx: number) => (
-                              <td key={cIdx} className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                                {cell.replace(/\*\*/g, '').trim()}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {section.paragraphs && section.paragraphs.map((para: string, pIdx: number) => {
-                      // Check if paragraph contains a table
+                {(() => {
+                  const paragraphs = section.paragraphs || []
+                  if (section.table) return renderTable(section.table)
+                  const hasParagraphTables = paragraphs.some((para: string) => !!parseMarkdownTable(para))
+                  if (hasParagraphTables) {
+                    return paragraphs.map((para: string, pIdx: number) => {
                       const tableData = parseMarkdownTable(para)
-                      if (tableData && tableData.rows.length > 0) {
-                        return (
-                          <div key={pIdx} className="overflow-x-auto shadow-md rounded-lg mt-4">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                              <thead className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/30 dark:to-blue-900/30">
-                                <tr>
-                                  {tableData.headers.map((header: string, hIdx: number) => (
-                                    <th key={hIdx} className="px-6 py-4 text-left text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-                                      {header}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {tableData.rows.map((row: string[], rIdx: number) => (
-                                  <tr key={rIdx} className="hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
-                                    {row.map((cell: string, cIdx: number) => (
-                                      <td key={cIdx} className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                                        {cell.replace(/\*\*/g, '').trim()}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )
-                      }
-                      return (
-                        <p key={pIdx} className="text-gray-700 dark:text-gray-300 leading-relaxed text-base">
+                      return tableData ? (
+                        <div key={pIdx}>{renderTable(tableData)}</div>
+                      ) : (
+                        <p key={pIdx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                           {para}
                         </p>
                       )
-                    })}
-                  </div>
-                )}
+                    })
+                  }
+                  return renderParagraphs(paragraphs)
+                })()}
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-600 dark:text-gray-400 italic">Architectural details not available for this component.</p>
-        )}
-      </div>
-      
-      {/* Functional Capabilities - CANONICAL SECTION */}
-      {/* Always show this section structure, even if empty (graceful degradation) */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700 shadow-lg">
-        <h5 className="font-bold text-gray-900 dark:text-white text-xl mb-6 pb-3 border-b-2 border-blue-200 dark:border-blue-700">
-          Functional Capabilities
-        </h5>
-        
-        {/* Show structured functional sections if available */}
-        {funcSections.sections.length > 0 && (
-          <div className="space-y-6 mb-8">
-            {funcSections.sections.map((section: any, idx: number) => (
-              <div key={idx} className="border-l-4 border-blue-400 dark:border-blue-600 pl-6 py-2">
-                {section.heading && (
-                  <h6 className="font-bold text-gray-900 dark:text-white text-lg mb-4 mt-2">
-                    {section.heading}
-                  </h6>
-                )}
-                <div className="space-y-4">
-                  {section.paragraphs.map((para: string, pIdx: number) => (
-                    <p key={pIdx} className="text-gray-700 dark:text-gray-300 leading-relaxed text-base">
-                      {para}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {/* Show capabilities table if we have parsed capabilities */}
-        {parsedCapabilities.length > 0 ? (
-          <div className="overflow-x-auto shadow-md rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Capability</th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Description</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {parsedCapabilities.slice(0, 20).map((cap, idx) => (
-                  <tr key={idx} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{cap.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{cap.description || "-"}</td>
-                  </tr>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">Architectural details not available.</p>
+          )}
+
+          {hasLifecycle && (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h6 className="font-semibold text-gray-900 dark:text-white mb-3">Event Lifecycle</h6>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                {archSections.lifecycle.map((step: string, idx: number) => (
+                  <li key={idx}>{step}</li>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        ) : funcSections.sections.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400 italic">Functional capabilities not available for this component.</p>
-        ) : null}
-      </div>
-      
-      {/* Explicit Non-Goals */}
-      {archSections.nonGoals.length > 0 && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-6 border border-yellow-200 dark:border-yellow-800">
-          <h6 className="font-bold text-yellow-900 dark:text-yellow-200 text-base mb-4">Explicit Non-Goals</h6>
-          <ul className="list-disc list-inside space-y-2 text-sm text-yellow-800 dark:text-yellow-200">
+              </ol>
+            </div>
+          )}
+
+          {hasComponents && (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h6 className="font-semibold text-gray-900 dark:text-white mb-3">Components & Responsibilities</h6>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-slate-700/40">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Component</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Responsibility</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {archSections.components.map((item: any, idx: number) => (
+                      <tr key={idx}>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{item.name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{item.responsibility}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{item.notes || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {hasDeployment && (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h6 className="font-semibold text-gray-900 dark:text-white mb-3">Deployment Snapshot</h6>
+              <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                {archSections.deployment.map((item: string, idx: number) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </details>
+
+      <details className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
+        <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+          Functional Capabilities
+        </summary>
+        <div className="mt-4 space-y-6">
+          {hasFunctionalSections && (
+            <div className="space-y-4">
+              {funcSections.sections.map((section: any, idx: number) => (
+                <div key={idx} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                  {section.heading && (
+                    <h6 className="font-semibold text-gray-900 dark:text-white mb-3">{section.heading}</h6>
+                  )}
+                  {renderParagraphs(section.paragraphs || [])}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {hasCapabilitiesTable ? (
+            renderTable({
+              headers: ['Capability', 'Description'],
+              rows: parsedCapabilities.slice(0, 20).map((cap) => [cap.name, cap.description || '-'])
+            })
+          ) : !hasFunctionalSections ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">Functional capabilities not available.</p>
+          ) : null}
+        </div>
+      </details>
+
+      {hasNonGoals && (
+        <details className="group bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-5 border border-yellow-200 dark:border-yellow-800">
+          <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+            Explicit Non-Goals
+          </summary>
+          <ul className="mt-4 list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
             {archSections.nonGoals.map((item: string, idx: number) => (
               <li key={idx}>{item}</li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
-      
-      {/* Runtime Deployment (Azure) - Last Section */}
-      {runtimeDeployment && (
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-6 border border-indigo-200 dark:border-indigo-800">
-          <h6 className="font-bold text-indigo-900 dark:text-indigo-200 text-base mb-4">Runtime Deployment (Azure)</h6>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-semibold text-gray-900 dark:text-white">Service Type:</span>
-              <span className="ml-2 text-gray-700 dark:text-gray-300">{runtimeDeployment.serviceType}</span>
-            </div>
-            {runtimeDeployment.namespace && (
+
+      {hasRuntimeDeployment && (
+        <details className="group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-5 border border-indigo-200 dark:border-indigo-800">
+          <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+            Runtime Deployment (Azure)
+          </summary>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            {runtimeDeployment?.serviceType && (
+              <div>
+                <span className="font-semibold text-gray-900 dark:text-white">Service Type:</span>
+                <span className="ml-2 text-gray-700 dark:text-gray-300">{runtimeDeployment.serviceType}</span>
+              </div>
+            )}
+            {runtimeDeployment?.namespace && (
               <div>
                 <span className="font-semibold text-gray-900 dark:text-white">Namespace:</span>
                 <span className="ml-2 text-gray-700 dark:text-gray-300 font-mono">{runtimeDeployment.namespace}</span>
               </div>
             )}
-            {runtimeDeployment.region && (
+            {runtimeDeployment?.region && (
               <div>
                 <span className="font-semibold text-gray-900 dark:text-white">Region:</span>
                 <span className="ml-2 text-gray-700 dark:text-gray-300">{runtimeDeployment.region}</span>
               </div>
             )}
-            {runtimeDeployment.resourceGroup && (
+            {runtimeDeployment?.resourceGroup && (
               <div>
                 <span className="font-semibold text-gray-900 dark:text-white">Resource Group:</span>
                 <span className="ml-2 text-gray-700 dark:text-gray-300">{runtimeDeployment.resourceGroup}</span>
               </div>
             )}
           </div>
-        </div>
+        </details>
+      )}
+
+      {(hasRawArchitecture || hasRawFunctional) && (
+        <details className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
+          <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+            Raw RAG Output
+          </summary>
+          <div className="mt-4 space-y-5">
+            {hasRawArchitecture && (
+              <div>
+                <h6 className="font-semibold text-gray-900 dark:text-white mb-2">Architecture Overview</h6>
+                {rawParagraphs(architecturalOverview).map((para, idx) => (
+                  <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
+                    {para}
+                  </p>
+                ))}
+              </div>
+            )}
+            {hasRawFunctional && (
+              <div>
+                <h6 className="font-semibold text-gray-900 dark:text-white mb-2">Functional Overview</h6>
+                {rawParagraphs(functionalOverview).map((para, idx) => (
+                  <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
+                    {para}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
       )}
     </div>
   )

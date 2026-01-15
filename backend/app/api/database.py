@@ -22,10 +22,13 @@ except ImportError as e:
 router = APIRouter(prefix="/database", tags=["database"])
 
 
-async def get_mssql_service() -> MSSQLService:
+async def get_mssql_service(connection_name: str = "tdh_ods") -> MSSQLService:
     """
     Get MSSQL service instance with connection details from MongoDB.
     Falls back to settings if MongoDB connection details are not found.
+    
+    Args:
+        connection_name: Name of the connection (default: "tdh_ods", can be "tdh_ods" or "tdh_sds")
     """
     if not MSSQL_AVAILABLE:
         raise HTTPException(
@@ -33,7 +36,7 @@ async def get_mssql_service() -> MSSQLService:
             detail="MSSQL service is not available. ODBC drivers may not be installed."
         )
     return await MSSQLService.from_mongodb(
-        connection_name="demo_sql_server",
+        connection_name=connection_name,
         component_id="data-architecture"
     )
 
@@ -71,6 +74,7 @@ class QueryRequest(BaseModel):
     """Query request"""
     query: str = Field(..., description="SQL query to execute")
     limit: int = Field(default=100, ge=1, le=1000, description="Maximum rows to return")
+    connection: str = Field(default="tdh_ods", description="Connection name: tdh_ods or tdh_sds")
 
 
 class QueryResponse(BaseModel):
@@ -92,19 +96,43 @@ class TableDataResponse(BaseModel):
 # Endpoints
 
 @router.get("/connection/test", response_model=ConnectionStatus)
-async def test_connection():
+async def test_connection(
+    connection: str = Query("tdh_ods", description="Connection name: tdh_ods or tdh_sds")
+):
     """
     Test database connection
 
+    Args:
+        connection: Connection name (tdh_ods or tdh_sds, default: tdh_ods)
+
     Returns connection status and database version
+    
+    Note: If connection fails with timeout, check Azure SQL firewall/VNet rules.
+    Since Azure Bastion is used, ensure VNet subnet is allowed or private endpoint is configured.
     """
     try:
-        service = await get_mssql_service()
+        service = await get_mssql_service(connection_name=connection)
         status = service.test_connection()
         return ConnectionStatus(**status)
     except Exception as e:
+        error_msg = str(e)
         logger.error(f"Connection test failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        
+        # Provide helpful error message for firewall/VNet issues
+        if 'timeout' in error_msg.lower() or 'not accessible' in error_msg.lower() or 'not found' in error_msg.lower():
+            detail = (
+                f"Connection failed: {error_msg}. "
+                f"This is likely a firewall/VNet configuration issue. "
+                f"Since Azure Bastion is used, ensure one of the following: "
+                f"1) VNet subnet is allowed in SQL firewall rules (Azure Portal > SQL Server > Networking > Add existing virtual network), "
+                f"2) Private endpoint is configured for SQL, or "
+                f"3) Service endpoint is enabled for the VNet subnet. "
+                f"Go to Azure Portal > SQL Server > Networking to configure."
+            )
+        else:
+            detail = error_msg
+            
+        raise HTTPException(status_code=500, detail=detail)
 
 
 @router.get("/tables", response_model=List[TableInfo])
@@ -209,7 +237,7 @@ async def execute_query(request: QueryRequest):
     Execute a custom SQL query
 
     Args:
-        request: Query request with SQL and limit
+        request: Query request with SQL, limit, and connection name
 
     Returns:
         Query results with columns and data
@@ -236,7 +264,7 @@ async def execute_query(request: QueryRequest):
                     detail=f"Query contains forbidden keyword: {keyword}"
                 )
 
-        service = await get_mssql_service()
+        service = await get_mssql_service(connection_name=request.connection)
         result = service.execute_query(
             query=request.query,
             limit=request.limit
