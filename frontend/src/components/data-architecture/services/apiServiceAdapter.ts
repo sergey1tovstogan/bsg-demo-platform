@@ -607,7 +607,6 @@ class RealApiService implements ITransactionApiService {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async sendPayment(payload: PaymentPayload): Promise<ApiResponse<Payment>> {
     try {
       // Validate minimal required fields for Temenos instant payment

@@ -1,11 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   cacheDir: '.vite',
   base: '/', // Ensure base path is root for Azure Static Web Apps
+  define: {
+    'global': 'globalThis',
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      'buffer': 'buffer/'
+    }
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

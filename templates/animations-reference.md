@@ -24,201 +24,245 @@ Content creators only need to specify:
 
 ## Animation Categories
 
-### 1. Entry Animations
+### 1. Entry Animations (Currently Implemented)
 How elements appear when page loads
 
-### 2. Interaction Animations
-How elements respond to user actions (hover, click)
+### 2. Hover Effects (Currently Implemented)
+How elements respond to mouse hover interactions
 
-### 3. Transition Animations
-How content changes or pages navigate
-
-### 4. Expandable Animations
-How collapsible content expands/collapses
-
-### 5. Loading Animations
-How loading states appear
+### 3. Future Animation Types (Not Yet Implemented)
+The following categories are planned for future releases:
+- Click/Active Animations (pulse, ripple)
+- Transition Animations (page navigation)
+- Expandable Animations (collapsible content)
+- Loading Animations (loading states)
 
 ---
 
-## Entry Animations
+## Currently Implemented Entry Animations
 
-Applied when elements first appear on page load.
+Applied when elements first appear on page load or in agenda grids.
 
-### fade-in
+**✅ IMPLEMENTED ANIMATION TYPES:**
+1. **fade-in** - Simple opacity fade
+2. **slide-in-left** - Slides in from left side
+3. **slide-in-right** - Slides in from right side
+4. **scale-in** - Grows from smaller size
+5. **stagger-fade-in** - Sequential fade for multiple items
+
+**Note:** Other animation types mentioned in this document (slide-in-up, slide-in-down, bounce-in, etc.) are for reference and future implementation.
+
+---
+
+### fade-in ✅
 Element fades from transparent to visible.
 
 ```yaml
-settings:
-  default_animation: "fade-in"
+card:
+  settings:
+    default_animation: "fade-in"
+```
+
+```yaml
+agenda:
+  animation:
+    type: "fade-in"
 ```
 
 **Use for:**
 - General purpose (default)
 - Subtle, professional appearance
 - Text content
+- Page sections
 
 **Effect:** Opacity 0 → 1
 
 ---
 
-### slide-in-up
-Element slides up from below.
+### slide-in-left ✅
+Element slides in from left side.
 
 ```yaml
-settings:
-  default_animation: "slide-in-up"
+card:
+  settings:
+    default_animation: "slide-in-left"
 ```
 
-**Use for:**
-- Cards and panels
-- Content blocks
-- Feature grids
-
-**Effect:** Moves from below viewport + fades in
-
----
-
-### slide-in-down
-Element slides down from above.
-
 ```yaml
-settings:
-  default_animation: "slide-in-down"
-```
-
-**Use for:**
-- Headers and heroes
-- Dropdowns and menus
-- Notifications
-
-**Effect:** Moves from above viewport + fades in
-
----
-
-### slide-in-left
-Element slides in from left.
-
-```yaml
-settings:
-  default_animation: "slide-in-left"
+agenda:
+  animation:
+    type: "slide-in-left"
 ```
 
 **Use for:**
 - Sidebar content
 - Sequential items
 - Reading flow emphasis
+- Agenda grids
 
-**Effect:** Moves from left + fades in
+**Effect:** Moves from left (-100px) + fades in
 
 ---
 
-### slide-in-right
-Element slides in from right.
+### slide-in-right ✅
+Element slides in from right side.
 
 ```yaml
-settings:
-  default_animation: "slide-in-right"
+card:
+  settings:
+    default_animation: "slide-in-right"
+```
+
+```yaml
+agenda:
+  animation:
+    type: "slide-in-right"
 ```
 
 **Use for:**
 - Sidebar opposite content
 - Alternative views
 - Contextual information
+- Reversed flow
 
-**Effect:** Moves from right + fades in
+**Effect:** Moves from right (+100px) + fades in
 
 ---
 
-### scale-in
+### scale-in ✅
 Element grows from small to full size.
 
 ```yaml
-settings:
-  default_animation: "scale-in"
+card:
+  settings:
+    default_animation: "scale-in"
+```
+
+```yaml
+agenda:
+  animation:
+    type: "scale-in"
 ```
 
 **Use for:**
 - Icons and badges
 - Important callouts
 - Interactive elements
+- Emphasizing content
 
 **Effect:** Scale 0.8 → 1.0 + fades in
 
 ---
 
-### bounce-in
-Element bounces into place.
-
-```yaml
-settings:
-  default_animation: "bounce-in"
-```
-
-**Use for:**
-- Success messages
-- Achievements
-- Playful content
-- **Use sparingly!**
-
-**Effect:** Bouncy spring animation + fade
-
----
-
-### stagger-fade-in
-Children elements fade in sequentially.
+### stagger-fade-in ✅
+Children elements fade in sequentially with configurable delay.
 
 ```yaml
 agenda:
   animation:
     type: "stagger-fade-in"
-    delay_between_items: "0.1s"  # Delay between each item
+    delay_between_items: "0.1s"  # Time between each item
 ```
 
 **Use for:**
 - Lists of items
 - Grid layouts
-- Agenda cards
+- Agenda cards (recommended)
 - Navigation menus
 
-**Effect:** Each child fades in with slight delay
+**Effect:** Each child fades in with delay between them
 
-**Stagger delay options:**
-- `0.05s` - Fast (many items)
-- `0.1s` - Standard (recommended)
-- `0.15s` - Slow (emphasis)
+**Delay Configuration:**
+The `delay_between_items` parameter supports:
+- **Seconds:** `"0.05s"`, `"0.1s"`, `"0.5s"`, `"1s"`, `"2s"`
+- **Milliseconds:** `"50ms"`, `"100ms"`, `"500ms"`, `"1000ms"`
+
+**Recommended delay values:**
+- `"0.05s"` or `"50ms"` - Fast (10+ items)
+- `"0.1s"` or `"100ms"` - Standard (recommended, 5-10 items)
+- `"0.2s"` or `"200ms"` - Moderate (3-5 items)
+- `"0.5s"` or `"500ms"` - Slow (2-3 items, dramatic effect)
+
+**Example:**
+```yaml
+agenda:
+  title: "Animations Showcase"
+  subtitle: "Explore all animation capabilities"
+
+  animation:
+    type: "stagger-fade-in"
+    delay_between_items: "0.2s"  # 200ms between each card
+
+  items:
+    - id: "item-1"  # Appears first
+    - id: "item-2"  # Appears after 0.2s
+    - id: "item-3"  # Appears after 0.4s
+```
 
 ---
 
-### none
-No animation (instant appearance).
+## Not Yet Implemented (Reference Only)
+
+The following animations are documented for future implementation but are **not currently functional**:
+
+### slide-in-up ❌ (Not Implemented)
+Element slides up from below.
 
 ```yaml
 settings:
-  default_animation: "none"
+  default_animation: "slide-in-up"  # NOT IMPLEMENTED
 ```
-
-**Use for:**
-- Performance-critical pages
-- Simple content
-- Accessibility preference
-- Testing
 
 ---
 
-## Interaction Animations
+### slide-in-down ❌ (Not Implemented)
+Element slides down from above.
 
-### Hover Effects
+```yaml
+settings:
+  default_animation: "slide-in-down"  # NOT IMPLEMENTED
+```
+
+---
+
+### bounce-in ❌ (Not Implemented)
+Element bounces into place.
+
+```yaml
+settings:
+  default_animation: "bounce-in"  # NOT IMPLEMENTED
+```
+
+---
+
+## Currently Implemented Hover Effects
 
 Applied when user hovers over interactive elements.
 
-#### zoom
+**✅ IMPLEMENTED HOVER EFFECTS:**
+1. **zoom** - Element slightly enlarges
+2. **lift** - Element rises with enhanced shadow
+3. **glow** - Subtle glow/border highlight
+4. **border** - Border color change
+5. **brightness** - Image brightness increases
+
+**Supported in these section types:**
+- `feature_grid` - Individual features can have hover effects
+- `clickable_cards` - Individual cards can have hover effects
+- `gallery` - Individual images can have hover effects
+
+---
+
+### zoom ✅
 Element slightly enlarges.
 
 ```yaml
-- type: "image_clickable"
-  image: "/images/diagram.png"
-  hover_effect: "zoom"
+- type: "feature_grid"
+  features:
+    - name: "Feature"
+      icon: "Star"
+      description: "Feature description"
+      hover_effect: "zoom"
 ```
 
 **Use for:**
@@ -231,13 +275,14 @@ Element slightly enlarges.
 
 ---
 
-#### lift
+### lift ✅
 Element rises with shadow.
 
 ```yaml
 - type: "clickable_cards"
   cards:
     - title: "Feature"
+      description: "Feature description"
       hover_effect: "lift"
 ```
 
@@ -246,17 +291,19 @@ Element rises with shadow.
 - Panels
 - Interactive containers
 
-**Effect:** Translates up + enhanced shadow
+**Effect:** Translates up (-4px) + enhanced shadow
 
 ---
 
-#### glow
+### glow ✅
 Element gets subtle glow effect.
 
 ```yaml
 - type: "feature_grid"
   features:
     - name: "Security"
+      icon: "Shield"
+      description: "Security feature"
       hover_effect: "glow"
 ```
 
@@ -265,17 +312,19 @@ Element gets subtle glow effect.
 - Badges
 - Special elements
 
-**Effect:** Subtle glow/border highlight
+**Effect:** Subtle ring glow effect
 
 ---
 
-#### border
+### border ✅
 Border color change or appearance.
 
 ```yaml
-- type: "image_clickable"
-  image: "/images/architecture.png"
-  hover_effect: "border"
+- type: "gallery"
+  images:
+    - src: "/images/architecture.png"
+      alt: "Architecture diagram"
+      hover_effect: "border"
 ```
 
 **Use for:**
@@ -283,17 +332,18 @@ Border color change or appearance.
 - Outlined elements
 - Selection indicators
 
-**Effect:** Border color transition
+**Effect:** Border color transition to blue
 
 ---
 
-#### brightness
+### brightness ✅
 Image brightness increases.
 
 ```yaml
 - type: "gallery"
   images:
     - src: "/images/screenshot.png"
+      alt: "Screenshot"
       hover_effect: "brightness"
 ```
 
@@ -302,7 +352,11 @@ Image brightness increases.
 - Photo grids
 - Thumbnails
 
-**Effect:** Brightness filter applied
+**Effect:** Brightness filter 1.0 → 1.1
+
+---
+
+## Not Yet Implemented Interaction Animations
 
 ---
 
@@ -907,38 +961,59 @@ page:
 
 ## Quick Reference
 
-**Entry Animations:**
-- fade-in (default)
-- slide-in-up, slide-in-down, slide-in-left, slide-in-right
-- scale-in
-- bounce-in (use sparingly)
-- stagger-fade-in (for groups)
-- none
+### ✅ Currently Implemented Entry Animations
 
-**Hover Effects:**
-- zoom
-- lift
-- glow
-- border
-- brightness
+**For Card Settings (Page/Section Animations):**
+```yaml
+card:
+  settings:
+    default_animation: "fade-in"  # or slide-in-left, slide-in-right, scale-in
+```
 
-**Expandable Animations:**
-- slide-down (default)
-- slide-up
-- fade-in
-- scale-expand
+**For Agenda Grid Animations:**
+```yaml
+agenda:
+  animation:
+    type: "stagger-fade-in"  # or fade-in, slide-in-left, slide-in-right, scale-in
+    delay_between_items: "0.1s"  # Only for stagger-fade-in
+```
 
-**Page Transitions:**
-- fade (default)
-- slide-left, slide-right
-- scale-fade
-- instant
+**Implemented Types:**
+1. `fade-in` - Default, simple opacity fade
+2. `slide-in-left` - Slides from left side
+3. `slide-in-right` - Slides from right side
+4. `scale-in` - Grows from smaller size
+5. `stagger-fade-in` - Sequential fade (recommended for agenda grids)
 
-**Speeds:**
-- fast (150ms)
-- normal (300ms) [default]
-- slow (500ms)
-- Custom: "250ms"
+**Stagger Delay Options:**
+- `"0.05s"` or `"50ms"` - Fast (10+ items)
+- `"0.1s"` or `"100ms"` - Standard (5-10 items) **[Recommended]**
+- `"0.2s"` or `"200ms"` - Moderate (3-5 items)
+- `"0.5s"` or `"500ms"` - Slow (2-3 items)
+- `"1s"` or `"1000ms"` - Very slow (dramatic effect)
+
+### ✅ Implemented Hover Effects
+
+The following hover effects are **now functional**:
+- **zoom** - Element scales up (1.0 → 1.05)
+- **lift** - Element rises with enhanced shadow
+- **glow** - Subtle ring glow effect
+- **border** - Border color transition to blue
+- **brightness** - Brightness filter (1.0 → 1.1)
+
+**Supported in:**
+- `feature_grid` sections
+- `clickable_cards` sections
+- `gallery` sections
+
+### ❌ Not Yet Implemented (Reference Only)
+
+The following are documented but **not functional**:
+- Entry animations: slide-in-up, slide-in-down, bounce-in
+- Click/Active animations: pulse, ripple
+- Expandable animations: slide-down, slide-up, scale-expand
+- Page transitions: fade, slide-left, slide-right, scale-fade, instant
+- Loading animations: spinner, dots, pulse, skeleton
 
 ---
 
@@ -956,5 +1031,5 @@ page:
 
 ---
 
-**Last Updated:** December 16, 2024
-**Version:** 1.0
+**Last Updated:** January 10, 2026
+**Version:** 1.2 - Added hover effects implementation (zoom, lift, glow, border, brightness)
