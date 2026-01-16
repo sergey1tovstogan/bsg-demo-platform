@@ -7,13 +7,8 @@
 import React, { useState, useEffect } from 'react'
 import './UserForm.css'
 
-export interface User {
-  user_id: string
-  email: string
-  username: string
-  role: 'admin' | 'viewer' | 'guest'
-  is_active: boolean
-}
+// Import User type from UserList to maintain consistency
+import type { User } from './UserList'
 
 interface UserFormProps {
   user?: User | null

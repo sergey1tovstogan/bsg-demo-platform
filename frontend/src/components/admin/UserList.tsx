@@ -82,8 +82,8 @@ export const UserList: React.FC<UserListProps> = ({
 
     // Sort
     filtered.sort((a, b) => {
-      let aValue: any = a[sortField]
-      let bValue: any = b[sortField]
+      let aValue: any
+      let bValue: any
 
       if (sortField === 'status') {
         aValue = a.is_active ? 1 : 0
@@ -91,6 +91,18 @@ export const UserList: React.FC<UserListProps> = ({
       } else if (sortField === 'last_login') {
         aValue = a.last_login_at || ''
         bValue = b.last_login_at || ''
+      } else if (sortField === 'username') {
+        aValue = a.username
+        bValue = b.username
+      } else if (sortField === 'email') {
+        aValue = a.email
+        bValue = b.email
+      } else if (sortField === 'role') {
+        aValue = a.role
+        bValue = b.role
+      } else {
+        aValue = ''
+        bValue = ''
       }
 
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1

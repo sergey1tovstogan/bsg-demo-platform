@@ -10,10 +10,9 @@ import './LoginForm.css'
 
 interface LoginFormProps {
   onSuccess?: () => void
-  redirectTo?: string
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, redirectTo }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
