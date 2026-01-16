@@ -1826,7 +1826,6 @@ function ServiceAnalysis({
           }, 0)
           
           const awsTotal = awsCosts.reduce((sum, cost) => sum + (cost.total_cost || 0), 0)
-          const totalCost = azureTotal + awsTotal
 
           const hasProjections = costEntries.some(c => c.projections && !c.error)
           const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {

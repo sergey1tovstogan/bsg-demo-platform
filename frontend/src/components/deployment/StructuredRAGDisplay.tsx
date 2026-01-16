@@ -669,12 +669,6 @@ export function StructuredRAGDisplay({
     </div>
   )
 
-  const rawParagraphs = (text: string) =>
-    text
-      .split(/\n{2,}/)
-      .map((part) => part.replace(/\s+/g, ' ').trim())
-      .filter(Boolean)
-
   return (
     <div className="space-y-5">
       {/* Quick facts */}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Info, Loader2, ExternalLink, Link, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Loader2, ExternalLink, Link, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { apiService } from '../services/api'
 import { ApiVersioning } from './integration/ApiVersioning'
 import { ApiWizardsGallery } from './ApiWizardsGallery'
@@ -18,10 +18,8 @@ interface TooltipConfig {
 
 export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyDemoSettings = false }: { hideTitle?: boolean, hideDemoSettings?: boolean, onlyDemoSettings?: boolean }) {
   const [showApiVersioning, setShowApiVersioning] = useState(false)
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const [kafkaTooltipContent, setKafkaTooltipContent] = useState<string>('')
   const [kafkaTooltipLoading, setKafkaTooltipLoading] = useState(true)
-  const [showKafkaTooltip, setShowKafkaTooltip] = useState(false)
   const [kafkaTooltipPinned, setKafkaTooltipPinned] = useState(false)
   const [showDemoSettings, setShowDemoSettings] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -32,7 +30,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
   const [showPublicCatalogApproval, setShowPublicCatalogApproval] = useState(false)
   const [newPublicCatalogContent, setNewPublicCatalogContent] = useState<string>('')
   const [isRefreshingCatalog, setIsRefreshingCatalog] = useState(false)
-  const [tooltipTimeout, setTooltipTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
   const [pinnedTooltip, setPinnedTooltip] = useState<string | null>(null)
   const [openStandardsContent, setOpenStandardsContent] = useState<string>('')
   const [, setOpenStandardsLoading] = useState(true)
@@ -49,12 +46,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
   const [kafkaPrompt, setKafkaPrompt] = useState('What are the Kafka capabilities in Temenos platform for event-driven architecture and messaging, including CloudEvents support?')
   const [publicCatalogPrompt, setPublicCatalogPrompt] = useState('What is the Temenos public API catalog and what are its key capabilities for banks and developers?')
   const [openStandardsPrompt, setOpenStandardsPrompt] = useState('Elaborate about API and related open standards such as Berlin Group, OpenAPI and PSD2')
-  const [showBusinessLogicTooltip, setShowBusinessLogicTooltip] = useState(false)
-  const [businessLogicTooltipPinned, setBusinessLogicTooltipPinned] = useState(false)
-  const [showBusinessMicroservicesTooltip, setShowBusinessMicroservicesTooltip] = useState(false)
-  const [businessMicroservicesTooltipPinned, setBusinessMicroservicesTooltipPinned] = useState(false)
-  const [showBankSystemTooltip, setShowBankSystemTooltip] = useState(false)
-  const [bankSystemTooltipPinned, setBankSystemTooltipPinned] = useState(false)
   const [showApiWizardsGallery, setShowApiWizardsGallery] = useState(false)
   
   // Track expanded components for overlay positioning
@@ -129,68 +120,17 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
   ]
 
   // Helper function to handle feature card hover
-  const handleFeatureCardHover = (tooltipId: string) => {
-    // Clear any existing timeout
-    if (tooltipTimeout) {
-      clearTimeout(tooltipTimeout)
-      setTooltipTimeout(null)
-    }
-    // Don't change tooltip if something is pinned
-    if (pinnedTooltip || kafkaTooltipPinned || businessLogicTooltipPinned || businessMicroservicesTooltipPinned || bankSystemTooltipPinned) {
-      return
-    }
-
-    // Add a delay before showing the tooltip to prevent flickering
-    const timeout = setTimeout(() => {
-      setActiveTooltip(tooltipId)
-      setShowKafkaTooltip(false)
-      setShowBusinessLogicTooltip(false)
-      setShowBusinessMicroservicesTooltip(false)
-      setShowBankSystemTooltip(false)
-      setTooltipTimeout(null)
-    }, 400)
-    setTooltipTimeout(timeout)
-  }
-
-  // Helper function to handle feature card leave with delay
-  const handleFeatureCardLeave = () => {
-    // Don't clear tooltip if something is pinned
-    if (pinnedTooltip || kafkaTooltipPinned || businessLogicTooltipPinned || businessMicroservicesTooltipPinned || bankSystemTooltipPinned) {
-      return
-    }
-    // Clear any existing timeout
-    if (tooltipTimeout) {
-      clearTimeout(tooltipTimeout)
-      setTooltipTimeout(null)
-    }
-    // Add a delay before hiding to prevent flickering when moving between boxes
-    const timeout = setTimeout(() => {
-      setActiveTooltip(null)
-      setTooltipTimeout(null)
-    }, 300)
-    setTooltipTimeout(timeout)
-  }
-
   // Helper function to handle feature card click (toggle expandable overlay)
   const handleFeatureCardClick = (tooltipId: string) => {
     if (expandedComponent === tooltipId) {
       // Collapse if clicking the same box
       setExpandedComponent(null)
       setPinnedTooltip(null)
-      setActiveTooltip(null)
     } else {
       // Expand this component's info
       setExpandedComponent(tooltipId)
       setPinnedTooltip(tooltipId)
-      setActiveTooltip(tooltipId)
       setKafkaTooltipPinned(false)
-      setShowKafkaTooltip(false)
-      setBusinessLogicTooltipPinned(false)
-      setShowBusinessLogicTooltip(false)
-      setBusinessMicroservicesTooltipPinned(false)
-      setShowBusinessMicroservicesTooltip(false)
-      setBankSystemTooltipPinned(false)
-      setShowBankSystemTooltip(false)
     }
   }
   
@@ -825,9 +765,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
           minHeight: '450px'
         }}
         onMouseLeave={() => {
-          if (!pinnedTooltip && !kafkaTooltipPinned) {
-            setActiveTooltip(null)
-          }
+          // Handled by click-outside listener
         }}
       >
         {/* Left Panel - Features */}
@@ -837,8 +775,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             data-component-ref
             ref={(el) => { componentRefs.current['expose-data'] = el }}
             className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${expandedComponent === 'expose-data' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
-            onMouseEnter={() => handleFeatureCardHover('expose-data')}
-            onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('expose-data')}
           >
             {expandedComponent === 'expose-data' ? (
@@ -874,8 +810,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             data-component-ref
             ref={(el) => { componentRefs.current['api-catalog'] = el }}
             className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'api-catalog' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
-            onMouseEnter={() => handleFeatureCardHover('api-catalog')}
-            onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('api-catalog')}
           >
             {expandedComponent === 'api-catalog' ? (
@@ -915,8 +849,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             data-component-ref
             ref={(el) => { componentRefs.current['open-standards'] = el }}
             className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'open-standards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
-            onMouseEnter={() => handleFeatureCardHover('open-standards')}
-            onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('open-standards')}
           >
             {expandedComponent === 'open-standards' ? (
@@ -1051,8 +983,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                   ref={(el) => { componentRefs.current['api-framework'] = el }}
                   className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all relative ${expandedComponent === 'api-framework' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '150px' }}
-                  onMouseEnter={() => handleFeatureCardHover('api-framework')}
-                  onMouseLeave={handleFeatureCardLeave}
                   onClick={() => handleFeatureCardClick('api-framework')}
                 >
                   {expandedComponent === 'api-framework' && (
@@ -1168,8 +1098,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                 <div
                   className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'microservices-api' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '150px' }}
-                  onMouseEnter={() => handleFeatureCardHover('microservices-api')}
-                  onMouseLeave={handleFeatureCardLeave}
                   onClick={() => handleFeatureCardClick('microservices-api')}
                 >
                   <div className="text-center text-sm font-bold text-white" style={{ color: '#FFFFFF' }}>API</div>
@@ -1226,8 +1154,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             data-component-ref
             ref={(el) => { componentRefs.current['graphical-wizards'] = el }}
             className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'graphical-wizards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
-            onMouseEnter={() => handleFeatureCardHover('graphical-wizards')}
-            onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('graphical-wizards')}
           >
             {expandedComponent === 'graphical-wizards' ? (
@@ -1268,8 +1194,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             data-component-ref
             ref={(el) => { componentRefs.current['security-standards'] = el }}
             className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'security-standards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
-            onMouseEnter={() => handleFeatureCardHover('security-standards')}
-            onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('security-standards')}
           >
             {expandedComponent === 'security-standards' ? (
@@ -1301,8 +1225,6 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
             data-component-ref
             ref={(el) => { componentRefs.current['upgradability'] = el }}
             className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'upgradability' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
-            onMouseEnter={() => handleFeatureCardHover('upgradability')}
-            onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('upgradability')}
           >
             {expandedComponent === 'upgradability' ? (
