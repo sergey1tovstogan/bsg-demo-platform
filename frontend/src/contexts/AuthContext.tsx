@@ -250,6 +250,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return roleHierarchy[user.role] >= roleHierarchy[role];
   }, [user]);
 
+  /**
+   * Authenticated fetch helper that automatically adds auth header
+   */
+  const authenticatedFetch = useCallback(async (
+    url: string,
+    options: RequestInit = {}
+  ): Promise<Response> => {
+    const accessToken = getAccessToken();
+
+    // Prepend API_BASE_URL if the URL is relative (starts with /)
+    const fullUrl = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
+
+    const headers = {
+      ...options.headers,
+      ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+    };
+
+    return fetch(fullUrl, {
+      ...options,
+      headers,
+    });
+  }, []);
+
   const value: AuthContextType = {
     user,
     isAuthenticated,
@@ -292,6 +315,7 @@ export const getAccessToken = (): string | null => {
 
 /**
  * API client helper that automatically adds auth header
+ * Useful for API calls outside of React components
  */
 export const authenticatedFetch = async (
   url: string,
@@ -299,12 +323,15 @@ export const authenticatedFetch = async (
 ): Promise<Response> => {
   const accessToken = getAccessToken();
 
+  // Prepend API_BASE_URL if the URL is relative (starts with /)
+  const fullUrl = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
+
   const headers = {
     ...options.headers,
     ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
   };
 
-  return fetch(url, {
+  return fetch(fullUrl, {
     ...options,
     headers,
   });
