@@ -1,0 +1,310 @@
+/**
+ * Authentication Context
+ * 
+ * Provides global authentication state management for the application.
+ * Handles login, logout, token storage, and auto-refresh.
+ */
+
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import axios, { AxiosInstance } from 'axios'
+
+// Types
+export type UserRole = 'guest' | 'viewer' | 'admin'
+
+export interface User {
+  user_id: string
+  email: string
+  username: string
+  role: UserRole
+  profile?: {
+    first_name?: string
+    last_name?: string
+    avatar_url?: string
+    timezone?: string
+  }
+  is_active?: boolean
+  last_login_at?: string
+}
+
+interface LoginCredentials {
+  email: string
+  password: string
+  remember_me?: boolean
+}
+
+interface LoginResponse {
+  access_token: string
+  refresh_token: string
+  token_type: string
+  expires_in: number
+  user: User
+}
+
+interface AuthContextType {
+  user: User | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  login: (credentials: LoginCredentials) => Promise<void>
+  logout: () => void
+  refreshToken: () => Promise<void>
+  hasRole: (role: UserRole) => boolean
+  hasPermission: (permission: string) => boolean
+  authenticatedFetch: <T = any>(url: string, options?: RequestInit) => Promise<T>
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+// API base URL
+const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined' && (window as any).API_BASE_URL) {
+    return (window as any).API_BASE_URL
+  }
+  const viteEnv = (import.meta as any).env
+  if (viteEnv && viteEnv.VITE_API_URL) {
+    return viteEnv.VITE_API_URL as string
+  }
+  return '/api/v1'
+}
+
+// Create axios instance
+const createAuthClient = (): AxiosInstance => {
+  const baseURL = getApiBaseUrl()
+  return axios.create({
+    baseURL,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+}
+
+const authClient = createAuthClient()
+
+// Storage keys
+const ACCESS_TOKEN_KEY = 'auth_access_token'
+const REFRESH_TOKEN_KEY = 'auth_refresh_token'
+const USER_KEY = 'auth_user'
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Load user from localStorage on mount
+  useEffect(() => {
+    const loadUser = () => {
+      try {
+        const storedUser = localStorage.getItem(USER_KEY)
+        const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY)
+        
+        if (storedUser && accessToken) {
+          const parsedUser = JSON.parse(storedUser)
+          setUser(parsedUser)
+          
+          // Set up auto-refresh
+          setupAutoRefresh()
+        }
+      } catch (error) {
+        console.error('Error loading user from storage:', error)
+        clearAuth()
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadUser()
+  }, [])
+
+  // Setup auto-refresh (every 14 minutes)
+  const setupAutoRefresh = useCallback(() => {
+    const interval = setInterval(() => {
+      refreshToken().catch((error) => {
+        console.error('Auto-refresh failed:', error)
+        // If refresh fails, logout user
+        logout()
+      })
+    }, 14 * 60 * 1000) // 14 minutes
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Login function
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    try {
+      const response = await authClient.post<LoginResponse>('/auth/login', {
+        email: credentials.email,
+        password: credentials.password,
+      })
+
+      const { access_token, refresh_token, user: userData } = response.data
+
+      // Store tokens and user
+      localStorage.setItem(ACCESS_TOKEN_KEY, access_token)
+      localStorage.setItem(REFRESH_TOKEN_KEY, refresh_token)
+      localStorage.setItem(USER_KEY, JSON.stringify(userData))
+
+      setUser(userData)
+      setupAutoRefresh()
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Login failed'
+      throw new Error(errorMessage)
+    }
+  }, [setupAutoRefresh])
+
+  // Logout function
+  const logout = useCallback(() => {
+    const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY)
+    
+    // Call logout endpoint (fire and forget)
+    if (accessToken) {
+      authClient.post('/auth/logout', {}, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }).catch(() => {
+        // Ignore errors on logout
+      })
+    }
+
+    clearAuth()
+  }, [])
+
+  // Clear auth state
+  const clearAuth = () => {
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
+    setUser(null)
+  }
+
+  // Refresh token function
+  const refreshToken = useCallback(async () => {
+    try {
+      const refreshTokenValue = localStorage.getItem(REFRESH_TOKEN_KEY)
+      if (!refreshTokenValue) {
+        throw new Error('No refresh token available')
+      }
+
+      const response = await authClient.post<{ access_token: string }>('/auth/refresh', {
+        refresh_token: refreshTokenValue,
+      })
+
+      const { access_token } = response.data
+      localStorage.setItem(ACCESS_TOKEN_KEY, access_token)
+    } catch (error: any) {
+      // If refresh fails, logout
+      clearAuth()
+      throw error
+    }
+  }, [])
+
+  // Check if user has role
+  const hasRole = useCallback((role: UserRole): boolean => {
+    if (!user) return false
+    
+    // Role hierarchy: admin > viewer > guest
+    const roleHierarchy: Record<UserRole, number> = {
+      guest: 0,
+      viewer: 1,
+      admin: 2,
+    }
+
+    return roleHierarchy[user.role] >= roleHierarchy[role]
+  }, [user])
+
+  // Check if user has permission
+  const hasPermission = useCallback((permission: string): boolean => {
+    if (!user) return false
+
+    // Admin has all permissions
+    if (user.role === 'admin') return true
+
+    // Define permissions by role
+    const rolePermissions: Record<UserRole, string[]> = {
+      guest: [],
+      viewer: ['view:cards', 'configure:demos'],
+      admin: ['*'], // All permissions
+    }
+
+    const userPermissions = rolePermissions[user.role] || []
+    return userPermissions.includes(permission) || userPermissions.includes('*')
+  }, [user])
+
+  // Authenticated fetch helper
+  const authenticatedFetch = useCallback(async <T = any>(url: string, options: RequestInit = {}): Promise<T> => {
+    const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY)
+    
+    if (!accessToken) {
+      throw new Error('Not authenticated')
+    }
+
+    const headers = new Headers(options.headers)
+    headers.set('Authorization', `Bearer ${accessToken}`)
+    if (!headers.has('Content-Type') && options.body) {
+      headers.set('Content-Type', 'application/json')
+    }
+
+    try {
+      const response = await fetch(`${getApiBaseUrl()}${url}`, {
+        ...options,
+        headers,
+      })
+
+      if (response.status === 401) {
+        // Token expired, try to refresh
+        await refreshToken()
+        
+        // Retry with new token
+        const newToken = localStorage.getItem(ACCESS_TOKEN_KEY)
+        const retryHeaders = new Headers(options.headers)
+        retryHeaders.set('Authorization', `Bearer ${newToken}`)
+        if (!retryHeaders.has('Content-Type') && options.body) {
+          retryHeaders.set('Content-Type', 'application/json')
+        }
+
+        const retryResponse = await fetch(`${getApiBaseUrl()}${url}`, {
+          ...options,
+          headers: retryHeaders,
+        })
+
+        if (!retryResponse.ok) {
+          const errorData = await retryResponse.json().catch(() => ({}))
+          throw new Error(errorData.detail || errorData.message || `Request failed: ${retryResponse.statusText}`)
+        }
+
+        return await retryResponse.json()
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || errorData.message || `Request failed: ${response.statusText}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error('Authenticated fetch error:', error)
+      throw error
+    }
+  }, [refreshToken])
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    logout,
+    refreshToken,
+    hasRole,
+    hasPermission,
+    authenticatedFetch,
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+// Hook to use auth context
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
