@@ -3271,24 +3271,6 @@ Open Questions
                     cache_service = await self._get_cache_service()
                     cached_data = await cache_service.get_component_info(component_name)
                     if cached_data:
-<<<<<<< HEAD
-                        logger.info(f"Using cached component info (persistent) for {component_name}")
-                        # Reconstruct TemenosComponentInfo from cached data
-                        cached_component_info = TemenosComponentInfo(
-                            component_name=cached_data.get("component_name", component_name),
-                            component_type=self._determine_component_type(service),
-                            architectural_overview=cached_data.get("architectural_overview", ""),
-                            functional_overview=cached_data.get("functional_overview", ""),
-                            capabilities=cached_data.get("capabilities", []),
-                            related_services=cached_data.get("related_services", []),
-                            relationships=[],  # Relationships not cached for now
-                            data_source="cache"
-                        )
-                        # Also update in-memory cache
-                        cache_key = component_name.lower()
-                        self._component_cache[cache_key] = cached_component_info
-                        return cached_component_info
-=======
                         # Check if cached data has old table format - if so, invalidate cache
                         arch_overview = cached_data.get("architectural_overview", "")
                         has_old_format = (
@@ -3298,7 +3280,7 @@ Open Questions
                             "| Component | Role |" in arch_overview or
                             "Core Architectural Guarantees" in arch_overview and "Component Identity" not in arch_overview
                         )
-                        
+
                         if has_old_format:
                             logger.info(f"🔄 Cached data has old table format for {component_name} - invalidating cache and fetching fresh")
                             await cache_service.delete_component_info(component_name)
@@ -3315,14 +3297,14 @@ Open Questions
                                 functional_overview=cached_data.get("functional_overview", ""),
                                 capabilities=cached_data.get("capabilities", []),
                                 related_services=cached_data.get("related_services", []),
-                                relationships=[]  # Relationships not cached for now
+                                relationships=[],  # Relationships not cached for now
+                                data_source="cache"
                             )
                             # Also update in-memory cache for faster access next time
                             cache_key = component_name.lower()
                             self._component_cache[cache_key] = component_info
                             logger.debug(f"Cached component info in memory for {component_name}")
                             return component_info
->>>>>>> origin/feature/component-deployment
                 except Exception as e:
                     logger.warning(f"Error reading from persistent cache for {component_name}: {e}, continuing...")
             elif force_refresh:
@@ -3463,11 +3445,7 @@ Open Questions
             import asyncio
             cache_service = await self._get_cache_service()
             
-<<<<<<< HEAD
-            # Try to get cached architectural response (ALWAYS skip cache if force_refresh)
-=======
             # Try to get cached architectural response (skip if force_refresh)
->>>>>>> origin/feature/component-deployment
             architectural_response = None
             rag_fresh_arch = False
             if force_refresh:
@@ -3490,17 +3468,11 @@ Open Questions
                 except Exception as e:
                     logger.warning(f"Failed to clear architectural cache (non-fatal): {e}")
             
-<<<<<<< HEAD
             # CRITICAL: When force_refresh=True, ALWAYS try to query RAG, even if has_rag was False
             # The adapter's _ensure_token() will try to load the token during the query
             if not architectural_response or force_refresh:
-                # If we get here, we need to query RAG (either force_refresh or no cache)
                 rag_fresh_arch = True  # Mark that we're fetching fresh RAG data
-                logger.info(f"Querying RAG for {component_name} - Architectural query... (force_refresh={force_refresh})")
-=======
-            if not architectural_response:
                 logger.info(f"🔄 Querying RAG API for {component_name} - Architectural query (force_refresh={force_refresh})...")
->>>>>>> origin/feature/component-deployment
                 logger.info(f"  Query: {architectural_query[:200]}...")
                 try:
                     # Check if adapter exists - if not, try to initialize it
@@ -3540,14 +3512,9 @@ Open Questions
                             # Substantial response - use it even if it contains "I cannot provide" somewhere
                             logger.info(f"✓ RAG returned substantial architectural response for {component_name} ({len(answer_text)} chars) - using it")
                     
-<<<<<<< HEAD
-                    # Cache the response (but NOT when force_refresh - we want fresh data next time too)
-                    if use_cache and not force_refresh:
-=======
                     # Cache the response (even after force_refresh, cache the fresh data)
                     if use_cache:
                         logger.info(f"💾 Caching fresh architectural RAG response for {component_name}")
->>>>>>> origin/feature/component-deployment
                         await cache_service.set_rag_response(
                             component_name, "architectural", architectural_response, "ModularBanking, TechnologyOverview"
                         )
@@ -3558,11 +3525,7 @@ Open Questions
                     logger.error(f"✗ Architectural query failed for {service.name}: {e}", exc_info=True)
                     architectural_response = {"data": {"answer": "Information not available - error"}}
             
-<<<<<<< HEAD
-            # Try to get cached functional response (ALWAYS skip cache if force_refresh)
-=======
             # Try to get cached functional response (skip if force_refresh)
->>>>>>> origin/feature/component-deployment
             functional_response = None
             rag_fresh_func = False
             if force_refresh:
@@ -3585,17 +3548,11 @@ Open Questions
                 except Exception as e:
                     logger.warning(f"Failed to clear functional cache (non-fatal): {e}")
             
-<<<<<<< HEAD
             # CRITICAL: When force_refresh=True, ALWAYS try to query RAG, even if has_rag was False
             # The adapter's _ensure_token() will try to load the token during the query
             if not functional_response or force_refresh:
-                # If we get here, we need to query RAG (either force_refresh or no cache)
                 rag_fresh_func = True  # Mark that we're fetching fresh RAG data
-                logger.info(f"Querying RAG for {component_name} - Functional query... (force_refresh={force_refresh})")
-=======
-            if not functional_response:
                 logger.info(f"🔄 Querying RAG API for {component_name} - Functional query (force_refresh={force_refresh})...")
->>>>>>> origin/feature/component-deployment
                 logger.info(f"  Query: {functional_query[:200]}...")
                 try:
                     # Check if adapter exists - if not, try to initialize it
@@ -3636,14 +3593,9 @@ Open Questions
                             # Substantial response - use it even if it contains "I cannot provide" somewhere
                             logger.info(f"✓ RAG returned substantial response for {component_name} ({len(answer_text)} chars) - using it")
                     
-<<<<<<< HEAD
-                    # Only cache if we got valid data (not "I cannot provide")
-                    if functional_response and use_cache and not force_refresh:
-=======
                     # Cache the response (even after force_refresh, cache the fresh data)
-                    if use_cache:
+                    if functional_response and use_cache:
                         logger.info(f"💾 Caching fresh functional RAG response for {component_name}")
->>>>>>> origin/feature/component-deployment
                         await cache_service.set_rag_response(
                             component_name, "functional", functional_response, "ModularBanking, FuncTransactGeneric"
                         )
@@ -3689,34 +3641,6 @@ Open Questions
             logger.info(f"  Architectural: {len(architectural_text)} chars - {architectural_text[:100]}...")
             logger.info(f"  Functional: {len(functional_text)} chars - {functional_text[:100]}...")
             
-<<<<<<< HEAD
-            # Format responses - PRESERVE original structure (sections A, B, C, D, etc.)
-            # Only do minimal formatting - keep the original RAG structure intact
-            # IMPORTANT: Only format if we have actual text content
-            if architectural_text and len(architectural_text) > 0:
-                arch_formatted = self._format_rag_response(architectural_text)
-                # If formatting resulted in empty or "Information not available", use raw text if it's substantial
-                if not arch_formatted or arch_formatted in ["Information not available", "Information not available - timeout"]:
-                    if len(architectural_text) > 50:
-                        arch_formatted = architectural_text
-                        logger.info(f"Using raw architectural text for {component_name} after format check ({len(architectural_text)} chars)")
-            else:
-                arch_formatted = ""
-            
-            if functional_text and len(functional_text) > 0:
-                func_formatted = self._format_rag_response(functional_text)
-                # If formatting resulted in empty or "Information not available", use raw text if it's substantial
-                if not func_formatted or func_formatted in ["Information not available", "Information not available - timeout"]:
-                    if len(functional_text) > 50:
-                        func_formatted = functional_text
-                        logger.info(f"Using raw functional text for {component_name} after format check ({len(functional_text)} chars)")
-            else:
-                func_formatted = ""
-            
-            # DO NOT use deduplication service - it removes the original structure
-            # The frontend will parse and display the original structure properly
-            logger.info(f"Using original RAG response structure: arch={len(arch_formatted)} chars, func={len(func_formatted)} chars")
-=======
             # Refactor RAG responses using STRICT 12-section format
             logger.info(f"🔄 Refactoring RAG content for {component_name} using STRICT format (force_refresh={force_refresh})...")
             arch_formatted = self._refactor_rag_content_strict(
@@ -3734,57 +3658,9 @@ Open Questions
                 logger.warning(f"  First 200 chars: {arch_formatted[:200]}")
             else:
                 logger.info(f"✓ Strict 12-section format confirmed - '## 1. Purpose & Scope' header found")
->>>>>>> origin/feature/component-deployment
             
             # Log formatted lengths
             logger.info(f"Formatted response lengths: arch={len(arch_formatted)}, func={len(func_formatted)}")
-            
-<<<<<<< HEAD
-            # If we still have no data, provide minimal fallback
-            if not arch_formatted or (len(arch_formatted) < 50 and "Information not available" in arch_formatted):
-                logger.warning(f"RAG returned no information for {component_name} - using minimal fallback")
-                arch_formatted = f"""{component_name} is a Temenos microservice component deployed in Azure Kubernetes Service.
-
-Architecture:
-- Deployed as containerized microservices in Azure Kubernetes Service (AKS)
-- Follows microservices architecture patterns for scalability and resilience
-- Integrates with other Temenos components through well-defined APIs
-- Uses cloud-native technologies for deployment and orchestration
-
-Key Components:
-- Core service components handling business logic
-- API endpoints for external and internal communication
-- Data access layers for persistence
-- Integration layers for component communication
-
-Deployment:
-- Containerized using Docker
-- Orchestrated via Kubernetes
-- Scalable and resilient architecture
-- Cloud-native design patterns"""
-            
-            # If we still have no functional data, provide minimal fallback
-            if not func_formatted or (len(func_formatted) < 50 and "Information not available" in func_formatted):
-                logger.warning(f"RAG returned no functional information for {component_name} - using minimal fallback")
-                func_formatted = f"""{component_name} provides core banking functionality as part of the Temenos Transact platform.
-
-Functional Capabilities:
-- Core banking operations and business logic processing
-- Transaction processing and validation
-- Business rule enforcement
-- Data management and persistence
-
-Business Functions:
-- Handles critical banking operations
-- Supports core banking workflows
-- Manages business data and state
-- Provides APIs for integration with other components
-
-Integration:
-- Integrates with other Temenos microservices
-- Communicates via standard APIs and protocols
-- Supports event-driven architectures
-- Enables distributed system patterns"""
             
             # Determine data source - prioritize fresh RAG data, especially when force_refresh
             # IMPORTANT: Check if we actually got RAG data (not just empty strings or fallback)
@@ -3817,7 +3693,6 @@ Integration:
             
             logger.info(f"Final data_source for {component_name}: {data_source} (force_refresh={force_refresh}, rag_fresh_arch={rag_fresh_arch}, rag_fresh_func={rag_fresh_func})")
             
-=======
             # Check if refactored content has strict format - if not, use fallback
             has_strict_format = "## 1. Purpose & Scope" in arch_formatted
             has_old_format = (
@@ -3901,7 +3776,6 @@ Integration:
             logger.info(f"✓ Final architectural overview for {component_name}: {len(arch_formatted)} chars, strict format: {'## 1. Purpose & Scope' in arch_formatted}")
             
             # Create component_info - at this point arch_formatted MUST be in strict format
->>>>>>> origin/feature/component-deployment
             component_info = TemenosComponentInfo(
                 component_name=component_name,
                 component_type=self._determine_component_type(service),
@@ -3913,14 +3787,12 @@ Integration:
                 data_source=data_source
             )
             
-<<<<<<< HEAD
             # Cache the component info (but NOT when force_refresh - we want fresh data next time too)
             if use_cache and not force_refresh:
                 self._component_cache[cache_key] = component_info
                 logger.info(f"Cached component info for {component_name}")
             elif force_refresh:
                 logger.info(f"force_refresh=True: NOT caching component info for {component_name} (fresh data should not be cached)")
-=======
             # One final validation on the created object
             if "## 1. Purpose & Scope" not in component_info.architectural_overview:
                 logger.error(f"✗ CRITICAL: component_info created without strict format for {component_name} - this should never happen!")
@@ -3985,7 +3857,6 @@ Integration:
                 logger.warning(f"  Rebuilt component_info with empty strict format for {component_name}")
             else:
                 logger.info(f"✓ Final validation passed for {component_name} - strict format confirmed before return")
->>>>>>> origin/feature/component-deployment
             
             logger.info(f"Successfully identified component: {component_name} for {service.name}")
             return component_info
