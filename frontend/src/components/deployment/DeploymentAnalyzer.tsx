@@ -1818,14 +1818,11 @@ function ServiceAnalysis({
 
           const hasErrors = costEntries.some(c => c.error)
           const azureCosts = costEntries.filter(c => !c.error || costsLoading)
-          const awsCosts: typeof costEntries = [] // AWS costs would come from a separate API call
           
           const azureTotal = azureCosts.reduce((sum, cost) => {
             if (cost.error && !costsLoading) return sum
             return sum + (cost.total_cost || 0)
           }, 0)
-          
-          const awsTotal = awsCosts.reduce((sum, cost) => sum + (cost.total_cost || 0), 0)
 
           const hasProjections = costEntries.some(c => c.projections && !c.error)
           const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
