@@ -891,19 +891,29 @@ class ApiService {
     return response.data
   }
 
-<<<<<<< HEAD
-  async updateRagJwtToken(token: string) {
-    const response = await this.client.post<ApiResponse<{ status: string; message: string }>>(
-      '/settings/rag/jwt-token',
-      { token }
-    )
+  async updateRAGToken(jwtToken: string) {
+    const response = await this.client.post<ApiResponse<{
+      message: string
+      token_preview: string
+    }>>('/deployment/temenos/update-token', {
+      jwt_token: jwtToken
+    })
     return response.data
   }
 
-  async getRagJwtToken() {
-    const response = await this.client.get<ApiResponse<{ token: string | null }>>(
-      '/settings/rag/jwt-token'
-    )
+  async getRAGJWTInfo() {
+    const response = await this.client.get<ApiResponse<{
+      configured: boolean
+      has_expiration?: boolean
+      is_expired?: boolean
+      expires_at?: string
+      issued_at?: string
+      days_remaining?: number
+      user_id?: string
+      email?: string
+      issuer?: string
+      audience?: string
+    }>>('/deployment/temenos/jwt-info')
     return response.data
   }
 
@@ -919,40 +929,16 @@ class ApiService {
     }>>('/deployment/azure/export', {
       subscription_id: subscriptionId,
       resource_group_names: resourceGroupNames
-=======
-  async updateRAGToken(jwtToken: string) {
-    const response = await this.client.post<ApiResponse<{
-      message: string
-      token_preview: string
-    }>>('/deployment/temenos/update-token', {
-      jwt_token: jwtToken
->>>>>>> origin/feature/component-deployment
     })
     return response.data
   }
 
-<<<<<<< HEAD
   async generateBriefing(productFamily: string, componentName: string, aliases: string[] = []) {
     const response = await this.client.post<ApiResponse<any>>('/deployment/temenos/briefing', {
       product_family: productFamily,
       component_name: componentName,
       aliases
     })
-=======
-  async getRAGJWTInfo() {
-    const response = await this.client.get<ApiResponse<{
-      configured: boolean
-      has_expiration?: boolean
-      is_expired?: boolean
-      expires_at?: string
-      issued_at?: string
-      days_remaining?: number
-      user_id?: string
-      email?: string
-      issuer?: string
-      audience?: string
-    }>>('/deployment/temenos/jwt-info')
->>>>>>> origin/feature/component-deployment
     return response.data
   }
 }
