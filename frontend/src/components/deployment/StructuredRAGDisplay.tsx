@@ -1,6 +1,6 @@
 /**
  * Structured RAG Display Component
- * 
+ *
  * Displays RAG content in a well-structured, human-friendly format
  * with proper headings, paragraphs, and sections.
  */
@@ -618,7 +618,6 @@ export function StructuredRAGDisplay({
   const archSections = parseArchitecturalOverview(architecturalOverview)
   const funcSections = parseFunctionalOverview(functionalOverview)
   const parsedCapabilities = parseCapabilities(capabilities)
-  const runtimeDeployment: {serviceType?: string, namespace?: string, region?: string, resourceGroup?: string} | null = null // Not available from props
 
   const hasRawArchitecture = hasMeaningfulText(architecturalOverview)
   const hasRawFunctional = functionalOverview ? hasMeaningfulText(functionalOverview) : false
@@ -630,13 +629,6 @@ export function StructuredRAGDisplay({
   const hasFunctionalSections = funcSections.sections.length > 0
   const hasCapabilitiesTable = parsedCapabilities.length > 0
   const hasNonGoals = archSections.nonGoals.length > 0
-
-  const hasRuntimeDeployment =
-    runtimeDeployment &&
-    (runtimeDeployment.serviceType ||
-      runtimeDeployment.namespace ||
-      runtimeDeployment.region ||
-      runtimeDeployment.resourceGroup)
 
   const renderTable = (table: { headers: string[]; rows: string[][] }) => (
     <div className="overflow-x-auto shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
@@ -703,7 +695,7 @@ export function StructuredRAGDisplay({
           </div>
           <div>
             <div className="font-semibold text-gray-900 dark:text-white">Deployment Substrate</div>
-            <div className="text-gray-700 dark:text-gray-300">{componentType || runtimeDeployment?.serviceType || 'Azure'}</div>
+            <div className="text-gray-700 dark:text-gray-300">{componentType || 'Azure'}</div>
           </div>
         </div>
       </div>
@@ -854,40 +846,6 @@ export function StructuredRAGDisplay({
               <li key={idx}>{item}</li>
             ))}
           </ul>
-        </details>
-      )}
-
-      {hasRuntimeDeployment && (
-        <details className="group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-5 border border-indigo-200 dark:border-indigo-800">
-          <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-            Runtime Deployment (Azure)
-          </summary>
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            {runtimeDeployment?.serviceType && (
-              <div>
-                <span className="font-semibold text-gray-900 dark:text-white">Service Type:</span>
-                <span className="ml-2 text-gray-700 dark:text-gray-300">{runtimeDeployment.serviceType}</span>
-              </div>
-            )}
-            {runtimeDeployment?.namespace && (
-              <div>
-                <span className="font-semibold text-gray-900 dark:text-white">Namespace:</span>
-                <span className="ml-2 text-gray-700 dark:text-gray-300 font-mono">{runtimeDeployment.namespace}</span>
-              </div>
-            )}
-            {runtimeDeployment?.region && (
-              <div>
-                <span className="font-semibold text-gray-900 dark:text-white">Region:</span>
-                <span className="ml-2 text-gray-700 dark:text-gray-300">{runtimeDeployment.region}</span>
-              </div>
-            )}
-            {runtimeDeployment?.resourceGroup && (
-              <div>
-                <span className="font-semibold text-gray-900 dark:text-white">Resource Group:</span>
-                <span className="ml-2 text-gray-700 dark:text-gray-300">{runtimeDeployment.resourceGroup}</span>
-              </div>
-            )}
-          </div>
         </details>
       )}
 
