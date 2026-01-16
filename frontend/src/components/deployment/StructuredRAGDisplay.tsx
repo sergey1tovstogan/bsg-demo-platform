@@ -20,7 +20,6 @@ export function StructuredRAGDisplay({
   capabilities,
   componentName,
   componentType,
-  service
 }: StructuredRAGDisplayProps) {
   
   // Helper function to parse markdown tables
@@ -615,6 +614,12 @@ export function StructuredRAGDisplay({
     return trimmed.length > 0 && !trimmed.includes('Information not available') && !trimmed.includes('I cannot provide')
   }
 
+  // Call parsing functions to create variables
+  const archSections = parseArchitecturalOverview(architecturalOverview)
+  const funcSections = parseFunctionalOverview(functionalOverview)
+  const parsedCapabilities = parseCapabilities(capabilities)
+  const runtimeDeployment: {serviceType?: string, namespace?: string, region?: string, resourceGroup?: string} | null = null // Not available from props
+
   const hasRawArchitecture = hasMeaningfulText(architecturalOverview)
   const hasRawFunctional = functionalOverview ? hasMeaningfulText(functionalOverview) : false
 
@@ -712,8 +717,8 @@ export function StructuredRAGDisplay({
             <div className="space-y-3">
               {archSections.executiveSummary
                 .split(/[.!?]+/)
-                .filter((s) => s.trim().length > 10)
-                .map((sentence, idx) => (
+                .filter((s: string) => s.trim().length > 10)
+                .map((sentence: string, idx: number) => (
                   <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                     {sentence.trim() + (sentence.trim().match(/[.!?]$/) ? '' : '.')}
                   </p>
