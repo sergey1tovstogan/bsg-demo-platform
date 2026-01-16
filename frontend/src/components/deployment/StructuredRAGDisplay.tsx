@@ -5,6 +5,8 @@
  * with proper headings, paragraphs, and sections.
  */
 
+import ReactMarkdown from 'react-markdown'
+
 interface StructuredRAGDisplayProps {
   architecturalOverview: string
   functionalOverview: string
@@ -706,15 +708,19 @@ export function StructuredRAGDisplay({
         </summary>
         <div className="mt-3">
           {archSections.executiveSummary ? (
-            <div className="space-y-3">
-              {archSections.executiveSummary
-                .split(/[.!?]+/)
-                .filter((s: string) => s.trim().length > 10)
-                .map((sentence: string, idx: number) => (
-                  <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {sentence.trim() + (sentence.trim().match(/[.!?]$/) ? '' : '.')}
-                  </p>
-                ))}
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown
+                components={{
+                  p: ({ ...props }) => <p className="mb-3 leading-relaxed text-gray-700 dark:text-gray-300 text-sm" {...props} />,
+                  strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                  em: ({ ...props }) => <em className="italic text-gray-800 dark:text-gray-200" {...props} />,
+                  ul: ({ ...props }) => <ul className="list-disc list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                  ol: ({ ...props }) => <ol className="list-decimal list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                  li: ({ ...props }) => <li className="leading-relaxed" {...props} />
+                }}
+              >
+                {archSections.executiveSummary}
+              </ReactMarkdown>
             </div>
           ) : (
             <p className="text-sm text-gray-500 dark:text-gray-400 italic">Information not available for this component.</p>
@@ -748,6 +754,24 @@ export function StructuredRAGDisplay({
                         </p>
                       )
                     })
+                  }
+                  // Use ReactMarkdown for better formatting of paragraphs
+                  if (paragraphs.length > 0) {
+                    return (
+                      <ReactMarkdown
+                        components={{
+                          p: ({ ...props }) => <p className="mb-3 leading-relaxed text-gray-700 dark:text-gray-300 text-sm" {...props} />,
+                          strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                          em: ({ ...props }) => <em className="italic text-gray-800 dark:text-gray-200" {...props} />,
+                          ul: ({ ...props }) => <ul className="list-disc list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                          ol: ({ ...props }) => <ol className="list-decimal list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                          li: ({ ...props }) => <li className="leading-relaxed" {...props} />,
+                          code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono text-indigo-600 dark:text-indigo-400" {...props} />
+                        }}
+                      >
+                        {paragraphs.join('\n\n')}
+                      </ReactMarkdown>
+                    )
                   }
                   return renderParagraphs(paragraphs)
                 })()}
@@ -819,7 +843,27 @@ export function StructuredRAGDisplay({
                   {section.heading && (
                     <h6 className="font-semibold text-gray-900 dark:text-white mb-3">{section.heading}</h6>
                   )}
-                  {renderParagraphs(section.paragraphs || [])}
+                  {(() => {
+                    const paragraphs = section.paragraphs || []
+                    if (paragraphs.length > 0) {
+                      return (
+                        <ReactMarkdown
+                          components={{
+                            p: ({ ...props }) => <p className="mb-3 leading-relaxed text-gray-700 dark:text-gray-300 text-sm" {...props} />,
+                            strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                            em: ({ ...props }) => <em className="italic text-gray-800 dark:text-gray-200" {...props} />,
+                            ul: ({ ...props }) => <ul className="list-disc list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                            ol: ({ ...props }) => <ol className="list-decimal list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                            li: ({ ...props }) => <li className="leading-relaxed" {...props} />,
+                            code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono text-indigo-600 dark:text-indigo-400" {...props} />
+                          }}
+                        >
+                          {paragraphs.join('\n\n')}
+                        </ReactMarkdown>
+                      )
+                    }
+                    return renderParagraphs(paragraphs)
+                  })()}
                 </div>
               ))}
             </div>
@@ -854,25 +898,51 @@ export function StructuredRAGDisplay({
           <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
             Raw RAG Output
           </summary>
-          <div className="mt-4 space-y-5">
+          <div className="mt-4 space-y-5 prose prose-sm dark:prose-invert max-w-none">
             {hasRawArchitecture && (
               <div>
-                <h6 className="font-semibold text-gray-900 dark:text-white mb-2">Architecture Overview</h6>
-                {rawParagraphs(architecturalOverview).map((para, idx) => (
-                  <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
-                    {para}
-                  </p>
-                ))}
+                <h6 className="font-semibold text-gray-900 dark:text-white mb-3 text-base">Architecture Overview</h6>
+                <ReactMarkdown
+                  components={{
+                    h1: ({ ...props }) => <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-4 mb-3 pb-2 border-b border-gray-300 dark:border-gray-600" {...props} />,
+                    h2: ({ ...props }) => <h2 className="text-xl font-bold text-indigo-700 dark:text-indigo-400 mt-6 mb-3 pt-3 border-t border-gray-200 dark:border-gray-700 first:border-t-0 first:pt-0" {...props} />,
+                    h3: ({ ...props }) => <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mt-4 mb-2" {...props} />,
+                    h4: ({ ...props }) => <h4 className="text-base font-semibold text-gray-700 dark:text-gray-300 mt-3 mb-2" {...props} />,
+                    p: ({ ...props }) => <p className="mb-3 leading-relaxed text-gray-700 dark:text-gray-300 text-sm" {...props} />,
+                    ul: ({ ...props }) => <ul className="list-disc list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                    ol: ({ ...props }) => <ol className="list-decimal list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                    li: ({ ...props }) => <li className="leading-relaxed" {...props} />,
+                    strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                    em: ({ ...props }) => <em className="italic text-gray-800 dark:text-gray-200" {...props} />,
+                    code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono text-indigo-600 dark:text-indigo-400" {...props} />,
+                    blockquote: ({ ...props }) => <blockquote className="border-l-4 border-indigo-500 pl-4 italic text-gray-600 dark:text-gray-400 my-3" {...props} />
+                  }}
+                >
+                  {architecturalOverview}
+                </ReactMarkdown>
               </div>
             )}
             {hasRawFunctional && (
               <div>
-                <h6 className="font-semibold text-gray-900 dark:text-white mb-2">Functional Overview</h6>
-                {rawParagraphs(functionalOverview).map((para, idx) => (
-                  <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
-                    {para}
-                  </p>
-                ))}
+                <h6 className="font-semibold text-gray-900 dark:text-white mb-3 text-base">Functional Overview</h6>
+                <ReactMarkdown
+                  components={{
+                    h1: ({ ...props }) => <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-4 mb-3 pb-2 border-b border-gray-300 dark:border-gray-600" {...props} />,
+                    h2: ({ ...props }) => <h2 className="text-xl font-bold text-indigo-700 dark:text-indigo-400 mt-6 mb-3 pt-3 border-t border-gray-200 dark:border-gray-700 first:border-t-0 first:pt-0" {...props} />,
+                    h3: ({ ...props }) => <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mt-4 mb-2" {...props} />,
+                    h4: ({ ...props }) => <h4 className="text-base font-semibold text-gray-700 dark:text-gray-300 mt-3 mb-2" {...props} />,
+                    p: ({ ...props }) => <p className="mb-3 leading-relaxed text-gray-700 dark:text-gray-300 text-sm" {...props} />,
+                    ul: ({ ...props }) => <ul className="list-disc list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                    ol: ({ ...props }) => <ol className="list-decimal list-outside ml-5 space-y-1 mb-3 text-gray-700 dark:text-gray-300" {...props} />,
+                    li: ({ ...props }) => <li className="leading-relaxed" {...props} />,
+                    strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                    em: ({ ...props }) => <em className="italic text-gray-800 dark:text-gray-200" {...props} />,
+                    code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono text-indigo-600 dark:text-indigo-400" {...props} />,
+                    blockquote: ({ ...props }) => <blockquote className="border-l-4 border-indigo-500 pl-4 italic text-gray-600 dark:text-gray-400 my-3" {...props} />
+                  }}
+                >
+                  {functionalOverview}
+                </ReactMarkdown>
               </div>
             )}
           </div>

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Info, Loader2, ExternalLink, Link } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Info, Loader2, ExternalLink, Link, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { apiService } from '../services/api'
 import { ApiVersioning } from './integration/ApiVersioning'
 import { ApiWizardsGallery } from './ApiWizardsGallery'
@@ -56,6 +56,26 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
   const [showBankSystemTooltip, setShowBankSystemTooltip] = useState(false)
   const [bankSystemTooltipPinned, setBankSystemTooltipPinned] = useState(false)
   const [showApiWizardsGallery, setShowApiWizardsGallery] = useState(false)
+  
+  // Track expanded components for overlay positioning
+  const [expandedComponent, setExpandedComponent] = useState<string | null>(null)
+  const componentRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  
+  // Close overlay when clicking outside
+  useEffect(() => {
+    if (!expandedComponent) return
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      // Check if click is outside any component or overlay
+      if (!target.closest('[data-component-overlay]') && !target.closest('[data-component-ref]')) {
+        setExpandedComponent(null)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [expandedComponent])
 
   const tooltips: TooltipConfig[] = [
     {
@@ -151,14 +171,16 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
     setTooltipTimeout(timeout)
   }
 
-  // Helper function to handle feature card click (pin/unpin)
+  // Helper function to handle feature card click (toggle expandable overlay)
   const handleFeatureCardClick = (tooltipId: string) => {
-    if (pinnedTooltip === tooltipId) {
-      // Unpin if clicking the same box
+    if (expandedComponent === tooltipId) {
+      // Collapse if clicking the same box
+      setExpandedComponent(null)
       setPinnedTooltip(null)
       setActiveTooltip(null)
     } else {
-      // Pin this tooltip
+      // Expand this component's info
+      setExpandedComponent(tooltipId)
       setPinnedTooltip(tooltipId)
       setActiveTooltip(tooltipId)
       setKafkaTooltipPinned(false)
@@ -170,6 +192,44 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
       setBankSystemTooltipPinned(false)
       setShowBankSystemTooltip(false)
     }
+  }
+  
+  // Helper to render expandable info overlay
+  const renderExpandableInfo = (componentId: string, title: string, content: React.ReactNode) => {
+    if (expandedComponent !== componentId) return null
+    
+    const componentRef = componentRefs.current[componentId]
+    if (!componentRef) return null
+    
+    // Calculate position relative to viewport (getBoundingClientRect is already viewport-relative)
+    const rect = componentRef.getBoundingClientRect()
+    
+    return (
+      <div
+        data-component-overlay
+        className="fixed z-50 bg-white dark:bg-slate-800 border-2 border-[#00A3E0] rounded-lg shadow-2xl p-4 max-w-md"
+        style={{
+          top: `${rect.bottom + 10}px`,
+          left: `${Math.min(rect.left, window.innerWidth - 450)}px`,
+          maxHeight: '400px',
+          overflowY: 'auto'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] text-lg">{title}</h3>
+          <button
+            onClick={() => setExpandedComponent(null)}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="text-sm text-gray-800 dark:text-slate-200 leading-relaxed">
+          {content}
+        </div>
+      </div>
+    )
   }
 
   // Fetch Kafka capabilities from cache
@@ -774,11 +834,21 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         <div className="w-[30%] p-6 space-y-4 flex flex-col justify-center">
           {/* API Icon & Text */}
           <div
-            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'expose-data' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+            data-component-ref
+            ref={(el) => { componentRefs.current['expose-data'] = el }}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${expandedComponent === 'expose-data' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('expose-data')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('expose-data')}
           >
+            {expandedComponent === 'expose-data' ? (
+              <ChevronUp className="absolute top-2 right-2 w-4 h-4 text-[#00A3E0]" />
+            ) : (
+              <ChevronDown className="absolute top-2 right-2 w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+            {renderExpandableInfo('expose-data', tooltips.find(t => t.id === 'expose-data')?.title || 'Expose data & business capabilities as REST APIs', 
+              <div className="whitespace-pre-wrap">{renderMarkdownContent(tooltips.find(t => t.id === 'expose-data')?.description || '')}</div>
+            )}
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
@@ -801,11 +871,21 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
           {/* Shopping Cart Icon & Text - Public API Catalog */}
           <div
-            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${pinnedTooltip === 'api-catalog' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+            data-component-ref
+            ref={(el) => { componentRefs.current['api-catalog'] = el }}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'api-catalog' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('api-catalog')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('api-catalog')}
           >
+            {expandedComponent === 'api-catalog' ? (
+              <ChevronUp className="absolute top-2 right-2 w-4 h-4 text-[#00A3E0]" />
+            ) : (
+              <ChevronDown className="absolute top-2 right-2 w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+            {renderExpandableInfo('api-catalog', tooltips.find(t => t.id === 'api-catalog')?.title || 'Public API Catalog for documentation and reuse',
+              <div className="whitespace-pre-wrap">{renderMarkdownContent(publicCatalogContent || tooltips.find(t => t.id === 'api-catalog')?.description || '')}</div>
+            )}
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div
@@ -832,11 +912,21 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
           {/* Open Standards Icon & Text */}
           <div
-            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'open-standards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+            data-component-ref
+            ref={(el) => { componentRefs.current['open-standards'] = el }}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'open-standards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('open-standards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('open-standards')}
           >
+            {expandedComponent === 'open-standards' ? (
+              <ChevronUp className="absolute top-2 right-2 w-4 h-4 text-[#00A3E0]" />
+            ) : (
+              <ChevronDown className="absolute top-2 right-2 w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+            {renderExpandableInfo('open-standards', tooltips.find(t => t.id === 'open-standards')?.title || 'Open standards and tooling',
+              <div className="whitespace-pre-wrap">{renderMarkdownContent(openStandardsContent || tooltips.find(t => t.id === 'open-standards')?.description || '')}</div>
+            )}
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
@@ -879,62 +969,28 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
           <div className="relative flex flex-col items-center justify-center" style={{ minHeight: '200px', gap: '38px' }}>
             {/* Bank's System Box - spans width of both columns */}
             <div
-              className={`bg-white dark:bg-slate-800 rounded-lg shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${bankSystemTooltipPinned ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+              data-component-ref
+              ref={(el) => { componentRefs.current['bank-system'] = el }}
+              className={`bg-white dark:bg-slate-800 rounded-lg shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all relative ${expandedComponent === 'bank-system' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
               style={{ width: '320px', padding: '11px 16px' }}
-              onMouseEnter={() => {
-                if (!bankSystemTooltipPinned && !pinnedTooltip && !kafkaTooltipPinned && !businessLogicTooltipPinned && !businessMicroservicesTooltipPinned) {
-                  // Clear any existing timeout
-                  if (tooltipTimeout) {
-                    clearTimeout(tooltipTimeout)
-                    setTooltipTimeout(null)
-                  }
-                  // Add delay before showing
-                  const timeout = setTimeout(() => {
-                    setShowBankSystemTooltip(true)
-                    setShowKafkaTooltip(false)
-                    setShowBusinessLogicTooltip(false)
-                    setShowBusinessMicroservicesTooltip(false)
-                    setActiveTooltip(null)
-                    setTooltipTimeout(null)
-                  }, 400)
-                  setTooltipTimeout(timeout)
-                }
-              }}
-              onMouseLeave={() => {
-                if (!bankSystemTooltipPinned) {
-                  // Clear any existing timeout
-                  if (tooltipTimeout) {
-                    clearTimeout(tooltipTimeout)
-                    setTooltipTimeout(null)
-                  }
-                  // Add delay before hiding
-                  const timeout = setTimeout(() => {
-                    setShowBankSystemTooltip(false)
-                    setTooltipTimeout(null)
-                  }, 300)
-                  setTooltipTimeout(timeout)
-                }
-              }}
               onClick={() => {
-                if (bankSystemTooltipPinned) {
-                  // Unpin
-                  setBankSystemTooltipPinned(false)
-                  setShowBankSystemTooltip(false)
+                if (expandedComponent === 'bank-system') {
+                  setExpandedComponent(null)
                 } else {
-                  // Pin
-                  setBankSystemTooltipPinned(true)
-                  setShowBankSystemTooltip(true)
-                  setActiveTooltip(null)
-                  setPinnedTooltip(null)
-                  setKafkaTooltipPinned(false)
-                  setShowKafkaTooltip(false)
-                  setBusinessLogicTooltipPinned(false)
-                  setShowBusinessLogicTooltip(false)
-                  setBusinessMicroservicesTooltipPinned(false)
-                  setShowBusinessMicroservicesTooltip(false)
+                  setExpandedComponent('bank-system')
                 }
               }}
             >
+              {expandedComponent === 'bank-system' ? (
+                <ChevronUp className="absolute top-2 right-2 w-4 h-4 text-[#00A3E0]" />
+              ) : (
+                <ChevronDown className="absolute top-2 right-2 w-4 h-4 text-gray-400 opacity-0 hover:opacity-100 transition-opacity" />
+              )}
+              {renderExpandableInfo('bank-system', "Bank's System",
+                <div className="space-y-3">
+                  <p>Temenos APIs are designed to be comprehensive and flexible, enabling integration with a wide range of banking systems and third-party applications. They provide RESTful interfaces with JSON payloads, adhering to modern web standards and semantic versioning, which ensures backward compatibility. These APIs cover most functionalities required by financial institutions, making them suitable for core banking systems, payment gateways, analytics platforms, and other banking-related systems.</p>
+                </div>
+              )}
               <div className="text-center text-base font-semibold text-[#283054] dark:text-slate-200 leading-tight">
                 Bank's system<br />
                 <span className="text-xs">(channel, real-time interface, etc.)</span>
@@ -991,69 +1047,48 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
               <div className="flex flex-col items-center relative" style={{ gap: '5px' }}>
                 {/* Thin API Box */}
                 <div
-                  className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all ${pinnedTooltip === 'api-framework' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+                  data-component-ref
+                  ref={(el) => { componentRefs.current['api-framework'] = el }}
+                  className={`bg-gradient-to-r from-[#097BED] to-[#0868CC] rounded px-5 py-1.5 shadow-sm cursor-pointer hover:shadow-lg transition-all relative ${expandedComponent === 'api-framework' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '150px' }}
                   onMouseEnter={() => handleFeatureCardHover('api-framework')}
                   onMouseLeave={handleFeatureCardLeave}
                   onClick={() => handleFeatureCardClick('api-framework')}
                 >
+                  {expandedComponent === 'api-framework' && (
+                    <ChevronUp className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 w-4 h-4 text-[#00A3E0]" />
+                  )}
+                  {renderExpandableInfo('api-framework', tooltips.find(t => t.id === 'api-framework')?.title || 'Temenos API Framework',
+                    <div className="whitespace-pre-wrap">{renderMarkdownContent(tooltips.find(t => t.id === 'api-framework')?.description || '')}</div>
+                  )}
                   <div className="text-center text-sm font-bold text-white" style={{ color: '#FFFFFF' }}>API</div>
                 </div>
 
                 {/* Temenos Business Logic Box */}
                 <div
-                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${businessLogicTooltipPinned ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+                  data-component-ref
+                  ref={(el) => { componentRefs.current['business-logic'] = el }}
+                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all relative ${expandedComponent === 'business-logic' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '150px' }}
-                  onMouseEnter={() => {
-                    if (!businessLogicTooltipPinned && !pinnedTooltip && !kafkaTooltipPinned) {
-                      // Clear any existing timeout
-                      if (tooltipTimeout) {
-                        clearTimeout(tooltipTimeout)
-                        setTooltipTimeout(null)
-                      }
-                      // Add delay before showing
-                      const timeout = setTimeout(() => {
-                        setShowBusinessLogicTooltip(true)
-                        setShowKafkaTooltip(false)
-                        setShowBusinessMicroservicesTooltip(false)
-                        setShowBankSystemTooltip(false)
-                        setActiveTooltip(null)
-                        setTooltipTimeout(null)
-                      }, 400)
-                      setTooltipTimeout(timeout)
-                    }
-                  }}
-                  onMouseLeave={() => {
-                    if (!businessLogicTooltipPinned) {
-                      // Clear any existing timeout
-                      if (tooltipTimeout) {
-                        clearTimeout(tooltipTimeout)
-                        setTooltipTimeout(null)
-                      }
-                      // Add delay before hiding
-                      const timeout = setTimeout(() => {
-                        setShowBusinessLogicTooltip(false)
-                        setTooltipTimeout(null)
-                      }, 300)
-                      setTooltipTimeout(timeout)
-                    }
-                  }}
                   onClick={() => {
-                    if (businessLogicTooltipPinned) {
-                      // Unpin
-                      setBusinessLogicTooltipPinned(false)
-                      setShowBusinessLogicTooltip(false)
+                    if (expandedComponent === 'business-logic') {
+                      setExpandedComponent(null)
                     } else {
-                      // Pin
-                      setBusinessLogicTooltipPinned(true)
-                      setShowBusinessLogicTooltip(true)
-                      setActiveTooltip(null)
-                      setPinnedTooltip(null)
-                      setKafkaTooltipPinned(false)
-                      setShowKafkaTooltip(false)
+                      setExpandedComponent('business-logic')
                     }
                   }}
                 >
+                  {expandedComponent === 'business-logic' ? (
+                    <ChevronUp className="absolute top-1 right-1 w-3 h-3 text-[#00A3E0]" />
+                  ) : (
+                    <ChevronDown className="absolute top-1 right-1 w-3 h-3 text-gray-400 opacity-0 hover:opacity-100 transition-opacity" />
+                  )}
+                  {renderExpandableInfo('business-logic', 'Temenos Business Logic',
+                    <div className="space-y-3">
+                      <p>Temenos Business Logic is a core component of the Temenos platform, designed to implement and manage the complex rules and processes that govern banking operations. It is organized into distinct modules that separate technical and business functionalities, enabling clear structure and maintainability. The business logic is fully parameter-driven, allowing banks to configure products and processes without extensive coding, which supports rapid adaptation to changing market or regulatory requirements.</p>
+                      <p>A key architectural principle is the separation of business logic from data storage. The database acts purely as a repository without embedded business logic or stored procedures, which enhances scalability and simplifies maintenance. Business logic is implemented primarily in Java and containerized, supporting modular deployment and extensibility.</p>
+                    </div>
+                  )}
                   <div className="text-center">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#097BED] to-[#0868CC] rounded-lg flex items-center justify-center mx-auto mb-1 shadow-sm">
                       <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1089,56 +1124,31 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
               {/* Kafka Box in the middle of U-arrow */}
               <div
-                className="absolute cursor-pointer"
+                data-component-ref
+                ref={(el) => { componentRefs.current['kafka'] = el }}
+                className="absolute cursor-pointer relative"
                 style={{ bottom: '-50px', left: '50%', transform: 'translateX(-50%)' }}
-                onMouseEnter={() => {
-                  if (!kafkaTooltipPinned && !pinnedTooltip) {
-                    // Clear any existing timeout
-                    if (tooltipTimeout) {
-                      clearTimeout(tooltipTimeout)
-                      setTooltipTimeout(null)
-                    }
-                    // Add delay before showing
-                    const timeout = setTimeout(() => {
-                      setShowKafkaTooltip(true)
-                      setShowBusinessLogicTooltip(false)
-                      setShowBusinessMicroservicesTooltip(false)
-                      setShowBankSystemTooltip(false)
-                      setActiveTooltip(null)
-                      setTooltipTimeout(null)
-                    }, 400)
-                    setTooltipTimeout(timeout)
-                  }
-                }}
-                onMouseLeave={() => {
-                  if (!kafkaTooltipPinned) {
-                    // Clear any existing timeout
-                    if (tooltipTimeout) {
-                      clearTimeout(tooltipTimeout)
-                      setTooltipTimeout(null)
-                    }
-                    // Add delay before hiding
-                    const timeout = setTimeout(() => {
-                      setShowKafkaTooltip(false)
-                      setTooltipTimeout(null)
-                    }, 300)
-                    setTooltipTimeout(timeout)
-                  }
-                }}
                 onClick={() => {
-                  if (kafkaTooltipPinned) {
-                    // Unpin
-                    setKafkaTooltipPinned(false)
-                    setShowKafkaTooltip(false)
+                  if (expandedComponent === 'kafka') {
+                    setExpandedComponent(null)
                   } else {
-                    // Pin
-                    setKafkaTooltipPinned(true)
-                    setShowKafkaTooltip(true)
-                    setActiveTooltip(null)
-                    setPinnedTooltip(null)
+                    setExpandedComponent('kafka')
                   }
                 }}
               >
+                {expandedComponent === 'kafka' && (
+                  <ChevronUp className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-4 h-4 text-[#00A3E0]" />
+                )}
+                {renderExpandableInfo('kafka', 'Kafka - Event-Driven Architecture',
+                  kafkaTooltipLoading ? (
+                    <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Loading Kafka capabilities from RAG...</span>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{kafkaTooltipContent}</p>
+                  )
+                )}
                 <div
                   className={`bg-white dark:bg-slate-800 rounded-lg p-2 shadow-md border-2 border-[#097BED] hover:shadow-lg transition-all ${kafkaTooltipPinned ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ width: '60px', height: '30px' }}
@@ -1167,60 +1177,34 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
                 {/* Business Microservices Box */}
                 <div
-                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all ${businessMicroservicesTooltipPinned ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+                  data-component-ref
+                  ref={(el) => { componentRefs.current['business-microservices'] = el }}
+                  className={`bg-white dark:bg-slate-800 rounded-lg p-2.5 shadow-md border-2 border-[#097BED] cursor-pointer hover:shadow-lg transition-all relative ${expandedComponent === 'business-microservices' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
                   style={{ minWidth: '150px' }}
-                  onMouseEnter={() => {
-                    if (!businessMicroservicesTooltipPinned && !pinnedTooltip && !kafkaTooltipPinned && !businessLogicTooltipPinned) {
-                      // Clear any existing timeout
-                      if (tooltipTimeout) {
-                        clearTimeout(tooltipTimeout)
-                        setTooltipTimeout(null)
-                      }
-                      // Add delay before showing
-                      const timeout = setTimeout(() => {
-                        setShowBusinessMicroservicesTooltip(true)
-                        setShowKafkaTooltip(false)
-                        setShowBusinessLogicTooltip(false)
-                        setShowBankSystemTooltip(false)
-                        setActiveTooltip(null)
-                        setTooltipTimeout(null)
-                      }, 400)
-                      setTooltipTimeout(timeout)
-                    }
-                  }}
-                  onMouseLeave={() => {
-                    if (!businessMicroservicesTooltipPinned) {
-                      // Clear any existing timeout
-                      if (tooltipTimeout) {
-                        clearTimeout(tooltipTimeout)
-                        setTooltipTimeout(null)
-                      }
-                      // Add delay before hiding
-                      const timeout = setTimeout(() => {
-                        setShowBusinessMicroservicesTooltip(false)
-                        setTooltipTimeout(null)
-                      }, 300)
-                      setTooltipTimeout(timeout)
-                    }
-                  }}
                   onClick={() => {
-                    if (businessMicroservicesTooltipPinned) {
-                      // Unpin
-                      setBusinessMicroservicesTooltipPinned(false)
-                      setShowBusinessMicroservicesTooltip(false)
+                    if (expandedComponent === 'business-microservices') {
+                      setExpandedComponent(null)
                     } else {
-                      // Pin
-                      setBusinessMicroservicesTooltipPinned(true)
-                      setShowBusinessMicroservicesTooltip(true)
-                      setActiveTooltip(null)
-                      setPinnedTooltip(null)
-                      setKafkaTooltipPinned(false)
-                      setShowKafkaTooltip(false)
-                      setBusinessLogicTooltipPinned(false)
-                      setShowBusinessLogicTooltip(false)
+                      setExpandedComponent('business-microservices')
                     }
                   }}
                 >
+                  {expandedComponent === 'business-microservices' ? (
+                    <ChevronUp className="absolute top-1 right-1 w-3 h-3 text-[#00A3E0]" />
+                  ) : (
+                    <ChevronDown className="absolute top-1 right-1 w-3 h-3 text-gray-400 opacity-0 hover:opacity-100 transition-opacity" />
+                  )}
+                  {renderExpandableInfo('business-microservices', 'Business Microservices',
+                    <div className="space-y-3">
+                      <p>In the Temenos architecture, business microservices are designed to provide modular, scalable, and loosely coupled components that handle specific business functions independently. This approach enhances flexibility, fault isolation, and ease of maintenance, allowing banks to develop and deploy functionalities separately while ensuring seamless integration within the overall system.</p>
+                      <p>A key example of business microservices in Temenos is the implementation of CQRS (Command Query Responsibility Segregation) microservices. The core database in Temenos Transact is optimized for transaction processing with strong consistency, focusing on write operations. However, this optimization can make querying inefficient, especially for large banks with high-volume read demands.</p>
+                      <p>To address this, Temenos employs CQRS microservices that synchronize data from the core system using an event-driven mechanism. These microservices maintain an eventually consistent copy of the data optimized for read operations. This means that while the data may have a slight delay in reflecting the latest state, it provides low-latency, high-performance access for read-only purposes.</p>
+                      <p>For example, when the Payment Cockpit dashboards need to search across million of payments, they query these CQRS microservices instead of the core database. This separation ensures that the core transaction processing remains efficient and consistent, while the CQRS microservices deliver fast, scalable read access tailored for user interfaces and reporting.</p>
+                      <p>Developers working with Temenos should be aware of these CQRS microservices in their deployment and utilize their APIs for scenarios requiring high-volume, read-optimized data access with relaxed consistency requirements.</p>
+                      <p>This microservices approach, including CQRS, supports Temenos' commitment to scalability, responsiveness, and operational efficiency in complex banking environments.</p>
+                      <p>By separating command (write) and query (read) responsibilities, Temenos enables banks to optimize performance and user experience without compromising transactional integrity.</p>
+                    </div>
+                  )}
                   <div className="text-center">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#097BED] to-[#0868CC] rounded-lg flex items-center justify-center mx-auto mb-1 shadow-sm">
                       <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1239,11 +1223,21 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         <div className="w-[30%] p-6 space-y-4 z-10 flex flex-col justify-center">
           {/* Desktop/Wizard Icon & Text */}
           <div
-            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${pinnedTooltip === 'graphical-wizards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+            data-component-ref
+            ref={(el) => { componentRefs.current['graphical-wizards'] = el }}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'graphical-wizards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('graphical-wizards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('graphical-wizards')}
           >
+            {expandedComponent === 'graphical-wizards' ? (
+              <ChevronUp className="absolute top-2 right-2 w-4 h-4 text-[#00A3E0]" />
+            ) : (
+              <ChevronDown className="absolute top-2 right-2 w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+            {renderExpandableInfo('graphical-wizards', tooltips.find(t => t.id === 'graphical-wizards')?.title || 'Graphical wizards for better productivity',
+              <div className="whitespace-pre-wrap">{renderMarkdownContent(tooltips.find(t => t.id === 'graphical-wizards')?.description || '')}</div>
+            )}
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div
@@ -1271,11 +1265,21 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
           {/* Security Shield Icon & Text */}
           <div
-            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'security-standards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+            data-component-ref
+            ref={(el) => { componentRefs.current['security-standards'] = el }}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'security-standards' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('security-standards')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('security-standards')}
           >
+            {expandedComponent === 'security-standards' ? (
+              <ChevronUp className="absolute top-2 right-2 w-4 h-4 text-[#00A3E0]" />
+            ) : (
+              <ChevronDown className="absolute top-2 right-2 w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+            {renderExpandableInfo('security-standards', tooltips.find(t => t.id === 'security-standards')?.title || 'Security standards ensuring data privacy and authentication',
+              <div className="whitespace-pre-wrap">{renderMarkdownContent(tooltips.find(t => t.id === 'security-standards')?.description || '')}</div>
+            )}
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
@@ -1294,11 +1298,21 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
 
           {/* Upgradability Icon & Text */}
           <div
-            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative ${pinnedTooltip === 'upgradability' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
+            data-component-ref
+            ref={(el) => { componentRefs.current['upgradability'] = el }}
+            className={`bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all cursor-pointer relative group ${expandedComponent === 'upgradability' ? 'ring-2 ring-[#00A3E0] ring-opacity-50' : ''}`}
             onMouseEnter={() => handleFeatureCardHover('upgradability')}
             onMouseLeave={handleFeatureCardLeave}
             onClick={() => handleFeatureCardClick('upgradability')}
           >
+            {expandedComponent === 'upgradability' ? (
+              <ChevronUp className="absolute top-2 right-2 w-4 h-4 text-[#00A3E0]" />
+            ) : (
+              <ChevronDown className="absolute top-2 right-2 w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+            {renderExpandableInfo('upgradability', tooltips.find(t => t.id === 'upgradability')?.title || 'Upgradability and versioning',
+              <div className="whitespace-pre-wrap">{renderMarkdownContent(tooltips.find(t => t.id === 'upgradability')?.description || '')}</div>
+            )}
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="w-16 h-16 bg-[#003366] rounded-2xl flex items-center justify-center">
@@ -1327,100 +1341,8 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
         </div>
       </div>
 
-      {/* Tooltip Display - Below the diagram background */}
-      <div className="mt-4 relative" style={{ height: '250px' }}>
-        <div
-          className={`absolute top-0 left-0 right-0 p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-sm transition-opacity duration-300 ${(activeTooltip || showKafkaTooltip || showBusinessLogicTooltip || showBusinessMicroservicesTooltip || showBankSystemTooltip) ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          style={{ maxHeight: '250px', overflowY: 'auto' }}
-          onMouseEnter={() => {
-            // Clear any existing timeout when hovering over tooltip to keep it visible
-            if (tooltipTimeout) {
-              clearTimeout(tooltipTimeout)
-              setTooltipTimeout(null)
-            }
-          }}
-        >
-          <div className="flex items-start space-x-2">
-            <Info className="w-5 h-5 text-[#00A3E0] flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              {showKafkaTooltip && (
-                <div>
-                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
-                    Kafka - Event-Driven Architecture
-                  </h3>
-                  {kafkaTooltipLoading ? (
-                    <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Loading Kafka capabilities from RAG...</span>
-                    </div>
-                  ) : (
-                    <p className="text-gray-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
-                      {kafkaTooltipContent}
-                    </p>
-                  )}
-                </div>
-              )}
-              {showBusinessLogicTooltip && !showKafkaTooltip && (
-                <div>
-                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
-                    Temenos Business Logic
-                  </h3>
-                  <div className="text-gray-800 dark:text-slate-200 leading-relaxed space-y-3">
-                    <p>Temenos Business Logic is a core component of the Temenos platform, designed to implement and manage the complex rules and processes that govern banking operations. It is organized into distinct modules that separate technical and business functionalities, enabling clear structure and maintainability. The business logic is fully parameter-driven, allowing banks to configure products and processes without extensive coding, which supports rapid adaptation to changing market or regulatory requirements.</p>
-
-                    <p>A key architectural principle is the separation of business logic from data storage. The database acts purely as a repository without embedded business logic or stored procedures, which enhances scalability and simplifies maintenance. Business logic is implemented primarily in Java and containerized, supporting modular deployment and extensibility.</p>
-                  </div>
-                </div>
-              )}
-              {showBusinessMicroservicesTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && (
-                <div>
-                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
-                    Business Microservices
-                  </h3>
-                  <div className="text-gray-800 dark:text-slate-200 leading-relaxed space-y-3">
-                    <p>In the Temenos architecture, business microservices are designed to provide modular, scalable, and loosely coupled components that handle specific business functions independently. This approach enhances flexibility, fault isolation, and ease of maintenance, allowing banks to develop and deploy functionalities separately while ensuring seamless integration within the overall system.</p>
-
-                    <p>A key example of business microservices in Temenos is the implementation of CQRS (Command Query Responsibility Segregation) microservices. The core database in Temenos Transact is optimized for transaction processing with strong consistency, focusing on write operations. However, this optimization can make querying inefficient, especially for large banks with high-volume read demands.</p>
-
-                    <p>To address this, Temenos employs CQRS microservices that synchronize data from the core system using an event-driven mechanism. These microservices maintain an eventually consistent copy of the data optimized for read operations. This means that while the data may have a slight delay in reflecting the latest state, it provides low-latency, high-performance access for read-only purposes.</p>
-
-                    <p>For example, when the Payment Cockpit dashboards need to search across million of payments, they query these CQRS microservices instead of the core database. This separation ensures that the core transaction processing remains efficient and consistent, while the CQRS microservices deliver fast, scalable read access tailored for user interfaces and reporting.</p>
-
-                    <p>Developers working with Temenos should be aware of these CQRS microservices in their deployment and utilize their APIs for scenarios requiring high-volume, read-optimized data access with relaxed consistency requirements.</p>
-
-                    <p>This microservices approach, including CQRS, supports Temenos' commitment to scalability, responsiveness, and operational efficiency in complex banking environments.</p>
-
-                    <p>By separating command (write) and query (read) responsibilities, Temenos enables banks to optimize performance and user experience without compromising transactional integrity.</p>
-                  </div>
-                </div>
-              )}
-              {showBankSystemTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && !showBusinessMicroservicesTooltip && (
-                <div>
-                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
-                    Bank's System
-                  </h3>
-                  <div className="text-gray-800 dark:text-slate-200 leading-relaxed space-y-3">
-                    <p>Temenos APIs are designed to be comprehensive and flexible, enabling integration with a wide range of banking systems and third-party applications. They provide RESTful interfaces with JSON payloads, adhering to modern web standards and semantic versioning, which ensures backward compatibility. These APIs cover most functionalities required by financial institutions, making them suitable for core banking systems, payment gateways, analytics platforms, and other banking-related systems.</p>
-                  </div>
-                </div>
-              )}
-              {activeTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && !showBusinessMicroservicesTooltip && !showBankSystemTooltip && (
-                <div>
-                  <h3 className="font-bold text-[#003366] dark:text-[#00A3E0] mb-2">
-                    {tooltips.find(t => t.id === activeTooltip)?.title}
-                  </h3>
-                  <div className="text-gray-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
-                    {renderMarkdownContent(tooltips.find(t => t.id === activeTooltip)?.description || '')}
-                  </div>
-                </div>
-              )}
-              {!activeTooltip && !showKafkaTooltip && !showBusinessLogicTooltip && !showBusinessMicroservicesTooltip && !showBankSystemTooltip && (
-                <p className="text-gray-600 dark:text-slate-400 italic">Hover over a feature card or any component box to see details</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Expandable Info Overlays - Positioned over components */}
+      {/* These will be rendered as overlays positioned relative to their components */}
 
       {!hideDemoSettings && (
         <>

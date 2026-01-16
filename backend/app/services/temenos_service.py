@@ -3200,8 +3200,13 @@ Open Questions
             )
             
             architectural_text = ""
-            if arch_response.get("answer"):
-                architectural_text = arch_response["answer"]
+            # RAG adapter returns {"data": {"answer": "..."}}
+            if arch_response and isinstance(arch_response, dict):
+                raw_text = arch_response.get("data", {}).get("answer", "") or arch_response.get("answer", "")
+                if raw_text and len(raw_text) > 50:
+                    architectural_text = raw_text
+                else:
+                    architectural_text = "Information not available"
             else:
                 architectural_text = "Information not available"
             
@@ -3215,8 +3220,13 @@ Open Questions
             )
             
             functional_text = ""
-            if func_response.get("answer"):
-                functional_text = func_response["answer"]
+            # RAG adapter returns {"data": {"answer": "..."}}
+            if func_response and isinstance(func_response, dict):
+                raw_text = func_response.get("data", {}).get("answer", "") or func_response.get("answer", "")
+                if raw_text and len(raw_text) > 50:
+                    functional_text = raw_text
+                else:
+                    functional_text = "Information not available"
             else:
                 functional_text = "Information not available"
             

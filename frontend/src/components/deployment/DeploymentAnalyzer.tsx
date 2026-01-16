@@ -1775,7 +1775,7 @@ function ServiceAnalysis({
       )}
 
       {/* Summary Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-3 ${includeCosts ? 'lg:grid-cols-4' : ''} gap-6`}>
+      <div className={`grid grid-cols-1 md:grid-cols-3 ${includeCosts ? 'lg:grid-cols-5' : ''} gap-6`}>
         <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <div className="flex items-center space-x-3">
             <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -1803,86 +1803,97 @@ function ServiceAnalysis({
             </div>
           </div>
         </div>
-        {includeCosts && (
-          <div className="card bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-200/50 dark:border-yellow-500/20">
-            <div className="flex items-center space-x-3">
-              <DollarSign className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
-              <div className="flex-1">
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">Total Cost</p>
-                {(() => {
-                  // Ensure all selected resource groups are accounted for in aggregation
-                  const allRGs = selectedResourceGroups || []
-                  const costEntries = allRGs.map(rgName => {
-                    // Get cost data for this RG, or create a default entry if not found
-                    return costs[rgName] || {
-                      resource_group: rgName,
-                      total_cost: 0,
-                      services: {},
-                      error: costsLoading ? undefined : 'No cost data available'
-                    }
-                  })
+        {includeCosts && (() => {
+          // Ensure all selected resource groups are accounted for in aggregation
+          const allRGs = selectedResourceGroups || []
+          const costEntries = allRGs.map(rgName => {
+            // Get cost data for this RG, or create a default entry if not found
+            return costs[rgName] || {
+              resource_group: rgName,
+              total_cost: 0,
+              services: {},
+              error: costsLoading ? undefined : 'No cost data available'
+            }
+          })
 
-                  const hasErrors = costEntries.some(c => c.error)
-                  const totalCost = costEntries.reduce((sum, cost) => {
-                    // Only include costs that don't have errors
-                    if (cost.error && !costsLoading) return sum
-                    return sum + (cost.total_cost || 0)
-                  }, 0)
+          const hasErrors = costEntries.some(c => c.error)
+          const azureCosts = costEntries.filter(c => !c.error || costsLoading)
+          const awsCosts: typeof costEntries = [] // AWS costs would come from a separate API call
+          
+          const azureTotal = azureCosts.reduce((sum, cost) => {
+            if (cost.error && !costsLoading) return sum
+            return sum + (cost.total_cost || 0)
+          }, 0)
+          
+          const awsTotal = awsCosts.reduce((sum, cost) => sum + (cost.total_cost || 0), 0)
+          const totalCost = azureTotal + awsTotal
 
-                  const hasProjections = costEntries.some(c => c.projections && !c.error)
-                  const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
-                    if (cost.error || !cost.projections) return sum
-                    return sum + (cost.projections.full_month || 0)
-                  }, 0) : null
+          const hasProjections = costEntries.some(c => c.projections && !c.error)
+          const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
+            if (cost.error || !cost.projections) return sum
+            return sum + (cost.projections.full_month || 0)
+          }, 0) : null
 
-                  const errorCount = costEntries.filter(c => c.error && !costsLoading).length
-                  const successCount = costEntries.length - errorCount
+          const errorCount = costEntries.filter(c => c.error && !costsLoading).length
+          const successCount = costEntries.length - errorCount
 
-                  if (hasErrors && costEntries.length > 0 && !costsLoading) {
-                    return (
+          return (
+            <>
+              {/* Azure Cost Card */}
+              <div className="card bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-200/50 dark:border-blue-500/20">
+                <div className="flex items-center space-x-3">
+                  <Cloud className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Azure Cost</p>
+                    {hasErrors && costEntries.length > 0 && !costsLoading ? (
                       <>
-                        <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">${azureTotal.toFixed(2)}</p>
                         {errorCount > 0 && (
                           <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                            {errorCount} of {costEntries.length} RG{costEntries.length !== 1 ? 's' : ''} failed to load
+                            {errorCount} of {costEntries.length} RG{costEntries.length !== 1 ? 's' : ''} failed
                           </p>
                         )}
                         {successCount > 0 && (
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                            Aggregated from {successCount} resource group{successCount !== 1 ? 's' : ''}
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            From {successCount} resource group{successCount !== 1 ? 's' : ''}
                           </p>
                         )}
                       </>
-                    )
-                  }
-
-                  return (
-                    <>
-                      <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
-                      {monthlyProjection !== null && monthlyProjection > 0 && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
-                      )}
-                      {costEntries.length > 1 && !costsLoading && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                          Aggregated from {costEntries.length} resource group{costEntries.length !== 1 ? 's' : ''}
-                        </p>
-                      )}
-                      {costsLoading && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 flex items-center space-x-1">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Loading costs for {allRGs.length} resource group{allRGs.length !== 1 ? 's' : ''}...</span>
-                        </p>
-                      )}
-                      {!costsLoading && costEntries.length === 0 && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">No cost data available</p>
-                      )}
-                    </>
-                  )
-                })()}
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">${azureTotal.toFixed(2)}</p>
+                        {monthlyProjection !== null && monthlyProjection > 0 && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
+                        )}
+                        {costsLoading && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center space-x-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>Loading...</span>
+                          </p>
+                        )}
+                        {!costsLoading && azureCosts.length === 0 && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">No Azure cost data</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+
+              {/* AWS Cost Card */}
+              <div className="card bg-gradient-to-br from-orange-500/10 to-amber-500/10 border-orange-200/50 dark:border-orange-500/20">
+                <div className="flex items-center space-x-3">
+                  <Cloud className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+                  <div className="flex-1">
+                    <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">AWS Cost</p>
+                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">${awsTotal.toFixed(2)}</p>
+                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">AWS cost analysis coming soon</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )
+        })()}
       </div>
 
       {/* Horizontal Panel Layout: Main Content + Sidebar */}
@@ -2216,17 +2227,25 @@ function ComponentDetailPanel({
     if (!value) return false
     const trimmed = value.trim()
     if (!trimmed) return false
-    return !trimmed.includes('Information not available') && !trimmed.includes('I cannot provide')
+    // Check for meaningful content - at least 50 characters and not just error messages
+    const isError = trimmed.includes('Information not available') || 
+                   trimmed.includes('I cannot provide') ||
+                   trimmed.toLowerCase().includes('no information') ||
+                   (trimmed.length < 50 && trimmed.toLowerCase().includes('not available'))
+    return !isError && trimmed.length >= 20
   }
 
   const hasCapabilities = Array.isArray(componentInfo?.capabilities)
     ? componentInfo.capabilities.some((cap) => typeof cap === 'string' && cap.trim().length > 0)
     : false
 
+  // More lenient check - show content if there's any text, even if it's not perfectly formatted
   const hasAnyRagContent =
     hasMeaningfulText(componentInfo?.architecturalOverview) ||
     hasMeaningfulText(componentInfo?.functionalOverview) ||
-    hasCapabilities
+    hasCapabilities ||
+    (componentInfo?.architecturalOverview && componentInfo.architecturalOverview.trim().length > 50) ||
+    (componentInfo?.functionalOverview && componentInfo.functionalOverview.trim().length > 50)
 
   const hasStrictDocumentation = componentInfo?.architecturalOverview?.includes('## 1. Purpose & Scope') ?? false
   const hasRelatedServices = Array.isArray(componentInfo?.relatedServices) && componentInfo.relatedServices.length > 0
