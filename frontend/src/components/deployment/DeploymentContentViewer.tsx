@@ -491,48 +491,64 @@ export function DeploymentContentViewer() {
                       </div>
                     </div>
                     
-                    {items.map((item: any, idx: number) => {
-                      const services = extractServices(item.answer || '')
-                      const uniqueServices = Array.from(new Set(services)).slice(0, 6) // Limit to 6 services
-                      
-                      return (
-                        <div
-                          key={`${category}-${idx}`}
-                          className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300"
-                        >
-                          {/* Title with Icon */}
-                          <div className="flex items-start space-x-4 mb-6 pb-4 border-b-2 border-gray-200 dark:border-gray-700">
-                            <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-700 shadow-md">
-                              <Cloud className="w-6 h-6 text-white" />
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                {item.title || item.question}
-                              </h3>
-                              {/* Service Icons Badge */}
+                    {/* Special handling for Architecture Overview - split into Azure and AWS sub-cards */}
+                    {category === 'Architecture Overview' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {items.map((item: any, idx: number) => {
+                          const isAzure = item.title?.includes('Azure') || item.answer?.includes('Azure')
+                          const isAWS = item.title?.includes('AWS') || item.answer?.includes('AWS')
+                          const services = extractServices(item.answer || '')
+                          const uniqueServices = Array.from(new Set(services)).slice(0, 4) // Limit to 4 for compact display
+                          
+                          return (
+                            <div
+                              key={`${category}-${idx}`}
+                              className={`rounded-xl p-4 border-2 shadow-lg transition-all duration-300 ${
+                                isAzure 
+                                  ? 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-300 dark:border-blue-700'
+                                  : isAWS
+                                  ? 'bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-300 dark:border-orange-700'
+                                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                              }`}
+                            >
+                              {/* Compact Header with Icon */}
+                              <div className="flex items-center space-x-3 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                                <div className={`p-2 rounded-lg shadow-md ${
+                                  isAzure 
+                                    ? 'bg-gradient-to-br from-blue-600 to-cyan-700'
+                                    : isAWS
+                                    ? 'bg-gradient-to-br from-orange-600 to-amber-700'
+                                    : 'bg-gradient-to-br from-indigo-600 to-blue-700'
+                                }`}>
+                                  <Cloud className="w-5 h-5 text-white" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                  {isAzure ? 'Azure' : isAWS ? 'AWS' : item.title || item.question}
+                                </h3>
+                              </div>
+                              
+                              {/* Compact Service Icons */}
                               {uniqueServices.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-3">
+                                <div className="flex flex-wrap gap-1.5 mb-3">
                                   {uniqueServices.map((service, sidx) => {
                                     const ServiceIcon = getServiceIcon(service)
                                     return (
                                       <div
                                         key={sidx}
-                                        className="flex items-center space-x-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-full border border-indigo-200 dark:border-indigo-800"
+                                        className="flex items-center space-x-1 px-2 py-0.5 bg-white/60 dark:bg-gray-800/60 rounded border border-gray-200 dark:border-gray-700"
                                       >
-                                        <ServiceIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                                        <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                                          {service.length > 20 ? service.substring(0, 20) + '...' : service}
+                                        <ServiceIcon className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                                        <span className="text-xs text-gray-700 dark:text-gray-300">
+                                          {service.length > 15 ? service.substring(0, 15) + '...' : service}
                                         </span>
                                       </div>
                                     )
                                   })}
                                 </div>
                               )}
-                            </div>
-                          </div>
-                          
-                          {/* Content */}
-                          <div className="text-gray-800 dark:text-gray-200 prose prose-lg dark:prose-invert max-w-none">
+                              
+                              {/* Compact Content */}
+                              <div className="text-gray-800 dark:text-gray-200 prose prose-sm dark:prose-invert max-w-none">
                             <ReactMarkdown
                               components={{
                             h1: ({ ...props }) => <h1 className="text-2xl font-bold text-indigo-900 dark:text-indigo-400 mt-6 mb-4" {...props} />,
@@ -588,30 +604,135 @@ export function DeploymentContentViewer() {
                         >
                           {item.answer}
                         </ReactMarkdown>
-                          </div>
-                          
-                          {/* Sources */}
-                          {item.sources && item.sources.length > 0 && (
-                            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                              <div className="flex items-center space-x-2 mb-3">
-                                <Activity className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Sources:</p>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {item.sources.map((source: any, sidx: number) => (
-                                  <div
-                                    key={sidx}
-                                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
-                                  >
-                                    {source.title || source.url || 'Temenos Documentation'}
-                                  </div>
-                                ))}
                               </div>
                             </div>
-                          )}
-                        </div>
-                      )
-                    })}
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      // Regular display for other categories
+                      items.map((item: any, idx: number) => {
+                        const services = extractServices(item.answer || '')
+                        const uniqueServices = Array.from(new Set(services)).slice(0, 6) // Limit to 6 services
+                        
+                        return (
+                          <div
+                            key={`${category}-${idx}`}
+                            className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300"
+                          >
+                            {/* Title with Icon */}
+                            <div className="flex items-start space-x-4 mb-6 pb-4 border-b-2 border-gray-200 dark:border-gray-700">
+                              <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-700 shadow-md">
+                                <Cloud className="w-6 h-6 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                  {item.title || item.question}
+                                </h3>
+                                {/* Service Icons Badge */}
+                                {uniqueServices.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 mt-3">
+                                    {uniqueServices.map((service, sidx) => {
+                                      const ServiceIcon = getServiceIcon(service)
+                                      return (
+                                        <div
+                                          key={sidx}
+                                          className="flex items-center space-x-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-full border border-indigo-200 dark:border-indigo-800"
+                                        >
+                                          <ServiceIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                          <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                                            {service.length > 20 ? service.substring(0, 20) + '...' : service}
+                                          </span>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="text-gray-800 dark:text-gray-200 prose prose-lg dark:prose-invert max-w-none">
+                              <ReactMarkdown
+                                components={{
+                                  h1: ({ ...props }) => <h1 className="text-2xl font-bold text-indigo-900 dark:text-indigo-400 mt-6 mb-4" {...props} />,
+                                  h2: ({ ...props }) => <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-5 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2" {...props} />,
+                                  h3: ({ children, ...props }: any) => {
+                                    const serviceName = typeof children === 'string' ? children : children?.toString() || ''
+                                    const ServiceIcon = getServiceIcon(serviceName)
+                                    return (
+                                      <div className="flex items-center space-x-3 mt-6 mb-3">
+                                        <div className="p-1.5 rounded-md bg-gradient-to-br from-indigo-600 to-blue-700">
+                                          <ServiceIcon className="w-5 h-5 text-white" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-indigo-700 dark:text-indigo-300 m-0" {...props}>
+                                          {children}
+                                        </h3>
+                                      </div>
+                                    )
+                                  },
+                                  h4: ({ ...props }) => <h4 className="text-base font-bold text-gray-800 dark:text-gray-200 mt-3 mb-1" {...props} />,
+                                  ul: ({ ...props }) => (
+                                    <ul className="list-none space-y-2 mb-4 text-gray-700 dark:text-gray-300" {...props} />
+                                  ),
+                                  ol: ({ ...props }) => (
+                                    <ol className="list-decimal list-outside ml-6 space-y-2 mb-4 text-gray-700 dark:text-gray-300" {...props} />
+                                  ),
+                                  li: ({ children, ...props }: any) => (
+                                    <li className="flex items-start space-x-3 leading-relaxed pl-1" {...props}>
+                                      <div className="mt-2 flex-shrink-0">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-700 mt-1.5"></div>
+                                      </div>
+                                      <span className="flex-1">{children}</span>
+                                    </li>
+                                  ),
+                                  p: ({ ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
+                                  strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                                  blockquote: ({ ...props }) => <blockquote className="border-l-4 border-indigo-600 pl-4 italic my-4 text-gray-600 dark:text-gray-400" {...props} />,
+                                  code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-red-500 dark:text-red-400" {...props} />,
+                                  table: ({ ...props }) => (
+                                    <div className="overflow-x-auto my-6">
+                                      <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-lg shadow-md" {...props} />
+                                    </div>
+                                  ),
+                                  thead: ({ ...props }) => <thead className="bg-indigo-50 dark:bg-indigo-900/30" {...props} />,
+                                  tbody: ({ ...props }) => <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props} />,
+                                  tr: ({ ...props }) => <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" {...props} />,
+                                  th: ({ ...props }) => (
+                                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left text-sm font-bold text-gray-900 dark:text-white bg-indigo-100 dark:bg-indigo-900/50 first:rounded-tl-lg last:rounded-tr-lg" {...props} />
+                                  ),
+                                  td: ({ ...props }) => (
+                                    <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 align-top" {...props} />
+                                  ),
+                                }}
+                              >
+                                {item.answer}
+                              </ReactMarkdown>
+                            </div>
+                            
+                            {/* Sources */}
+                            {item.sources && item.sources.length > 0 && (
+                              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center space-x-2 mb-3">
+                                  <Activity className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Sources:</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {item.sources.map((source: any, sidx: number) => (
+                                    <div
+                                      key={sidx}
+                                      className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+                                    >
+                                      {source.title || source.url || 'Temenos Documentation'}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
                   </div>
                 )
               })

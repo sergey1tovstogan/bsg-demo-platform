@@ -1775,7 +1775,7 @@ function ServiceAnalysis({
       )}
 
       {/* Summary Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-3 ${includeCosts ? 'lg:grid-cols-5' : ''} gap-6`}>
+      <div className={`grid grid-cols-1 md:grid-cols-3 ${includeCosts ? 'lg:grid-cols-4' : ''} gap-6`}>
         <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <div className="flex items-center space-x-3">
             <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -1879,17 +1879,6 @@ function ServiceAnalysis({
                 </div>
               </div>
 
-              {/* AWS Cost Card */}
-              <div className="card bg-gradient-to-br from-orange-500/10 to-amber-500/10 border-orange-200/50 dark:border-orange-500/20">
-                <div className="flex items-center space-x-3">
-                  <Cloud className="w-8 h-8 text-orange-600 dark:text-orange-400" />
-                  <div className="flex-1">
-                    <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">AWS Cost</p>
-                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">${awsTotal.toFixed(2)}</p>
-                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">AWS cost analysis coming soon</p>
-                  </div>
-                </div>
-              </div>
             </>
           )
         })()}

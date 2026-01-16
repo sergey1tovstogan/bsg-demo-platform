@@ -144,14 +144,23 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
     // Calculate position relative to viewport (getBoundingClientRect is already viewport-relative)
     const rect = componentRef.getBoundingClientRect()
     
+    // Position beside (to the right) of the component instead of below
+    // If there's not enough space on the right, position to the left
+    const overlayWidth = 450
+    const spaceOnRight = window.innerWidth - rect.right
+    const spaceOnLeft = rect.left
+    const positionBeside = spaceOnRight >= overlayWidth || spaceOnRight > spaceOnLeft
+    
     return (
       <div
         data-component-overlay
         className="fixed z-50 bg-white dark:bg-slate-800 border-2 border-[#00A3E0] rounded-lg shadow-2xl p-4 max-w-md"
         style={{
-          top: `${rect.bottom + 10}px`,
-          left: `${Math.min(rect.left, window.innerWidth - 450)}px`,
-          maxHeight: '400px',
+          top: `${rect.top}px`,
+          left: positionBeside 
+            ? `${Math.min(rect.right + 10, window.innerWidth - overlayWidth)}px`
+            : `${Math.max(10, rect.left - overlayWidth - 10)}px`,
+          maxHeight: `${Math.min(400, window.innerHeight - rect.top - 20)}px`,
           overflowY: 'auto'
         }}
         onClick={(e) => e.stopPropagation()}
