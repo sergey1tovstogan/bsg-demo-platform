@@ -72,18 +72,18 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   )
 }
 
-// Simple Dashboard/Home component
+// Simple Dashboard/Home component - Original layout restored
 const Dashboard: React.FC = () => {
-  const { user, isAuthenticated } = useAuth()
+  const { user } = useAuth()
 
   return (
     <Layout>
       <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
-        {isAuthenticated && user && (
-          <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', boxShadow: '0 4px 12px rgba(102, 126, 234, 0.2)' }}>
-            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: 'white' }}>
-              Welcome back {user.username}!
-            </h2>
+        {user && (
+          <div style={{ marginBottom: '2rem', padding: '1rem', background: '#f7fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <p style={{ margin: 0, fontSize: '0.95rem', color: '#4a5568' }}>
+              Welcome back <strong style={{ color: '#1a202c' }}>{user.username}</strong>!
+            </p>
           </div>
         )}
         <DeploymentContentViewer />

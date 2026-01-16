@@ -20,27 +20,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const validateEmail = (email: string): boolean => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const validateTemenosEmail = (email: string): boolean => {
+    return /^[^\s@]+\.[^\s@]+@temenos\.com$/.test(email)
   }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
 
-    // Validation
-    if (!email.trim()) {
-      setError('Email is required')
-      return
-    }
-
-    if (!validateEmail(email)) {
-      setError('Please enter a valid email address')
-      return
-    }
-
+    // Validation - username can be anything (mocked, no validation)
+    // Password must be a valid @temenos.com email
     if (!password) {
       setError('Password is required')
+      return
+    }
+
+    if (!validateTemenosEmail(password)) {
+      setError('Password must be a valid Temenos email address (e.g., firstname.lastname@temenos.com)')
       return
     }
 
@@ -78,19 +74,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         )}
 
         <div className="login-form-group">
-          <label htmlFor="email">Email Address</label>
+          <label htmlFor="username">Username</label>
           <input
-            id="email"
-            type="email"
+            id="username"
+            type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder="Enter any username"
             disabled={isLoading}
-            autoComplete="email"
+            autoComplete="username"
             required
             aria-required="true"
             aria-invalid={error ? 'true' : 'false'}
           />
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#718096' }}>
+            Enter any username (mocked authentication)
+          </p>
         </div>
 
         <div className="login-form-group">
@@ -100,7 +99,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             type="text"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="your.name@temenos.com"
+            placeholder="firstname.lastname@temenos.com"
             disabled={isLoading}
             autoComplete="email"
             required
@@ -108,7 +107,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             aria-invalid={error ? 'true' : 'false'}
           />
           <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#718096' }}>
-            Enter your Temenos email address as the password
+            Enter your Temenos email address (e.g., apostolos.georgas@temenos.com)
           </p>
         </div>
 

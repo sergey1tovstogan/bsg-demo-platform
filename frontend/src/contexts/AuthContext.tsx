@@ -122,11 +122,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Login function with mocked authentication
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
-      // Mocked authentication: Accept any username, password must be @temenos.com email
-      const passwordIsTemenosEmail = credentials.password.includes('@temenos.com')
+      // Mocked authentication: Accept any username (no validation), password must be valid @temenos.com email
+      const temenosEmailPattern = /^[^\s@]+\.[^\s@]+@temenos\.com$/
       
-      if (!passwordIsTemenosEmail) {
-        throw new Error('Password must be a Temenos email address (e.g., user@temenos.com)')
+      if (!temenosEmailPattern.test(credentials.password)) {
+        throw new Error('Password must be a valid Temenos email address (e.g., firstname.lastname@temenos.com)')
       }
 
       // Extract name from email (first part before @)
