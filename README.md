@@ -102,11 +102,14 @@ The application uses browser localStorage to store user preferences and temporar
 **Note**: localStorage is browser-based storage that persists data locally on the user's machine. It's separate from MongoDB, which stores server-side persistent data in Azure Cosmos DB.
 
 For detailed documentation, see:
-- [Architecture Documentation](./docs/ARCHITECTURE.md)
-- [Usage Guide](./docs/USAGE.md)
-- [Azure Services Explained](./docs/AZURE_SERVICES_EXPLAINED.md) - Learn about Static Web Apps vs App Service
-- [Azure Configuration Guide](./docs/AZURE_CONFIGURATION.md)
-- [Troubleshooting Guide](./docs/TROUBLESHOOTING.md)
+- [User Guide](./docs/USER_GUIDE.md) - Getting started and platform overview
+- [Usage Guide](./docs/USAGE.md) - Quick reference for common tasks
+- [Local Development](./docs/LOCAL_DEV.md) - Setting up and running locally
+- [Deployment Guide](./docs/DEPLOYMENT.md) - How to deploy to Azure
+- [Debugging Guide](./docs/DEBUGGING.md) - How to access and analyze logs
+- [Architecture Documentation](./docs/ARCHITECTURE.md) - System design and structure
+- [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [Azure Configuration](./docs/providers/AZURE_CONFIGURATION.md) - Azure setup and configuration
 
 ---
 

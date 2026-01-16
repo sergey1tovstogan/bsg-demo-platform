@@ -7,7 +7,7 @@ It intentionally stays short and links to authoritative documentation instead of
 
 If you are new to the platform, start with USER_GUIDE.md.
 
-_Last updated: 2025-12-18_
+_Last updated: 2026-01-16_
 
 ---
 
@@ -48,21 +48,31 @@ Authoritative rules for components:
 
 Deployment Analyzer (High Level)
 --------------------------------
-The Deployment component allows Azure resource analysis.
+The Deployment component allows Azure resource analysis and cost calculation.
 
 Typical flow:
 1. Open Deployment component
-2. Connect to Azure
-3. Select subscription and resource groups
-4. Review detected Temenos components
+2. Connect to Azure (select subscription)
+3. Select resource groups
+4. Optionally enable cost analysis
+5. Review detected Temenos components and costs
+
+Features:
+- **Component Discovery**: Automatically identifies Temenos microservices from Azure resources
+- **Cost Analysis**: Calculate Azure costs per resource group (requires "Cost Management Reader" role)
+- **RAG Integration**: Detailed component information from Temenos knowledge base
+- **Architecture Overview**: Azure and AWS deployment patterns in compact sub-cards
 
 Notes:
 - Azure permissions and Managed Identity setup are required
+- Cost calculation requires "Cost Management Reader" role on subscription
 - AKS namespace discovery may differ between local and cloud runtimes
 
 See:
-- AZURE_CONFIGURATION.md
-- TROUBLESHOOTING.md
+- DEPLOYMENT.md - Deployment procedures
+- DEBUGGING.md - How to access logs for troubleshooting
+- providers/AZURE_CONFIGURATION.md - Azure setup
+- TROUBLESHOOTING.md - Common issues
 
 ---
 
@@ -91,5 +101,5 @@ Use this file when you need:
 For details, always follow links to authoritative docs.
 
 ---
-Last updated: 2025-12-18
+Last updated: 2026-01-16
 Maintained by the BSG Team

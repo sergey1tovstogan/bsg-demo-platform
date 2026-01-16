@@ -6,7 +6,7 @@ and operational behavior of the BSG Demo Platform.
 All contributors — including Claude and Cursor — MUST reference the files in this directory
 instead of restating, guessing, or inventing system behavior.
 
-_Last updated: 2025-12-18_
+_Last updated: 2026-01-16_
 
 ---
 
@@ -110,6 +110,12 @@ Running and operating the platform.
 - **LOCAL_DEV.md**  
   Canonical local development workflow.
 
+- **DEPLOYMENT.md**  
+  Deployment architecture, procedures, and verification.
+
+- **DEBUGGING.md**  
+  Comprehensive guide to accessing and analyzing logs in production.
+
 - **CONFIGURATION.md**  
   Environment variable contract and configuration sources.
 
@@ -165,5 +171,5 @@ See:
 - **CONTRIBUTING.md**
 
 ---
-Last updated: 2025-12-18
+Last updated: 2026-01-16
 Maintained by the BSG Team

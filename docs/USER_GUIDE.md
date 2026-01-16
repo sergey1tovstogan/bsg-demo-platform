@@ -15,7 +15,7 @@ It does NOT:
 - Explain local setup steps (see LOCAL_DEV.md)
 - Define configuration contracts (see CONFIGURATION.md)
 
-_Last updated: 2025-12-18_
+_Last updated: 2026-01-16_
 
 ---
 

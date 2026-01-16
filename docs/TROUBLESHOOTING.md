@@ -14,7 +14,7 @@ This document does NOT:
 - Duplicate configuration contracts (see CONFIGURATION.md)
 - Replace Azure setup documentation (see AZURE_CONFIGURATION.md)
 
-_Last updated: 2025-12-18_
+_Last updated: 2026-01-16_
 
 ---
 
@@ -158,6 +158,69 @@ Related docs:
 
 ---
 
+### Cost Calculation Returns $0 or Fails
+**Symptoms:**
+- Cost analysis shows $0.00 for all resource groups
+- Error message: "X of Y RGs failed to load"
+- No cost data displayed
+
+**Primary causes:**
+1. **Authentication/Permissions** (most common)
+   - Managed Identity lacks "Cost Management Reader" role
+   - DefaultAzureCredential cannot authenticate
+   
+2. **No cost data available**
+   - Cost data takes 24-48 hours to appear after resource creation
+   - Selected date range has no costs
+   - Resource group has no billable resources
+
+3. **API response structure mismatch**
+   - Azure Cost Management API response format changed
+   - Column names don't match expected format
+
+**Checklist:**
+1) **Verify permissions:**
+   - Azure Portal → Subscription → Access control (IAM)
+   - Find App Service Managed Identity
+   - Verify "Cost Management Reader" role is assigned at subscription level
+   - If missing, assign the role and restart App Service
+
+2) **Check backend logs** (see DEBUGGING.md):
+   ```kusto
+   AppServiceConsoleLogs
+   | where Message contains "Cost Management"
+   | order by TimeGenerated desc
+   | take 50
+   ```
+   Look for:
+   - "Failed to get access token" → Authentication issue
+   - "No cost data rows returned" → No data or permissions
+   - "Could not find required columns" → API response format issue
+
+3) **Verify date range:**
+   - Cost calculation uses "last full calendar month" by default
+   - If resources are new, costs may not be available yet
+   - Check Azure Portal → Cost Management for manual verification
+
+4) **Compare with working script:**
+   - If your local `cost-analysis.sh` script works, compare:
+     - Authentication method (Azure CLI vs Managed Identity)
+     - API response structure
+     - Date range calculation
+
+**Debugging steps:**
+- See DEBUGGING.md for detailed log access instructions
+- Enable verbose logging: Set `LOG_LEVEL=DEBUG` in App Service settings
+- Check logs for "Cost Management API response" messages
+- Verify response contains `properties.rows` with data
+
+**Related docs:**
+- DEBUGGING.md - How to access and analyze logs
+- DEPLOYMENT.md - Deployment and configuration
+- providers/AZURE_CONFIGURATION.md - Azure setup
+
+---
+
 ### Deployment Succeeds but App Is Broken
 **Common causes:**
 - Environment variables missing
@@ -202,11 +265,14 @@ Always collect:
 - Which environment (local / prod)
 
 Where to look:
-- Azure App Service → Log stream
-- GitHub Actions logs
-- Local console output
+- Azure App Service → Log stream (real-time)
+- Azure Portal → Logs (queryable, historical)
+- GitHub Actions logs (deployment issues)
+- Local console output (local development)
 
-See OBSERVABILITY.md for logging rules.
+See:
+- **DEBUGGING.md** - Comprehensive log access guide
+- **OBSERVABILITY.md** - Logging standards and rules
 
 ---
 
@@ -236,5 +302,5 @@ Relationship to Other Documents
 This document is intentionally procedural and symptom-driven.
 
 ---
-Last updated: 2025-12-18
+Last updated: 2026-01-16
 Maintained by the BSG Team
