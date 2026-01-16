@@ -28,11 +28,12 @@ class CostService:
         """Get access token for Azure Management API."""
         if self.access_token is None:
             try:
+                logger.info("Attempting to get Azure access token for Cost Management API...")
                 token_response = self.credential.get_token("https://management.azure.com/.default")
                 self.access_token = token_response.token
-                logger.info("Successfully obtained Azure access token for Cost Management API")
+                logger.info(f"Successfully obtained Azure access token for Cost Management API (token length: {len(self.access_token)})")
             except Exception as e:
-                logger.error(f"Failed to get access token: {e}")
+                logger.error(f"Failed to get access token: {e}", exc_info=True)
                 raise RuntimeError(f"Authentication failed: {str(e)}")
         
         return self.access_token
@@ -103,7 +104,16 @@ class CostService:
                     }
                 
                 response.raise_for_status()
-                return response.json()
+                result_json = response.json()
+                
+                # Log response structure for debugging (first 500 chars to avoid huge logs)
+                logger.debug(f"Cost Management API response structure: {str(result_json)[:500]}")
+                if isinstance(result_json, dict):
+                    logger.debug(f"Response top-level keys: {list(result_json.keys())}")
+                    if 'properties' in result_json:
+                        logger.debug(f"Properties keys: {list(result_json['properties'].keys()) if isinstance(result_json['properties'], dict) else 'Not a dict'}")
+                
+                return result_json
                 
             except requests.exceptions.Timeout as e:
                 last_error = f"Request timeout: {str(e)}"
@@ -265,15 +275,29 @@ class CostService:
                     'end_date': end_date.isoformat()
                 }
             
+            # Log the full response structure for debugging
+            logger.info(f"Cost Management API response for {resource_group_name}:")
+            logger.info(f"  Response keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
+            if isinstance(result, dict) and 'properties' in result:
+                props = result['properties']
+                logger.info(f"  Properties keys: {list(props.keys()) if isinstance(props, dict) else 'Not a dict'}")
+                if 'rows' in props:
+                    logger.info(f"  Rows count: {len(props['rows']) if isinstance(props['rows'], list) else 'Not a list'}")
+                if 'columns' in props:
+                    logger.info(f"  Columns: {[col.get('name', '') for col in props['columns']] if isinstance(props.get('columns'), list) else 'Not a list'}")
+            
             # Check if we got valid data with rows
             if result and 'properties' in result and 'rows' in result['properties']:
                 rows = result['properties']['rows']
                 if rows and len(rows) > 0:
+                    logger.info(f"Found {len(rows)} cost rows for {resource_group_name}, parsing...")
                     return self._parse_cost_result(result, resource_group_name, start_date, end_date)
                 else:
-                    logger.info(f"No cost data rows returned for {resource_group_name}, trying grouped query without filter")
+                    logger.warning(f"No cost data rows returned for {resource_group_name} (empty rows array), trying grouped query without filter")
+                    logger.debug(f"Full response: {result}")
             else:
-                logger.info(f"No cost data returned for {resource_group_name}, trying grouped query without filter")
+                logger.warning(f"No cost data returned for {resource_group_name} (missing properties/rows), trying grouped query without filter")
+                logger.debug(f"Full response: {result}")
             
             # Try grouped query without filter as fallback (using same structure as primary query)
             grouped_query = {
@@ -459,15 +483,27 @@ class CostService:
         
         # Parse rows and aggregate by service type
         logger.info(f"Parsing {len(rows)} cost rows for resource group {resource_group_name}")
+        logger.info(f"Column indices: ResourceType={idx_resource_type}, ResourceId={idx_resource_id}, Cost={idx_cost}")
+        
         for idx, row in enumerate(rows):
             if len(row) <= max(idx_resource_type, idx_resource_id, idx_cost):
                 logger.warning(f"Row {idx} has insufficient columns ({len(row)}), expected at least {max(idx_resource_type, idx_resource_id, idx_cost) + 1}")
+                logger.warning(f"Row {idx} content: {row}")
                 continue
             
             try:
-                cost = float(row[idx_cost]) if row[idx_cost] is not None else 0.0
-                resource_type = str(row[idx_resource_type]) if row[idx_resource_type] else "Unknown"
-                resource_id = str(row[idx_resource_id]) if row[idx_resource_id] else ""
+                # Handle both numeric and string cost values
+                cost_value = row[idx_cost]
+                if cost_value is None:
+                    cost = 0.0
+                elif isinstance(cost_value, (int, float)):
+                    cost = float(cost_value)
+                else:
+                    # Try to convert string to float
+                    cost = float(str(cost_value).replace(',', ''))
+                
+                resource_type = str(row[idx_resource_type]) if row[idx_resource_type] is not None else "Unknown"
+                resource_id = str(row[idx_resource_id]) if row[idx_resource_id] is not None else ""
                 
                 # Extract resource name from ResourceId (basename)
                 resource_name = resource_id.split('/')[-1] if resource_id else "Unknown"
@@ -478,10 +514,10 @@ class CostService:
                 services[resource_type] += cost
                 total_cost += cost
                 
-                if idx < 3:  # Log first 3 rows for debugging
-                    logger.debug(f"Row {idx}: ResourceType={resource_type}, Cost={cost}, ResourceId={resource_id[:50]}...")
+                if idx < 5:  # Log first 5 rows for debugging
+                    logger.info(f"Row {idx}: ResourceType={resource_type}, Cost={cost}, ResourceId={resource_id[:50]}...")
             except (ValueError, IndexError, TypeError) as e:
-                logger.warning(f"Error parsing cost row {idx}: {e}, row: {row}")
+                logger.warning(f"Error parsing cost row {idx}: {e}, row: {row}, row type: {type(row)}")
                 continue
         
         logger.info(f"Parsed costs for {resource_group_name}: total=${total_cost:.2f}, services={len(services)}")
