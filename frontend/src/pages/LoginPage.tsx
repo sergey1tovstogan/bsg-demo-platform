@@ -5,17 +5,15 @@
  */
 
 import React from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { LoginForm } from '../components/auth'
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
-  const location = useLocation()
 
   const handleSuccess = () => {
-    // Redirect to the page they were trying to access, or home
-    const from = (location.state as any)?.from?.pathname || '/'
-    navigate(from, { replace: true })
+    // Redirect to home page after successful login
+    navigate('/', { replace: true })
   }
 
   return (

@@ -32,13 +32,6 @@ interface LoginCredentials {
   remember_me?: boolean
 }
 
-interface LoginResponse {
-  access_token: string
-  refresh_token: string
-  token_type: string
-  expires_in: number
-  user: User
-}
 
 interface AuthContextType {
   user: User | null
@@ -126,25 +119,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => clearInterval(interval)
   }, [])
 
-  // Login function
+  // Login function with mocked authentication
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
-      const response = await authClient.post<LoginResponse>('/auth/login', {
-        email: credentials.email,
-        password: credentials.password,
-      })
+      // Mocked authentication: Accept any username, password must be @temenos.com email
+      const passwordIsTemenosEmail = credentials.password.includes('@temenos.com')
+      
+      if (!passwordIsTemenosEmail) {
+        throw new Error('Password must be a Temenos email address (e.g., user@temenos.com)')
+      }
 
-      const { access_token, refresh_token, user: userData } = response.data
+      // Extract name from email (first part before @)
+      const emailParts = credentials.password.split('@')
+      const name = emailParts[0].split('.')[0] // Get first part before dot
+      const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+
+      // Create mock user data
+      const mockUser: User = {
+        user_id: `usr_${name.toLowerCase()}_001`,
+        email: credentials.password, // Use the password email as the user email
+        username: capitalizedName,
+        role: 'viewer', // Default role
+        profile: {
+          first_name: capitalizedName,
+        },
+        is_active: true,
+      }
+
+      // Create mock tokens
+      const mockAccessToken = `mock_access_token_${Date.now()}`
+      const mockRefreshToken = `mock_refresh_token_${Date.now()}`
 
       // Store tokens and user
-      localStorage.setItem(ACCESS_TOKEN_KEY, access_token)
-      localStorage.setItem(REFRESH_TOKEN_KEY, refresh_token)
-      localStorage.setItem(USER_KEY, JSON.stringify(userData))
+      localStorage.setItem(ACCESS_TOKEN_KEY, mockAccessToken)
+      localStorage.setItem(REFRESH_TOKEN_KEY, mockRefreshToken)
+      localStorage.setItem(USER_KEY, JSON.stringify(mockUser))
 
-      setUser(userData)
+      setUser(mockUser)
       setupAutoRefresh()
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Login failed'
+      const errorMessage = error.message || 'Login failed'
       throw new Error(errorMessage)
     }
   }, [setupAutoRefresh])

@@ -94,19 +94,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         </div>
 
         <div className="login-form-group">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">Password (Temenos Email)</label>
           <input
             id="password"
-            type="password"
+            type="text"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
+            placeholder="your.name@temenos.com"
             disabled={isLoading}
-            autoComplete="current-password"
+            autoComplete="email"
             required
             aria-required="true"
             aria-invalid={error ? 'true' : 'false'}
           />
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#718096' }}>
+            Enter your Temenos email address as the password
+          </p>
         </div>
 
         <div className="login-form-options">

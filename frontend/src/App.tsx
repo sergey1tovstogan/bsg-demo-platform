@@ -80,11 +80,10 @@ const Dashboard: React.FC = () => {
     <Layout>
       <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
         {isAuthenticated && user && (
-          <div style={{ marginBottom: '2rem', padding: '1rem', background: '#f7fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <p style={{ margin: 0, fontSize: '0.95rem', color: '#4a5568' }}>
-              Welcome, <strong style={{ color: '#1a202c' }}>{user.username}</strong>! 
-              <span style={{ marginLeft: '1rem', color: '#718096' }}>Role: <strong>{user.role}</strong></span>
-            </p>
+          <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', boxShadow: '0 4px 12px rgba(102, 126, 234, 0.2)' }}>
+            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: 'white' }}>
+              Welcome back {user.username}!
+            </h2>
           </div>
         )}
         <DeploymentContentViewer />
@@ -94,6 +93,22 @@ const Dashboard: React.FC = () => {
 }
 
 function App() {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <div>Loading...</div>
+      </div>
+    )
+  }
+
   return (
     <Routes>
       {/* Public routes */}
@@ -111,7 +126,15 @@ function App() {
         }
       />
 
-      {/* Default route - Dashboard */}
+      {/* Root route - Show login if not authenticated, dashboard if authenticated */}
+      <Route 
+        path="/" 
+        element={
+          isAuthenticated ? <Dashboard /> : <LoginPage />
+        } 
+      />
+
+      {/* Other routes - Dashboard */}
       <Route path="/*" element={<Dashboard />} />
     </Routes>
   )
