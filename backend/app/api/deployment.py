@@ -18,6 +18,7 @@ from app.services.cost_service import CostService
 from app.services.azure_service_info import get_azure_service_description, get_azure_service_descriptions_batch
 from app.services.rag_briefing_service import RAGBriefingService
 from app.core.database import get_database
+from app.adapters.rag.factory import update_rag_token, reset_rag_adapter
 import asyncio
 import time
 import requests
@@ -185,10 +186,12 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
             else:
                 recovery_steps = [
                     "Check if Azure CLI is installed: Run `az --version`",
-                    "Login to Azure: Run `az login`",
+                    "If not installed, download from: https://aka.ms/installazurecliwindows",
+                    "Login to Azure: Run `az login --use-device-code`",
+                    "Complete authentication in browser when prompted",
                     "Verify your login: Run `az account show`",
-                    "Set the correct subscription: Run `az account set --subscription <subscription-id>`",
-                    "After logging in, restart the backend server"
+                    f"Set the correct subscription: Run `az account set --subscription {subscription_id}`",
+                    "After logging in, refresh the page and try connecting again"
                 ]
         elif "permission" in error_msg.lower() or "authorization" in error_msg.lower():
             error_type = "permission"
@@ -206,11 +209,24 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
                 "Ensure the subscription is active"
             ]
         else:
-            recovery_steps = [
-                "Check backend server logs for detailed error information",
-                "Verify Azure CLI is installed and logged in",
-                "Try restarting the backend server"
-            ]
+            # Default recovery steps for unknown errors
+            import os
+            is_azure_app_service = os.getenv("WEBSITE_SITE_NAME") is not None
+            if is_azure_app_service:
+                recovery_steps = [
+                    "Check backend server logs in Azure Portal",
+                    "Verify Managed Identity is enabled and has proper permissions",
+                    "OR configure Service Principal credentials in App Settings"
+                ]
+            else:
+                recovery_steps = [
+                    "Check backend server logs for detailed error information",
+                    "Verify Azure CLI is installed: Run `az --version`",
+                    "Login to Azure: Run `az login --use-device-code`",
+                    "Verify your login: Run `az account show`",
+                    f"Set the correct subscription: Run `az account set --subscription {subscription_id}`",
+                    "After logging in, refresh the page and try connecting again"
+                ]
         
         raise HTTPException(
             status_code=500,
@@ -226,14 +242,29 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
         error_msg = str(e)
         error_type = type(e).__name__
         
+        # Check if running in Azure App Service
+        import os
+        is_azure_app_service = os.getenv("WEBSITE_SITE_NAME") is not None
+        
         # Try to extract more information from the error
-        recovery_steps = [
-            "Check backend server logs for detailed error information",
-            "Verify Azure CLI is installed and logged in (run: az login)",
-            f"Verify subscription ID '{request.subscription_id}' is correct",
-            "Run: az account set --subscription <subscription-id>",
-            "Try restarting the backend server"
-        ]
+        if is_azure_app_service:
+            recovery_steps = [
+                "Check backend server logs in Azure Portal",
+                "Verify Managed Identity is enabled and has proper permissions",
+                "OR configure Service Principal credentials in App Settings",
+                f"Verify subscription ID '{request.subscription_id}' is correct"
+            ]
+        else:
+            recovery_steps = [
+                "Check backend server logs for detailed error information",
+                "Verify Azure CLI is installed: Run `az --version`",
+                "If not installed, download from: https://aka.ms/installazurecliwindows",
+                "Login to Azure: Run `az login --use-device-code`",
+                "Complete authentication in browser when prompted",
+                "Verify your login: Run `az account show`",
+                f"Set the correct subscription: Run `az account set --subscription {request.subscription_id}`",
+                "After logging in, refresh the page and try connecting again"
+            ]
         
         # Check if it's an Azure-specific error
         if "azure" in error_msg.lower() or "subscription" in error_msg.lower():
@@ -281,14 +312,20 @@ async def get_resource_groups(subscriptionId: str, refresh: bool = False):
                     "cached": True
                 }
         
+        # If refresh is requested, clear cache first to ensure fresh data
+        if refresh:
+            logger.info(f"Refresh requested - fetching fresh resource groups for subscription {subscriptionId}")
+            # Clear existing cache by setting with new data (will overwrite)
+            # The cache key is deterministic, so setting new data will replace old
+        
         # Fetch fresh data
         azure_service = get_azure_service(subscriptionId)
         resource_groups = await azure_service.get_resource_groups()
         resource_groups_dict = [rg.to_dict() for rg in resource_groups]
         
-        # Cache the results
+        # Cache the results (this will overwrite any existing cache entry)
         await cache_service.set_azure_resource_groups(subscriptionId, resource_groups_dict)
-        logger.info(f"Cached {len(resource_groups_dict)} resource groups for subscription {subscriptionId}")
+        logger.info(f"Cached {len(resource_groups_dict)} resource groups for subscription {subscriptionId} (refresh={refresh})")
         
         return {
             "status": "success",
@@ -841,7 +878,9 @@ async def analyze_services(request: AnalyzeRequest):
 @router.post("/temenos/analyze/refresh")
 async def refresh_analysis(request: AnalyzeRequest):
     """Refresh analysis - forces RAG queries even if cached."""
+    logger.info(f"🔄 REFRESH endpoint called - forcing refresh for {len(request.services)} services")
     request.force_refresh = True
+    logger.info(f"🔄 force_refresh set to: {request.force_refresh}")
     return await _analyze_services_impl(request)
 
 
@@ -882,12 +921,16 @@ async def _analyze_services_impl(request: AnalyzeRequest):
         # This ensures we find all pods, then we can filter if needed
         selected_namespaces = request.selected_namespaces if request.selected_namespaces else None
         
-        # Extract subscription ID from first resource
+        # Extract subscription ID from first resource (optimized)
         subscription_id = None
         if services and services[0].id:
-            id_parts = services[0].id.split("/")
-            if "subscriptions" in id_parts:
-                subscription_id = id_parts[id_parts.index("subscriptions") + 1]
+            # More efficient: find subscription ID directly without full split
+            id_str = services[0].id
+            sub_idx = id_str.find("/subscriptions/")
+            if sub_idx != -1:
+                start = sub_idx + len("/subscriptions/")
+                end = id_str.find("/", start)
+                subscription_id = id_str[start:end] if end != -1 else id_str[start:]
         
         if subscription_id:
             try:
@@ -901,20 +944,19 @@ async def _analyze_services_impl(request: AnalyzeRequest):
                     logger.info(f"Discovering pods from ALL Temenos namespaces (auto-detection)...")
                     aks_pods = await aks_service.discover_pods_from_resources(services, temenos_namespaces=None)
                     
-                    # Log what we found
+                    # Log what we found (optimize namespace extraction - do once)
                     if aks_pods:
-                        all_pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
+                        # Extract namespaces once and reuse
+                        all_pod_namespaces = list(set(p.properties.get('namespace', 'unknown') for p in aks_pods))
                         logger.info(f"✓ Discovered pods from {len(all_pod_namespaces)} namespaces: {all_pod_namespaces}")
                         
                         # If namespaces were selected, log which ones match
-                        if selected_namespaces and len(selected_namespaces) > 0:
+                        if selected_namespaces:
                             matching_namespaces = [ns for ns in all_pod_namespaces if ns in selected_namespaces]
-                            logger.info(f"Selected namespaces {selected_namespaces} match {len(matching_namespaces)} discovered namespaces: {matching_namespaces}")
-                    
-                    if aks_pods:
+                            if matching_namespaces:
+                                logger.info(f"Selected namespaces match {len(matching_namespaces)} discovered namespaces: {matching_namespaces}")
+                        
                         logger.info(f"✓ Successfully discovered {len(aks_pods)} AKS pods")
-                        pod_namespaces = list(set([p.properties.get('namespace', 'unknown') for p in aks_pods]))
-                        logger.info(f"Pod namespaces found: {pod_namespaces}")
                         services.extend(aks_pods)
                         logger.info(f"Total services after adding pods: {len(services)}")
                     else:
@@ -923,11 +965,13 @@ async def _analyze_services_impl(request: AnalyzeRequest):
                 logger.error(f"Failed to discover AKS pods: {e}", exc_info=True)
                 # Continue with analysis even if AKS discovery fails
         
-        # Log what we're analyzing
-        pod_count = sum(1 for s in services if "managedclusters/pods" in s.type.lower())
+        # Log what we're analyzing (optimize: cache type checks)
+        pod_type_str = "managedclusters/pods"
+        pod_count = sum(1 for s in services if pod_type_str in s.type.lower())
         logger.info(f"Analyzing {len(services)} services ({pod_count} AKS pods, {len(services) - pod_count} Azure resources)")
         if pod_count > 0:
-            pod_namespaces = list(set([s.properties.get("namespace", "unknown") for s in services if "managedclusters/pods" in s.type.lower()]))
+            # Extract namespaces efficiently
+            pod_namespaces = list(set(s.properties.get("namespace", "unknown") for s in services if pod_type_str in s.type.lower()))
             logger.info(f"Pod namespaces: {pod_namespaces}")
         
         # Initialize Temenos service
@@ -935,7 +979,9 @@ async def _analyze_services_impl(request: AnalyzeRequest):
         
         # Analyze services (use cache by default, unless force_refresh is True)
         force_refresh = getattr(request, 'force_refresh', False)
+        logger.info(f"🔄 Analyzing services with force_refresh={force_refresh}, use_cache=True")
         results = await temenos_service.analyze_services(services, use_cache=True, force_refresh=force_refresh)
+        logger.info(f"✓ Analysis complete - {len(results)} results returned")
         
         # Deduplicate components (simplified version)
         deduplicated_results = _deduplicate_components(results)
@@ -977,70 +1023,54 @@ def _deduplicate_components(results: List[TemenosAnalysisResult]) -> List[Temeno
     """
     Deduplicate components by grouping services with the same normalized component name.
     For AKS pods, group by namespace/component rather than individual pod names.
+    Optimized for performance.
     """
     component_map: Dict[str, TemenosAnalysisResult] = {}
     unidentified: List[TemenosAnalysisResult] = []
+    
+    # Pre-compile infrastructure type checks for performance
+    pod_type_str = "managedclusters/pods"
+    infrastructure_types = (
+        "microsoft.storage", "microsoft.keyvault", "microsoft.network",
+        "microsoft.insights", "microsoft.operationalinsights", 
+        "microsoft.compute/virtualmachines", "microsoft.compute/virtualmachinescalesets"
+    )
     
     for result in results:
         if not result.component_info:
             unidentified.append(result)
             continue
         
-        # Use normalized component name for grouping (not the individual service/pod name)
-        # This groups all pods from the same namespace/component together
+        service_type_lower = result.service.type.lower()
         normalized_name = result.component_info.component_name
         
-        # For AKS pods, group by namespace ONLY - all pods in same namespace = one component
-        # This way: eventstore namespace = 1 component, adapterservice = 1 component, etc.
-        if "managedclusters/pods" in result.service.type.lower():
+        # For AKS pods, group by namespace ONLY
+        if pod_type_str in service_type_lower:
             namespace = result.service.properties.get("namespace", "")
-            if namespace:
-                # Use namespace as the PRIMARY grouping key
-                # All pods from the same namespace should be grouped as ONE component
-                # This ensures: adapterservice (3 pods) = 1 component, eventstore (3 pods) = 1 component
-                grouping_key = namespace.lower()  # Use lowercase for consistency
-            else:
-                # Fallback if namespace not found (shouldn't happen)
-                grouping_key = normalized_name
+            grouping_key = namespace.lower() if namespace else normalized_name
         else:
-            # For non-pod resources, use normalized name
-            # But exclude infrastructure types
-            if any(infra_type in result.service.type.lower() for infra_type in [
-                "microsoft.storage", "microsoft.keyvault", "microsoft.network",
-                "microsoft.insights", "microsoft.operationalinsights"
-            ]):
-                # Skip infrastructure resources - they shouldn't be Temenos components
+            # For non-pod resources, check infrastructure types efficiently
+            if any(infra_type in service_type_lower for infra_type in infrastructure_types):
                 logger.debug(f"Skipping infrastructure resource: {result.service.name} ({result.service.type})")
                 unidentified.append(result)
                 continue
             grouping_key = normalized_name
         
         existing = component_map.get(grouping_key)
-        
         if not existing:
             component_map[grouping_key] = result
         else:
             # Merge services - add related services list
-            # Keep the first result but note that there are multiple instances
-            if result.service.name not in existing.component_info.related_services:
-                existing.component_info.related_services.append(result.service.name)
+            service_name = result.service.name
+            if service_name not in existing.component_info.related_services:
+                existing.component_info.related_services.append(service_name)
     
-    # Filter out infrastructure services from unidentified
-    # Infrastructure services are not meaningful to show as "Other Azure Services"
-    infrastructure_types = [
-        "microsoft.storage", "microsoft.keyvault", "microsoft.network",
-        "microsoft.insights", "microsoft.operationalinsights", "microsoft.compute/virtualmachines",
-        "microsoft.compute/virtualmachinescalesets"
-    ]
-    
+    # Filter out infrastructure services from unidentified (optimized)
     filtered_unidentified = []
     for result in unidentified:
         resource_type = result.service.type.lower()
-        # Skip infrastructure resources
-        if any(infra_type in resource_type for infra_type in infrastructure_types):
-            logger.debug(f"Filtering out infrastructure resource: {result.service.name} ({result.service.type})")
-            continue
-        filtered_unidentified.append(result)
+        if not any(infra_type in resource_type for infra_type in infrastructure_types):
+            filtered_unidentified.append(result)
     
     # Return identified components first, then filtered unidentified
     identified = list(component_map.values())
@@ -1064,6 +1094,79 @@ async def temenos_health():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class RefactorDocumentationRequest(BaseModel):
+    """Request model for strict documentation refactoring."""
+    component_name: str = Field(..., description="Name of the Temenos component/microservice")
+    force_refresh: Optional[bool] = Field(False, description="Force refresh RAG queries even if cached")
+
+
+@router.post("/temenos/refactor-documentation")
+async def refactor_documentation_strict(request: RefactorDocumentationRequest):
+    """
+    Query RAG API and refactor into strict client-facing architecture documentation.
+    
+    This endpoint follows a strict 12-section structure:
+    1. Purpose & Scope
+    2. Architectural Role
+    3. Design Patterns & Guarantees
+    4. Core Components
+    5. Data Model & Consistency
+    6. APIs & Access Patterns
+    7. Deployment Architecture
+    8. Scalability & Performance
+    9. Security Model
+    10. Observability & Operations
+    11. Functional Capabilities
+    12. Explicit Non-Goals / Out-of-Scope
+    
+    Args:
+        request: Refactoring request with component name and optional force_refresh flag
+        
+    Returns:
+        Refactored documentation following strict structure
+    """
+    try:
+        component_name = request.component_name
+        force_refresh = request.force_refresh or False
+        
+        if not component_name or not component_name.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="component_name is required"
+            )
+        
+        logger.info(f"🔄 Refactoring documentation for {component_name} (strict format, force_refresh={force_refresh})")
+        
+        temenos_service = TemenosService()
+        refactored_doc = await temenos_service.refactor_documentation_strict(
+            component_name=component_name.strip(),
+            force_refresh=force_refresh
+        )
+        
+        return {
+            "status": "success",
+            "data": {
+                "component_name": component_name,
+                "documentation": refactored_doc,
+                "format": "strict_12_section",
+                "refactored_at": datetime.utcnow().isoformat()
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error refactoring documentation: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+                "errorType": type(e).__name__
+            }
+        )
 
 
 @router.post("/temenos/query")
@@ -1674,8 +1777,6 @@ async def save_user_jwt_token(
     except Exception as e:
         logger.error(f"Error saving JWT token: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save JWT token: {str(e)}")
-
-
 @router.post("/azure/export")
 async def export_resource_groups(request: ExportRequest):
     """
@@ -1820,3 +1921,305 @@ async def generate_briefing(request: BriefingRequest):
             }
         )
 
+
+class RAGTokenUpdateRequest(BaseModel):
+    """Request model for updating RAG JWT token."""
+    jwt_token: str = Field(..., description="New JWT token for RAG API")
+
+
+@router.post("/temenos/update-token")
+async def update_rag_jwt_token(request: RAGTokenUpdateRequest):
+    """
+    Update the RAG JWT token at runtime.
+    
+    This allows updating the token without restarting the application.
+    The token is cached in memory and used for all subsequent RAG API calls.
+    
+    Args:
+        request: Request containing the new JWT token
+        
+    Returns:
+        Success status and token preview
+    """
+    try:
+        if not request.jwt_token or not request.jwt_token.strip():
+            raise HTTPException(status_code=400, detail="JWT token cannot be empty")
+        
+        token = request.jwt_token.strip()
+        
+        # Update token in adapter
+        from app.adapters.rag.factory import update_rag_token
+        success = update_rag_token(token)
+        
+        if success:
+            # Also update settings for consistency (though adapter uses its own copy)
+            # This ensures that if adapter is recreated, it will use the new token
+            from app.core.config import get_settings
+            settings = get_settings()
+            settings.RAG_JWT_TOKEN = token
+            
+            token_preview = token[:20] + "..." if len(token) > 20 else token
+            logger.info(f"RAG JWT token updated successfully. Preview: {token_preview}")
+            
+            return {
+                "status": "success",
+                "message": "RAG JWT token updated successfully",
+                "token_preview": token_preview
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to update RAG token. Adapter may not support token updates."
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating RAG token: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error updating RAG token: {str(e)}"
+        )
+
+
+@router.post("/azure/export-arm-template")
+async def export_arm_template(
+    request: Request
+):
+    """
+    Export a Resource Group to ARM template JSON for Infrastructure as Code.
+    
+    This endpoint exports the entire Resource Group configuration as an ARM template
+    that can be used for Infrastructure as Code (IaC) deployments.
+    
+    Query parameters:
+    - subscription_id: Azure subscription ID
+    - resource_group_name: Name of the resource group to export
+    """
+    try:
+        # Get query parameters
+        query_params = request.query_params
+        subscription_id = query_params.get("subscription_id")
+        resource_group_name = query_params.get("resource_group_name")
+        
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="subscription_id query parameter is required")
+        if not resource_group_name:
+            raise HTTPException(status_code=400, detail="resource_group_name query parameter is required")
+        
+        logger.info(f"Exporting ARM template for resource group: {resource_group_name} in subscription: {subscription_id}")
+        
+        # Get or create Azure service instance
+        if subscription_id not in azure_service_cache:
+            azure_service_cache[subscription_id] = AzureService(subscription_id)
+        
+        azure_service = azure_service_cache[subscription_id]
+        
+        # Export ARM template using Azure SDK
+        from azure.mgmt.resource import ResourceManagementClient
+        from azure.identity import DefaultAzureCredential
+        
+        credential = DefaultAzureCredential()
+        resource_client = ResourceManagementClient(credential, subscription_id)
+        
+        # Export template - this exports all resources in the resource group
+        # Try to import ExportTemplateRequest, fallback to dict if not available
+        try:
+            from azure.mgmt.resource.models import ExportTemplateRequest
+            export_request = ExportTemplateRequest(
+                resources=["*"],  # Export all resources
+                options="IncludeParameterDefaultValue,IncludeComments"  # Include defaults and comments
+            )
+        except ImportError:
+            # Fallback to dict for newer SDK versions
+            export_request = {
+                "resources": ["*"],  # Export all resources
+                "options": "IncludeParameterDefaultValue,IncludeComments"  # Include defaults and comments
+            }
+        
+        logger.info(f"Calling Azure API to export template for resource group: {resource_group_name}")
+        export_result = resource_client.resource_groups.begin_export_template(
+            resource_group_name,
+            export_request
+        )
+        
+        # Wait for the export to complete (it's usually synchronous but returns a LROPoller)
+        template_data = export_result.result()
+        
+        if not template_data or not template_data.template:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Failed to export ARM template for resource group '{resource_group_name}'. No template data returned."
+            )
+        
+        # Convert template to JSON string
+        import json
+        template_json = json.dumps(template_data.template, indent=2, ensure_ascii=False)
+        
+        logger.info(f"Successfully exported ARM template for resource group: {resource_group_name}")
+        
+        return {
+            "success": True,
+            "data": {
+                "resource_group": resource_group_name,
+                "subscription_id": subscription_id,
+                "template": template_data.template,
+                "template_json": template_json,
+                "parameters": template_data.parameters if hasattr(template_data, 'parameters') else None,
+                "exported_at": datetime.utcnow().isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error exporting ARM template: {e}", exc_info=True)
+        
+        # Provide helpful error messages
+        error_msg = str(e)
+        if "ResourceGroupNotFound" in error_msg or "not found" in error_msg.lower():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Resource group '{resource_group_name}' not found in subscription '{subscription_id}'"
+            )
+        elif "Authorization" in error_msg or "permission" in error_msg.lower():
+            raise HTTPException(
+                status_code=403,
+                detail=f"Insufficient permissions to export ARM template for resource group '{resource_group_name}'. "
+                       f"Ensure you have 'Microsoft.Resources/deployments/read' permission."
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to export ARM template: {error_msg}"
+            )
+
+
+@router.post("/azure/export-arm-templates-bulk")
+async def export_arm_templates_bulk(
+    subscription_id: str = None,
+    resource_group_names: List[str] = None,
+    request: Request = None
+):
+    """
+    Export multiple Resource Groups to ARM template JSON files for Infrastructure as Code.
+    
+    This endpoint exports multiple Resource Groups as ARM templates that can be used
+    for Infrastructure as Code (IaC) deployments and cloning.
+    
+    Args:
+        subscription_id: Azure subscription ID (from query param or body)
+        resource_group_names: List of resource group names to export (from body)
+        
+    Returns:
+        Dictionary with export results for each resource group
+    """
+    try:
+        # Get parameters from query or body
+        if not subscription_id:
+            body = await request.json() if request else {}
+            subscription_id = body.get("subscription_id") or request.query_params.get("subscription_id")
+        
+        if not resource_group_names:
+            body = await request.json() if request else {}
+            resource_group_names = body.get("resource_group_names") or []
+        
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="subscription_id is required")
+        if not resource_group_names or not isinstance(resource_group_names, list):
+            raise HTTPException(status_code=400, detail="resource_group_names must be a non-empty list")
+        
+        logger.info(f"Bulk exporting ARM templates for {len(resource_group_names)} resource groups in subscription: {subscription_id}")
+        
+        # Get or create Azure service instance
+        if subscription_id not in azure_service_cache:
+            azure_service_cache[subscription_id] = AzureService(subscription_id)
+        
+        azure_service = azure_service_cache[subscription_id]
+        
+        # Export templates for each resource group
+        results = []
+        errors = []
+        
+        for rg_name in resource_group_names:
+            try:
+                # Export ARM template using Azure SDK
+                from azure.mgmt.resource import ResourceManagementClient
+                from azure.identity import DefaultAzureCredential
+                
+                credential = DefaultAzureCredential()
+                resource_client = ResourceManagementClient(credential, subscription_id)
+                
+                # Export template - this exports all resources in the resource group
+                # Try to import ExportTemplateRequest, fallback to dict if not available
+                try:
+                    from azure.mgmt.resource.models import ExportTemplateRequest
+                    export_request = ExportTemplateRequest(
+                        resources=["*"],  # Export all resources
+                        options="IncludeParameterDefaultValue,IncludeComments"  # Include defaults and comments
+                    )
+                except ImportError:
+                    # Fallback to dict for newer SDK versions
+                    export_request = {
+                        "resources": ["*"],  # Export all resources
+                        "options": "IncludeParameterDefaultValue,IncludeComments"  # Include defaults and comments
+                    }
+                
+                logger.info(f"Exporting ARM template for resource group: {rg_name}")
+                export_result = resource_client.resource_groups.begin_export_template(
+                    rg_name,
+                    export_request
+                )
+                
+                # Wait for the export to complete
+                template_data = export_result.result()
+                
+                if not template_data or not template_data.template:
+                    errors.append({
+                        "resource_group": rg_name,
+                        "error": f"No template data returned for resource group '{rg_name}'"
+                    })
+                    continue
+                
+                # Convert template to JSON string
+                import json
+                template_json = json.dumps(template_data.template, indent=2, ensure_ascii=False)
+                
+                results.append({
+                    "resource_group": rg_name,
+                    "subscription_id": subscription_id,
+                    "template": template_data.template,
+                    "template_json": template_json,
+                    "parameters": template_data.parameters if hasattr(template_data, 'parameters') else None,
+                    "exported_at": datetime.utcnow().isoformat(),
+                    "success": True
+                })
+                
+                logger.info(f"Successfully exported ARM template for resource group: {rg_name}")
+                
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Error exporting ARM template for {rg_name}: {error_msg}", exc_info=True)
+                errors.append({
+                    "resource_group": rg_name,
+                    "error": error_msg,
+                    "error_type": type(e).__name__
+                })
+        
+        return {
+            "success": len(errors) == 0,
+            "data": {
+                "subscription_id": subscription_id,
+                "total_requested": len(resource_group_names),
+                "successful": len(results),
+                "failed": len(errors),
+                "templates": results,
+                "errors": errors,
+                "exported_at": datetime.utcnow().isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in bulk ARM template export: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to export ARM templates: {str(e)}"
+        )

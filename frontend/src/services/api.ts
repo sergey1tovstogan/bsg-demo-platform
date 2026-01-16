@@ -530,6 +530,46 @@ class ApiService {
     return response.data
   }
 
+  async exportArmTemplate(subscriptionId: string, resourceGroupName: string) {
+    const response = await this.client.post<ApiResponse<{
+      resource_group: string
+      subscription_id: string
+      template: any
+      template_json: string
+      parameters: any
+      exported_at: string
+    }>>(`/deployment/azure/export-arm-template?subscription_id=${encodeURIComponent(subscriptionId)}&resource_group_name=${encodeURIComponent(resourceGroupName)}`)
+    return response.data
+  }
+
+  async exportArmTemplatesBulk(subscriptionId: string, resourceGroupNames: string[]) {
+    const response = await this.client.post<ApiResponse<{
+      subscription_id: string
+      total_requested: number
+      successful: number
+      failed: number
+      templates: Array<{
+        resource_group: string
+        subscription_id: string
+        template: any
+        template_json: string
+        parameters: any
+        exported_at: string
+        success: boolean
+      }>
+      errors: Array<{
+        resource_group: string
+        error: string
+        error_type?: string
+      }>
+      exported_at: string
+    }>>('/deployment/azure/export-arm-templates-bulk', {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames
+    })
+    return response.data
+  }
+
   async getAzureResources(subscriptionId: string, resourceGroupNames: string[]) {
     const response = await this.client.post<ApiResponse<{
       data: Array<{
@@ -851,18 +891,29 @@ class ApiService {
     return response.data
   }
 
-  async updateRagJwtToken(token: string) {
-    const response = await this.client.post<ApiResponse<{ status: string; message: string }>>(
-      '/settings/rag/jwt-token',
-      { token }
-    )
+  async updateRAGToken(jwtToken: string) {
+    const response = await this.client.post<ApiResponse<{
+      message: string
+      token_preview: string
+    }>>('/deployment/temenos/update-token', {
+      jwt_token: jwtToken
+    })
     return response.data
   }
 
-  async getRagJwtToken() {
-    const response = await this.client.get<ApiResponse<{ token: string | null }>>(
-      '/settings/rag/jwt-token'
-    )
+  async getRAGJWTInfo() {
+    const response = await this.client.get<ApiResponse<{
+      configured: boolean
+      has_expiration?: boolean
+      is_expired?: boolean
+      expires_at?: string
+      issued_at?: string
+      days_remaining?: number
+      user_id?: string
+      email?: string
+      issuer?: string
+      audience?: string
+    }>>('/deployment/temenos/jwt-info')
     return response.data
   }
 

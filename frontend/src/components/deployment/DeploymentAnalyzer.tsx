@@ -5,8 +5,9 @@
  * Provides functionality to connect to Azure, select resource groups, and analyze Temenos components.
  */
 
-import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Code, Settings, GitBranch, Box, Zap, HardDrive, Globe, Layers, Cpu, Info } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
 
@@ -176,9 +177,22 @@ export function DeploymentAnalyzer() {
 
       // If we still don't have a good error message, use the status code
       if (errorMessage === 'Failed to connect to Azure' && err.response?.status) {
+        // Try to extract a better error message from the response
+        if (err.response.data?.detail) {
+          const detail = err.response.data.detail
+          if (typeof detail === 'object' && detail.error) {
+            errorMessage = detail.error
+            // Make sure we have recovery steps if they exist
+            if (detail.recoverySteps && Array.isArray(detail.recoverySteps) && recoverySteps.length === 0) {
+              recoverySteps = detail.recoverySteps
+            }
+          } else if (typeof detail === 'string') {
+            errorMessage = detail
+          } else {
         errorMessage = `Request failed with status code ${err.response.status}`
-        if (err.response.data) {
-          errorMessage += `. ${JSON.stringify(err.response.data)}`
+          }
+        } else {
+          errorMessage = `Request failed with status code ${err.response.status}`
         }
       }
 
@@ -213,6 +227,29 @@ export function DeploymentAnalyzer() {
         ]
       }
 
+      // Always try to extract recovery steps from error detail if not already found
+      if (recoverySteps.length === 0 && errorDetail && typeof errorDetail === 'object') {
+        if (errorDetail.recoverySteps && Array.isArray(errorDetail.recoverySteps)) {
+          recoverySteps = errorDetail.recoverySteps
+        }
+      }
+
+      // For 500 errors, provide default recovery steps if none found
+      if (recoverySteps.length === 0 && err.response?.status === 500) {
+        errorMessage = 'Azure connection failed. This usually means Azure CLI authentication is required.'
+        recoverySteps = [
+          'Open PowerShell or Command Prompt (as Administrator if needed)',
+          'Check if Azure CLI is installed: az --version',
+          'If not installed, download from: https://aka.ms/installazurecliwindows',
+          'Login to Azure: az login --use-device-code',
+          'A browser will open - complete authentication',
+          'Select your subscription (usually option 1)',
+          'Verify login: az account show',
+          'Set the subscription: az account set --subscription ' + subscriptionId,
+          'After login completes, refresh this page and try connecting again'
+        ]
+      }
+
       // Format error message with recovery steps
       if (recoverySteps.length > 0) {
         errorMessage += '\n\nTo fix this:\n' + recoverySteps.map((step, i) => `${i + 1}. ${step}`).join('\n')
@@ -220,6 +257,8 @@ export function DeploymentAnalyzer() {
 
       setError(errorMessage)
       console.error('Azure connection error:', err)
+      console.error('Error detail:', errorDetail)
+      console.error('Recovery steps:', recoverySteps)
     } finally {
       setLoading(false)
     }
@@ -239,10 +278,19 @@ export function DeploymentAnalyzer() {
       setAnalysisProgress({ current: 1, total: 3, message: 'Loading resources from selected resource groups...' })
       const response = await apiService.getAzureResources(subscriptionId, selected)
       const servicesData = (response.data as any)?.data || response.data || []
-      setServices(Array.isArray(servicesData) ? servicesData : [])
+      const validServices = Array.isArray(servicesData) ? servicesData : []
+      setServices(validServices)
+
+      // Check if we have any services to analyze
+      if (!validServices || validServices.length === 0) {
+        setError('No Azure resources found in the selected resource groups. Please select different resource groups.')
+        setAnalysisProgress(null)
+        setLoading(false)
+        return
+      }
 
       // Check if there are AKS clusters - if so, get namespaces for selection
-      const hasAKS = servicesData.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
+      const hasAKS = validServices.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
 
       if (hasAKS) {
         // Get namespaces from AKS clusters - dynamically fetch from actual clusters
@@ -314,10 +362,10 @@ export function DeploymentAnalyzer() {
             url: nsErr.config?.url
           })
           // Continue to analysis without namespace selection
-          setAnalysisProgress(null)
-          setLoading(false)
           setCurrentStep('analysis')
-          analyzeServices(servicesData).catch(err => {
+          setLoading(true) // Ensure loading is true when starting analysis
+          setAnalysisProgress({ current: 0, total: validServices.length, message: 'Starting analysis...' })
+          analyzeServices(validServices).catch(err => {
             console.error('Analysis error:', err)
             setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
             setLoading(false)
@@ -325,10 +373,10 @@ export function DeploymentAnalyzer() {
         }
       } else {
         // No AKS clusters, proceed directly to analysis
-        setAnalysisProgress(null)
-        setLoading(false)
         setCurrentStep('analysis')
-        analyzeServices(servicesData).catch(err => {
+        setLoading(true) // Ensure loading is true when starting analysis
+        setAnalysisProgress({ current: 0, total: validServices.length, message: 'Starting analysis...' })
+        analyzeServices(validServices).catch(err => {
           console.error('Analysis error:', err)
           setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
           setLoading(false)
@@ -471,10 +519,18 @@ export function DeploymentAnalyzer() {
               message: err.message,
               response: err.response?.data,
               status: err.response?.status,
-              url: err.config?.url
+              url: err.config?.url,
+              signal: err.name === 'AbortError' ? 'Request aborted' : 'Not aborted'
             })
+            
             // Set error state for costs but don't fail the analysis
             const costMap: Record<string, any> = {}
+            
+            // If it's a timeout or abort error, provide specific message
+            const isTimeout = err.message?.includes('timeout') || err.name === 'AbortError'
+            const errorMessage = isTimeout 
+              ? 'Request timed out. Cost Management API is taking too long. Try selecting fewer resource groups.'
+              : err.response?.data?.detail?.error || err.response?.data?.error || err.message || 'Failed to fetch cost data'
 
             // Check if the response contains cost data with errors (partial success)
             if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
@@ -503,9 +559,11 @@ export function DeploymentAnalyzer() {
               })
             } else {
               // Complete failure - set error for all RGs
-              selectedResourceGroups.forEach(rgName => {
+              // Determine error message
                 let errorMessage = 'Failed to load costs'
-                if (err.response?.data?.detail) {
+              if (err.message?.includes('timeout') || err.name === 'AbortError') {
+                errorMessage = 'Request timed out. Cost Management API is taking too long. Try selecting fewer resource groups.'
+              } else if (err.response?.data?.detail) {
                   if (typeof err.response.data.detail === 'string') {
                     errorMessage = err.response.data.detail
                   } else if (err.response.data.detail.error) {
@@ -521,6 +579,8 @@ export function DeploymentAnalyzer() {
                     errorMessage = err.message
                   }
                 }
+              // Set error for all selected resource groups
+              selectedResourceGroups.forEach(rgName => {
                 costMap[rgName] = {
                   resource_group: rgName,
                   total_cost: 0,
@@ -626,7 +686,7 @@ export function DeploymentAnalyzer() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-[400px]">
       {currentStep === 'subscription' && (
         <SubscriptionInput
           onSubmit={handleSubscriptionSubmit}
@@ -669,9 +729,6 @@ export function DeploymentAnalyzer() {
           error={error}
           onBack={handleBack}
           onRefresh={() => analyzeServices(services)}
-          onUpdateAnalysisResults={(updatedResults) => {
-            setAnalysisResults(updatedResults)
-          }}
           costs={costs}
           costsLoading={costsLoading}
           includeCosts={includeCostsInAnalysis}
@@ -681,6 +738,13 @@ export function DeploymentAnalyzer() {
           }}
           selectedResourceGroups={selectedResourceGroups}
           subscriptionId={subscriptionId}
+          onUpdateAnalysisResult={(updatedResult: AnalysisResult) => {
+            setAnalysisResults((prev: AnalysisResult[]) =>
+              prev.map((r: AnalysisResult) =>
+                r.service.id === updatedResult.service.id ? updatedResult : r
+              )
+            )
+          }}
         />
       )}
 
@@ -717,19 +781,22 @@ function SubscriptionInput({
   }
 
   const [subscriptionId, setSubscriptionId] = useState(getInitialSubscriptionId())
-  const [isFocused, setIsFocused] = useState(false)
-  const [showMasked, setShowMasked] = useState(true)
+  const [isUsingCachedId, setIsUsingCachedId] = useState(false)
+  const [showSubscriptionId, setShowSubscriptionId] = useState(false)
 
-  // Function to mask subscription ID for display
-  const maskSubscriptionId = (id: string): string => {
-    if (!id || id.length < 12) return id
-    return `${id.substring(0, 8)}...${id.substring(id.length - 4)}`
-  }
+  // Check if we're using cached ID on mount
+  useEffect(() => {
+    const cached = localStorage.getItem('lastAzureSubscriptionId')
+    if (cached && cached === subscriptionId) {
+      setIsUsingCachedId(true)
+    }
+  }, [])
 
   // Save to localStorage when subscription ID changes
   useEffect(() => {
     if (subscriptionId.trim()) {
       localStorage.setItem('lastAzureSubscriptionId', subscriptionId.trim())
+      setIsUsingCachedId(true)
     }
   }, [subscriptionId])
 
@@ -742,20 +809,8 @@ function SubscriptionInput({
     }
   }
 
-  const handleFocus = () => {
-    setIsFocused(true)
-    setShowMasked(false)
-  }
-
-  const handleBlur = () => {
-    setIsFocused(false)
-    if (subscriptionId && subscriptionId.length > 0) {
-      setShowMasked(true)
-    }
-  }
-
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[400px]">
       <div className="card bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 sm:p-8">
         <div className="flex items-center space-x-3 mb-6">
           <Cloud className="w-8 h-8 text-purple-600 dark:text-purple-400" />
@@ -776,8 +831,8 @@ function SubscriptionInput({
                 {error.includes('\n\nTo fix this:') ? error.split('\n\nTo fix this:')[0] : error}
               </div>
               {error.includes('\n\nTo fix this:') && (
-                <div className="mt-3 pt-3 border-t border-red-200">
-                  <div className="text-sm font-semibold text-red-800 mb-2">📋 Steps to Fix:</div>
+                <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-700">
+                  <div className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">📋 Steps to Fix:</div>
                   <ol className="text-sm text-red-700 dark:text-red-300 space-y-2 list-decimal list-inside">
                     {error.split('\n\nTo fix this:\n')[1]?.split('\n').filter((line: string) => line.trim() && !line.match(/^\d+\.\s*$/)).map((step: string, idx: number) => (
                       <li key={idx} className="ml-2 bg-red-100 dark:bg-red-900/40 px-2 py-1 rounded">
@@ -785,7 +840,7 @@ function SubscriptionInput({
                       </li>
                     ))}
                   </ol>
-                  <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-800 dark:text-blue-200">
+                  <div className="mt-3 p-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded text-xs text-indigo-800 dark:text-indigo-200">
                     <strong>💡 Tip:</strong> After completing these steps, refresh this page and try connecting again.
                   </div>
                 </div>
@@ -799,34 +854,34 @@ function SubscriptionInput({
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Azure Subscription ID
+            {isUsingCachedId && (
+              <span className="ml-2 text-xs text-indigo-600 dark:text-indigo-400 font-normal">
+                (Using cached subscription ID)
+              </span>
+            )}
           </label>
           <div className="relative">
             <input
-              type="text"
-              value={isFocused || !showMasked ? subscriptionId : maskSubscriptionId(subscriptionId)}
+              type={showSubscriptionId ? 'text' : 'password'}
+              value={subscriptionId}
               onChange={(e) => setSubscriptionId(e.target.value)}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-mono text-sm"
+              className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
               disabled={loading}
             />
-            {!isFocused && subscriptionId && subscriptionId.length > 0 && showMasked && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsFocused(true)
-                  setShowMasked(false)
-                  // Focus the input
-                  const input = document.querySelector('input[type="text"]') as HTMLInputElement
-                  input?.focus()
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs"
-                title="Click to reveal full subscription ID"
-              >
-                Show
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowSubscriptionId(!showSubscriptionId)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              disabled={loading}
+              title={showSubscriptionId ? 'Hide subscription ID' : 'Show subscription ID'}
+            >
+              {showSubscriptionId ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
           </div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             You can find your subscription ID in the Azure Portal under Subscriptions.
@@ -836,7 +891,7 @@ function SubscriptionInput({
         <button
           type="submit"
           disabled={loading || !subscriptionId.trim()}
-          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold"
+          className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold"
         >
           {loading ? (
             <>
@@ -853,9 +908,44 @@ function SubscriptionInput({
   )
 }
 
+// ARM Template Export Handler
+async function handleExportArmTemplate(
+  subscriptionId: string,
+  resourceGroupName: string,
+  onError: (error: string) => void
+): Promise<boolean> {
+  try {
+    const response = await apiService.exportArmTemplate(subscriptionId, resourceGroupName)
+    
+    if (response.data?.template_json) {
+      // Create a blob with the ARM template JSON
+      const blob = new Blob([response.data.template_json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${resourceGroupName}-arm-template.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      return true
+    } else {
+      onError('ARM template export failed: No template data returned')
+      return false
+    }
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.detail?.error || 
+                     error.response?.data?.detail || 
+                     error.message || 
+                     'Failed to export ARM template'
+    onError(`ARM template export failed: ${errorMsg}`)
+    return false
+  }
+}
+
 // Resource Group Selector Component
 function ResourceGroupSelector({
-
   resourceGroups,
   onSelected,
   onBack,
@@ -880,6 +970,8 @@ function ResourceGroupSelector({
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [includeCosts, setIncludeCosts] = useState(false)
+  const [exportingRg, setExportingRg] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   const toggleSelection = (rgName: string) => {
     setSelected(prev =>
@@ -906,19 +998,32 @@ function ResourceGroupSelector({
           <div className="flex items-center space-x-3 mb-2">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Select Resource Groups</h2>
             {cached && (
-              <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">
-                Cached
+              <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full flex items-center space-x-1">
+                <span>📦</span>
+                <span>Cached</span>
               </span>
             )}
           </div>
+          <div>
           <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
+            {cached && (
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 flex items-center space-x-1">
+                <span>💡</span>
+                <span>Using cached data. If you don't see a newly created resource group, click "Refresh" to fetch the latest list from Azure.</span>
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex items-center space-x-3">
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="btn-secondary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Refresh resource groups from Azure"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              cached 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                : 'btn-secondary'
+            }`}
+            title={cached ? "Refresh to fetch latest resource groups from Azure (including newly created ones)" : "Refresh resource groups from Azure"}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -936,22 +1041,42 @@ function ResourceGroupSelector({
         </div>
       )}
 
+      {exportError && (
+        <div className={`card border-2 ${
+          exportError.includes('successfully') 
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300'
+        }`}>
+          <div className="flex items-start space-x-2">
+            {exportError.includes('successfully') ? (
+              <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            )}
+            <div className="flex-1">
+              <p className="font-semibold mb-1">ARM Template Export</p>
+              <p className="text-sm whitespace-pre-line">{exportError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Loading/Progress Indicator */}
       {loading && analysisProgress && (
-        <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30">
+        <div className="card bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-500/30">
           <div className="flex items-center space-x-4">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+              <p className="text-sm font-medium text-indigo-900 dark:text-indigo-100 mb-2">
                 {analysisProgress.message}
               </p>
-              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+              <div className="w-full bg-indigo-200 dark:bg-indigo-800 rounded-full h-2">
                 <div
-                  className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                  className="bg-indigo-600 dark:bg-indigo-400 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
                 ></div>
               </div>
-              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+              <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-1">
                 Step {analysisProgress.current} of {analysisProgress.total}
               </p>
             </div>
@@ -979,12 +1104,72 @@ function ResourceGroupSelector({
             {selected.length === filteredResourceGroups.length ? 'Deselect All' : 'Select All'}
           </button>
         </div>
-        <div className="mt-3 text-sm text-gray-600">
+        <div className="mt-3 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
           {selected.length > 0 && (
             <span className="font-medium text-purple-600">{selected.length} selected</span>
           )}
           {' '}
           {filteredResourceGroups.length} resource group{filteredResourceGroups.length !== 1 ? 's' : ''} found
+          </div>
+          {selected.length > 0 && (
+            <button
+              onClick={async () => {
+                setExportingRg('bulk')
+                setExportError(null)
+                try {
+                  let successCount = 0
+                  let failCount = 0
+                  const errors: string[] = []
+                  
+                  for (const rgName of selected) {
+                    try {
+                      const success = await handleExportArmTemplate(
+                        subscriptionId,
+                        rgName,
+                        (error) => {
+                          errors.push(`${rgName}: ${error}`)
+                          failCount++
+                        }
+                      )
+                      if (success) {
+                        successCount++
+                      }
+                    } catch (err: any) {
+                      errors.push(`${rgName}: ${err.message || 'Export failed'}`)
+                      failCount++
+                    }
+                  }
+                  
+                  if (failCount > 0) {
+                    setExportError(`${successCount} exported successfully, ${failCount} failed. ${errors.join('; ')}`)
+                  } else {
+                    setExportError(null)
+                  }
+                } finally {
+                  setExportingRg(null)
+                  if (selected.length > 0) {
+                    setTimeout(() => setExportError(null), 5000)
+                  }
+                }
+              }}
+              disabled={exportingRg === 'bulk' || loading}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              title="Export ARM templates for all selected resource groups"
+            >
+              {exportingRg === 'bulk' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Exporting {selected.length} RGs...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Export Selected ({selected.length}) as ARM Templates</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -998,6 +1183,8 @@ function ResourceGroupSelector({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredResourceGroups.map((rg) => {
           const isSelected = selected.includes(rg.name)
+          const isExporting = exportingRg === rg.name
+          
           return (
             <div
               key={rg.id}
@@ -1018,45 +1205,46 @@ function ResourceGroupSelector({
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation()
-                      try {
-                        const exportData = await apiService.exportResourceGroups(subscriptionId, [rg.name])
-                        if (exportData.data && exportData.data.data && exportData.data.data.length > 0) {
-                          const exportItem = exportData.data.data[0]
-                          if (exportItem.status === 'success' && exportItem.template) {
-                            const blob = new Blob([JSON.stringify(exportItem.template, null, 2)], { type: 'application/json' })
-                            const url = URL.createObjectURL(blob)
-                            const a = document.createElement('a')
-                            a.href = url
-                            a.download = `arm-template-${rg.name}-${new Date().toISOString().split('T')[0]}.json`
-                            document.body.appendChild(a)
-                            a.click()
-                            document.body.removeChild(a)
-                            URL.revokeObjectURL(url)
-                          } else {
-                            alert(`Failed to export ${rg.name}: ${exportItem.error || 'Unknown error'}`)
-                          }
-                        }
-                      } catch (error: any) {
-                        console.error('Export failed:', error)
-                        const errorMsg = error.response?.data?.detail || error.message || 'Failed to export resource group'
-                        alert(`Export failed: ${errorMsg}`)
-                      }
-                    }}
-                    className="p-1.5 text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded transition-colors"
-                    title={`Export ${rg.name} as ARM template`}
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
                   {isSelected && (
                     <div className="bg-purple-600 text-white rounded-full p-1">
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
                   )}
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      setExportingRg(rg.name)
+                      setExportError(null)
+                      try {
+                        const success = await handleExportArmTemplate(
+                          subscriptionId,
+                          rg.name,
+                          (error) => setExportError(error)
+                        )
+                        if (success) {
+                          setTimeout(() => setExportError(null), 3000)
+                        }
+                      } finally {
+                        setExportingRg(null)
+                      }
+                    }}
+                    disabled={isExporting}
+                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Export ARM Template (IaC)"
+                  >
+                    {isExporting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
+              {exportError && exportingRg === rg.name && (
+                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300">
+                  {exportError}
+                </div>
+              )}
             </div>
           )
         })}
@@ -1064,7 +1252,7 @@ function ResourceGroupSelector({
 
       {/* Include Costs Checkbox */}
       {/* Include Costs Checkbox */}
-      <div className="card bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-100 dark:border-purple-500/30 transition-all hover:shadow-md">
+      <div className="card bg-gradient-to-r from-indigo-50 to-indigo-50 dark:from-indigo-900/20 dark:to-indigo-900/20 border-indigo-100 dark:border-indigo-500/30 transition-all hover:shadow-md">
         <label className="flex items-center space-x-3 cursor-pointer group">
           <div className="relative flex items-center justify-center">
             <input
@@ -1306,7 +1494,7 @@ function ServiceAnalysis({
   onOpenLogAnalyzer,
   selectedResourceGroups,
   subscriptionId,
-  onUpdateAnalysisResults
+  onUpdateAnalysisResult
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
@@ -1328,9 +1516,10 @@ function ServiceAnalysis({
   onOpenLogAnalyzer: (resourceGroup: string) => void
   selectedResourceGroups: string[]
   subscriptionId: string
-  onUpdateAnalysisResults?: (updatedResults: AnalysisResult[]) => void
+  onUpdateAnalysisResult: (updatedResult: AnalysisResult) => void
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
+  const [selectedAzureService, setSelectedAzureService] = useState<string | null>(null)
 
   const [analysisResultsState, setAnalysisResultsState] = useState(analysisResults)
   
@@ -1351,6 +1540,22 @@ function ServiceAnalysis({
 
   const selectedResult = identifiedComponents.find(r => r.service.id === selectedComponent) || identifiedComponents[0]
   
+
+  // Callback to handle component refresh
+  const handleComponentRefresh = useCallback((updatedResult: AnalysisResult) => {
+    try {
+      console.log('[Refresh] handleComponentRefresh called with:', updatedResult)
+      setAnalysisResultsState((prev) =>
+        prev.map((item) => (item.service.id === updatedResult.service.id ? updatedResult : item))
+      )
+      onUpdateAnalysisResult(updatedResult)
+      console.log('[Refresh] State update queued successfully')
+    } catch (err) {
+      console.error('[Refresh] Error updating state:', err)
+      console.error('[Refresh] Error stack:', err instanceof Error ? err.stack : 'No stack')
+      alert(`Failed to update component information: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+  }, [onUpdateAnalysisResult])
 
   // Show error if present
   if (error) {
@@ -1556,13 +1761,13 @@ function ServiceAnalysis({
 
       {loading && (
         <div className="card text-center py-12 bg-white dark:bg-slate-800">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
           <p className="text-gray-700 font-medium mb-2">Analyzing Azure services and identifying Temenos components...</p>
           {analysisProgress && (
             <div className="mt-4">
               <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
                 <div
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                  className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
                   style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
                 ></div>
               </div>
@@ -1585,12 +1790,12 @@ function ServiceAnalysis({
             </div>
           </div>
         </div>
-        <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <div className="card bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800">
           <div className="flex items-center space-x-3">
-            <Cloud className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            <Cloud className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             <div>
-              <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Azure Services</p>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{services.length}</p>
+              <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">Azure Services</p>
+              <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{services.length}</p>
             </div>
           </div>
         </div>
@@ -1696,18 +1901,8 @@ function ServiceAnalysis({
             </h3>
             {selectedResult && (
               <ComponentDetailPanel 
-                result={selectedResult}
-                onComponentUpdate={(updatedResult) => {
-                  // Update local state immediately for instant UI feedback
-                  const updatedResults = analysisResultsState.map(r => 
-                    r.service.id === updatedResult.service.id ? updatedResult : r
-                  )
-                  setAnalysisResultsState(updatedResults)
-                  // Also update parent state if callback provided
-                  if (onUpdateAnalysisResults) {
-                    onUpdateAnalysisResults(updatedResults)
-                  }
-                }}
+                result={selectedResult} 
+                onRefresh={handleComponentRefresh}
               />
             )}
           </div>
@@ -1752,23 +1947,146 @@ function ServiceAnalysis({
         </div>
       )}
 
+      {/* Empty State - No Results */}
+      {!loading && analysisResults.length === 0 && services.length > 0 && (
+        <div className="card text-center py-12 bg-white dark:bg-slate-800">
+          <AlertCircle className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Analysis Results</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            Analysis completed but no results were returned. This may indicate an issue with the analysis service.
+          </p>
+          <button onClick={onRefresh} className="btn-primary flex items-center space-x-2 mx-auto">
+            <RefreshCw className="w-4 h-4" />
+            <span>Retry Analysis</span>
+          </button>
+        </div>
+      )}
+
+      {/* Empty State - All Results Have Errors */}
+      {!loading && analysisResults.length > 0 && identifiedComponents.length === 0 && unidentifiedServices.length === 0 && (
+        <div className="card text-center py-12 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800">
+          <AlertCircle className="w-16 h-16 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Analysis Completed with Errors</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            All {analysisResults.length} service{analysisResults.length !== 1 ? 's' : ''} encountered errors during analysis.
+            Please check the backend logs or try refreshing the analysis.
+          </p>
+          <button onClick={onRefresh} className="btn-primary flex items-center space-x-2 mx-auto">
+            <RefreshCw className="w-4 h-4" />
+            <span>Retry Analysis</span>
+          </button>
+        </div>
+      )}
+
       {/* Other Services */}
       {unidentifiedServices.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Other Azure Services</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {unidentifiedServices.map((result, index) => (
-              <div key={result.service.id || index} className="card bg-white dark:bg-slate-800">
-                <h4 className="font-semibold text-gray-900 dark:text-white">{result.service.name}</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{result.service.type}</p>
-                {result.service.description && (
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
-                    {result.service.description}
-                  </p>
-                )}
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{result.service.location}</p>
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+            <Cloud className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <span>Azure Services ({unidentifiedServices.length})</span>
+          </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Azure Services List */}
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {unidentifiedServices.map((result, index) => {
+                  const isSelected = result.service.id === selectedAzureService
+                  const ServiceIcon = getServiceIcon(result.service.type)
+                  return (
+                    <div
+                      key={result.service.id || index}
+                      onClick={() => setSelectedAzureService(result.service.id || null)}
+                      className={`card cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-500 dark:border-indigo-400 shadow-lg'
+                          : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className={`p-2 rounded-lg ${isSelected ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <ServiceIcon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 dark:text-white truncate">{result.service.name}</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">{result.service.type}</p>
+                          {result.service.location && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{result.service.location}</p>
+                          )}
               </div>
-            ))}
+          </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            
+            {/* Azure Service Info Panel */}
+            {selectedAzureService && (() => {
+              const selectedService = unidentifiedServices.find(r => r.service.id === selectedAzureService)
+              if (!selectedService) return null
+              const ServiceIcon = getServiceIcon(selectedService.service.type)
+              const serviceDescription = getAzureServiceDescription(selectedService.service.type, selectedService.service.name)
+              return (
+                <div className="lg:col-span-1">
+                  <div className="card bg-white dark:bg-slate-800 sticky top-4">
+                    <div className="flex items-center space-x-2 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-700">
+                        <ServiceIcon className="w-5 h-5 text-white" />
+                      </div>
+                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">Service Info</h4>
+                    </div>
+                    <div className="space-y-3">
+                      {/* Service Description */}
+                      {serviceDescription && (
+                        <div className="pb-3 border-b border-gray-200 dark:border-gray-700">
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Description</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{serviceDescription}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Name</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedService.service.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Type</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{selectedService.service.type}</p>
+                      </div>
+                      {selectedService.service.resourceGroup && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Resource Group</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{selectedService.service.resourceGroup}</p>
+                        </div>
+                      )}
+                      {selectedService.service.location && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Location</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{selectedService.service.location}</p>
+                        </div>
+                      )}
+                      {selectedService.service.id && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Resource ID</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 break-all font-mono">{selectedService.service.id}</p>
+                        </div>
+                      )}
+                      {selectedService.service.portalUrl && (
+                        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                          <a
+                            href={selectedService.service.portalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium w-full justify-center"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            <span>Open in Azure Portal</span>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -1776,7 +2094,100 @@ function ServiceAnalysis({
   )
 }
 
-// Format RAG text with better formatting (headings, bold, paragraphs, lists)
+// Icon mapping for services and technologies
+const getServiceIcon = (text: string): any => {
+  const lowerText = text.toLowerCase()
+  if (lowerText.includes('kubernetes') || lowerText.includes('aks') || lowerText.includes('container')) return Container
+  if (lowerText.includes('database') || lowerText.includes('sql') || lowerText.includes('postgresql') || lowerText.includes('mongodb') || lowerText.includes('cosmos')) return Database
+  if (lowerText.includes('event hub') || lowerText.includes('messaging') || lowerText.includes('activemq') || lowerText.includes('kinesis')) return MessageSquare
+  if (lowerText.includes('server') || lowerText.includes('compute') || lowerText.includes('vm')) return Server
+  if (lowerText.includes('storage') || lowerText.includes('blob') || lowerText.includes('file')) return HardDrive
+  if (lowerText.includes('network') || lowerText.includes('vnet') || lowerText.includes('load balancer')) return Network
+  if (lowerText.includes('security') || lowerText.includes('key vault') || lowerText.includes('identity')) return Shield
+  if (lowerText.includes('monitoring') || lowerText.includes('log') || lowerText.includes('insights')) return Activity
+  if (lowerText.includes('azure') || lowerText.includes('cloud')) return Cloud
+  if (lowerText.includes('microservice') || lowerText.includes('service')) return Box
+  return Layers
+}
+
+// Generate description for Azure services based on type
+const getAzureServiceDescription = (serviceType: string, serviceName: string): string => {
+  const lowerType = serviceType.toLowerCase()
+  const lowerName = serviceName.toLowerCase()
+  
+  // Kubernetes / AKS
+  if (lowerType.includes('kubernetes') || lowerType.includes('aks') || lowerType.includes('container')) {
+    return `Azure Kubernetes Service (AKS) provides a managed Kubernetes environment for deploying, managing, and scaling containerized applications. This cluster hosts containerized workloads and provides orchestration capabilities for microservices architectures.`
+  }
+  
+  // Event Hub
+  if (lowerType.includes('event hub') || lowerType.includes('eventhub')) {
+    return `Azure Event Hubs is a fully managed, real-time data ingestion service that can receive and process millions of events per second. It's commonly used for event streaming, real-time analytics, and building event-driven architectures.`
+  }
+  
+  // Database services
+  if (lowerType.includes('database') || lowerType.includes('sql') || lowerType.includes('postgresql') || lowerType.includes('mongodb') || lowerType.includes('cosmos')) {
+    if (lowerType.includes('cosmos')) {
+      return `Azure Cosmos DB is a globally distributed, multi-model database service designed for low-latency, high-availability applications. It supports multiple APIs including MongoDB, SQL, Cassandra, and Gremlin.`
+    } else if (lowerType.includes('postgresql')) {
+      return `Azure Database for PostgreSQL is a fully managed relational database service based on the open-source PostgreSQL database engine. It provides high availability, automated backups, and built-in security features.`
+    } else if (lowerType.includes('sql')) {
+      return `Azure SQL Database is a fully managed relational database service built on SQL Server. It provides high availability, automated backups, and intelligent performance optimization for cloud applications.`
+    } else {
+      return `This database service provides persistent storage and data management capabilities for applications. It supports structured data storage, querying, and transaction processing.`
+    }
+  }
+  
+  // Storage
+  if (lowerType.includes('storage') || lowerType.includes('blob') || lowerType.includes('file')) {
+    return `Azure Storage provides scalable, durable cloud storage for data, files, and application content. It includes Blob storage for unstructured data, File storage for file shares, and Queue storage for messaging.`
+  }
+  
+  // Virtual Machine / Compute
+  if (lowerType.includes('virtualmachine') || lowerType.includes('vm') || lowerType.includes('compute')) {
+    return `Azure Virtual Machines provide on-demand, scalable computing resources in the cloud. They enable you to deploy and run applications with full control over the operating system and configuration.`
+  }
+  
+  // Key Vault
+  if (lowerType.includes('key vault') || lowerType.includes('keyvault')) {
+    return `Azure Key Vault is a cloud service for securely storing and accessing secrets, keys, and certificates. It helps protect cryptographic keys and secrets used by cloud applications and services.`
+  }
+  
+  // App Service
+  if (lowerType.includes('app service') || lowerType.includes('appservice') || lowerType.includes('web')) {
+    return `Azure App Service is a fully managed platform for building, deploying, and scaling web apps and APIs. It supports multiple programming languages and provides built-in DevOps capabilities.`
+  }
+  
+  // Container Apps / Container Instances
+  if (lowerType.includes('container') && (lowerType.includes('app') || lowerType.includes('instance'))) {
+    return `Azure Container Apps or Container Instances provide serverless container hosting for running containerized applications without managing infrastructure. They're ideal for microservices and event-driven applications.`
+  }
+  
+  // Network services
+  if (lowerType.includes('network') || lowerType.includes('vnet') || lowerType.includes('load balancer')) {
+    return `Azure networking services provide connectivity, security, and traffic management capabilities. They enable secure communication between Azure resources and connect on-premises networks to Azure.`
+  }
+  
+  // Monitoring / Log Analytics
+  if (lowerType.includes('monitoring') || lowerType.includes('log') || lowerType.includes('insights') || lowerType.includes('application insights')) {
+    return `Azure monitoring and logging services provide observability for applications and infrastructure. They collect telemetry data, enable performance monitoring, and support troubleshooting and diagnostics.`
+  }
+  
+  // Service Bus
+  if (lowerType.includes('service bus') || lowerType.includes('servicebus')) {
+    return `Azure Service Bus is a fully managed enterprise message broker with message queues and publish-subscribe topics. It enables reliable messaging between distributed applications and services.`
+  }
+  
+  // Function Apps
+  if (lowerType.includes('function') || lowerType.includes('functionapp')) {
+    return `Azure Functions is a serverless compute service that lets you run event-driven code without managing infrastructure. It's ideal for building microservices, processing data, and integrating systems.`
+  }
+  
+  // Default description
+  return `This Azure service provides cloud infrastructure and capabilities for hosting and managing applications. It's part of the Azure cloud platform and integrates with other Azure services for comprehensive cloud solutions.`
+}
+
+// Format RAG text with better formatting (headings, bold, paragraphs, lists) and icons
 function formatRAGText(text: string): JSX.Element | null {
   if (!text || !text.trim()) return null
 
@@ -1818,12 +2229,44 @@ function formatRAGText(text: string): JSX.Element | null {
   const flushParagraph = () => {
     if (currentParagraph.length > 0) {
       const paragraphText = currentParagraph.join(' ').trim()
-      if (paragraphText && paragraphText.length > 0) {
-        elements.push(
-          <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
-            {formatInlineText(paragraphText)}
-          </p>
-        )
+      if (paragraphText) {
+        // Check if paragraph mentions services/technologies
+        const serviceMatches = paragraphText.match(/\b(Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi)
+        if (serviceMatches && serviceMatches.length > 0) {
+          // Split paragraph and add icons for service mentions
+          const parts: React.ReactNode[] = []
+          let lastIndex = 0
+          serviceMatches.forEach((match, idx) => {
+            const matchIndex = paragraphText.toLowerCase().indexOf(match.toLowerCase(), lastIndex)
+            if (matchIndex > lastIndex) {
+              parts.push(paragraphText.substring(lastIndex, matchIndex))
+            }
+            const Icon = getServiceIcon(match)
+            parts.push(
+              <span key={`service-${idx}`} className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">
+                <Icon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span className="font-medium text-indigo-700 dark:text-indigo-300">{match}</span>
+              </span>
+            )
+            lastIndex = matchIndex + match.length
+          })
+          if (lastIndex < paragraphText.length) {
+            parts.push(paragraphText.substring(lastIndex))
+          }
+          elements.push(
+            <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3 flex flex-wrap items-center gap-1">
+              {parts.map((part, pidx) => (
+                <span key={pidx}>{typeof part === 'string' ? formatInlineText(part) : part}</span>
+              ))}
+            </p>
+          )
+        } else {
+          elements.push(
+            <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+              {formatInlineText(paragraphText)}
+            </p>
+          )
+        }
       }
       currentParagraph = []
     }
@@ -1832,12 +2275,35 @@ function formatRAGText(text: string): JSX.Element | null {
   const flushList = () => {
     if (listItems.length > 0) {
       elements.push(
-        <ul key={key++} className="list-disc list-inside space-y-2 mb-4 ml-4">
-          {listItems.map((item, idx) => (
-            <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-              {formatInlineText(item)}
+        <ul key={key++} className="list-none space-y-2 mb-4">
+          {listItems.map((item, idx) => {
+            const Icon = getServiceIcon(item)
+            return (
+              <li key={idx} className="flex items-start space-x-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                <div className="mt-1.5 flex-shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-700"></div>
+                </div>
+                <div className="flex-1 flex flex-wrap items-center gap-1">
+                  {item.match(/\b(Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi) ? (
+                    item.split(/(\b(?:Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*)/gi).map((part, pidx) => {
+                      if (part.match(/\b(?:Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi)) {
+                        const PartIcon = getServiceIcon(part)
+                        return (
+                          <span key={pidx} className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">
+                            <PartIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                            <span className="font-medium text-indigo-700 dark:text-indigo-300">{part}</span>
+                          </span>
+                        )
+                      }
+                      return <span key={pidx}>{formatInlineText(part)}</span>
+                    })
+                  ) : (
+                    formatInlineText(item)
+                  )}
+                </div>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )
       listItems = []
@@ -1859,13 +2325,17 @@ function formatRAGText(text: string): JSX.Element | null {
       flushParagraph()
       flushList()
       const headingText = trimmed.replace(/^(\*\*|##)\s*/, '').replace(/\*\*$/, '').replace(/:$/, '').trim()
-      if (headingText) {
-        elements.push(
-          <h6 key={key++} className="font-bold text-gray-900 dark:text-white text-base mt-4 mb-2 first:mt-0">
+      const HeadingIcon = getServiceIcon(headingText)
+      elements.push(
+        <div key={key++} className="flex items-center space-x-2 mt-4 mb-2 first:mt-0">
+          <div className="p-1.5 rounded-md bg-gradient-to-br from-indigo-600 to-blue-700">
+            <HeadingIcon className="w-4 h-4 text-white" />
+          </div>
+          <h6 className="font-bold text-gray-900 dark:text-white text-base">
             {formatInlineText(headingText)}
           </h6>
-        )
-      }
+        </div>
+      )
       continue
     }
 
@@ -1943,10 +2413,10 @@ function formatInlineText(text: string): JSX.Element | string | null {
 // Component Detail Panel - Horizontal layout with all information visible
 function ComponentDetailPanel({
   result,
-  onComponentUpdate
+  onRefresh
 }: {
   result: AnalysisResult
-  onComponentUpdate?: (updatedResult: AnalysisResult) => void
+  onRefresh?: (updatedResult: AnalysisResult) => void
 
 
 
@@ -1958,7 +2428,7 @@ function ComponentDetailPanel({
 
 }) {
   const { service, componentInfo } = result
-  const [refreshing, setRefreshing] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Debug logging
   useEffect(() => {
@@ -1970,6 +2440,26 @@ function ComponentDetailPanel({
       console.log('Related Services:', componentInfo.relatedServices)
     }
   }, [componentInfo])
+
+  const hasMeaningfulText = (value?: string) => {
+    if (!value) return false
+    const trimmed = value.trim()
+    if (!trimmed) return false
+    return !trimmed.includes('Information not available') && !trimmed.includes('I cannot provide')
+  }
+
+  const hasCapabilities = Array.isArray(componentInfo?.capabilities)
+    ? componentInfo.capabilities.some((cap) => typeof cap === 'string' && cap.trim().length > 0)
+    : false
+
+  const hasAnyRagContent =
+    hasMeaningfulText(componentInfo?.architecturalOverview) ||
+    hasMeaningfulText(componentInfo?.functionalOverview) ||
+    hasCapabilities
+
+  const hasStrictDocumentation = componentInfo?.architecturalOverview?.includes('## 1. Purpose & Scope') ?? false
+  const hasRelatedServices = Array.isArray(componentInfo?.relatedServices) && componentInfo.relatedServices.length > 0
+  const hasRelationships = Array.isArray(componentInfo?.relationships) && componentInfo.relationships.length > 0
 
 
   if (!componentInfo) {
@@ -2006,7 +2496,7 @@ function ComponentDetailPanel({
             href={service.portalUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
           >
             <ExternalLink className="w-4 h-4" />
             <span>Open in Azure Portal</span>
@@ -2014,247 +2504,258 @@ function ComponentDetailPanel({
         )}
         <button
           onClick={async () => {
-            if (refreshing) return // Prevent double-clicks
-            setRefreshing(true)
+            if (isRefreshing) return // Prevent multiple clicks
+
             try {
-              console.log('[Refresh] Starting refresh for component:', componentInfo?.componentName)
-              console.log('[Refresh] Service:', service)
+              setIsRefreshing(true)
+              console.log('[Refresh] Starting refresh for component:', componentInfo.componentName)
+              console.log('[Refresh] Service object:', service)
+              console.log('[Refresh] Service name:', service.name)
+              console.log('[Refresh] Service type:', service.type)
+              console.log('[Refresh] Service ID:', service.id)
+              console.log('[Refresh] Service properties:', service.properties)
+              console.log('[Refresh] Calling analyzeAzureServices with forceRefresh=true')
+
+              // Ensure service is in the correct format for the API
+              const servicePayload = {
+                id: service.id,
+                name: service.name,
+                type: service.type,
+                location: service.location,
+                resourceGroup: service.resourceGroup,
+                properties: service.properties || {},
+                tags: service.tags || {}
+              }
+
+              console.log('[Refresh] Service payload:', servicePayload)
+
               const response = await apiService.analyzeAzureServices(
-                [service],
+                [servicePayload],
                 undefined,
                 undefined,
                 true // forceRefresh
               )
-              console.log('[Refresh] Response received:', response)
+
+              console.log('[Refresh] Full response:', JSON.stringify(response, null, 2))
               console.log('[Refresh] Response structure:', {
                 hasData: !!response.data,
                 dataType: typeof response.data,
-                isDataArray: Array.isArray(response.data),
                 hasDataData: !!response.data?.data,
+                dataDataType: typeof response.data?.data,
+                isDataArray: Array.isArray(response.data),
                 isDataDataArray: Array.isArray(response.data?.data),
-                responseKeys: Object.keys(response || {}),
-                dataKeys: response.data ? Object.keys(response.data) : []
+                dataKeys: response.data ? Object.keys(response.data) : [],
+                status: response.data?.status
               })
-              
-              // The API service returns response.data from axios
-              // Based on console logs, response is: {status: 'success', data: Array(1), ...}
-              // So response.data is the array of results
+
+              // Handle different response structures
               let resultsArray: any[] = []
-              
-              // First try: response.data (the array property)
-              if (response.data && Array.isArray(response.data)) {
-                resultsArray = response.data
-                console.log('[Refresh] Using response.data (direct array), length:', resultsArray.length)
-              } 
-              // Fallback: response.data.data (nested structure)
-              else if (response.data?.data && Array.isArray(response.data.data)) {
+
+              // Standard structure: response.data.data is an array
+              if (response.data?.data && Array.isArray(response.data.data)) {
                 resultsArray = response.data.data
-                console.log('[Refresh] Using response.data.data (nested structure), length:', resultsArray.length)
+                console.log('[Refresh] Using response.data.data (standard structure)')
               }
-              // Last resort: response itself is an array
+              // Fallback: response.data is the array directly
+              else if (Array.isArray(response.data)) {
+                resultsArray = response.data
+                console.log('[Refresh] Using response.data (fallback structure)')
+              }
+              // Fallback: response is the array directly
               else if (Array.isArray(response)) {
                 resultsArray = response
-                console.log('[Refresh] Using response (direct array), length:', resultsArray.length)
+                console.log('[Refresh] Using response directly (fallback structure)')
               }
-              else {
-                console.error('[Refresh] Could not find results array. Response structure:', {
-                  response,
-                  responseData: response.data,
-                  responseDataType: typeof response.data,
-                  isArray: Array.isArray(response.data),
-                  responseKeys: Object.keys(response || {})
-                })
-                alert('Invalid response structure from refresh. Please check console for details.')
-                return
+              // Check if response has a different structure
+              else if (response.data && typeof response.data === 'object') {
+                console.warn('[Refresh] Unexpected response structure:', response.data)
+                // Try to find any array in the response
+                for (const key in response.data) {
+                  if (Array.isArray(response.data[key])) {
+                    resultsArray = response.data[key]
+                    console.log(`[Refresh] Found array in response.data.${key}`)
+                    break
+                  }
+                }
               }
-              
+
               console.log('[Refresh] Results array:', resultsArray)
+              console.log('[Refresh] Results array length:', resultsArray.length)
+
+              if (resultsArray.length === 0) {
+                console.error('[Refresh] No results found in response. Full response structure:', {
+                  responseType: typeof response,
+                  responseKeys: Object.keys(response || {}),
+                  dataType: typeof response.data,
+                  dataKeys: response.data ? Object.keys(response.data) : []
+                })
+              }
               
               if (resultsArray.length > 0) {
                 const firstResult = resultsArray[0]
                 console.log('[Refresh] First result:', firstResult)
                 console.log('[Refresh] First result keys:', Object.keys(firstResult || {}))
+
+                const newComponentInfo = firstResult?.componentInfo
+                console.log('[Refresh] New component info:', newComponentInfo)
                 
-                // Try both camelCase and snake_case for componentInfo
-                const updatedComponentInfo = firstResult?.componentInfo || firstResult?.component_info
-                
-                if (updatedComponentInfo) {
-                  console.log('[Refresh] Updated component info found:', updatedComponentInfo)
-                  
-                  // Check if fresh RAG data was fetched
-                  const dataSource = updatedComponentInfo.dataSource || updatedComponentInfo.data_source
-                  const isFreshRAG = dataSource === 'rag_fresh'
-                  
-                  if (isFreshRAG) {
-                    // Show success message for fresh RAG data
-                    console.log('[Refresh] ✓ Successfully fetched fresh RAG data from API')
-                    // Use a more visible notification
-                    const notification = document.createElement('div')
-                    notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-2'
-                    notification.innerHTML = `
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span class="font-medium">Successfully refreshed from RAG API</span>
-                    `
-                    document.body.appendChild(notification)
-                    setTimeout(() => {
-                      notification.style.transition = 'opacity 0.5s'
-                      notification.style.opacity = '0'
-                      setTimeout(() => notification.remove(), 500)
-                    }, 3000)
-                  } else if (dataSource === 'rag_cached' || dataSource === 'cache') {
-                    console.log('[Refresh] Using cached RAG data')
-                    const notification = document.createElement('div')
-                    notification.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-2'
-                    notification.innerHTML = `
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
-                      </svg>
-                      <span class="font-medium">Using cached data</span>
-                    `
-                    document.body.appendChild(notification)
-                    setTimeout(() => {
-                      notification.style.transition = 'opacity 0.5s'
-                      notification.style.opacity = '0'
-                      setTimeout(() => notification.remove(), 500)
-                    }, 2000)
-                  }
+                if (newComponentInfo) {
+                  // Check if architectural overview has strict format
+                  const hasStrictFormat = newComponentInfo.architecturalOverview?.includes('## 1. Purpose & Scope')
+                  console.log('[Refresh] Has strict format:', hasStrictFormat)
+                  console.log('[Refresh] Architectural overview length:', newComponentInfo.architecturalOverview?.length)
+                  console.log('[Refresh] Architectural overview preview:', newComponentInfo.architecturalOverview?.substring(0, 200))
                   
                   // Create updated result with new component info
                   const updatedResult: AnalysisResult = {
                     ...result,
-                    componentInfo: updatedComponentInfo
+                    componentInfo: newComponentInfo
                   }
+                  console.log('[Refresh] Updated result:', updatedResult)
+                  
                   // Update parent state via callback
-                  if (onComponentUpdate) {
-                    onComponentUpdate(updatedResult)
-                    console.log('[Refresh] Component updated via callback successfully')
+                  if (onRefresh) {
+                    console.log('[Refresh] Calling onRefresh callback')
+                    onRefresh(updatedResult)
+                    
+                    // Show success message
+                    if (!hasStrictFormat) {
+                      alert('Refresh completed, but the documentation is not in the strict 12-section format. The RAG API may not be configured or may have returned incomplete data. Check backend logs for details.')
+                    }
                   } else {
-                    console.warn('[Refresh] No callback provided, reloading page')
-                    window.location.reload()
+                    console.warn('[Refresh] No onRefresh callback provided')
                   }
                 } else {
-                  console.warn('[Refresh] No component info in response. First result:', firstResult)
-                  alert('No component information returned from refresh. The service may not be a Temenos component.')
+                  console.warn('[Refresh] No componentInfo in response. First result:', firstResult)
+                  if (firstResult?.error) {
+                    alert(`Refresh completed but encountered an error: ${firstResult.error}\n\nCheck backend logs for more details.`)
+                  } else {
+                    alert('Refresh completed but no component information was returned.\n\nPossible causes:\n1. RAG API is not configured (check RAG_JWT_TOKEN)\n2. Service was not identified as a Temenos component\n3. Backend error occurred\n\nCheck backend logs for details.')
+                  }
                 }
               } else {
                 console.warn('[Refresh] Empty results array. Full response:', response)
-                alert('No results returned from refresh. Please check console for details.')
+                alert('Refresh completed but no results were returned.\n\nPossible causes:\n1. Service was not identified as a Temenos component\n2. Backend error occurred\n3. RAG API is not configured\n\nCheck backend logs for details.')
               }
             } catch (error: any) {
               console.error('[Refresh] Failed to refresh component info:', error)
               console.error('[Refresh] Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
+                message: error?.message,
+                response: error?.response?.data,
+                status: error?.response?.status,
+                url: error?.config?.url
               })
-              const errorMsg = error.response?.data?.detail || error.message || 'Failed to refresh component information. Please try again.'
-              alert(`Failed to refresh: ${errorMsg}`)
+
+              let errorMessage = 'Failed to refresh component information.'
+              if (error?.response?.data?.detail) {
+                const detail = error.response.data.detail
+                if (typeof detail === 'string') {
+                  errorMessage += `\n\nError: ${detail}`
+                } else if (detail.error) {
+                  errorMessage += `\n\nError: ${detail.error}`
+                } else {
+                  errorMessage += `\n\nError: ${JSON.stringify(detail)}`
+                }
+              } else if (error?.message) {
+                errorMessage += `\n\nError: ${error.message}`
+              }
+
+              errorMessage += '\n\nCheck browser console and backend logs for more details.'
+              alert(errorMessage)
             } finally {
-              setRefreshing(false)
+              setIsRefreshing(false)
             }
           }}
-          disabled={refreshing}
+          disabled={isRefreshing}
           className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span>{refreshing ? 'Refreshing...' : 'Refresh Info'}</span>
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>{isRefreshing ? 'Refreshing...' : 'Refresh Info'}</span>
         </button>
       </div>
 
 
-      {/* Architecture Overview */}
+      {/* Documentation & Context */}
       <div className="space-y-6">
-        <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
-              ? formatRAGText(componentInfo.architecturalOverview)
-              : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
+        {hasAnyRagContent ? (
+          <StructuredRAGDisplay
+            architecturalOverview={componentInfo.architecturalOverview}
+            functionalOverview={componentInfo.functionalOverview || ''}
+            capabilities={componentInfo.capabilities || []}
+            componentName={componentInfo.componentName}
+            componentType={componentInfo.componentType}
+            service={service}
+          />
+        ) : (
+          <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
+            <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-lg">Documentation</h5>
+            <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+              No structured documentation is available for this component yet. Use "Refresh Info" to pull content from the RAG API.
+            </p>
           </div>
-        </div>
+        )}
 
-        {/* Deployment Architecture */}
-        {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') ||
-          componentInfo.architecturalOverview?.toLowerCase().includes('aks') ||
-          componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes') ||
-          componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
-          service.type?.toLowerCase().includes('containerservice') ||
-          service.type?.toLowerCase().includes('kubernetes')) ? (
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('docker') ||
-                service.type?.toLowerCase().includes('containerservice')) && (
-                  <li>Containerized using Docker and deployed in Azure Kubernetes Service (AKS)</li>
-                )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('orchestrated') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes')) && (
-                  <li>Orchestrated via Kubernetes for automated scaling, health management, and service discovery</li>
-                )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('scaling') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('scale')) && (
-                  <li>Supports horizontal scaling based on load and demand</li>
-                )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('high-availability') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('availability') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('replica')) && (
-                  <li>Implements high-availability patterns with multiple replicas and health checks</li>
-                )}
-              {service.type && (
-                <li>Azure Service Type: {service.type}</li>
-              )}
-            </ul>
-          </div>
-        ) : null}
-
-        {/* Functional Overview */}
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            {componentInfo.functionalOverview && componentInfo.functionalOverview.trim()
-              ? formatRAGText(componentInfo.functionalOverview)
-              : <p className="text-gray-500 dark:text-gray-400 italic">No functional overview available</p>}
-          </div>
-        </div>
-
-        {/* Key Capabilities */}
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">KEY CAPABILITIES</h5>
-          {componentInfo.capabilities && Array.isArray(componentInfo.capabilities) && componentInfo.capabilities.length > 0 ? (
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              {componentInfo.capabilities.map((cap, idx) => (
-                <li key={idx}>{cap}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No capabilities listed</p>
-          )}
-        </div>
-
-        {/* Related Services */}
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">RELATED SERVICES</h5>
-          {componentInfo.relatedServices && Array.isArray(componentInfo.relatedServices) && componentInfo.relatedServices.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {componentInfo.relatedServices.map((svc, idx) => (
-                <span key={idx} className="px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
-                  {svc}
-                </span>
-              ))}
+        {hasStrictDocumentation && componentInfo.architecturalOverview && (
+          <details className="group bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+              Full Documentation (RAG)
+            </summary>
+            <div className="mt-4 prose prose-lg dark:prose-invert max-w-none">
+              <ReactMarkdown
+                components={{
+                  h1: ({ ...props }) => <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-6 mb-4 pb-2 border-b border-gray-300 dark:border-gray-600" {...props} />,
+                  h2: ({ ...props }) => <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-8 mb-4 pt-4 border-t border-gray-200 dark:border-gray-700 first:border-t-0 first:pt-0" {...props} />,
+                  h3: ({ ...props }) => <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-6 mb-3" {...props} />,
+                  h4: ({ ...props }) => <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mt-4 mb-2" {...props} />,
+                  ul: ({ ...props }) => <ul className="list-none space-y-2 mb-4 text-gray-700 dark:text-gray-300 ml-4" {...props} />,
+                  ol: ({ ...props }) => <ol className="list-decimal list-outside ml-6 space-y-2 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
+                  li: ({ children, ...props }: any) => (
+                    <li className="flex items-start space-x-3 leading-relaxed" {...props}>
+                      <div className="mt-2 flex-shrink-0">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-700 mt-1.5"></div>
+                      </div>
+                      <span className="flex-1">{children}</span>
+                    </li>
+                  ),
+                  p: ({ ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
+                  strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
+                  code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-indigo-600 dark:text-indigo-400" {...props} />
+                }}
+              >
+                {componentInfo.architecturalOverview}
+              </ReactMarkdown>
             </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No related services listed</p>
-          )}
-        </div>
+          </details>
+        )}
 
-        {/* Relationships */}
-        {componentInfo.relationships && Array.isArray(componentInfo.relationships) && componentInfo.relationships.length > 0 && (
-          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">COMPONENT RELATIONSHIPS</h5>
-            <div className="space-y-3">
+        <details
+          className="group bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800"
+          open={hasRelatedServices}
+        >
+          <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+            Related Services {hasRelatedServices ? `(${componentInfo.relatedServices.length})` : ''}
+          </summary>
+          <div className="mt-4">
+            {hasRelatedServices ? (
+              <div className="flex flex-wrap gap-2">
+                {componentInfo.relatedServices.map((svc, idx) => (
+                  <span key={idx} className="px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
+                    {svc}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">No related services listed.</p>
+            )}
+          </div>
+        </details>
+
+        {hasRelationships && (
+          <details className="group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-200 dark:border-indigo-700" open>
+            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+              Component Relationships ({componentInfo.relationships.length})
+            </summary>
+            <div className="mt-4 space-y-3">
               {componentInfo.relationships.map((rel, idx) => (
                 <div key={idx} className="bg-white dark:bg-slate-700 rounded p-3 border border-indigo-200 dark:border-indigo-500/30">
                   <div className="font-medium text-gray-900 dark:text-white">{rel.targetComponent}</div>
@@ -2263,7 +2764,7 @@ function ComponentDetailPanel({
                 </div>
               ))}
             </div>
-          </div>
+          </details>
         )}
       </div>
     </div>

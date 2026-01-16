@@ -1,0 +1,82 @@
+name: Build and Push to ACR (Pull-Based Deployment)
+
+# This workflow only builds and pushes to ACR
+# Azure automatically pulls and deploys via webhook (zero GitHub runner time for deployment)
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'backend/**'
+      - '.github/workflows/build-push-acr.yml'
+  workflow_dispatch:
+
+env:
+  ACR_NAME: bsgdemoplatform
+  IMAGE_NAME: bsg-demo-backend
+  AZURE_RESOURCE_GROUP: bsg-demo-platform
+
+jobs:
+  build-and-push:
+    name: Build and Push to ACR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15  # Reduced from 25 (no deployment step)
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Log in to ACR
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+            ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:buildcache,mode=max
+          platforms: linux/amd64
+      
+      - name: Verify image pushed
+        run: |
+          echo "✅ Image pushed successfully"
+          echo "Image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest"
+          echo "Tag: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo ""
+          echo "Azure will automatically deploy via ACR webhook"
+      
+      - name: Deployment Summary
+        run: |
+          echo "## Build and Push Complete ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image**: \`${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag**: \`${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Pull-Based Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Azure will automatically:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Receive webhook from ACR" >> $GITHUB_STEP_SUMMARY
+          echo "2. Pull new image from ACR" >> $GITHUB_STEP_SUMMARY
+          echo "3. Deploy to Container App/Web App" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Zero GitHub Actions time for deployment!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⏱️ Time Savings" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Old workflow**: ~25 minutes (build + test + deploy)" >> $GITHUB_STEP_SUMMARY
+          echo "- **New workflow**: ~8-12 minutes (build + push only)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Savings**: ~50-60% reduction in GitHub Actions usage" >> $GITHUB_STEP_SUMMARY

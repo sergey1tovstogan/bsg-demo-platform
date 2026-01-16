@@ -397,6 +397,26 @@ class CacheService:
         """Clear in-memory cache (useful for testing or memory management)."""
         self._in_memory_cache.clear()
         logger.debug("Cleared in-memory cache")
+    
+    async def delete_component_info(self, component_name: str) -> bool:
+        """Delete cached component info."""
+        cache_key = self._generate_cache_key("component_info", component_name=component_name)
+        return await self.delete(cache_key)
+    
+    async def delete_rag_response(
+        self,
+        component_name: str,
+        query_type: str,
+        rag_model_id: str = "ModularBanking, TechnologyOverview"
+    ) -> bool:
+        """Delete cached RAG response."""
+        cache_key = self._generate_cache_key(
+            "rag",
+            component_name=component_name,
+            query_type=query_type,
+            rag_model_id=rag_model_id
+        )
+        return await self.delete(cache_key)
 
 
 # Global cache service instance

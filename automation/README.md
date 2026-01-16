@@ -61,20 +61,20 @@ To run the platform locally:
 ```
 
 This will start:
-- **Backend:** http://localhost:8000
-- **Frontend:** http://localhost:3000
-- **API Docs:** http://localhost:8000/docs
+- **Backend:** http://localhost:8001
+- **Frontend:** http://localhost:3001
+- **API Docs:** http://localhost:8001/docs
 
 Two command windows will open:
-- `BSG Backend` - Backend server (FastAPI/Uvicorn on port 8000)
-- `BSG Frontend` - Frontend server (Vite dev server on port 3000)
+- `BSG Backend` - Backend server (FastAPI/Uvicorn on port 8001)
+- `BSG Frontend` - Frontend server (Vite dev server on port 3001)
 
 Wait a few seconds for services to fully start, then:
-1. Open http://localhost:3000 in your browser (frontend dev server)
+1. Open http://localhost:3001 in your browser (frontend dev server)
 2. Go to Demo → Deployment Analyzer
 3. Connect to Azure and analyze deployments
 
-**Note:** The backend (localhost:8000) also serves the frontend static files when deployed, but for local development, always use localhost:3000 for the frontend to get hot-reload and development features.
+**Note:** The backend (localhost:8001) also serves the frontend static files when deployed, but for local development, always use localhost:3001 for the frontend to get hot-reload and development features.
 
 ### 3. Manual Operations (Optional)
 
@@ -197,9 +197,9 @@ If workflows succeed:
 4. **Create success summary** with deployment URLs
 
 **Note:** For local development, use:
-- Backend: `http://localhost:8000`
-- Frontend: `http://localhost:5173`
-- API Docs: `http://localhost:8000/docs`
+- Backend: `http://localhost:8001`
+- Frontend: `http://localhost:3001`
+- API Docs: `http://localhost:8001/docs`
 
 #### Step 5: Failure Path
 If workflows fail:

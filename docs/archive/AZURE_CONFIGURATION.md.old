@@ -137,6 +137,8 @@ These should be set in Azure App Service **Configuration** → **Application set
 | `EVENTHUB_CONNECTION_STRING` | Azure Event Hub connection string | No | `Endpoint=sb://...` |
 | `EVENTHUB_NAME` | Event Hub topic name | No | `modelbank-event-topic` |
 | `EVENTHUB_CONSUMER_GROUP` | Consumer group name | No | `$Default` |
+
+**Note**: The RAG JWT token can be updated at runtime via the Settings modal in the UI (recommended) or via the `/api/v1/deployment/temenos/update-token` endpoint. The token is cached in browser localStorage for convenience and automatically synchronized with the backend when the Settings modal is opened.
 | `ENVIRONMENT` | Environment name | No | `production` |
 | `DEBUG` | Debug mode | No | `False` |
 

@@ -106,7 +106,7 @@ class Settings(BaseSettings):
     RAG_TYPE: str = Field(default="temenos", description="RAG provider type: temenos, openai, etc.")
     RAG_JWT_TOKEN: Optional[str] = Field(
         default=None,
-        description="JWT token for RAG tool API authentication (tbsg.temenos.com). Optional - can be set via Settings API instead."
+        description="JWT token for RAG tool API authentication (tbsg.temenos.com). Optional - can be set via Settings API or /temenos/update-token endpoint instead."
     )
     RAG_API_URL: str = Field(
         default="https://tbsg.temenos.com",
@@ -191,6 +191,7 @@ class Settings(BaseSettings):
         """
         origins = [
             # Local development
+            "http://localhost:3000",
             "http://localhost:3000",
             "http://localhost:5173",
             # Azure Static Web Apps (specific domain - regex pattern handles all *.azurestaticapps.net)

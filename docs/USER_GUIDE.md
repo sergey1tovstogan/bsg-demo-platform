@@ -45,6 +45,8 @@ Current components include:
 - Security
 - Observability
 - Design Time
+Component rules and ownership:
+- COMPONENTS.md
 
 Each component provides:
 - curated content
@@ -53,6 +55,40 @@ Each component provides:
 
 Component rules and ownership:
 - COMPONENTS.md
+
+### RAG JWT Token Management
+
+The RAG (Retrieval Augmented Generation) API requires a JWT token for authentication. You can manage this token in two ways:
+
+**Option 1: Via Settings Modal (Recommended)**
+1. Click the **Settings** icon (gear) in the top navigation
+2. Scroll to **RAG API JWT Token** section
+3. Enter your JWT token (masked by default, click eye icon to show/hide)
+4. Click **Update RAG Token**
+5. The token is automatically:
+   - Sent to the backend and stored in memory
+   - Cached in browser localStorage for future sessions
+   - Used for all RAG API calls until a new token is provided
+
+**Option 2: Via Environment Variable**
+- Set `RAG_JWT_TOKEN` in `backend/.env` file (for local development)
+- Set `RAG_JWT_TOKEN` in Azure App Service Configuration (for production)
+
+**Token Status:**
+- The Settings modal displays token information:
+  - Expiration status (valid/expired)
+  - Days remaining until expiration
+  - User email and ID
+  - Expiration date
+
+**Token Caching:**
+- The token is cached in browser localStorage (`bsg_rag_jwt_token` key)
+- When you reopen the application, the cached token is automatically loaded and sent to the backend
+- This ensures seamless operation even if the token expires, as you can easily update it via the Settings modal
+
+**Note**: The token is never stored in any files on the server. It's only stored:
+- In browser localStorage (client-side, user-specific)
+- In backend memory (runtime only, lost on restart)
 
 ---
 
@@ -98,6 +134,22 @@ Azure setup details:
 
 Known runtime differences:
 - Some discovery features behave differently in cloud vs local
+
+**Update RAG JWT Token:**
+```bash
+curl -X POST http://localhost:8000/api/v1/deployment/temenos/update-token \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "token": "your-new-jwt-token"
+  }'
+```
+
+**Get RAG JWT Token Info:**
+```bash
+curl -X GET http://localhost:8000/api/v1/deployment/temenos/jwt-info \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
 
 ---
 
