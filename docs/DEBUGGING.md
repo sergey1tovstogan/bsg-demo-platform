@@ -269,28 +269,95 @@ az webapp log config \
 
 ### Scenario 1: Cost Calculation Returns $0
 
-**Check logs for:**
-1. Authentication success
-2. API response structure
-3. Row count (should be > 0)
-4. Column names match expected format
+**Step 1: Check if cost calculation is triggered**
 
-**Query:**
+Search for cost-related API calls:
+```kusto
+AppServiceConsoleLogs
+| where Message contains "cost" or Message contains "Cost"
+| where TimeGenerated > ago(1h)
+| order by TimeGenerated desc
+```
+
+**Step 2: Check authentication**
+
+Look for token acquisition:
+```kusto
+AppServiceConsoleLogs
+| where Message contains "Attempting to get Azure access token" 
+   or Message contains "Successfully obtained Azure access token"
+   or Message contains "Failed to get access token"
+| order by TimeGenerated desc
+```
+
+**Step 3: Check API request/response**
+
+Look for API responses:
 ```kusto
 AppServiceConsoleLogs
 | where Message contains "Cost Management API response"
 | order by TimeGenerated desc
-| take 20
+| take 30
 ```
 
-**If rows = 0:**
-- Check date range (costs may take 24-48 hours to appear)
-- Verify resource group exists
-- Check permissions
+Expected log messages:
+- `"Attempting to get Azure access token for Cost Management API..."`
+- `"Successfully obtained Azure access token (token length: XXX)"`
+- `"Cost Management API response for {resource_group_name}"`
+- `"Response keys: [...]"`
+- `"Properties keys: [...]"`
+- `"Rows count: X"`
+- `"Columns: [...]"`
 
-**If parsing fails:**
-- Check column names in logs
-- Verify response structure matches expected format
+**Step 4: Check parsing**
+
+Look for parsing logs:
+```kusto
+AppServiceConsoleLogs
+| where Message contains "Parsing" and Message contains "cost rows"
+   or Message contains "Column indices"
+   or Message contains "Error parsing cost row"
+| order by TimeGenerated desc
+```
+
+**Step 5: Check for errors**
+
+Look for any errors:
+```kusto
+AppServiceConsoleLogs
+| where Level == "Error" or Level == "Warning"
+| where Message contains "cost" or Message contains "Cost Management"
+| where TimeGenerated > ago(1h)
+| order by TimeGenerated desc
+```
+
+**Common Issues:**
+
+1. **No logs found**: Cost calculation may not be triggered
+   - Check if "Include Cost Analysis" checkbox is enabled
+   - Verify resource groups are selected
+
+2. **Authentication fails**: `"Failed to get access token"`
+   - Managed Identity may not have permissions
+   - Check Azure Portal → Subscription → Access control (IAM)
+
+3. **No rows returned**: `"Rows count: 0"`
+   - Cost data may take 24-48 hours to appear
+   - Verify date range (uses last full calendar month)
+
+4. **Parsing errors**: `"Error parsing cost row"` or `"Could not find required columns"`
+   - API response structure may have changed
+   - Check column names in logs
+
+**Quick Query (All Cost Logs):**
+```kusto
+AppServiceConsoleLogs
+| where Message contains "Cost Management"
+   or (Message contains "cost" and Message contains "service")
+| where TimeGenerated > ago(24h)
+| order by TimeGenerated desc
+| take 100
+```
 
 ---
 

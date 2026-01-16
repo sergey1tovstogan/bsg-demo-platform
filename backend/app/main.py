@@ -18,6 +18,7 @@ from app.core.database import init_db, close_db, get_database
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
+from app.middleware.basic_auth_middleware import BasicAuthMiddleware
 from app.api import health, auth, auth_v2, users, auth_cards, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events, data_architecture, payments
 from app.api import settings as settings_api
 from app.adapters.eventhub import get_eventhub_adapter
@@ -119,7 +120,11 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
 )
 
-# Configure CORS - MUST be the outermost middleware to handle preflight OPTIONS requests
+# Add Basic Auth middleware FIRST (outermost) to protect all routes
+# This must be before CORS to protect the entire application
+app.add_middleware(BasicAuthMiddleware)
+
+# Configure CORS - MUST be after Basic Auth but before other middleware
 # Use allow_origin_regex to allow all Azure Static Web Apps and App Service domains
 # This is more flexible than hardcoding specific origins
 app.add_middleware(
