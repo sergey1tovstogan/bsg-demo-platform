@@ -37,7 +37,7 @@ describe('PopupRenderer', () => {
             ...defaultContext,
             popupStack: [],
             card: {
-                // @ts-expect-error
+                // @ts-expect-error - Mocking partial card object for test
                 popups: []
             }
         });
@@ -51,7 +51,7 @@ describe('PopupRenderer', () => {
             ...defaultContext,
             popupStack: ['popup-1'],
             card: {
-                // @ts-expect-error
+                // @ts-expect-error - Mocking partial card object for test
                 popups: [
                     {
                         id: 'popup-1',
@@ -72,7 +72,7 @@ describe('PopupRenderer', () => {
             ...defaultContext,
             popupStack: ['popup-1'],
             card: {
-                // @ts-expect-error
+                // @ts-expect-error - Mocking partial card object for test
                 popups: [
                     { id: 'popup-1', title: 'Test Popup', content: [] }
                 ]

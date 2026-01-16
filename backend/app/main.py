@@ -116,7 +116,7 @@ app = FastAPI(
     docs_url="/docs" if not settings.is_production else None,  # Disable in production
     redoc_url="/redoc" if not settings.is_production else None,
     lifespan=lifespan,
-    openapi_url=f"/{settings.API_V1_PREFIX}/openapi.json"
+    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
 )
 
 # Configure CORS - MUST be the outermost middleware to handle preflight OPTIONS requests

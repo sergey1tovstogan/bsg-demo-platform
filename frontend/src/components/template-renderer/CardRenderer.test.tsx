@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { CardRenderer } from './CardRenderer';
 import { CardDefinition } from '@/lib/template-types';
 import { vi } from 'vitest';

@@ -1,22 +1,19 @@
 import { useState, useEffect } from 'react'
-import { 
-  Loader2, 
-  Cloud, 
-  RefreshCw, 
-  Container, 
-  Database, 
-  MessageSquare, 
-  Server, 
+import {
+  Loader2,
+  Cloud,
+  RefreshCw,
+  Container,
+  Database,
+  MessageSquare,
+  Server,
   Layers,
   Box,
-  Zap,
   Network,
   Shield,
   Activity,
-  Code,
   Settings,
   GitBranch,
-  Cpu,
   HardDrive,
   Globe
 } from 'lucide-react'

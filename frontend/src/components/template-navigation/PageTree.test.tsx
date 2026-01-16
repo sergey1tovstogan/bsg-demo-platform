@@ -29,7 +29,7 @@ const mockHierarchy = {
 describe('PageTree', () => {
     it('should render hierarchy items', () => {
         vi.mocked(NavigationProvider.useNavigation).mockReturnValue({
-            // @ts-expect-error
+            // @ts-expect-error - Mocking partial navigation context for test
             hierarchy: mockHierarchy,
             currentPage: 'p1',
             navigateToPage: vi.fn(),
@@ -43,7 +43,7 @@ describe('PageTree', () => {
 
     it('should render children items', () => {
         vi.mocked(NavigationProvider.useNavigation).mockReturnValue({
-            // @ts-expect-error
+            // @ts-expect-error - Mocking partial navigation context for test
             hierarchy: mockHierarchy,
             currentPage: 'p1',
             navigateToPage: vi.fn(),
@@ -57,7 +57,7 @@ describe('PageTree', () => {
     it('should call navigateToPage on click', () => {
         const mockNavigate = vi.fn();
         vi.mocked(NavigationProvider.useNavigation).mockReturnValue({
-            // @ts-expect-error
+            // @ts-expect-error - Mocking partial navigation context for test
             hierarchy: mockHierarchy,
             currentPage: 'p1',
             navigateToPage: mockNavigate,
@@ -71,7 +71,7 @@ describe('PageTree', () => {
 
     it('should highlight current page', () => {
         vi.mocked(NavigationProvider.useNavigation).mockReturnValue({
-            // @ts-expect-error
+            // @ts-expect-error - Mocking partial navigation context for test
             hierarchy: mockHierarchy,
             currentPage: 'p1',
             navigateToPage: vi.fn(),
