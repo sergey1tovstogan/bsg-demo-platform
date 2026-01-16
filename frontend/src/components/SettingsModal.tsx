@@ -96,8 +96,8 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
     setRagTokenMessage('')
     
     try {
-      const response = await apiService.updateRAGToken(ragToken.trim())
-      
+      await apiService.updateRAGToken(ragToken.trim())
+
       // Save to localStorage
       localStorage.setItem(RAG_TOKEN_STORAGE_KEY, ragToken.trim())
       

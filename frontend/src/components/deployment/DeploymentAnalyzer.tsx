@@ -6,10 +6,11 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Code, Settings, GitBranch, Box, Zap, HardDrive, Globe, Layers, Cpu, Info } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
+import { StructuredRAGDisplay } from './StructuredRAGDisplay'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -525,12 +526,6 @@ export function DeploymentAnalyzer() {
             
             // Set error state for costs but don't fail the analysis
             const costMap: Record<string, any> = {}
-            
-            // If it's a timeout or abort error, provide specific message
-            const isTimeout = err.message?.includes('timeout') || err.name === 'AbortError'
-            const errorMessage = isTimeout 
-              ? 'Request timed out. Cost Management API is taking too long. Try selecting fewer resource groups.'
-              : err.response?.data?.detail?.error || err.response?.data?.error || err.message || 'Failed to fetch cost data'
 
             // Check if the response contains cost data with errors (partial success)
             if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
@@ -2025,7 +2020,7 @@ function ServiceAnalysis({
               const selectedService = unidentifiedServices.find(r => r.service.id === selectedAzureService)
               if (!selectedService) return null
               const ServiceIcon = getServiceIcon(selectedService.service.type)
-              const serviceDescription = getAzureServiceDescription(selectedService.service.type, selectedService.service.name)
+              const serviceDescription = getAzureServiceDescription(selectedService.service.type)
               return (
                 <div className="lg:col-span-1">
                   <div className="card bg-white dark:bg-slate-800 sticky top-4">
@@ -2111,10 +2106,9 @@ const getServiceIcon = (text: string): any => {
 }
 
 // Generate description for Azure services based on type
-const getAzureServiceDescription = (serviceType: string, serviceName: string): string => {
+const getAzureServiceDescription = (serviceType: string): string => {
   const lowerType = serviceType.toLowerCase()
-  const lowerName = serviceName.toLowerCase()
-  
+
   // Kubernetes / AKS
   if (lowerType.includes('kubernetes') || lowerType.includes('aks') || lowerType.includes('container')) {
     return `Azure Kubernetes Service (AKS) provides a managed Kubernetes environment for deploying, managing, and scaling containerized applications. This cluster hosts containerized workloads and provides orchestration capabilities for microservices architectures.`
@@ -2185,229 +2179,6 @@ const getAzureServiceDescription = (serviceType: string, serviceName: string): s
   
   // Default description
   return `This Azure service provides cloud infrastructure and capabilities for hosting and managing applications. It's part of the Azure cloud platform and integrates with other Azure services for comprehensive cloud solutions.`
-}
-
-// Format RAG text with better formatting (headings, bold, paragraphs, lists) and icons
-function formatRAGText(text: string): JSX.Element | null {
-  if (!text || !text.trim()) return null
-
-  // Clean up text: remove ugly markdown table separators and format tables better
-  const cleanedText = text
-    // Remove markdown table separator lines (like |-------------------|------------------|-----------------|)
-    .replace(/\|[\s\-|:]+\|/g, '')
-    // Remove empty table rows
-    .replace(/\|\s*\|\s*\|\s*\|/g, '')
-    // Convert markdown tables to cleaner format
-    .replace(/\|([^|]+)\|([^|]+)\|([^|]+)\|/g, (_match, col1, col2, col3) => {
-      // Convert table rows to bullet points with better formatting
-      const c1 = col1.trim()
-      const c2 = col2.trim()
-      const c3 = col3.trim()
-      if (c1 && c2 && c3 && !c1.match(/^[-:]+$/) && !c2.match(/^[-:]+$/)) {
-        return `• **${c1}**: ${c2} - ${c3}`
-      }
-      return ''
-    })
-    // Remove redundant whitespace
-    .replace(/\n{3,}/g, '\n\n')
-    // Remove lines that are just separators
-    .split('\n')
-    .filter(line => {
-      const trimmed = line.trim()
-      // Skip lines that are just dashes, pipes, or separators
-      return trimmed && !trimmed.match(/^[-=|:]+$/) && !trimmed.match(/^[\s|]+$/)
-    })
-    .join('\n')
-
-  // Split by lines and process
-  const lines = cleanedText.split('\n')
-  const elements: React.ReactNode[] = []
-  let currentParagraph: string[] = []
-  let listItems: string[] = []
-  let key = 0
-
-  const flushParagraph = () => {
-    if (currentParagraph.length > 0) {
-      const paragraphText = currentParagraph.join(' ').trim()
-      if (paragraphText) {
-        // Check if paragraph mentions services/technologies
-        const serviceMatches = paragraphText.match(/\b(Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi)
-        if (serviceMatches && serviceMatches.length > 0) {
-          // Split paragraph and add icons for service mentions
-          const parts: React.ReactNode[] = []
-          let lastIndex = 0
-          serviceMatches.forEach((match, idx) => {
-            const matchIndex = paragraphText.toLowerCase().indexOf(match.toLowerCase(), lastIndex)
-            if (matchIndex > lastIndex) {
-              parts.push(paragraphText.substring(lastIndex, matchIndex))
-            }
-            const Icon = getServiceIcon(match)
-            parts.push(
-              <span key={`service-${idx}`} className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">
-                <Icon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span className="font-medium text-indigo-700 dark:text-indigo-300">{match}</span>
-              </span>
-            )
-            lastIndex = matchIndex + match.length
-          })
-          if (lastIndex < paragraphText.length) {
-            parts.push(paragraphText.substring(lastIndex))
-          }
-          elements.push(
-            <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3 flex flex-wrap items-center gap-1">
-              {parts.map((part, pidx) => (
-                <span key={pidx}>{typeof part === 'string' ? formatInlineText(part) : part}</span>
-              ))}
-            </p>
-          )
-        } else {
-          elements.push(
-            <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
-              {formatInlineText(paragraphText)}
-            </p>
-          )
-        }
-      }
-      currentParagraph = []
-    }
-  }
-
-  const flushList = () => {
-    if (listItems.length > 0) {
-      elements.push(
-        <ul key={key++} className="list-none space-y-2 mb-4">
-          {listItems.map((item, idx) => {
-            const Icon = getServiceIcon(item)
-            return (
-              <li key={idx} className="flex items-start space-x-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                <div className="mt-1.5 flex-shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-700"></div>
-                </div>
-                <div className="flex-1 flex flex-wrap items-center gap-1">
-                  {item.match(/\b(Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi) ? (
-                    item.split(/(\b(?:Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*)/gi).map((part, pidx) => {
-                      if (part.match(/\b(?:Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi)) {
-                        const PartIcon = getServiceIcon(part)
-                        return (
-                          <span key={pidx} className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">
-                            <PartIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                            <span className="font-medium text-indigo-700 dark:text-indigo-300">{part}</span>
-                          </span>
-                        )
-                      }
-                      return <span key={pidx}>{formatInlineText(part)}</span>
-                    })
-                  ) : (
-                    formatInlineText(item)
-                  )}
-                </div>
-            </li>
-            )
-          })}
-        </ul>
-      )
-      listItems = []
-    }
-  }
-
-  for (const line of lines) {
-    const trimmed = line.trim()
-
-    // Skip empty lines
-    if (!trimmed) {
-      flushParagraph()
-      flushList()
-      continue
-    }
-
-    // Check if it's a heading (ALL CAPS with colon, or starts with ** or ##)
-    if (trimmed.match(/^[A-Z][A-Z\s]+:$/) || trimmed.match(/^(\*\*|##)\s*.+(\*\*)?$/)) {
-      flushParagraph()
-      flushList()
-      const headingText = trimmed.replace(/^(\*\*|##)\s*/, '').replace(/\*\*$/, '').replace(/:$/, '').trim()
-      const HeadingIcon = getServiceIcon(headingText)
-      elements.push(
-        <div key={key++} className="flex items-center space-x-2 mt-4 mb-2 first:mt-0">
-          <div className="p-1.5 rounded-md bg-gradient-to-br from-indigo-600 to-blue-700">
-            <HeadingIcon className="w-4 h-4 text-white" />
-          </div>
-          <h6 className="font-bold text-gray-900 dark:text-white text-base">
-            {formatInlineText(headingText)}
-          </h6>
-        </div>
-      )
-      continue
-    }
-
-    // Check if it's a bullet point (starts with - or * or •)
-    if (trimmed.match(/^[-*•]\s+/)) {
-      flushParagraph()
-      const bulletText = trimmed.replace(/^[-*•]\s+/, '').trim()
-      if (bulletText) {
-        listItems.push(bulletText)
-      }
-      continue
-    }
-
-    // Check if line starts with bold text (likely a subheading)
-    if (trimmed.match(/^\*\*[^*]+\*\*:/)) {
-      flushParagraph()
-      flushList()
-      const headingText = trimmed.replace(/^\*\*/, '').replace(/\*\*:$/, '').trim()
-      if (headingText) {
-        elements.push(
-          <h6 key={key++} className="font-semibold text-gray-900 dark:text-white text-sm mt-3 mb-2">
-            {formatInlineText(headingText)}
-          </h6>
-        )
-      }
-      continue
-    }
-
-    // Regular paragraph text
-    listItems.length > 0 && flushList()
-    currentParagraph.push(trimmed)
-  }
-
-  // Flush any remaining content
-  flushParagraph()
-  flushList()
-
-  return <div className="space-y-3">{elements}</div>
-}
-
-// Format inline text (bold, italic, etc.)
-function formatInlineText(text: string): JSX.Element | string | null {
-  if (!text) return null
-
-  // Split by ** for bold text
-  const parts: React.ReactNode[] = []
-  const boldRegex = /\*\*(.+?)\*\*/g
-  let lastIndex = 0
-  let match
-  let key = 0
-
-  while ((match = boldRegex.exec(text)) !== null) {
-    // Add text before bold
-    if (match.index > lastIndex) {
-      const beforeText = text.substring(lastIndex, match.index)
-      parts.push(beforeText)
-    }
-    // Add bold text
-    parts.push(
-      <strong key={key++} className="font-semibold text-gray-900 dark:text-white">
-        {match[1]}
-      </strong>
-    )
-    lastIndex = boldRegex.lastIndex
-  }
-
-  // Add remaining text
-  if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex))
-  }
-
-  return parts.length > 0 ? <>{parts}</> : text
 }
 
 // Component Detail Panel - Horizontal layout with all information visible
@@ -2544,8 +2315,7 @@ function ComponentDetailPanel({
                 dataDataType: typeof response.data?.data,
                 isDataArray: Array.isArray(response.data),
                 isDataDataArray: Array.isArray(response.data?.data),
-                dataKeys: response.data ? Object.keys(response.data) : [],
-                status: response.data?.status
+                dataKeys: response.data ? Object.keys(response.data) : []
               })
 
               // Handle different response structures
@@ -2570,9 +2340,10 @@ function ComponentDetailPanel({
               else if (response.data && typeof response.data === 'object') {
                 console.warn('[Refresh] Unexpected response structure:', response.data)
                 // Try to find any array in the response
-                for (const key in response.data) {
-                  if (Array.isArray(response.data[key])) {
-                    resultsArray = response.data[key]
+                const responseData = response.data as Record<string, any>
+                for (const key in responseData) {
+                  if (Array.isArray(responseData[key])) {
+                    resultsArray = responseData[key]
                     console.log(`[Refresh] Found array in response.data.${key}`)
                     break
                   }
@@ -2753,10 +2524,10 @@ function ComponentDetailPanel({
         {hasRelationships && (
           <details className="group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-200 dark:border-indigo-700" open>
             <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-              Component Relationships ({componentInfo.relationships.length})
+              Component Relationships ({componentInfo.relationships?.length ?? 0})
             </summary>
             <div className="mt-4 space-y-3">
-              {componentInfo.relationships.map((rel, idx) => (
+              {componentInfo.relationships?.map((rel, idx) => (
                 <div key={idx} className="bg-white dark:bg-slate-700 rounded p-3 border border-indigo-200 dark:border-indigo-500/30">
                   <div className="font-medium text-gray-900 dark:text-white">{rel.targetComponent}</div>
                   <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rel.relationshipType}</div>
