@@ -102,8 +102,65 @@ const extractServices = (content: string): string[] => {
   return services
 }
 
+// Helper function to remove "Summary of Roles and Purposes" section from content
+const removeSummaryOfRolesAndPurposes = (content: string): string => {
+  // Remove the entire "Summary of Roles and Purposes" section
+  // This can appear as a heading followed by content (table/list)
+  const patterns = [
+    // Pattern 1: **Summary of Roles and Purposes** followed by content until next heading or end
+    /(?:\*\*|##?)\s*Summary\s+of\s+Roles\s+and\s+Purposes\s*\*\*[\s\S]*?(?=(?:\*\*|##?)\s+[A-Z]|$)/gi,
+    // Pattern 2: ### Summary of Roles and Purposes or ## Summary of Roles and Purposes
+    /##?\s*Summary\s+of\s+Roles\s+and\s+Purposes[\s\S]*?(?=##?|$)/gi,
+    // Pattern 3: Any heading containing "Summary" and "Roles" and "Purposes"
+    /(?:^|\n)(?:##?\s*|\*\*)\s*.*Summary.*Roles.*Purposes.*(?:##?|\*\*)[\s\S]*?(?=(?:^|\n)(?:##?|\*\*)\s+[A-Z]|$)/gim
+  ]
+  
+  let filtered = content
+  for (const pattern of patterns) {
+    filtered = filtered.replace(pattern, '')
+  }
+  
+  // Also remove any standalone table/list that might be the summary content
+  // Look for pipe-separated tables (markdown table format) that appear after "Summary" text
+  const lines = filtered.split('\n')
+  const filteredLines: string[] = []
+  let skipNextLines = false
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const lowerLine = line.toLowerCase()
+    
+    // Check if this line contains "summary" and "roles" and "purposes"
+    if (lowerLine.includes('summary') && lowerLine.includes('roles') && lowerLine.includes('purposes')) {
+      skipNextLines = true
+      continue
+    }
+    
+    // If we're skipping and this line is a table row (contains pipes) or is part of a list, skip it
+    if (skipNextLines) {
+      // Check if this is a table row (contains |) or empty line (end of section)
+      if (line.trim().includes('|') || line.trim() === '') {
+        // Continue skipping if it's a table row, stop if it's an empty line followed by non-table content
+        if (line.trim() === '' && i + 1 < lines.length && !lines[i + 1].trim().includes('|')) {
+          skipNextLines = false
+        }
+        continue
+      } else {
+        // Non-table content, stop skipping
+        skipNextLines = false
+      }
+    }
+    
+    filteredLines.push(line)
+  }
+  
+  return filteredLines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 // Helper function to parse RAG content into categories (Databases, Infrastructure, Messaging, etc.)
 const parseContentByCategories = (content: string): { [category: string]: string } => {
+  // Remove "Summary of Roles and Purposes" section first
+  const filteredContent = removeSummaryOfRolesAndPurposes(content)
   const categories: { [category: string]: string } = {}
   
   // Define category keywords
@@ -119,7 +176,7 @@ const parseContentByCategories = (content: string): { [category: string]: string
   }
   
   // Split content by common section headers (h2, h3, ###, ##)
-  const sections = content.split(/(?:^|\n)(?:###? |## |\*\*|###)/m).filter(s => s.trim())
+  const sections = filteredContent.split(/(?:^|\n)(?:###? |## |\*\*|###)/m).filter(s => s.trim())
   
   // Try to match sections to categories
   for (const [category, keywords] of Object.entries(categoryKeywords)) {
@@ -134,11 +191,11 @@ const parseContentByCategories = (content: string): { [category: string]: string
     }
     
     // Also check entire content for category keywords
-    const lowerContent = content.toLowerCase()
+    const lowerContent = filteredContent.toLowerCase()
     if (keywords.some(keyword => lowerContent.includes(keyword.toLowerCase()))) {
       if (matchingSections.length === 0) {
         // Extract relevant paragraphs mentioning these keywords
-        const paragraphs = content.split(/\n\n+/)
+        const paragraphs = filteredContent.split(/\n\n+/)
         const relevant = paragraphs.filter(p => 
           keywords.some(keyword => p.toLowerCase().includes(keyword.toLowerCase()))
         )
@@ -155,7 +212,7 @@ const parseContentByCategories = (content: string): { [category: string]: string
   
   // If no categories found, put everything in "Overview"
   if (Object.keys(categories).length === 0) {
-    categories['Overview'] = content
+    categories['Overview'] = filteredContent
   }
   
   return categories
@@ -319,12 +376,14 @@ export function DeploymentContentViewer() {
             : response.data
 
           if (ragData?.answer) {
+            // Remove "Summary of Roles and Purposes" section from the answer
+            const filteredAnswer = removeSummaryOfRolesAndPurposes(ragData.answer)
             ragResults.push({
               order: questionItem.order,
               category: questionItem.category,
               title: questionItem.title,
               question: questionItem.question,
-              answer: ragData.answer,
+              answer: filteredAnswer,
               sources: ragData.sources || []
             })
           } else {
