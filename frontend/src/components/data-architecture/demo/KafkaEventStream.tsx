@@ -349,11 +349,11 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
           // Grouped view
           <div className="space-y-4">
             <AnimatePresence mode="popLayout">
-              {eventGroups.map((group) => (
+              {eventGroups.map((group: any) => (
                 <EventTransactionGroup
                   key={group.id}
                   group={group}
-                  renderEvent={(event, index) => <KafkaEventEntry key={event.id} event={event} index={index} />}
+                  renderEvent={(event: any, index: number) => <KafkaEventEntry key={event.id} event={event} index={index} />}
                 />
               ))}
             </AnimatePresence>

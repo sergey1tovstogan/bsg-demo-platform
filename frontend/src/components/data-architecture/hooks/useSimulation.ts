@@ -73,7 +73,7 @@ async function pollRealEventsAfterTransaction(
     const timeWindowMs = 60000 // 60 second window before transaction
     const minTime = transactionStartTime - timeWindowMs
     
-    const filteredEvents = result.events.filter((event) => {
+    const filteredEvents = result.events.filter((event: any) => {
       const eventEntityId = event.payload?.entityid ? String(event.payload.entityid) : ''
       
       // Match by entityId (dynamically set based on transaction type)
@@ -91,7 +91,7 @@ async function pollRealEventsAfterTransaction(
       entityId,
       transactionTime: new Date(transactionStartTime).toISOString(),
       timeWindowStart: new Date(minTime).toISOString(),
-      allEventEntityIds: result.events.map(e => e.payload?.entityid)
+      allEventEntityIds: result.events.map((e: any) => e.payload?.entityid)
     })
 
     return filteredEvents
@@ -219,7 +219,7 @@ export const useSimulation = () => {
           simulationState.addKafkaEvents(response.events)
 
           // Create animation triggers for cross-tab
-          response.events.forEach((event) => {
+          response.events.forEach((event: any) => {
             const trigger = createAnimationTrigger(event.type, 'CREATE_CUSTOMER', event.id)
             simulationState.addAnimationTrigger(trigger)
           })
@@ -399,7 +399,7 @@ export const useSimulation = () => {
           simulationState.addKafkaEvents(response.events)
 
           // Create animation triggers for cross-tab
-          response.events.forEach((event) => {
+          response.events.forEach((event: any) => {
             const trigger = createAnimationTrigger(event.type, 'OPEN_ACCOUNT', event.id)
             simulationState.addAnimationTrigger(trigger)
           })
@@ -564,7 +564,7 @@ export const useSimulation = () => {
           simulationState.addKafkaEvents(response.events)
 
           // Create animation triggers for cross-tab
-          response.events.forEach((event) => {
+          response.events.forEach((event: any) => {
             const trigger = createAnimationTrigger(event.type, 'SEND_PAYMENT', event.id)
             simulationState.addAnimationTrigger(trigger)
           })
