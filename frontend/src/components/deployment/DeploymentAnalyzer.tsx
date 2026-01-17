@@ -1822,17 +1822,24 @@ function ServiceAnalysis({
                     }
                   })
 
-                  const hasErrors = costEntries.some(c => c.error)
+                  const hasErrors = costEntries.some(c => c.error && !costsLoading)
+                  // Calculate total cost - only include valid costs (no errors or still loading)
                   const totalCost = costEntries.reduce((sum, cost) => {
-                    // Only include costs that don't have errors
+                    // Skip costs with errors (but only if not loading, as loading state might have temporary errors)
                     if (cost.error && !costsLoading) return sum
-                    return sum + (cost.total_cost || 0)
+                    // Ensure total_cost is a valid number
+                    const costValue = typeof cost.total_cost === 'number' ? cost.total_cost : 0
+                    return sum + costValue
                   }, 0)
 
-                  const hasProjections = costEntries.some(c => c.projections && !c.error)
+                  const hasProjections = costEntries.some(c => c.projections && !c.error && !costsLoading)
                   const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
-                    if (cost.error || !cost.projections) return sum
-                    return sum + (cost.projections.full_month || 0)
+                    // Skip costs with errors or missing projections
+                    if (cost.error && !costsLoading) return sum
+                    if (!cost.projections) return sum
+                    // Ensure full_month is a valid number
+                    const projectionValue = typeof cost.projections.full_month === 'number' ? cost.projections.full_month : 0
+                    return sum + projectionValue
                   }, 0) : null
 
                   const errorCount = costEntries.filter(c => c.error && !costsLoading).length
@@ -2440,17 +2447,26 @@ function ComponentDetailPanel({
     if (!value) return false
     const trimmed = value.trim()
     if (!trimmed) return false
-    return !trimmed.includes('Information not available') && !trimmed.includes('I cannot provide')
+    // More lenient check - only exclude obvious error messages
+    const lowerTrimmed = trimmed.toLowerCase()
+    return !lowerTrimmed.includes('information not available') && 
+           !lowerTrimmed.includes('i cannot provide') &&
+           !lowerTrimmed.includes('no information available') &&
+           trimmed.length > 10 // Minimum length to be considered meaningful
   }
 
   const hasCapabilities = Array.isArray(componentInfo?.capabilities)
     ? componentInfo.capabilities.some((cap) => typeof cap === 'string' && cap.trim().length > 0)
     : false
 
+  // More lenient check - if componentInfo exists, try to display it even if text seems empty
+  // The RAG API might return data in different formats
   const hasAnyRagContent =
-    hasMeaningfulText(componentInfo?.architecturalOverview) ||
-    hasMeaningfulText(componentInfo?.functionalOverview) ||
-    hasCapabilities
+    (componentInfo?.architecturalOverview && componentInfo.architecturalOverview.trim().length > 0) ||
+    (componentInfo?.functionalOverview && componentInfo.functionalOverview.trim().length > 0) ||
+    hasCapabilities ||
+    (hasMeaningfulText(componentInfo?.architecturalOverview) ||
+     hasMeaningfulText(componentInfo?.functionalOverview))
 
   const hasStrictDocumentation = componentInfo?.architecturalOverview?.includes('## 1. Purpose & Scope') ?? false
   const hasRelatedServices = Array.isArray(componentInfo?.relatedServices) && componentInfo.relatedServices.length > 0
