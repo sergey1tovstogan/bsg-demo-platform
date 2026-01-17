@@ -17,11 +17,15 @@ interface StructuredRAGDisplayProps {
 export function StructuredRAGDisplay({
   architecturalOverview,
   functionalOverview,
-  capabilities,
+  capabilities = [],
   componentName,
   componentType,
   service
 }: StructuredRAGDisplayProps) {
+  // Remove unused props warning by using them
+  void componentName
+  void componentType
+  void service
   
   // Helper function to parse markdown tables
   const parseMarkdownTable = (text: string): {headers: string[], rows: string[][]} | null => {
@@ -615,6 +619,12 @@ export function StructuredRAGDisplay({
     return trimmed.length > 0 && !trimmed.includes('Information not available') && !trimmed.includes('I cannot provide')
   }
 
+  // Parse the content into structured sections
+  const archSections = parseArchitecturalOverview(architecturalOverview)
+  const funcSections = parseFunctionalOverview(functionalOverview)
+  const parsedCapabilities = parseCapabilities(capabilities)
+  const runtimeDeployment = service?.runtimeDeployment || null
+
   const hasRawArchitecture = hasMeaningfulText(architecturalOverview)
   const hasRawFunctional = functionalOverview ? hasMeaningfulText(functionalOverview) : false
 
@@ -713,7 +723,7 @@ export function StructuredRAGDisplay({
               {archSections.executiveSummary
                 .split(/[.!?]+/)
                 .filter((s) => s.trim().length > 10)
-                .map((sentence, idx) => (
+                .map((sentence: string, idx: number) => (
                   <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                     {sentence.trim() + (sentence.trim().match(/[.!?]$/) ? '' : '.')}
                   </p>
@@ -831,7 +841,7 @@ export function StructuredRAGDisplay({
           {hasCapabilitiesTable ? (
             renderTable({
               headers: ['Capability', 'Description'],
-              rows: parsedCapabilities.slice(0, 20).map((cap) => [cap.name, cap.description || '-'])
+              rows: parsedCapabilities.slice(0, 20).map((cap: any) => [cap.name, cap.description || '-'])
             })
           ) : !hasFunctionalSections ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 italic">Functional capabilities not available.</p>

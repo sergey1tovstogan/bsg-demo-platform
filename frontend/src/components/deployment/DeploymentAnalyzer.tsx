@@ -2106,7 +2106,7 @@ const getServiceIcon = (text: string): any => {
 }
 
 // Generate description for Azure services based on type
-const getAzureServiceDescription = (serviceType: string, serviceName: string): string => {
+const getAzureServiceDescription = (serviceType: string): string => {
   const lowerType = serviceType.toLowerCase()
   
   // Kubernetes / AKS
@@ -2538,8 +2538,7 @@ function ComponentDetailPanel({
                 dataDataType: typeof response.data?.data,
                 isDataArray: Array.isArray(response.data),
                 isDataDataArray: Array.isArray(response.data?.data),
-                dataKeys: response.data ? Object.keys(response.data) : [],
-                status: response.data?.status
+                dataKeys: response.data ? Object.keys(response.data) : []
               })
 
               // Handle different response structures
@@ -2565,8 +2564,8 @@ function ComponentDetailPanel({
                 console.warn('[Refresh] Unexpected response structure:', response.data)
                 // Try to find any array in the response
                 for (const key in response.data) {
-                  if (Array.isArray(response.data[key])) {
-                    resultsArray = response.data[key]
+                  if (Array.isArray((response.data as any)[key])) {
+                    resultsArray = (response.data as any)[key]
                     console.log(`[Refresh] Found array in response.data.${key}`)
                     break
                   }
