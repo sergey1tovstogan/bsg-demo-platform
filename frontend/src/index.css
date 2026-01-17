@@ -1,28 +1,152 @@
-/**
- * Global Styles
- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  :root {
+    /* Temenos Brand Colors - Unified Layout Specification */
+    --color-temenos-navy: #003366;
+    --color-temenos-blue: #0066CC;
+    --color-temenos-cyan: #00A3E0;
+
+    /* Primary Interactive Colors */
+    --color-primary: #003366; /* Temenos Navy */
+    --color-primary-hover: #004080; /* Lighter navy */
+    --color-primary-active: #002244; /* Darker navy */
+
+    /* Secondary Interactive Colors */
+    --color-secondary: #0066CC; /* Temenos Blue */
+    --color-secondary-hover: #0052A3;
+    --color-secondary-active: #003D7A;
+
+    /* Accent Color */
+    --color-accent: #00A3E0; /* Temenos Cyan */
+    --color-accent-hover: #008FC7;
+    --color-accent-active: #007BAE;
+
+    /* Functional Colors */
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+    --color-info: #60A5FA;
+
+    /* Neutral Colors - Light Mode */
+    --color-background: #F8FAFC; /* Slate 50 */
+    --color-surface: #FFFFFF; /* White */
+    --color-surface-hover: #F1F5F9; /* Slate 100 */
+    --color-surface-raised: #FFFFFF; /* White with shadow */
+
+    --color-border-light: #E2E8F0; /* Slate 200 */
+    --color-border-medium: #CBD5E1; /* Slate 300 */
+    --color-border-strong: #94A3B8; /* Slate 400 */
+
+    --color-text-primary: #0F172A; /* Slate 900 */
+    --color-text-secondary: #64748B; /* Slate 500 */
+    --color-text-disabled: #94A3B8; /* Slate 400 */
+    --color-text-on-primary: #FFFFFF; /* White on brand colors */
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-glow: 0 0 15px rgba(0, 51, 102, 0.5);
+  }
+
+  .dark {
+    /* Neutral Colors - Dark Mode */
+    --color-background: #0F172A; /* Slate 900 */
+    --color-surface: #1E293B; /* Slate 800 */
+    --color-surface-hover: #334155; /* Slate 700 */
+    --color-surface-raised: #1E293B; /* Slate 800 with shadow */
+
+    --color-border-light: #334155; /* Slate 700 */
+    --color-border-medium: #475569; /* Slate 600 */
+    --color-border-strong: #64748B; /* Slate 500 */
+
+    --color-text-primary: #F8FAFC; /* Slate 50 */
+    --color-text-secondary: #94A3B8; /* Slate 400 */
+    --color-text-disabled: #64748B; /* Slate 500 */
+    --color-text-on-primary: #FFFFFF; /* White on brand colors */
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+    --shadow-glow: 0 0 15px rgba(0, 163, 224, 0.3);
+  }
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-[var(--color-background)] text-[var(--color-text-primary)] transition-colors duration-300;
+    overflow-x: hidden;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 dark:bg-slate-600 rounded-full hover:bg-slate-400 dark:hover:bg-slate-500 transition-colors;
+  }
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: #1a202c;
-  background: #f7fafc;
+@layer components {
+  .glass {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/20 dark:border-slate-700/30 shadow-lg;
+  }
+
+  .glass-panel {
+    @apply bg-white/10 backdrop-blur-md border border-white/10 shadow-xl;
+  }
+
+  .modern-card {
+    @apply bg-[var(--color-surface)] dark:bg-[var(--color-surface)] rounded-2xl p-6 
+           border border-slate-200 dark:border-slate-700/50
+           shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)] hover:shadow-blue-500/10 dark:hover:shadow-blue-500/5
+           transition-all duration-300 hover:-translate-y-1;
+  }
+
+  .btn-primary {
+    @apply bg-[#003366] hover:bg-[#004080] active:bg-[#002244]
+           text-white font-semibold px-6 py-3 rounded-lg shadow-md
+           transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:shadow-sm
+           disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700;
+  }
+
+  .btn-secondary {
+    @apply bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 
+           border border-slate-200 dark:border-slate-700
+           px-6 py-2.5 rounded-xl font-medium
+           hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-300;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 
+           border border-slate-200 dark:border-slate-700
+           text-slate-900 dark:text-white
+           focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none
+           transition-all duration-200;
+  }
+
+  /* Typography Utilities */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-violet-500;
+  }
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
-
-#root {
-  min-height: 100vh;
+@layer utilities {
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
 }
