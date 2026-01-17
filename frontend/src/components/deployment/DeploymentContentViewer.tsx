@@ -543,10 +543,17 @@ export function DeploymentContentViewer() {
         {ragContent && ragContent.length > 0 && (
           <div className="space-y-8">
             {(() => {
-              // Group by category for better organization
+              // Filter to only show Architecture Overview category
+              const architectureItems = ragContent.filter((item: any) => item.category === 'Architecture Overview')
+              
+              if (architectureItems.length === 0) {
+                return null
+              }
+
+              // Group by category (should only be Architecture Overview now)
               const grouped: { [key: string]: any[] } = {}
-              ragContent.forEach((item: any) => {
-                const cat = item.category || 'Other'
+              architectureItems.forEach((item: any) => {
+                const cat = item.category || 'Architecture Overview'
                 if (!grouped[cat]) {
                   grouped[cat] = []
                 }
