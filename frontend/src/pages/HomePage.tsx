@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Network, Database, Cloud, Shield, Eye, Palette, Settings, Layout } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ComponentId } from '../types'
+import { useAuth } from '../contexts/AuthContext'
 
 interface ComponentCard {
   id: ComponentId
@@ -80,7 +81,7 @@ const ALL_COMPONENTS: ComponentCard[] = [
     description: 'Comprehensive unified layout and component demonstrations',
     icon: Layout,
     color: 'text-purple-500',
-    gradient: 'from-purple-500/20 to-pink-400/20',
+    gradient: 'from-purple-500/20 to-violet-400/20',
     delay: 'animation-delay-600',
   },
 ]
@@ -89,6 +90,17 @@ const STORAGE_KEY = 'bsg_selected_categories'
 
 export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: HomePageProps) {
   const [selectedCategories, setSelectedCategories] = useState<Set<ComponentId>>(new Set())
+  const { user } = useAuth()
+  
+  // Extract username from email (first part before @)
+  const getDisplayName = () => {
+    if (!user?.email) return null
+    const emailParts = user.email.split('@')
+    const name = emailParts[0].split('.')[0] // Get first part before dot
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+  }
+  
+  const displayName = getDisplayName()
 
   // Load selected categories from localStorage on mount and when storage changes
   const loadCategories = () => {
@@ -137,16 +149,23 @@ export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: Home
               BSG Demo Platform
             </span>
           </h1>
-          {searchBar}
-          {onSettingsClick && (
-            <button
-              onClick={onSettingsClick}
-              className="ml-auto p-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
-              title="Customize Categories"
-            >
-              <Settings className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-            </button>
-          )}
+          <div className="flex items-center gap-4 ml-auto">
+            {displayName && (
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Welcome {displayName}
+              </div>
+            )}
+            {searchBar}
+            {onSettingsClick && (
+              <button
+                onClick={onSettingsClick}
+                className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+                title="Customize Categories"
+              >
+                <Settings className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+              </button>
+            )}
+          </div>
         </div>
         <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
           Explore interactive demonstrations across multiple technical domains.

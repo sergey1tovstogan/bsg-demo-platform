@@ -78,7 +78,13 @@ export function StructuredRAGDisplay({
       nonGoals: []
     }
     
-    if (!text || text.includes("Information not available") || text.includes("I cannot provide")) {
+    // More lenient check - only exclude obvious error messages
+    const lowerText = text?.toLowerCase() || ''
+    if (!text || 
+        lowerText.includes("information not available") || 
+        lowerText.includes("i cannot provide") ||
+        lowerText.includes("no information available") ||
+        text.trim().length < 10) {
       // Return empty structure - UI will show "Not available" gracefully
       return sections
     }

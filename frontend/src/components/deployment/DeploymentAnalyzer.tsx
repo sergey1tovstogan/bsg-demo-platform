@@ -910,9 +910,15 @@ async function handleExportArmTemplate(
   onError: (error: string) => void
 ): Promise<boolean> {
   try {
-    const response = await apiService.exportArmTemplate(subscriptionId, resourceGroupName)
+    // Add timeout handling
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Export request timed out after 2 minutes')), 120000)
+    })
     
-    if (response.data?.template_json) {
+    const exportPromise = apiService.exportArmTemplate(subscriptionId, resourceGroupName)
+    const response = await Promise.race([exportPromise, timeoutPromise]) as any
+    
+    if (response?.data?.template_json) {
       // Create a blob with the ARM template JSON
       const blob = new Blob([response.data.template_json], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -930,10 +936,16 @@ async function handleExportArmTemplate(
       return false
     }
   } catch (error: any) {
-    const errorMsg = error.response?.data?.detail?.error || 
-                     error.response?.data?.detail || 
-                     error.message || 
-                     'Failed to export ARM template'
+    let errorMsg = 'Failed to export ARM template'
+    if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
+      errorMsg = 'Export request timed out. The resource group may be too large. Please try exporting individual resource groups or contact support.'
+    } else if (error.response?.data?.detail?.error) {
+      errorMsg = error.response.data.detail.error
+    } else if (error.response?.data?.detail) {
+      errorMsg = typeof error.response.data.detail === 'string' ? error.response.data.detail : JSON.stringify(error.response.data.detail)
+    } else if (error.message) {
+      errorMsg = error.message
+    }
     onError(`ARM template export failed: ${errorMsg}`)
     return false
   }

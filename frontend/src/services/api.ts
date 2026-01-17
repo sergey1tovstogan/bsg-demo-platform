@@ -538,7 +538,9 @@ class ApiService {
       template_json: string
       parameters: any
       exported_at: string
-    }>>(`/deployment/azure/export-arm-template?subscription_id=${encodeURIComponent(subscriptionId)}&resource_group_name=${encodeURIComponent(resourceGroupName)}`)
+    }>>(`/deployment/azure/export-arm-template?subscription_id=${encodeURIComponent(subscriptionId)}&resource_group_name=${encodeURIComponent(resourceGroupName)}`, {}, {
+      timeout: 120000 // 2 minutes timeout for ARM template export
+    })
     return response.data
   }
 

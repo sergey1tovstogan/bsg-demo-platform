@@ -80,7 +80,7 @@ const CATEGORY_STYLES: { [key: string]: { icon: any, gradient: string, bgColor: 
   },
   'Service Selection': {
     icon: Settings,
-    gradient: 'from-purple-500 to-pink-500',
+    gradient: 'from-purple-500 to-violet-500',
     bgColor: 'bg-purple-50 dark:bg-purple-900/20'
   },
   'Integration & Extensibility': {
@@ -189,7 +189,7 @@ const CATEGORY_ICONS: { [key: string]: any } = {
 // Category colors mapping
 const CATEGORY_COLORS: { [key: string]: string } = {
   'Databases': 'from-blue-600 to-cyan-600',
-  'Infrastructure': 'from-purple-600 to-pink-600',
+  'Infrastructure': 'from-purple-600 to-violet-600',
   'Messaging': 'from-green-600 to-emerald-600',
   'Container Orchestration': 'from-indigo-600 to-blue-600',
   'Security': 'from-red-600 to-rose-600',

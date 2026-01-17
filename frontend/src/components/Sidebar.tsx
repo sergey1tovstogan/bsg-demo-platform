@@ -95,15 +95,15 @@ const components: ComponentCard[] = [
     description: 'Unified Layout',
     icon: Layout,
     color: 'text-purple-500',
-    gradient: 'from-purple-500 to-pink-400',
+    gradient: 'from-purple-500 to-violet-400',
   },
   {
     id: 'gallery',
     name: 'Card Gallery',
     description: 'Browse Cards',
     icon: Grid,
-    color: 'text-pink-500',
-    gradient: 'from-pink-500 to-rose-400',
+    color: 'text-purple-500',
+    gradient: 'from-purple-500 to-violet-400',
   },
   {
     id: 'editor',
