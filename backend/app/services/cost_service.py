@@ -10,6 +10,7 @@ from app.core.logging import get_logger
 from azure.identity import DefaultAzureCredential
 import requests
 import time
+import json
 
 logger = get_logger(__name__)
 
@@ -259,26 +260,36 @@ class CostService:
             
             # Log the full response structure for debugging
             logger.info(f"Cost Management API response for {resource_group_name}:")
+            logger.info(f"  Response type: {type(result)}")
             logger.info(f"  Response keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
             if isinstance(result, dict) and 'properties' in result:
                 props = result['properties']
                 logger.info(f"  Properties keys: {list(props.keys()) if isinstance(props, dict) else 'Not a dict'}")
                 if 'rows' in props:
-                    logger.info(f"  Rows count: {len(props['rows']) if isinstance(props['rows'], list) else 'Not a list'}")
+                    rows = props['rows']
+                    logger.info(f"  Rows type: {type(rows)}")
+                    logger.info(f"  Rows count: {len(rows) if isinstance(rows, list) else 'Not a list'}")
+                    if isinstance(rows, list) and len(rows) > 0:
+                        logger.info(f"  First row sample: {rows[0] if len(rows) > 0 else 'N/A'}")
                 if 'columns' in props:
-                    logger.info(f"  Columns: {[col.get('name', '') for col in props['columns']] if isinstance(props.get('columns'), list) else 'Not a list'}")
+                    columns = props.get('columns', [])
+                    logger.info(f"  Columns: {[col.get('name', '') for col in columns] if isinstance(columns, list) else 'Not a list'}")
+                    logger.info(f"  Columns count: {len(columns) if isinstance(columns, list) else 0}")
             
-            # Check if we got valid data with rows
-            if result and 'properties' in result and 'rows' in result['properties']:
-                rows = result['properties']['rows']
-                if rows and len(rows) > 0:
-                    logger.info(f"Found {len(rows)} cost rows for {resource_group_name}, parsing...")
-                    return self._parse_cost_result(result, resource_group_name, start_date, end_date)
+            # Check if we got valid data with rows (matching working script logic)
+            if result and isinstance(result, dict) and 'properties' in result:
+                props = result['properties']
+                rows = props.get('rows', [])
+                if rows and isinstance(rows, list) and len(rows) > 0:
+                    logger.info(f"✓ Found {len(rows)} cost rows for {resource_group_name}, parsing...")
+                    parsed_result = self._parse_cost_result(result, resource_group_name, start_date, end_date)
+                    logger.info(f"✓ Parsed result: total_cost={parsed_result.get('total_cost', 0)}, services={len(parsed_result.get('services', {}))}")
+                    return parsed_result
                 else:
-                    logger.warning(f"No cost data rows returned for {resource_group_name} (empty rows array), trying grouped query without filter")
-                    logger.debug(f"Full response: {result}")
+                    logger.warning(f"⚠ No cost data rows returned for {resource_group_name} (empty rows array: {rows}), trying grouped query without filter")
+                    logger.debug(f"Full response structure: {json.dumps(result, indent=2, default=str)[:1000]}")
             else:
-                logger.warning(f"No cost data returned for {resource_group_name} (missing properties/rows), trying grouped query without filter")
+                logger.warning(f"⚠ No cost data returned for {resource_group_name} (missing properties/rows), trying grouped query without filter")
                 logger.debug(f"Full response: {result}")
             
             # Try grouped query without filter as fallback (matching working script)

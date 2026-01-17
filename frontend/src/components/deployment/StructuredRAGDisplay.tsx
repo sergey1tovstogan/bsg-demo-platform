@@ -650,8 +650,6 @@ export function StructuredRAGDisplay({
   const parsedCapabilities = parseCapabilities(capabilities)
   const runtimeDeployment = service?.runtimeDeployment || null
 
-  const hasRawArchitecture = hasMeaningfulText(architecturalOverview)
-  const hasRawFunctional = functionalOverview ? hasMeaningfulText(functionalOverview) : false
 
   const hasArchitectureSections = archSections.sections.length > 0
   const hasLifecycle = archSections.lifecycle.length > 0
@@ -921,35 +919,6 @@ export function StructuredRAGDisplay({
         </details>
       )}
 
-      {(hasRawArchitecture || hasRawFunctional) && (
-        <details className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
-          <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-            Raw RAG Output
-          </summary>
-          <div className="mt-4 space-y-5">
-            {hasRawArchitecture && (
-              <div>
-                <h6 className="font-semibold text-gray-900 dark:text-white mb-2">Architecture Overview</h6>
-                {rawParagraphs(architecturalOverview).map((para, idx) => (
-                  <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
-                    {para}
-                  </p>
-                ))}
-              </div>
-            )}
-            {hasRawFunctional && (
-              <div>
-                <h6 className="font-semibold text-gray-900 dark:text-white mb-2">Functional Overview</h6>
-                {rawParagraphs(functionalOverview).map((para, idx) => (
-                  <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
-                    {para}
-                  </p>
-                ))}
-              </div>
-            )}
-          </div>
-        </details>
-      )}
     </div>
   )
 }
