@@ -2687,9 +2687,13 @@ function ComponentDetailPanel({
 
       {/* Documentation & Context */}
       <div className="space-y-6">
-        {hasAnyRagContent ? (
+        {/* Always try to display componentInfo if it exists, even if text seems empty */}
+        {/* The RAG API might return data in different formats that our checks don't catch */}
+        {(hasAnyRagContent || (componentInfo?.architecturalOverview && componentInfo.architecturalOverview.trim().length > 0) || 
+          (componentInfo?.functionalOverview && componentInfo.functionalOverview.trim().length > 0) ||
+          (Array.isArray(componentInfo?.capabilities) && componentInfo.capabilities.length > 0)) ? (
           <StructuredRAGDisplay
-            architecturalOverview={componentInfo.architecturalOverview}
+            architecturalOverview={componentInfo.architecturalOverview || ''}
             functionalOverview={componentInfo.functionalOverview || ''}
             capabilities={componentInfo.capabilities || []}
             componentName={componentInfo.componentName}
@@ -2702,6 +2706,12 @@ function ComponentDetailPanel({
             <p className="text-sm text-gray-600 dark:text-gray-400 italic">
               No structured documentation is available for this component yet. Use "Refresh Info" to pull content from the RAG API.
             </p>
+            {componentInfo && (
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                Debug: ComponentInfo exists but content appears empty. Architectural Overview length: {componentInfo.architecturalOverview?.length || 0}, 
+                Functional Overview length: {componentInfo.functionalOverview?.length || 0}
+              </p>
+            )}
           </div>
         )}
 
