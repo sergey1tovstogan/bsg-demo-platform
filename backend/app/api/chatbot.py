@@ -292,6 +292,17 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
         }
     except HTTPException:
         raise
+    except RuntimeError as e:
+        error_msg = str(e)
+        # Check if it's a token expiration error
+        if "expired" in error_msg.lower() or "token" in error_msg.lower():
+            logger.error(f"🔑 RAG token expired in chatbot query: {error_msg}")
+            raise HTTPException(
+                status_code=401,
+                detail="RAG authentication token has expired. Please update the RAG JWT token via Settings API."
+            )
+        logger.error(f"Error sending chat message: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:
         logger.error(f"Error sending chat message: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

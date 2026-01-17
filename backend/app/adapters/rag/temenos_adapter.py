@@ -165,6 +165,21 @@ class TemenosRAGAdapter(RAGAdapter):
             logger.error(f"  URL: {url}")
             logger.error(f"  Error response: {error_text}")
             logger.error(f"  Request payload: question={question[:100]}..., RAGmodelId={payload.get('RAGmodelId')}")
+            
+            # Check for token expiration specifically
+            if e.response.status_code == 401:
+                try:
+                    error_json = e.response.json()
+                    error_msg = error_json.get("error", "")
+                    if "expired" in error_msg.lower() or "token" in error_msg.lower():
+                        logger.error("🔑 RAG JWT token has expired. Please update it via Settings API.")
+                        raise RuntimeError(
+                            "RAG JWT token has expired. Please update the token via Settings API. "
+                            f"Error: {error_msg}"
+                        )
+                except:
+                    pass
+            
             # Try to parse error response
             try:
                 error_json = e.response.json()
