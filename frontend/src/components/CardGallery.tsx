@@ -37,7 +37,7 @@ const categories: CategoryCard[] = [
     title: 'API',
     description: 'API gateway and integration',
     icon: Network,
-    gradient: 'from-purple-600 to-pink-600',
+    gradient: 'from-purple-500 to-pink-500',
     bgColor: 'bg-purple-50 dark:bg-purple-900/20'
   },
   {
@@ -61,7 +61,7 @@ const categories: CategoryCard[] = [
     title: 'Observability',
     description: 'Monitoring, logging, and tracing',
     icon: Activity,
-    gradient: 'from-green-600 to-emerald-600',
+    gradient: 'from-green-500 to-emerald-500',
     bgColor: 'bg-green-50 dark:bg-green-900/20'
   },
   {
@@ -69,8 +69,8 @@ const categories: CategoryCard[] = [
     title: 'Architecture',
     description: 'System architecture and design',
     icon: Layers,
-    gradient: 'from-orange-600 to-amber-600',
-    bgColor: 'bg-orange-50 dark:bg-orange-900/20'
+    gradient: 'from-indigo-600 to-blue-700',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-900/20'
   }
 ]
 
@@ -86,7 +86,7 @@ export const CardGallery: React.FC = () => {
           return (
             <div
               key={category.id}
-              className={`bg-white dark:bg-gray-800 rounded-xl p-6 border-2 border-transparent bg-gradient-to-r ${category.gradient} bg-opacity-10 dark:bg-opacity-20 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group`}
+              className={`${category.bgColor} rounded-xl p-6 border-2 border-transparent bg-gradient-to-r ${category.gradient} bg-opacity-10 dark:bg-opacity-20 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group`}
             >
               <div className="flex items-start space-x-4">
                 <div className={`p-3 rounded-lg bg-gradient-to-br ${category.gradient} shadow-lg flex-shrink-0`}>
