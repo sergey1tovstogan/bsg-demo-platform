@@ -722,7 +722,7 @@ export function StructuredRAGDisplay({
             <div className="space-y-3">
               {archSections.executiveSummary
                 .split(/[.!?]+/)
-                .filter((s) => s.trim().length > 10)
+                .filter((s: string) => s.trim().length > 10)
                 .map((sentence: string, idx: number) => (
                   <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                     {sentence.trim() + (sentence.trim().match(/[.!?]$/) ? '' : '.')}
