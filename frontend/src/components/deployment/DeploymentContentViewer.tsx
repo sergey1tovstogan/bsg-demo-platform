@@ -201,21 +201,22 @@ export function DeploymentContentViewer() {
     // Check cache immediately on mount
     const cached = loadCachedContent()
     if (cached) {
-      // Sort cached content for consistent display
-      const sorted = [...cached].sort((a, b) => {
-          const categoryOrder = ['Architecture Overview']
-        const aCategoryIndex = categoryOrder.indexOf(a.category) !== -1 ? categoryOrder.indexOf(a.category) : 999
-        const bCategoryIndex = categoryOrder.indexOf(b.category) !== -1 ? categoryOrder.indexOf(b.category) : 999
-        
-        if (aCategoryIndex !== bCategoryIndex) {
-          return aCategoryIndex - bCategoryIndex
-        }
-        return (a.order || 0) - (b.order || 0)
-      })
-      setRagContent(sorted)
-      setRagLoading(false)
-      setIsFromCache(true)
-      console.log('Loaded RAG content from cache')
+      // Filter to only include Architecture Overview category
+      const filtered = cached.filter((item: any) => item.category === 'Architecture Overview')
+      
+      if (filtered.length > 0) {
+        // Sort cached content for consistent display
+        const sorted = [...filtered].sort((a, b) => {
+          return (a.order || 0) - (b.order || 0)
+        })
+        setRagContent(sorted)
+        setRagLoading(false)
+        setIsFromCache(true)
+        console.log('Loaded RAG content from cache (Architecture Overview only)')
+      } else {
+        // No Architecture Overview in cache, load from API
+        loadRAGContent()
+      }
     } else {
       // Only load from API if no cache
       loadRAGContent()
@@ -384,41 +385,61 @@ export function DeploymentContentViewer() {
       }
 
       if (ragResults.length > 0) {
-        // Sort results by category and order for coherent presentation
-        ragResults.sort((a, b) => {
-          // First sort by category for logical grouping
-          const categoryOrder = ['Architecture Overview']
-          const aCategoryIndex = categoryOrder.indexOf(a.category) !== -1 ? categoryOrder.indexOf(a.category) : 999
-          const bCategoryIndex = categoryOrder.indexOf(b.category) !== -1 ? categoryOrder.indexOf(b.category) : 999
-          
-          if (aCategoryIndex !== bCategoryIndex) {
-            return aCategoryIndex - bCategoryIndex
-          }
-          // Then by order within category
-          return (a.order || 0) - (b.order || 0)
-        })
+        // Filter to only include Architecture Overview category
+        const filteredResults = ragResults.filter((item: any) => item.category === 'Architecture Overview')
         
-        setRagContent(ragResults)
-        saveCachedContent(ragResults)
-        setIsFromCache(false)
-        setRagError(null)
-        console.log('Loaded RAG content from API and cached')
+        if (filteredResults.length > 0) {
+          // Sort results by order for coherent presentation
+          filteredResults.sort((a, b) => {
+            return (a.order || 0) - (b.order || 0)
+          })
+          
+          setRagContent(filteredResults)
+          saveCachedContent(filteredResults)
+          setIsFromCache(false)
+          setRagError(null)
+          console.log('Loaded RAG content from API and cached (Architecture Overview only)')
 
-        // If some queries failed, show a warning but still display successful results
-        if (errors.length > 0) {
-          const partialErrorMsg = `Some queries failed (${errors.length}/${questions.length}). Showing available results.`
-          console.warn(partialErrorMsg, errors)
-          // Don't set as error since we have some results, just log it
+          // If some queries failed, show a warning but still display successful results
+          if (errors.length > 0) {
+            const partialErrorMsg = `Some queries failed (${errors.length}/${questions.length}). Showing available results.`
+            console.warn(partialErrorMsg, errors)
+            // Don't set as error since we have some results, just log it
+          }
+        } else {
+          // No Architecture Overview results - restore cached content if available
+          if (forceRefresh && cachedContent) {
+            const filteredCached = Array.isArray(cachedContent) 
+              ? cachedContent.filter((item: any) => item.category === 'Architecture Overview')
+              : []
+            if (filteredCached.length > 0) {
+              setRagContent(filteredCached)
+              setIsFromCache(true)
+              setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
+              console.warn('Refresh failed, restored cached content', errors)
+            } else {
+              setRagError(`No Architecture Overview content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
+            }
+          } else {
+            setRagError(`No Architecture Overview content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
+          }
         }
       } else {
         // All queries failed - restore cached content if available
         if (forceRefresh && cachedContent) {
-          setRagContent(cachedContent)
-          setIsFromCache(true)
-          setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
-          console.warn('Refresh failed, restored cached content', errors)
+          const filteredCached = Array.isArray(cachedContent) 
+            ? cachedContent.filter((item: any) => item.category === 'Architecture Overview')
+            : []
+          if (filteredCached.length > 0) {
+            setRagContent(filteredCached)
+            setIsFromCache(true)
+            setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
+            console.warn('Refresh failed, restored cached content', errors)
+          } else {
+            setRagError(`No Architecture Overview content available. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
+          }
         } else {
-          setRagError(`No content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
+          setRagError(`No Architecture Overview content available. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
         }
       }
     } catch (err: any) {
@@ -432,9 +453,17 @@ export function DeploymentContentViewer() {
       if (forceRefresh) {
         const cachedContent = loadCachedContent()
         if (cachedContent) {
-          setRagContent(cachedContent)
-          setIsFromCache(true)
-          setRagError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
+          // Filter to only include Architecture Overview category
+          const filteredCached = Array.isArray(cachedContent) 
+            ? cachedContent.filter((item: any) => item.category === 'Architecture Overview')
+            : []
+          if (filteredCached.length > 0) {
+            setRagContent(filteredCached)
+            setIsFromCache(true)
+            setRagError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
+          } else {
+            setRagError(errorMsg)
+          }
         } else {
           setRagError(errorMsg)
         }
