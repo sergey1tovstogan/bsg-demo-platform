@@ -633,16 +633,6 @@ export function StructuredRAGDisplay({
     
     return unique
   }
-  
-  const hasMeaningfulText = (value: string) => {
-    const trimmed = value.trim()
-    if (!trimmed || trimmed.length < 10) return false
-    // Only filter if it's an explicit error message at the START (not if it appears somewhere in the text)
-    const lowerTrimmed = trimmed.toLowerCase()
-    return !(lowerTrimmed.startsWith('information not available') || 
-             lowerTrimmed.startsWith('i cannot provide') ||
-             lowerTrimmed.startsWith('no information available'))
-  }
 
   // Parse the content into structured sections
   const archSections = parseArchitecturalOverview(architecturalOverview)
@@ -702,12 +692,6 @@ export function StructuredRAGDisplay({
       ))}
     </div>
   )
-
-  const rawParagraphs = (text: string) =>
-    text
-      .split(/\n{2,}/)
-      .map((part) => part.replace(/\s+/g, ' ').trim())
-      .filter(Boolean)
 
   return (
     <div className="space-y-5">
