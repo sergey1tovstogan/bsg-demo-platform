@@ -7,8 +7,6 @@ interface ChatbotProps {
   componentId: ComponentId
 }
 
-const RAG_TOKEN_STORAGE_KEY = 'bsg_rag_jwt_token'
-
 export function Chatbot({ componentId }: ChatbotProps) {
   // Chatbot State (for non-security components)
   const [sessionId, setSessionId] = useState<string | null>(null)

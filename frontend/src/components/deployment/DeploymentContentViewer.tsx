@@ -13,7 +13,6 @@ import {
   Shield,
   Activity,
   Settings,
-  GitBranch,
   HardDrive,
   Globe,
   ChevronRight,
