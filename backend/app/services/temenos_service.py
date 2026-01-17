@@ -3549,10 +3549,14 @@ Open Questions
                             component_name, "architectural", architectural_response, "ModularBanking, TechnologyOverview"
                         )
                 except asyncio.TimeoutError:
-                    logger.warning(f"⚠ Architectural query timeout for {service.name} after 60s")
+                    logger.warning(f"⚠ Architectural query timeout for {component_name} after 60s")
+                    logger.warning(f"  Query was: {architectural_query[:200]}...")
                     architectural_response = {"data": {"answer": "Information not available - timeout"}}
                 except Exception as e:
-                    logger.error(f"✗ Architectural query failed for {service.name}: {e}", exc_info=True)
+                    logger.error(f"✗ Architectural query failed for {component_name}: {e}", exc_info=True)
+                    logger.error(f"  Query was: {architectural_query[:200]}...")
+                    logger.error(f"  Exception type: {type(e).__name__}")
+                    logger.error(f"  Exception details: {str(e)}")
                     architectural_response = {"data": {"answer": "Information not available - error"}}
             
             # Try to get cached functional response (skip if force_refresh)
@@ -3644,10 +3648,14 @@ Open Questions
                             component_name, "functional", functional_response, "ModularBanking, FuncTransactGeneric"
                         )
                 except asyncio.TimeoutError:
-                    logger.warning(f"⚠ Functional query timeout for {service.name} after 60s")
+                    logger.warning(f"⚠ Functional query timeout for {component_name} after 60s")
+                    logger.warning(f"  Query was: {functional_query[:200]}...")
                     functional_response = {"data": {"answer": "Information not available - timeout"}}
                 except Exception as e:
-                    logger.error(f"✗ Functional query failed for {service.name}: {e}", exc_info=True)
+                    logger.error(f"✗ Functional query failed for {component_name}: {e}", exc_info=True)
+                    logger.error(f"  Query was: {functional_query[:200]}...")
+                    logger.error(f"  Exception type: {type(e).__name__}")
+                    logger.error(f"  Exception details: {str(e)}")
                     functional_response = {"data": {"answer": "Information not available - error"}}
             
             # Get text from responses, handling None cases
