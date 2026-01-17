@@ -78,16 +78,14 @@ const Dashboard: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
-        {user && (
-          <div style={{ marginBottom: '2rem', padding: '1rem', background: '#f7fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <p style={{ margin: 0, fontSize: '0.95rem', color: '#4a5568' }}>
-              Welcome back <strong style={{ color: '#1a202c' }}>{user.username}</strong>!
-            </p>
-          </div>
-        )}
-        <DeploymentContentViewer />
-      </div>
+      {user && (
+        <div style={{ padding: '1rem 2rem', background: '#f7fafc', borderBottom: '1px solid #e2e8f0' }}>
+          <p style={{ margin: 0, fontSize: '0.95rem', color: '#4a5568' }}>
+            Welcome back <strong style={{ color: '#1a202c' }}>{user.username}</strong>!
+          </p>
+        </div>
+      )}
+      <DeploymentContentViewer />
     </Layout>
   )
 }
