@@ -2182,6 +2182,8 @@ const getAzureServiceDescription = (serviceType: string): string => {
 }
 
 // Format RAG text with better formatting (headings, bold, paragraphs, lists) and icons
+// NOTE: This function is currently unused but kept for potential future use
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function formatRAGText(text: string): JSX.Element | null {
   if (!text || !text.trim()) return null
 
