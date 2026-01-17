@@ -11,9 +11,7 @@ import {
   Shield, 
   Network, 
   Layers,
-  Activity,
-  Settings,
-  Server
+  Activity
 } from 'lucide-react'
 
 interface CategoryCard {
