@@ -2020,7 +2020,7 @@ function ServiceAnalysis({
               const selectedService = unidentifiedServices.find(r => r.service.id === selectedAzureService)
               if (!selectedService) return null
               const ServiceIcon = getServiceIcon(selectedService.service.type)
-              const serviceDescription = getAzureServiceDescription(selectedService.service.type, selectedService.service.name)
+              const serviceDescription = getAzureServiceDescription(selectedService.service.type)
               return (
                 <div className="lg:col-span-1">
                   <div className="card bg-white dark:bg-slate-800 sticky top-4">
@@ -2271,7 +2271,6 @@ function formatRAGText(text: string): JSX.Element | null {
       elements.push(
         <ul key={key++} className="list-none space-y-2 mb-4">
           {listItems.map((item, idx) => {
-            const Icon = getServiceIcon(item)
             return (
               <li key={idx} className="flex items-start space-x-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                 <div className="mt-1.5 flex-shrink-0">
