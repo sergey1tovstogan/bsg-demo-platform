@@ -78,13 +78,17 @@ export function StructuredRAGDisplay({
       nonGoals: []
     }
     
-    // More lenient check - only exclude obvious error messages
+    // More lenient check - only exclude obvious error messages at the START
+    // RAG API provides information for ALL microservices, so be less aggressive
     const lowerText = text?.toLowerCase() || ''
-    if (!text || 
-        lowerText.includes("information not available") || 
-        lowerText.includes("i cannot provide") ||
-        lowerText.includes("no information available") ||
-        text.trim().length < 10) {
+    if (!text || text.trim().length < 10) {
+      // Return empty structure - UI will show "Not available" gracefully
+      return sections
+    }
+    // Only filter if it's an explicit error message at the START (not if it appears somewhere in the text)
+    if (lowerText.trim().startsWith("information not available") || 
+        lowerText.trim().startsWith("i cannot provide") ||
+        lowerText.trim().startsWith("no information available")) {
       // Return empty structure - UI will show "Not available" gracefully
       return sections
     }
@@ -424,7 +428,17 @@ export function StructuredRAGDisplay({
       capabilities: []
     }
     
-    if (!text || text.includes("Information not available") || text.includes("I cannot provide")) {
+    // More lenient check - only exclude obvious error messages at the START
+    // RAG API provides information for ALL microservices, so be less aggressive
+    if (!text || text.trim().length < 10) {
+      // Return empty structure - UI will show "Not available" gracefully
+      return funcSections
+    }
+    // Only filter if it's an explicit error message at the START (not if it appears somewhere in the text)
+    const lowerText = text.toLowerCase().trim()
+    if (lowerText.startsWith("information not available") || 
+        lowerText.startsWith("i cannot provide") ||
+        lowerText.startsWith("no information available")) {
       // Return empty structure - UI will show "Not available" gracefully
       return funcSections
     }
@@ -622,7 +636,12 @@ export function StructuredRAGDisplay({
   
   const hasMeaningfulText = (value: string) => {
     const trimmed = value.trim()
-    return trimmed.length > 0 && !trimmed.includes('Information not available') && !trimmed.includes('I cannot provide')
+    if (!trimmed || trimmed.length < 10) return false
+    // Only filter if it's an explicit error message at the START (not if it appears somewhere in the text)
+    const lowerTrimmed = trimmed.toLowerCase()
+    return !(lowerTrimmed.startsWith('information not available') || 
+             lowerTrimmed.startsWith('i cannot provide') ||
+             lowerTrimmed.startsWith('no information available'))
   }
 
   // Parse the content into structured sections

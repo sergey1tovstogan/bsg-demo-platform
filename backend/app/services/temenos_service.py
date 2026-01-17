@@ -3482,8 +3482,14 @@ Open Questions
             # The adapter's _ensure_token() will try to load the token during the query
             if not architectural_response or force_refresh:
                 rag_fresh_arch = True  # Mark that we're fetching fresh RAG data
-                logger.info(f"🔄 Querying RAG API for {component_name} - Architectural query (force_refresh={force_refresh})...")
+                logger.info(f"🔄 Querying RAG API for {component_name} - Architectural query (force_refresh={force_refresh}, has_cached={architectural_response is not None})...")
                 logger.info(f"  Query: {architectural_query[:200]}...")
+                logger.info(f"  RAG adapter available: {self.rag_adapter is not None}")
+                if self.rag_adapter:
+                    logger.info(f"  RAG adapter type: {type(self.rag_adapter).__name__}")
+                    if hasattr(self.rag_adapter, 'jwt_token'):
+                        has_token = bool(self.rag_adapter.jwt_token)
+                        logger.info(f"  RAG JWT token configured: {has_token}")
                 try:
                     # Check if adapter exists - if not, try to initialize it
                     if self.rag_adapter is None:
@@ -3511,16 +3517,30 @@ Open Questions
                         answer_text = str(architectural_response.get("data", {}).get("answer", ""))
                         answer_preview = answer_text[:300]
                         logger.info(f"  Answer preview: {answer_preview}...")
-                        # Check if RAG returned "I cannot provide" - but only filter if response is very short
-                        # If response is substantial (>100 chars), it might still have useful info even if it says "I cannot provide"
-                        if answer_text and len(answer_text) < 100 and ("I cannot provide" in answer_text or "not available in my knowledge" in answer_text.lower()):
-                            logger.warning(f"⚠ RAG returned 'I cannot provide' with short response for {component_name} - treating as no data available")
-                            # Don't cache this response - it's not useful
+                        logger.info(f"  Answer length: {len(answer_text)} chars")
+                        # RAG API provides information for ALL microservices - be very lenient
+                        # Only filter out if it's explicitly an error message AND very short (< 30 chars)
+                        if answer_text and len(answer_text) > 30:
+                            # Use any response > 30 chars - RAG API provides valid info for all microservices
+                            logger.info(f"✓ RAG returned architectural response for {component_name} ({len(answer_text)} chars) - using it")
+                        elif answer_text and len(answer_text) > 0:
+                            # Even short responses might have useful info - only filter explicit error messages at start
+                            lower_text = answer_text.lower().strip()
+                            if (lower_text.startswith("i cannot provide") or 
+                                lower_text.startswith("information not available") or
+                                lower_text.startswith("not available in my knowledge") or
+                                lower_text == "information not available - timeout" or
+                                lower_text == "information not available - error"):
+                                logger.warning(f"⚠ RAG returned explicit error message for {component_name} - treating as no data")
+                                architectural_response = None
+                                rag_fresh_arch = False
+                            else:
+                                # Use it - might be valid short response
+                                logger.info(f"✓ RAG returned short but potentially valid response for {component_name} ({len(answer_text)} chars) - using it")
+                        else:
+                            logger.warning(f"⚠ RAG returned empty response for {component_name}")
                             architectural_response = None
                             rag_fresh_arch = False
-                        elif answer_text and len(answer_text) > 100:
-                            # Substantial response - use it even if it contains "I cannot provide" somewhere
-                            logger.info(f"✓ RAG returned substantial architectural response for {component_name} ({len(answer_text)} chars) - using it")
                     
                     # Cache the response (even after force_refresh, cache the fresh data)
                     if use_cache:
@@ -3592,16 +3612,30 @@ Open Questions
                         answer_preview = answer_text[:300]
                         logger.info(f"  Answer preview: {answer_preview}...")
                         
-                        # Check if RAG returned "I cannot provide" - but only filter if response is very short
-                        # If response is substantial (>100 chars), it might still have useful info even if it says "I cannot provide"
-                        if answer_text and len(answer_text) < 100 and ("I cannot provide" in answer_text or "not available in my knowledge" in answer_text.lower()):
-                            logger.warning(f"⚠ RAG returned 'I cannot provide' with short response for {component_name} - treating as no data available")
-                            # Don't cache this response - it's not useful
+                        logger.info(f"  Answer length: {len(answer_text)} chars")
+                        # RAG API provides information for ALL microservices - be very lenient
+                        # Only filter out if it's explicitly an error message AND very short (< 30 chars)
+                        if answer_text and len(answer_text) > 30:
+                            # Use any response > 30 chars - RAG API provides valid info for all microservices
+                            logger.info(f"✓ RAG returned functional response for {component_name} ({len(answer_text)} chars) - using it")
+                        elif answer_text and len(answer_text) > 0:
+                            # Even short responses might have useful info - only filter explicit error messages at start
+                            lower_text = answer_text.lower().strip()
+                            if (lower_text.startswith("i cannot provide") or 
+                                lower_text.startswith("information not available") or
+                                lower_text.startswith("not available in my knowledge") or
+                                lower_text == "information not available - timeout" or
+                                lower_text == "information not available - error"):
+                                logger.warning(f"⚠ RAG returned explicit error message for {component_name} - treating as no data")
+                                functional_response = None
+                                rag_fresh_func = False
+                            else:
+                                # Use it - might be valid short response
+                                logger.info(f"✓ RAG returned short but potentially valid response for {component_name} ({len(answer_text)} chars) - using it")
+                        else:
+                            logger.warning(f"⚠ RAG returned empty functional response for {component_name}")
                             functional_response = None
                             rag_fresh_func = False
-                        elif answer_text and len(answer_text) > 100:
-                            # Substantial response - use it even if it contains "I cannot provide" somewhere
-                            logger.info(f"✓ RAG returned substantial response for {component_name} ({len(answer_text)} chars) - using it")
                     
                     # Cache the response (even after force_refresh, cache the fresh data)
                     if functional_response and use_cache:
@@ -3618,33 +3652,42 @@ Open Questions
             
             # Get text from responses, handling None cases
             # IMPORTANT: Only mark as "not available" if truly empty or explicitly says so
+            # Be LESS aggressive - RAG API provides information for ALL microservices, so trust the response
             architectural_text = ""
             if architectural_response and isinstance(architectural_response, dict):
                 raw_text = architectural_response.get("data", {}).get("answer", "")
-                # Only filter out if it's explicitly "I cannot provide" AND very short
-                if raw_text and len(raw_text) > 100:
-                    # If we have substantial text, use it even if it contains "I cannot provide" somewhere
+                # Only filter out if it's explicitly an error message AND very short (< 30 chars)
+                # RAG API provides information for ALL microservices, so be lenient
+                if raw_text and len(raw_text) > 30:
+                    # Use any response that's longer than 30 chars - RAG API provides valid info
                     architectural_text = raw_text
-                elif raw_text and ("I cannot provide" not in raw_text and "not available in my knowledge" not in raw_text.lower()):
-                    # Use it if it doesn't explicitly say it can't provide
-                    architectural_text = raw_text
-                elif raw_text and len(raw_text) > 50:
-                    # Even if it says "I cannot provide", if there's substantial content, use it
-                    architectural_text = raw_text
+                elif raw_text and len(raw_text) > 0:
+                    # Even short responses might have useful info - only filter explicit error messages
+                    lower_text = raw_text.lower()
+                    if not (lower_text.startswith("i cannot provide") or 
+                           lower_text.startswith("information not available") or
+                           lower_text.startswith("not available in my knowledge") or
+                           lower_text == "information not available - timeout" or
+                           lower_text == "information not available - error"):
+                        architectural_text = raw_text
             
             functional_text = ""
             if functional_response and isinstance(functional_response, dict):
                 raw_text = functional_response.get("data", {}).get("answer", "")
-                # Only filter out if it's explicitly "I cannot provide" AND very short
-                if raw_text and len(raw_text) > 100:
-                    # If we have substantial text, use it even if it contains "I cannot provide" somewhere
+                # Only filter out if it's explicitly an error message AND very short (< 30 chars)
+                # RAG API provides information for ALL microservices, so be lenient
+                if raw_text and len(raw_text) > 30:
+                    # Use any response that's longer than 30 chars - RAG API provides valid info
                     functional_text = raw_text
-                elif raw_text and ("I cannot provide" not in raw_text and "not available in my knowledge" not in raw_text.lower()):
-                    # Use it if it doesn't explicitly say it can't provide
-                    functional_text = raw_text
-                elif raw_text and len(raw_text) > 50:
-                    # Even if it says "I cannot provide", if there's substantial content, use it
-                    functional_text = raw_text
+                elif raw_text and len(raw_text) > 0:
+                    # Even short responses might have useful info - only filter explicit error messages
+                    lower_text = raw_text.lower()
+                    if not (lower_text.startswith("i cannot provide") or 
+                           lower_text.startswith("information not available") or
+                           lower_text.startswith("not available in my knowledge") or
+                           lower_text == "information not available - timeout" or
+                           lower_text == "information not available - error"):
+                        functional_text = raw_text
             
             # Log actual RAG response lengths
             logger.info(f"RAG response for {component_name}:")

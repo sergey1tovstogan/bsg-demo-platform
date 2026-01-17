@@ -154,16 +154,12 @@ class CostService:
             Dictionary with cost information including total cost, service breakdown, and projections
         """
         try:
-            # Default to last full calendar month if dates not provided (matching working script)
+            # Default to current month if dates not provided (matching working script)
             if end_date is None:
-                # First day of current month
-                end_date = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                end_date = datetime.now()
             if start_date is None:
-                # First day of previous month
-                if end_date.month == 1:
-                    start_date = end_date.replace(year=end_date.year - 1, month=12, day=1)
-                else:
-                    start_date = end_date.replace(month=end_date.month - 1, day=1)
+                # First day of current month
+                start_date = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             
             # Use subscription scope
             scope = f"/subscriptions/{self.subscription_id}"
@@ -173,67 +169,53 @@ class CostService:
                 "type": "ActualCost",
                 "timeframe": "Custom",
                 "timePeriod": {
-                    "from": start_date.strftime("%Y-%m-%d"),
-                    "to": end_date.strftime("%Y-%m-%d")
+                    "from": start_date.strftime("%Y-%m-%dT00:00:00Z"),
+                    "to": end_date.strftime("%Y-%m-%dT23:59:59Z")
                 },
                 "dataset": {
-                    "granularity": "None",
+                    "granularity": "Daily",
                     "aggregation": {
                         "totalCost": {
-                            "name": "Cost",
+                            "name": "PreTaxCost",
                             "function": "Sum"
-                        }
-                    },
-                    "filter": {
-                        "dimensions": {
-                            "name": "ResourceGroupName",
-                            "operator": "In",
-                            "values": [resource_group_name]
                         }
                     },
                     "grouping": [
                         {
                             "type": "Dimension",
-                            "name": "ResourceType"
+                            "name": "ResourceGroup"
                         },
                         {
                             "type": "Dimension",
-                            "name": "ResourceId"
+                            "name": "ServiceName"
                         }
-                    ]
+                    ],
+                    "filter": {
+                        "dimensions": {
+                            "name": "ResourceGroup",
+                            "operator": "In",
+                            "values": [resource_group_name]
+                        }
+                    }
                 }
             }
             
-            # Try subscription scope first (more reliable for permissions)
-            url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2023-03-01"
+            # Make REST API call - try resource group scope first (matching working script)
+            rg_scope = f"/subscriptions/{self.subscription_id}/resourceGroups/{resource_group_name}"
+            url = f"{self.base_url}{rg_scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
             result = self._make_api_request(url, "POST", query_definition)
+            
+            # If that fails, try subscription scope (matching working script)
+            if not result or result.get('error') or not result.get('properties', {}).get('rows'):
+                logger.info(f"Resource group scope query failed or returned no data, trying subscription scope")
+                url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
+                result = self._make_api_request(url, "POST", query_definition)
             
             # Check if the result contains an error
             if result.get('error'):
                 error_msg = result.get('error', 'Unknown error')
                 status_code = result.get('status_code', 500)
                 error_detail = result.get("detail", {})
-                
-                logger.warning(f"Subscription scope query failed with {status_code}: {error_msg}")
-                
-                # If it's a 404 or 403, try resource group scope as fallback
-                if status_code in [403, 404]:
-                    logger.info(f"Trying resource group scope as fallback")
-                    rg_scope = f"/subscriptions/{self.subscription_id}/resourceGroups/{resource_group_name}"
-                    url = f"{self.base_url}{rg_scope}/providers/Microsoft.CostManagement/query?api-version=2023-03-01"
-                    fallback_result = self._make_api_request(url, "POST", query_definition)
-                    if fallback_result.get('error'):
-                        # Both failed, use the more specific error from fallback attempt
-                        fallback_error = fallback_result.get("error", "Unknown error")
-                        fallback_status = fallback_result.get("status_code", status_code)
-                        fallback_detail = fallback_result.get("detail", error_detail)
-                        
-                        error_msg = fallback_error
-                        status_code = fallback_status
-                        error_detail = fallback_detail
-                    else:
-                        # Fallback succeeded, use that result
-                        result = fallback_result
                 
                 # If still has error, format it properly
                 if result.get('error'):
@@ -299,30 +281,30 @@ class CostService:
                 logger.warning(f"No cost data returned for {resource_group_name} (missing properties/rows), trying grouped query without filter")
                 logger.debug(f"Full response: {result}")
             
-            # Try grouped query without filter as fallback (using same structure as primary query)
+            # Try grouped query without filter as fallback (matching working script)
             grouped_query = {
                 "type": "ActualCost",
                 "timeframe": "Custom",
                 "timePeriod": {
-                    "from": start_date.strftime("%Y-%m-%d"),
-                    "to": end_date.strftime("%Y-%m-%d")
+                    "from": start_date.strftime("%Y-%m-%dT00:00:00Z"),
+                    "to": end_date.strftime("%Y-%m-%dT23:59:59Z")
                 },
                 "dataset": {
-                    "granularity": "None",
+                    "granularity": "Daily",
                     "aggregation": {
                         "totalCost": {
-                            "name": "Cost",
+                            "name": "PreTaxCost",
                             "function": "Sum"
                         }
                     },
                     "grouping": [
                         {
                             "type": "Dimension",
-                            "name": "ResourceType"
+                            "name": "ResourceGroup"
                         },
                         {
                             "type": "Dimension",
-                            "name": "ResourceId"
+                            "name": "ServiceName"
                         }
                     ]
                 }
@@ -428,7 +410,7 @@ class CostService:
         services = {}
         total_cost = 0.0
         
-        if 'properties' not in result:
+        if 'properties' not in result or 'rows' not in result['properties']:
             return {
                 'resource_group': resource_group_name,
                 'total_cost': 0.0,
@@ -438,87 +420,42 @@ class CostService:
                 'end_date': end_date.isoformat()
             }
         
-        properties = result['properties']
-        columns = properties.get('columns', [])
-        rows = properties.get('rows', [])
+        rows = result['properties']['rows']
         
         if not rows:
             return {
                 'resource_group': resource_group_name,
                 'total_cost': 0.0,
                 'services': {},
-                'error': 'No cost data rows returned (RBAC/billing scope may not expose ResourceId)',
+                'error': 'No cost data rows returned',
                 'start_date': start_date.isoformat(),
                 'end_date': end_date.isoformat()
             }
         
-        # Dynamically find column indices (matching working script)
-        column_names = [col.get('name', '') for col in columns]
-        logger.info(f"Cost Management API columns: {column_names}")
-        logger.info(f"Cost Management API rows count: {len(rows)}")
-        
-        try:
-            idx_resource_type = column_names.index('ResourceType')
-            idx_resource_id = column_names.index('ResourceId')
-            # Try Cost first, fallback to PreTaxCost
-            if 'Cost' in column_names:
-                idx_cost = column_names.index('Cost')
-            elif 'PreTaxCost' in column_names:
-                idx_cost = column_names.index('PreTaxCost')
-            else:
-                # Last resort: assume cost is first column
-                idx_cost = 0
-                logger.warning(f"Could not find Cost or PreTaxCost column, assuming first column is cost. Available columns: {column_names}")
-        except ValueError as e:
-            logger.error(f"Could not find required columns in response: {e}. Available columns: {column_names}")
-            logger.error(f"Sample row structure: {rows[0] if rows else 'No rows'}")
-            return {
-                'resource_group': resource_group_name,
-                'total_cost': 0.0,
-                'services': {},
-                'error': f'Invalid column structure in Cost Management API response. Expected ResourceType, ResourceId, and Cost columns. Available: {", ".join(column_names)}',
-                'start_date': start_date.isoformat(),
-                'end_date': end_date.isoformat()
-            }
-        
-        # Parse rows and aggregate by service type
+        # Parse rows - format is [cost, date, resource_group, service, currency] (matching working script)
         logger.info(f"Parsing {len(rows)} cost rows for resource group {resource_group_name}")
-        logger.info(f"Column indices: ResourceType={idx_resource_type}, ResourceId={idx_resource_id}, Cost={idx_cost}")
         
         for idx, row in enumerate(rows):
-            if len(row) <= max(idx_resource_type, idx_resource_id, idx_cost):
-                logger.warning(f"Row {idx} has insufficient columns ({len(row)}), expected at least {max(idx_resource_type, idx_resource_id, idx_cost) + 1}")
-                logger.warning(f"Row {idx} content: {row}")
-                continue
-            
-            try:
-                # Handle both numeric and string cost values
-                cost_value = row[idx_cost]
-                if cost_value is None:
-                    cost = 0.0
-                elif isinstance(cost_value, (int, float)):
-                    cost = float(cost_value)
-                else:
-                    # Try to convert string to float
-                    cost = float(str(cost_value).replace(',', ''))
-                
-                resource_type = str(row[idx_resource_type]) if row[idx_resource_type] is not None else "Unknown"
-                resource_id = str(row[idx_resource_id]) if row[idx_resource_id] is not None else ""
-                
-                # Extract resource name from ResourceId (basename)
-                resource_name = resource_id.split('/')[-1] if resource_id else "Unknown"
-                
-                # Group by ResourceType (service type)
-                if resource_type not in services:
-                    services[resource_type] = 0.0
-                services[resource_type] += cost
-                total_cost += cost
-                
-                if idx < 5:  # Log first 5 rows for debugging
-                    logger.info(f"Row {idx}: ResourceType={resource_type}, Cost={cost}, ResourceId={resource_id[:50]}...")
-            except (ValueError, IndexError, TypeError) as e:
-                logger.warning(f"Error parsing cost row {idx}: {e}, row: {row}, row type: {type(row)}")
-                continue
+            if len(row) >= 5:  # [cost, date, resource_group, service, currency]
+                try:
+                    cost = float(row[0]) if row[0] is not None else 0.0
+                    rg_name = row[2] if row[2] else "Unknown"
+                    service_name = row[3] if row[3] else "Unknown Service"
+                    
+                    # Filter by resource group name (case-insensitive, matching working script)
+                    if rg_name.lower() == resource_group_name.lower():
+                        if service_name not in services:
+                            services[service_name] = 0.0
+                        services[service_name] += cost
+                        total_cost += cost
+                        
+                        if idx < 5:  # Log first 5 matching rows for debugging
+                            logger.info(f"Row {idx}: ResourceGroup={rg_name}, Service={service_name}, Cost={cost}")
+                except (ValueError, IndexError, TypeError) as e:
+                    logger.warning(f"Error parsing cost row {idx}: {e}, row: {row}, row type: {type(row)}")
+                    continue
+            else:
+                logger.warning(f"Row {idx} has insufficient columns ({len(row)}), expected at least 5. Row: {row}")
         
         logger.info(f"Parsed costs for {resource_group_name}: total=${total_cost:.2f}, services={len(services)}")
         
@@ -532,7 +469,7 @@ class CostService:
         annual_projection = full_month_projection * 12
         
         # Extract currency from response (matching working script)
-        currency = properties.get('currency', 'USD')
+        currency = result.get('properties', {}).get('currency', 'USD')
         
         return {
             'resource_group': resource_group_name,
