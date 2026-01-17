@@ -11,7 +11,6 @@ import { ProtectedRoute, UserProfileHeader } from './components/auth'
 import { LoginPage } from './pages/LoginPage'
 import { UserManagement } from './pages/UserManagement'
 import { DeploymentContentViewer } from './components/deployment/DeploymentContentViewer'
-import { CardGallery } from './components/CardGallery'
 
 // Layout component with header
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -87,7 +86,6 @@ const Dashboard: React.FC = () => {
             </p>
           </div>
         )}
-        <CardGallery />
         <DeploymentContentViewer />
       </div>
     </Layout>
