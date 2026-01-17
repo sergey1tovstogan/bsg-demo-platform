@@ -6,10 +6,11 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Code, Settings, GitBranch, Box, Zap, HardDrive, Globe, Layers, Cpu, Info } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
+import { StructuredRAGDisplay } from './StructuredRAGDisplay'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -2113,7 +2114,6 @@ const getServiceIcon = (text: string): any => {
 // Generate description for Azure services based on type
 const getAzureServiceDescription = (serviceType: string, serviceName: string): string => {
   const lowerType = serviceType.toLowerCase()
-  const lowerName = serviceName.toLowerCase()
   
   // Kubernetes / AKS
   if (lowerType.includes('kubernetes') || lowerType.includes('aks') || lowerType.includes('container')) {
@@ -2753,10 +2753,10 @@ function ComponentDetailPanel({
         {hasRelationships && (
           <details className="group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-200 dark:border-indigo-700" open>
             <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-              Component Relationships ({componentInfo.relationships.length})
+              Component Relationships ({componentInfo.relationships?.length || 0})
             </summary>
             <div className="mt-4 space-y-3">
-              {componentInfo.relationships.map((rel, idx) => (
+              {componentInfo.relationships?.map((rel, idx) => (
                 <div key={idx} className="bg-white dark:bg-slate-700 rounded p-3 border border-indigo-200 dark:border-indigo-500/30">
                   <div className="font-medium text-gray-900 dark:text-white">{rel.targetComponent}</div>
                   <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rel.relationshipType}</div>
