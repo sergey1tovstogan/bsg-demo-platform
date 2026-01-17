@@ -774,7 +774,8 @@ export class ApiServiceAdapter implements ITransactionApiService {
     kafkaEventDelay?: number
   }): void {
     if (this.service instanceof MockApiService) {
-      this.service.updateConfig(config)
+      // Type assertion: MockApiService has updateConfig method
+      (this.service as any).updateConfig(config)
     }
   }
 
@@ -783,7 +784,8 @@ export class ApiServiceAdapter implements ITransactionApiService {
    */
   getMockConfig(): { networkDelay: number; failureRate: number; kafkaEventDelay: number } | null {
     if (this.service instanceof MockApiService) {
-      return this.service.getConfig()
+      // Type assertion: MockApiService has getConfig method
+      return (this.service as any).getConfig()
     }
     return null
   }
