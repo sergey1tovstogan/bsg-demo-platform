@@ -86,17 +86,17 @@ export const CardGallery: React.FC = () => {
           return (
             <div
               key={category.id}
-              className={`${category.bgColor} rounded-xl p-6 border-2 border-transparent bg-gradient-to-r ${category.gradient} bg-opacity-10 dark:bg-opacity-20 border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group`}
+              className={`${category.bgColor} rounded-xl p-6 border-2 border-transparent bg-gradient-to-r ${category.gradient} bg-opacity-10 dark:bg-opacity-20`}
             >
-              <div className="flex items-start space-x-4">
+              <div className="flex items-center space-x-4">
                 <div className={`p-3 rounded-lg bg-gradient-to-br ${category.gradient} shadow-lg flex-shrink-0`}>
-                  <Icon className="w-6 h-6 text-white" />
+                  <Icon className="w-8 h-8 text-white" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                <div>
+                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
                     {category.title}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {category.description}
                   </p>
                 </div>
