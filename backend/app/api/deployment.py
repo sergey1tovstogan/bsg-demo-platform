@@ -1283,10 +1283,14 @@ async def get_resource_group_costs(request: CostRequest):
         subscription_id = request.subscription_id
         resource_group_names = request.resource_group_names
         
+        logger.info(f"💰 COST API CALLED - Subscription: {subscription_id}, Resource Groups: {resource_group_names}")
+        
         if not subscription_id:
+            logger.error("💰 COST API ERROR: Subscription ID is required")
             raise HTTPException(status_code=400, detail="Subscription ID is required")
         
         if not resource_group_names or len(resource_group_names) == 0:
+            logger.error("💰 COST API ERROR: At least one resource group name is required")
             raise HTTPException(status_code=400, detail="At least one resource group name is required")
         
         # Parse dates if provided
@@ -1296,16 +1300,21 @@ async def get_resource_group_costs(request: CostRequest):
         if request.start_date:
             try:
                 start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
+                logger.info(f"💰 Using provided start_date: {start_date}")
             except ValueError:
+                logger.error(f"💰 COST API ERROR: Invalid start_date format: {request.start_date}")
                 raise HTTPException(status_code=400, detail=f"Invalid start_date format: {request.start_date}. Use ISO format (YYYY-MM-DD)")
         
         if request.end_date:
             try:
                 end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
+                logger.info(f"💰 Using provided end_date: {end_date}")
             except ValueError:
+                logger.error(f"💰 COST API ERROR: Invalid end_date format: {request.end_date}")
                 raise HTTPException(status_code=400, detail=f"Invalid end_date format: {request.end_date}. Use ISO format (YYYY-MM-DD)")
         
         # Create cost service
+        logger.info(f"💰 Creating CostService for subscription {subscription_id}")
         cost_service = CostService(subscription_id)
         
         # Calculate timeout based on number of resource groups
@@ -1321,7 +1330,8 @@ async def get_resource_group_costs(request: CostRequest):
         else:
             timeout_seconds = 60.0   # 60 seconds for small batches (2-20)
         
-        logger.info(f"Fetching costs for {num_rgs} resource groups with {timeout_seconds}s timeout")
+        logger.info(f"💰 Fetching costs for {num_rgs} resource groups: {resource_group_names}")
+        logger.info(f"💰 Timeout set to {timeout_seconds}s")
         
         # Wrap the cost fetching in a timeout
         # Run the synchronous cost service in a thread pool to avoid blocking
@@ -1356,7 +1366,17 @@ async def get_resource_group_costs(request: CostRequest):
                 ]
         
         # Get costs for all resource groups with timeout
+        logger.info(f"💰 Starting cost fetch for {num_rgs} resource groups...")
         cost_results = await fetch_costs_with_timeout()
+        
+        # Log results summary
+        success_count = len([r for r in cost_results if not r.get('error')])
+        error_count = len([r for r in cost_results if r.get('error')])
+        total_cost = sum([r.get('total_cost', 0) for r in cost_results if not r.get('error')])
+        
+        logger.info(f"💰 Cost fetch completed: {success_count} success, {error_count} errors, total_cost=${total_cost:.2f}")
+        if error_count > 0:
+            logger.warning(f"💰 Cost fetch errors: {[r.get('resource_group') + ': ' + r.get('error', 'Unknown') for r in cost_results if r.get('error')]}")
         
         return {
             "status": "success",
