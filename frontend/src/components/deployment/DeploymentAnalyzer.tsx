@@ -918,9 +918,31 @@ async function handleExportArmTemplate(
     const exportPromise = apiService.exportArmTemplate(subscriptionId, resourceGroupName)
     const response = await Promise.race([exportPromise, timeoutPromise]) as any
     
+    // Handle different response structures
+    let templateJson: string | null = null
+    
     if (response?.data?.template_json) {
+      templateJson = response.data.template_json
+    } else if (response?.data?.data?.template_json) {
+      templateJson = response.data.data.template_json
+    } else if (response?.template_json) {
+      templateJson = response.template_json
+    } else if (typeof response?.data === 'string') {
+      // If response.data is a string, it might be the JSON directly
+      try {
+        const parsed = JSON.parse(response.data)
+        templateJson = parsed.template_json || parsed.template || response.data
+      } catch {
+        templateJson = response.data
+      }
+    }
+    
+    if (templateJson) {
+      // Ensure templateJson is a string
+      const jsonString = typeof templateJson === 'string' ? templateJson : JSON.stringify(templateJson, null, 2)
+      
       // Create a blob with the ARM template JSON
-      const blob = new Blob([response.data.template_json], { type: 'application/json' })
+      const blob = new Blob([jsonString], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -932,7 +954,8 @@ async function handleExportArmTemplate(
       
       return true
     } else {
-      onError('ARM template export failed: No template data returned')
+      console.error('[Export ARM] Unexpected response structure:', response)
+      onError('ARM template export failed: No template data returned. Check console for details.')
       return false
     }
   } catch (error: any) {
