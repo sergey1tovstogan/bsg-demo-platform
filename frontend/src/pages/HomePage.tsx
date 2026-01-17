@@ -155,7 +155,6 @@ export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: Home
                 Welcome {displayName}
               </div>
             )}
-            {searchBar}
             {onSettingsClick && (
               <button
                 onClick={onSettingsClick}
@@ -167,10 +166,10 @@ export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: Home
             )}
           </div>
         </div>
-        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
-          Explore interactive demonstrations across multiple technical domains.
-          Select a module below to get started.
+        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed whitespace-nowrap">
+          Explore interactive demonstrations across multiple technical domains. Select a module below to get started.
         </p>
+        {searchBar && <div className="mt-4">{searchBar}</div>}
       </div>
 
       {visibleComponents.length === 0 ? (

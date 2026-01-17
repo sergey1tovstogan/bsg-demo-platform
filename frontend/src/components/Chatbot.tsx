@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Loader2, Bot, User } from 'lucide-react'
+import { Send, Loader2, Bot, User, AlertTriangle } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { ComponentId, ChatMessage } from '../types'
 
 interface ChatbotProps {
   componentId: ComponentId
 }
+
+const RAG_TOKEN_STORAGE_KEY = 'bsg_rag_jwt_token'
 
 export function Chatbot({ componentId }: ChatbotProps) {
   // Chatbot State (for non-security components)
@@ -15,8 +17,32 @@ export function Chatbot({ componentId }: ChatbotProps) {
   const [loading, setLoading] = useState(false)
   const [initializing, setInitializing] = useState(true)
   const [chatError, setChatError] = useState<string | null>(null)
+  const [ragTokenWarning, setRagTokenWarning] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sessionIdRef = useRef<string | null>(null)
+
+  // Check RAG token status on mount
+  useEffect(() => {
+    const checkRAGToken = async () => {
+      try {
+        const jwtInfo = await apiService.getRAGJWTInfo()
+        if (jwtInfo.data) {
+          // Check if token is expired or expiring soon
+          if (jwtInfo.data.is_expired) {
+            setRagTokenWarning('RAG API token has expired. Please update it in Settings to use BSG Guru.')
+          } else if (jwtInfo.data.days_remaining !== undefined && jwtInfo.data.days_remaining < 7) {
+            setRagTokenWarning(`RAG API token expires in ${jwtInfo.data.days_remaining} day(s). Please update it in Settings.`)
+          } else if (!jwtInfo.data.configured) {
+            setRagTokenWarning('RAG API token is not configured. Please configure it in Settings to use BSG Guru.')
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check RAG token status:', error)
+        // Don't show error if token check fails, just log it
+      }
+    }
+    checkRAGToken()
+  }, [])
 
   const initializeSession = useCallback(async () => {
     try {
@@ -150,8 +176,14 @@ export function Chatbot({ componentId }: ChatbotProps) {
         )}
       </div>
 
+      {ragTokenWarning && (
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-800 dark:text-yellow-200 text-sm flex items-start space-x-2">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <span>{ragTokenWarning}</span>
+        </div>
+      )}
       {chatError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
           {chatError}
         </div>
       )}

@@ -2640,25 +2640,25 @@ function ComponentDetailPanel({
                     console.log('[Refresh] Calling onRefresh callback')
                     onRefresh(updatedResult)
                     
-                    // Show success message
-                    if (!hasStrictFormat) {
-                      alert('Refresh completed, but the documentation is not in the strict 12-section format. The RAG API may not be configured or may have returned incomplete data. Check backend logs for details.')
-                    }
+                    // Show success message silently - don't alert for non-strict format
+                    // The UI will display whatever content is available
                   } else {
                     console.warn('[Refresh] No onRefresh callback provided')
                   }
-                } else {
-                  console.warn('[Refresh] No componentInfo in response. First result:', firstResult)
-                  if (firstResult?.error) {
-                    alert(`Refresh completed but encountered an error: ${firstResult.error}\n\nCheck backend logs for more details.`)
-                  } else {
-                    alert('Refresh completed but no component information was returned.\n\nPossible causes:\n1. RAG API is not configured (check RAG_JWT_TOKEN)\n2. Service was not identified as a Temenos component\n3. Backend error occurred\n\nCheck backend logs for details.')
-                  }
-                }
               } else {
-                console.warn('[Refresh] Empty results array. Full response:', response)
-                alert('Refresh completed but no results were returned.\n\nPossible causes:\n1. Service was not identified as a Temenos component\n2. Backend error occurred\n3. RAG API is not configured\n\nCheck backend logs for details.')
+                console.warn('[Refresh] No componentInfo in response. First result:', firstResult)
+                if (firstResult?.error) {
+                  console.error('[Refresh] Component refresh error:', firstResult.error)
+                  // Don't show alert, just log the error - UI will show existing data
+                } else {
+                  console.warn('[Refresh] No component information returned. Possible causes: RAG API not configured, service not identified, or backend error.')
+                  // Don't show alert, just log the warning - UI will show existing data
+                }
               }
+            } else {
+              console.warn('[Refresh] Empty results array. Full response:', response)
+              // Don't show alert, just log the warning - UI will show existing data
+            }
             } catch (error: any) {
               console.error('[Refresh] Failed to refresh component info:', error)
               console.error('[Refresh] Error details:', {

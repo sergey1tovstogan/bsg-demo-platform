@@ -78,16 +78,6 @@ const CATEGORY_STYLES: { [key: string]: { icon: any, gradient: string, bgColor: 
     gradient: 'from-indigo-600 to-blue-700',
     bgColor: 'bg-indigo-50 dark:bg-indigo-900/20'
   },
-  'Service Selection': {
-    icon: Settings,
-    gradient: 'from-purple-500 to-violet-500',
-    bgColor: 'bg-purple-50 dark:bg-purple-900/20'
-  },
-  'Integration & Extensibility': {
-    icon: GitBranch,
-    gradient: 'from-green-500 to-emerald-500',
-    bgColor: 'bg-green-50 dark:bg-green-900/20'
-  }
 }
 
 // Helper function to find icon for a service name
@@ -214,7 +204,7 @@ export function DeploymentContentViewer() {
     if (cached) {
       // Sort cached content for consistent display
       const sorted = [...cached].sort((a, b) => {
-        const categoryOrder = ['Architecture Overview', 'Service Selection', 'Integration & Extensibility']
+          const categoryOrder = ['Architecture Overview']
         const aCategoryIndex = categoryOrder.indexOf(a.category) !== -1 ? categoryOrder.indexOf(a.category) : 999
         const bCategoryIndex = categoryOrder.indexOf(b.category) !== -1 ? categoryOrder.indexOf(b.category) : 999
         
@@ -299,24 +289,6 @@ export function DeploymentContentViewer() {
           title: "AWS Cloud Services Architecture",
           question: "Describe the AWS cloud services architecture for Temenos cloud-native deployments. Detail the specific AWS services used for databases (Amazon RDS, DocumentDB, PostgreSQL), messaging (Amazon Kinesis, Apache ActiveMQ), container orchestration (AWS Elastic Kubernetes Service EKS, Amazon ECS), and other infrastructure components, including their roles and purposes."
         },
-        {
-          order: 3,
-          category: "Service Selection",
-          title: "Azure Service Selection Criteria",
-          question: "Explain the decision criteria and use cases for selecting Azure services in Temenos deployments. When should Azure SQL Database be used versus Azure Database for PostgreSQL? When should Azure Event Hub be used versus Apache ActiveMQ? When should AKS be used versus Azure Container Apps? Provide specific guidance for each service selection."
-        },
-        {
-          order: 4,
-          category: "Service Selection",
-          title: "AWS Service Selection Criteria",
-          question: "Explain the decision criteria and use cases for selecting AWS services in Temenos deployments. When should Amazon RDS be used versus Amazon DocumentDB? When should Amazon RDS be used versus PostgreSQL? When should Amazon Kinesis be used versus Apache ActiveMQ? When should EKS be used versus Amazon ECS? Provide specific guidance for each service selection."
-        },
-        {
-          order: 5,
-          category: "Integration & Extensibility",
-          title: "Extensibility and Integration Capabilities",
-          question: "Describe Temenos cloud-native deployment capabilities for data-driven enhancements, extensibility, and integration. Explain how the Extensibility Framework supports advanced workflows and what integration patterns are available for connecting with external services and data sources in Azure and AWS environments."
-        }
       ]
 
       // Query multiple questions and combine results
@@ -416,7 +388,7 @@ export function DeploymentContentViewer() {
         // Sort results by category and order for coherent presentation
         ragResults.sort((a, b) => {
           // First sort by category for logical grouping
-          const categoryOrder = ['Architecture Overview', 'Service Selection', 'Integration & Extensibility']
+          const categoryOrder = ['Architecture Overview']
           const aCategoryIndex = categoryOrder.indexOf(a.category) !== -1 ? categoryOrder.indexOf(a.category) : 999
           const bCategoryIndex = categoryOrder.indexOf(b.category) !== -1 ? categoryOrder.indexOf(b.category) : 999
           
@@ -575,8 +547,6 @@ export function DeploymentContentViewer() {
                           </h2>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {category === 'Architecture Overview' && 'Cloud infrastructure and service architecture'}
-                            {category === 'Service Selection' && 'Guidance for choosing the right services'}
-                            {category === 'Integration & Extensibility' && 'Integration patterns and extensibility capabilities'}
                           </p>
                         </div>
                       </div>

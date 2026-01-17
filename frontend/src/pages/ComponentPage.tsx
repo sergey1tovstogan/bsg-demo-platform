@@ -80,7 +80,7 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
       ? [
         { id: 'content' as Tab, label: 'Content', icon: BookOpen },
         { id: 'demo' as Tab, label: 'Demo', icon: Play },
-        { id: 'chatbot' as Tab, label: 'Assistant', icon: MessageSquare },
+        { id: 'chatbot' as Tab, label: 'BSG Guru', icon: MessageSquare },
       ]
       : [
         { id: 'content' as Tab, label: 'Content', icon: BookOpen },
