@@ -79,6 +79,8 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
         Assistant response
     """
     try:
+        logger.info(f"💬 Chatbot query endpoint called - component_id: {component_id}, session_id: {request.session_id}")
+        logger.info(f"💬 Message: {request.message[:100]}...")
         session_id = request.session_id
         message = request.message
 
