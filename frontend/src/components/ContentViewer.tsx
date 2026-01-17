@@ -25,7 +25,7 @@ export function ContentViewer({ componentId, initialSelectedCard }: ContentViewe
       setLoading(true)
       setError(null)
       const response = await apiService.getContent(componentId)
-      const sortedContents = (response.data || []).sort((a, b) => a.order - b.order)
+      const sortedContents = (response.data || []).sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
       setContents(sortedContents)
       setCurrentIndex(0)
     } catch (err: unknown) {

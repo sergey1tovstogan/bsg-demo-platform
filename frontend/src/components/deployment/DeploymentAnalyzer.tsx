@@ -527,12 +527,6 @@ export function DeploymentAnalyzer() {
             // Set error state for costs but don't fail the analysis
             const costMap: Record<string, any> = {}
             
-            // If it's a timeout or abort error, provide specific message
-            const isTimeout = err.message?.includes('timeout') || err.name === 'AbortError'
-            const errorMessage = isTimeout 
-              ? 'Request timed out. Cost Management API is taking too long. Try selecting fewer resource groups.'
-              : err.response?.data?.detail?.error || err.response?.data?.error || err.message || 'Failed to fetch cost data'
-
             // Check if the response contains cost data with errors (partial success)
             if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
               // API returned data but some RGs may have errors
