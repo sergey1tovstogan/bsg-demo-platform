@@ -78,6 +78,8 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
     Returns:
         Assistant response
     """
+    # Log immediately when endpoint is hit
+    logger.info(f"💬💬💬 CHATBOT QUERY ENDPOINT HIT - component_id: {component_id}")
     try:
         logger.info(f"💬 Chatbot query endpoint called - component_id: {component_id}, session_id: {request.session_id}")
         logger.info(f"💬 Message: {request.message[:100] if request.message else 'None'}...")
