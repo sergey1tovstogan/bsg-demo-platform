@@ -55,7 +55,7 @@ export function Chatbot({ componentId }: ChatbotProps) {
       
       console.log(`[Chatbot] Session creation response:`, response)
       
-      const newSessionId = response.data?.session_id || response.data?.data?.session_id
+      const newSessionId = response.data?.session_id
       
       if (!newSessionId) {
         throw new Error('Session ID not returned from server')
@@ -70,7 +70,7 @@ export function Chatbot({ componentId }: ChatbotProps) {
         try {
           const historyResponse = await apiService.getChatHistory(componentId, newSessionId)
           console.log(`[Chatbot] History loaded:`, historyResponse)
-          setMessages(historyResponse.data?.messages || historyResponse.data?.data?.messages || [])
+          setMessages(historyResponse.data?.messages || [])
         } catch (historyErr: any) {
           // No history yet - this is normal for new sessions
           console.log(`[Chatbot] No history yet (this is normal for new sessions):`, historyErr?.response?.status)
@@ -151,7 +151,7 @@ export function Chatbot({ componentId }: ChatbotProps) {
       const response = await apiService.sendChatMessage(componentId, sessionId, messageToSend)
       console.log(`[Chatbot] Message response:`, response)
       
-      const assistantMessage = response.data || response.data?.data
+      const assistantMessage = response.data
       if (assistantMessage) {
         setMessages((prev) => [...prev, assistantMessage])
       } else {

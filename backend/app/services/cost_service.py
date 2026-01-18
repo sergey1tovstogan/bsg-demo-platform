@@ -465,6 +465,21 @@ class CostService:
         # Parse rows - format is [cost, date, resource_group, service, currency] (matching working script)
         logger.info(f"Parsing {len(rows)} cost rows for resource group {resource_group_name}")
         
+        # Log all unique resource group names found in the data for debugging
+        unique_rgs = set()
+        for idx, row in enumerate(rows):
+            if len(row) >= 3:
+                try:
+                    rg_name = row[2] if row[2] else "Unknown"
+                    unique_rgs.add(rg_name)
+                except:
+                    pass
+        
+        if unique_rgs:
+            logger.info(f"Found {len(unique_rgs)} unique resource groups in cost data: {list(unique_rgs)[:10]}")  # Log first 10
+            logger.info(f"Looking for resource group: '{resource_group_name}' (case-insensitive)")
+        
+        matching_rows_count = 0
         for idx, row in enumerate(rows):
             if len(row) >= 5:  # [cost, date, resource_group, service, currency]
                 try:
@@ -473,19 +488,27 @@ class CostService:
                     service_name = row[3] if row[3] else "Unknown Service"
                     
                     # Filter by resource group name (case-insensitive, matching working script)
-                    if rg_name.lower() == resource_group_name.lower():
+                    # Also strip whitespace to handle any formatting differences
+                    rg_match = rg_name.strip().lower() == resource_group_name.strip().lower()
+                    
+                    if rg_match:
+                        matching_rows_count += 1
                         if service_name not in services:
                             services[service_name] = 0.0
                         services[service_name] += cost
                         total_cost += cost
                         
-                        if idx < 5:  # Log first 5 matching rows for debugging
-                            logger.info(f"Row {idx}: ResourceGroup={rg_name}, Service={service_name}, Cost={cost}")
+                        if matching_rows_count <= 5:  # Log first 5 matching rows for debugging
+                            logger.info(f"✓ Match {matching_rows_count}: ResourceGroup='{rg_name}', Service='{service_name}', Cost=${cost:.2f}")
+                    elif idx < 10:  # Log first 10 non-matching rows to debug name differences
+                        logger.debug(f"  No match: Expected '{resource_group_name}', Got '{rg_name}'")
                 except (ValueError, IndexError, TypeError) as e:
                     logger.warning(f"Error parsing cost row {idx}: {e}, row: {row}, row type: {type(row)}")
                     continue
             else:
                 logger.warning(f"Row {idx} has insufficient columns ({len(row)}), expected at least 5. Row: {row}")
+        
+        logger.info(f"Found {matching_rows_count} matching rows out of {len(rows)} total rows for resource group '{resource_group_name}'")
         
         # If we parsed rows but found no matching resource group, that's still "no data" not an error
         if total_cost == 0.0 and len(services) == 0:
