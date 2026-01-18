@@ -124,11 +124,12 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
             context = "\n".join(context_parts)
             
             # Query RAG API with deployment and architecture topics
+            # Note: "Platform" is not a valid model ID, using "PlatformFrameworkMea" instead
             try:
                 result = await temenos_service.query_rag(
                     question=message,
                     region="global",
-                    rag_model_id="ModularBanking, TechnologyOverview, Platform",
+                    rag_model_id="ModularBanking, TechnologyOverview, PlatformFrameworkMea",
                     context=context
                 )
             except RuntimeError as rag_error:
