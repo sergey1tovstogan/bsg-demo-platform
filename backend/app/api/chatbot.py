@@ -80,10 +80,17 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
     """
     try:
         logger.info(f"💬 Chatbot query endpoint called - component_id: {component_id}, session_id: {request.session_id}")
-        logger.info(f"💬 Message: {request.message[:100]}...")
+        logger.info(f"💬 Message: {request.message[:100] if request.message else 'None'}...")
         logger.info(f"💬 Available sessions: {list(chat_sessions.keys())}")
+        logger.info(f"💬 Request body: session_id={request.session_id}, message length={len(request.message) if request.message else 0}")
+        
         session_id = request.session_id
         message = request.message
+        
+        if not session_id:
+            raise HTTPException(status_code=400, detail="session_id is required")
+        if not message:
+            raise HTTPException(status_code=400, detail="message is required")
 
         # Get or create session
         if session_id not in chat_sessions:
