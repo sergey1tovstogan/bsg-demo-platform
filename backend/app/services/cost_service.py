@@ -206,11 +206,15 @@ class CostService:
             url = f"{self.base_url}{rg_scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
             result = self._make_api_request(url, "POST", query_definition)
             
-            # If that fails, try subscription scope (matching working script)
+            # If that fails, try subscription scope WITHOUT filter (to get all RGs, then filter in parsing)
             if not result or result.get('error') or not result.get('properties', {}).get('rows'):
-                logger.info(f"Resource group scope query failed or returned no data, trying subscription scope")
+                logger.info(f"Resource group scope query failed or returned no data, trying subscription scope without filter")
+                # Remove the filter when querying subscription scope - we'll filter in parsing
+                query_without_filter = query_definition.copy()
+                query_without_filter['dataset'] = query_definition['dataset'].copy()
+                query_without_filter['dataset'].pop('filter', None)  # Remove filter
                 url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
-                result = self._make_api_request(url, "POST", query_definition)
+                result = self._make_api_request(url, "POST", query_without_filter)
             
             # Check if the result contains an error
             if result.get('error'):
@@ -488,8 +492,16 @@ class CostService:
                     service_name = row[3] if row[3] else "Unknown Service"
                     
                     # Filter by resource group name (case-insensitive, matching working script)
-                    # Also strip whitespace to handle any formatting differences
-                    rg_match = rg_name.strip().lower() == resource_group_name.strip().lower()
+                    # Also strip whitespace and normalize to handle any formatting differences
+                    # Handle potential None values
+                    rg_name_normalized = (rg_name or "").strip().lower()
+                    target_rg_normalized = (resource_group_name or "").strip().lower()
+                    rg_match = rg_name_normalized == target_rg_normalized
+                    
+                    # Also try partial match in case of substrings or variations
+                    if not rg_match and rg_name_normalized and target_rg_normalized:
+                        # Check if one contains the other (for cases like "rg-name" vs "rgname")
+                        rg_match = target_rg_normalized in rg_name_normalized or rg_name_normalized in target_rg_normalized
                     
                     if rg_match:
                         matching_rows_count += 1

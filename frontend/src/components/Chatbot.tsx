@@ -55,10 +55,13 @@ export function Chatbot({ componentId }: ChatbotProps) {
       
       console.log(`[Chatbot] Session creation response:`, response)
       
-      const newSessionId = response.data?.session_id
+      // Backend returns {"status": "success", "data": {"session_id": "..."}}
+      // API service returns response.data which is the whole response object
+      const newSessionId = (response as any).data?.session_id || (response as any).session_id
       
       if (!newSessionId) {
-        throw new Error('Session ID not returned from server')
+        console.error('[Chatbot] Full response structure:', JSON.stringify(response, null, 2))
+        throw new Error('Session ID not returned from server. Response: ' + JSON.stringify(response))
       }
       
       console.log(`[Chatbot] Session created with ID: ${newSessionId}`)
@@ -70,7 +73,9 @@ export function Chatbot({ componentId }: ChatbotProps) {
         try {
           const historyResponse = await apiService.getChatHistory(componentId, newSessionId)
           console.log(`[Chatbot] History loaded:`, historyResponse)
-          setMessages(historyResponse.data?.messages || [])
+          // Backend returns {"status": "success", "data": {"messages": [...]}}
+          const messages = (historyResponse as any).data?.messages || (historyResponse as any).messages || []
+          setMessages(messages)
         } catch (historyErr: any) {
           // No history yet - this is normal for new sessions
           console.log(`[Chatbot] No history yet (this is normal for new sessions):`, historyErr?.response?.status)
@@ -151,11 +156,13 @@ export function Chatbot({ componentId }: ChatbotProps) {
       const response = await apiService.sendChatMessage(componentId, sessionId, messageToSend)
       console.log(`[Chatbot] Message response:`, response)
       
-      const assistantMessage = response.data
-      if (assistantMessage) {
+      // Backend returns {"status": "success", "data": {...message...}}
+      const assistantMessage = (response as any).data || response
+      if (assistantMessage && assistantMessage.content) {
         setMessages((prev) => [...prev, assistantMessage])
       } else {
-        throw new Error('No response data received from server')
+        console.error('[Chatbot] Invalid message response:', response)
+        throw new Error('No valid response data received from server')
       }
     } catch (err: unknown) {
       console.error('[Chatbot] Failed to send message:', err)
