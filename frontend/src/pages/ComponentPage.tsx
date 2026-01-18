@@ -86,7 +86,7 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
         { id: 'content' as Tab, label: 'Content', icon: BookOpen },
         { id: 'video' as Tab, label: 'Videos', icon: Video },
         { id: 'demo' as Tab, label: 'Demo', icon: Play },
-        { id: 'chatbot' as Tab, label: 'Chatbot', icon: MessageSquare },
+        { id: 'chatbot' as Tab, label: 'BSG Guru', icon: MessageSquare },
       ]
 
   return (

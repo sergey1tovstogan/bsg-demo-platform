@@ -191,7 +191,7 @@ export function Chatbot({ componentId }: ChatbotProps) {
         {messages.length === 0 ? (
           <div className="text-center text-gray-600 dark:text-gray-300 py-8">
             <Bot className="w-12 h-12 mx-auto mb-4 text-purple-600 dark:text-purple-400" />
-            <p className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Welcome to BSG-Guru</p>
+            <p className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Welcome to BSG Guru</p>
             <p className="text-sm text-gray-600 dark:text-gray-300">Ask me anything about {componentId === 'deployment' ? 'Temenos cloud deployment, architecture, and best practices' : componentId}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">Powered by Temenos RAG Knowledge Base</p>
           </div>

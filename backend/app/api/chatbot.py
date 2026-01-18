@@ -81,6 +81,7 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
     try:
         logger.info(f"💬 Chatbot query endpoint called - component_id: {component_id}, session_id: {request.session_id}")
         logger.info(f"💬 Message: {request.message[:100]}...")
+        logger.info(f"💬 Available sessions: {list(chat_sessions.keys())}")
         session_id = request.session_id
         message = request.message
 
@@ -294,8 +295,8 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
         raise
     except RuntimeError as e:
         error_msg = str(e)
-        # Check if it's a token expiration error
-        if "expired" in error_msg.lower() or "token" in error_msg.lower():
+        # Check if it's a token expiration error (check for 401, expired, or token-related errors)
+        if "401" in error_msg or "expired" in error_msg.lower() or "token" in error_msg.lower() or "unauthorized" in error_msg.lower():
             logger.error(f"🔑 RAG token expired in chatbot query: {error_msg}")
             raise HTTPException(
                 status_code=401,

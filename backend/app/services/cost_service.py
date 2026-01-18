@@ -292,60 +292,75 @@ class CostService:
                 logger.warning(f"⚠ No cost data returned for {resource_group_name} (missing properties/rows), trying grouped query without filter")
                 logger.debug(f"Full response: {result}")
             
+            # If we got here, try grouped query without filter (matching working script)
+            # But first check if result has an error - if so, don't try grouped query
+            if result.get('error'):
+                # Already handled above, return error result
+                pass
+            
             # Try grouped query without filter as fallback (matching working script)
-            grouped_query = {
-                "type": "ActualCost",
-                "timeframe": "Custom",
-                "timePeriod": {
-                    "from": start_date.strftime("%Y-%m-%dT00:00:00Z"),
-                    "to": end_date.strftime("%Y-%m-%dT23:59:59Z")
-                },
-                "dataset": {
-                    "granularity": "Daily",
-                    "aggregation": {
-                        "totalCost": {
-                            "name": "PreTaxCost",
-                            "function": "Sum"
-                        }
+            # Only if we don't have an error already
+            if not result.get('error'):
+                grouped_query = {
+                    "type": "ActualCost",
+                    "timeframe": "Custom",
+                    "timePeriod": {
+                        "from": start_date.strftime("%Y-%m-%dT00:00:00Z"),
+                        "to": end_date.strftime("%Y-%m-%dT23:59:59Z")
                     },
-                    "grouping": [
-                        {
-                            "type": "Dimension",
-                            "name": "ResourceGroup"
+                    "dataset": {
+                        "granularity": "Daily",
+                        "aggregation": {
+                            "totalCost": {
+                                "name": "PreTaxCost",
+                                "function": "Sum"
+                            }
                         },
-                        {
-                            "type": "Dimension",
-                            "name": "ServiceName"
-                        }
-                    ]
+                        "grouping": [
+                            {
+                                "type": "Dimension",
+                                "name": "ResourceGroup"
+                            },
+                            {
+                                "type": "Dimension",
+                                "name": "ServiceName"
+                            }
+                        ]
+                    }
                 }
-            }
+                
+                grouped_result = self._make_api_request(url, "POST", grouped_query)
+                
+                # Check for errors in grouped result
+                if grouped_result.get('error'):
+                    error_msg = grouped_result.get('error', 'Unknown error')
+                    status_code = grouped_result.get('status_code', 500)
+                    return {
+                        'resource_group': resource_group_name,
+                        'total_cost': 0.0,
+                        'services': {},
+                        'error': f'Cost Management API error: {error_msg}. Please verify you have "Cost Management Reader" role on the subscription.',
+                        'status_code': status_code,
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat()
+                    }
+                
+                if grouped_result and 'properties' in grouped_result and 'rows' in grouped_result['properties']:
+                    rows = grouped_result['properties']['rows']
+                    if rows and len(rows) > 0:
+                        parsed = self._parse_cost_result(grouped_result, resource_group_name, start_date, end_date)
+                        logger.info(f"✓ Grouped query succeeded: total_cost={parsed.get('total_cost', 0)}, services={len(parsed.get('services', {}))}")
+                        return parsed
             
-            grouped_result = self._make_api_request(url, "POST", grouped_query)
-            
-            # Check for errors in grouped result
-            if grouped_result.get('error'):
-                error_msg = grouped_result.get('error', 'Unknown error')
-                return {
-                    'resource_group': resource_group_name,
-                    'total_cost': 0.0,
-                    'services': {},
-                    'error': f'Cost Management API error: {error_msg}. Please verify you have "Cost Management Reader" role on the subscription.',
-                    'start_date': start_date.isoformat(),
-                    'end_date': end_date.isoformat()
-                }
-            
-            if grouped_result and 'properties' in grouped_result and 'rows' in grouped_result['properties']:
-                rows = grouped_result['properties']['rows']
-                if rows and len(rows) > 0:
-                    return self._parse_cost_result(grouped_result, resource_group_name, start_date, end_date)
-            
-            # No data found - return with helpful message
+            # No data found - return with helpful message (not an error, just no data)
+            # This is different from an API error - it means the resource group exists but has no costs
+            logger.info(f"ℹ No cost data found for {resource_group_name} - this is normal for new or unused resource groups")
             return {
                 'resource_group': resource_group_name,
                 'total_cost': 0.0,
                 'services': {},
-                'error': 'No cost data found for the specified period. Cost data may take 24-48 hours to appear after resource creation.',
+                'error': None,  # No error - just no data
+                'note': 'No cost data found for the specified period. This is normal for new or unused resource groups. Cost data may take 24-48 hours to appear after resource creation.',
                 'start_date': start_date.isoformat(),
                 'end_date': end_date.isoformat()
             }

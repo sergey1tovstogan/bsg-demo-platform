@@ -471,31 +471,38 @@ export function DeploymentAnalyzer() {
                 // First, add all cost data from the response
                 costDataArray.forEach((costData: any) => {
                   if (costData?.resource_group) {
+                    // Only treat as error if error field exists AND is not null/empty
+                    // A null error or missing error means no error (just no data, which is normal)
+                    const hasError = costData.error && costData.error.trim().length > 0
                     costMap[costData.resource_group] = {
                       resource_group: costData.resource_group,
                       total_cost: costData.total_cost || 0,
                       services: costData.services || {},
                       projections: costData.projections,
-                      error: costData.error
+                      error: hasError ? costData.error : null,  // null means no error, just no data
+                      note: costData.note  // Include note if present
                     }
                   }
                 })
                 // Ensure all selected resource groups are in the map
-                // If a RG is missing from the response, add it with zero cost
+                // If a RG is missing from the response, add it with zero cost (no error)
                 selectedResourceGroups.forEach(rgName => {
                   if (!costMap[rgName]) {
                     costMap[rgName] = {
                       resource_group: rgName,
                       total_cost: 0,
                       services: {},
-                      error: 'No cost data returned for this resource group'
+                      error: null,  // No error - just no data returned
+                      note: 'No cost data returned for this resource group'
                     }
                   }
                 })
                 console.log('[Costs] Cost map created:', costMap)
                 setCosts(costMap)
                 setCostsLoading(false)
-                console.log(`[Costs] Successfully loaded costs for ${Object.keys(costMap).length} resource groups (${selectedResourceGroups.length} selected)`)
+                const successCount = Object.values(costMap).filter((c: any) => !c.error).length
+                const errorCount = Object.values(costMap).filter((c: any) => c.error).length
+                console.log(`[Costs] Successfully loaded costs: ${successCount} success, ${errorCount} errors, ${selectedResourceGroups.length} total`)
               } else {
                 console.warn('[Costs] No cost data in response, setting empty costs')
                 // Set empty costs for all resource groups
@@ -918,28 +925,79 @@ async function handleExportArmTemplate(
     const exportPromise = apiService.exportArmTemplate(subscriptionId, resourceGroupName)
     const response = await Promise.race([exportPromise, timeoutPromise]) as any
     
-    // Handle different response structures
-    let templateJson: string | null = null
+    console.log('[Export ARM] Response received:', response)
+    console.log('[Export ARM] Response structure:', {
+      hasData: !!response?.data,
+      hasDataData: !!response?.data?.data,
+      hasTemplateJson: !!response?.data?.template_json,
+      hasDataTemplateJson: !!response?.data?.data?.template_json,
+      hasTemplate: !!response?.data?.template,
+      hasDataTemplate: !!response?.data?.data?.template
+    })
     
-    if (response?.data?.template_json) {
-      templateJson = response.data.template_json
-    } else if (response?.data?.data?.template_json) {
+    // Handle different response structures - check multiple possible locations
+    let templateJson: string | null = null
+    let template: any = null
+    
+    // Try response.data.data.template_json (standard API response structure)
+    if (response?.data?.data?.template_json) {
       templateJson = response.data.data.template_json
-    } else if (response?.template_json) {
+      console.log('[Export ARM] Found template_json in response.data.data.template_json')
+    }
+    // Try response.data.template_json (alternative structure)
+    else if (response?.data?.template_json) {
+      templateJson = response.data.template_json
+      console.log('[Export ARM] Found template_json in response.data.template_json')
+    }
+    // Try response.template_json (direct structure)
+    else if (response?.template_json) {
       templateJson = response.template_json
-    } else if (typeof response?.data === 'string') {
-      // If response.data is a string, it might be the JSON directly
+      console.log('[Export ARM] Found template_json in response.template_json')
+    }
+    // Try response.data.data.template (object that needs stringification)
+    else if (response?.data?.data?.template) {
+      template = response.data.data.template
+      console.log('[Export ARM] Found template object in response.data.data.template')
+    }
+    // Try response.data.template (object that needs stringification)
+    else if (response?.data?.template) {
+      template = response.data.template
+      console.log('[Export ARM] Found template object in response.data.template')
+    }
+    // Try response.template (direct object)
+    else if (response?.template) {
+      template = response.template
+      console.log('[Export ARM] Found template object in response.template')
+    }
+    // Try parsing response.data as string
+    else if (typeof response?.data === 'string') {
       try {
         const parsed = JSON.parse(response.data)
         templateJson = parsed.template_json || parsed.template || response.data
+        console.log('[Export ARM] Parsed response.data as JSON string')
       } catch {
         templateJson = response.data
+        console.log('[Export ARM] Using response.data as string directly')
+      }
+    }
+    
+    // If we have a template object but no JSON string, stringify it
+    if (!templateJson && template) {
+      try {
+        templateJson = JSON.stringify(template, null, 2)
+        console.log('[Export ARM] Stringified template object')
+      } catch (e) {
+        console.error('[Export ARM] Failed to stringify template:', e)
+        onError(`ARM template export failed: Unable to convert template to JSON: ${e}`)
+        return false
       }
     }
     
     if (templateJson) {
       // Ensure templateJson is a string
       const jsonString = typeof templateJson === 'string' ? templateJson : JSON.stringify(templateJson, null, 2)
+      
+      console.log('[Export ARM] Template JSON length:', jsonString.length)
       
       // Create a blob with the ARM template JSON
       const blob = new Blob([jsonString], { type: 'application/json' })
@@ -952,9 +1010,11 @@ async function handleExportArmTemplate(
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
       
+      console.log('[Export ARM] Successfully downloaded ARM template')
       return true
     } else {
       console.error('[Export ARM] Unexpected response structure:', response)
+      console.error('[Export ARM] Full response:', JSON.stringify(response, null, 2))
       onError('ARM template export failed: No template data returned. Check console for details.')
       return false
     }
@@ -1857,27 +1917,40 @@ function ServiceAnalysis({
                     }
                   })
 
-                  const hasErrors = costEntries.some(c => c.error && !costsLoading)
+                  // Only count actual errors (non-null, non-empty error strings), not "no data" cases
+                  const hasErrors = costEntries.some(c => {
+                    const hasError = c.error && typeof c.error === 'string' && c.error.trim().length > 0
+                    return hasError && !costsLoading
+                  })
                   // Calculate total cost - only include valid costs (no errors or still loading)
                   const totalCost = costEntries.reduce((sum, cost) => {
-                    // Skip costs with errors (but only if not loading, as loading state might have temporary errors)
-                    if (cost.error && !costsLoading) return sum
+                    // Skip costs with actual errors (but only if not loading, as loading state might have temporary errors)
+                    const hasError = cost.error && typeof cost.error === 'string' && cost.error.trim().length > 0
+                    if (hasError && !costsLoading) return sum
                     // Ensure total_cost is a valid number
                     const costValue = typeof cost.total_cost === 'number' ? cost.total_cost : 0
                     return sum + costValue
                   }, 0)
 
-                  const hasProjections = costEntries.some(c => c.projections && !c.error && !costsLoading)
+                  const hasProjections = costEntries.some(c => {
+                    const hasError = c.error && typeof c.error === 'string' && c.error.trim().length > 0
+                    return c.projections && !hasError && !costsLoading
+                  })
                   const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
-                    // Skip costs with errors or missing projections
-                    if (cost.error && !costsLoading) return sum
+                    // Skip costs with actual errors or missing projections
+                    const hasError = cost.error && typeof cost.error === 'string' && cost.error.trim().length > 0
+                    if (hasError && !costsLoading) return sum
                     if (!cost.projections) return sum
                     // Ensure full_month is a valid number
                     const projectionValue = typeof cost.projections.full_month === 'number' ? cost.projections.full_month : 0
                     return sum + projectionValue
                   }, 0) : null
 
-                  const errorCount = costEntries.filter(c => c.error && !costsLoading).length
+                  // Only count actual errors (non-null, non-empty strings)
+                  const errorCount = costEntries.filter(c => {
+                    const hasError = c.error && typeof c.error === 'string' && c.error.trim().length > 0
+                    return hasError && !costsLoading
+                  }).length
                   const successCount = costEntries.length - errorCount
 
                   if (hasErrors && costEntries.length > 0 && !costsLoading) {
@@ -2640,21 +2713,41 @@ function ComponentDetailPanel({
                 const firstResult = resultsArray[0]
                 console.log('[Refresh] First result:', firstResult)
                 console.log('[Refresh] First result keys:', Object.keys(firstResult || {}))
-
-                const newComponentInfo = firstResult?.componentInfo
+                
+                const newComponentInfo = firstResult?.componentInfo || firstResult?.component_info
                 console.log('[Refresh] New component info:', newComponentInfo)
+                console.log('[Refresh] Component info keys:', newComponentInfo ? Object.keys(newComponentInfo) : 'No component info')
                 
                 if (newComponentInfo) {
-                  // Check if architectural overview has strict format
-                  const hasStrictFormat = newComponentInfo.architecturalOverview?.includes('## 1. Purpose & Scope')
-                  console.log('[Refresh] Has strict format:', hasStrictFormat)
-                  console.log('[Refresh] Architectural overview length:', newComponentInfo.architecturalOverview?.length)
-                  console.log('[Refresh] Architectural overview preview:', newComponentInfo.architecturalOverview?.substring(0, 200))
+                  // Check if architectural overview has content (even if not strict format)
+                  const hasContent = newComponentInfo.architecturalOverview || newComponentInfo.architectural_overview
+                  const architecturalOverview = newComponentInfo.architecturalOverview || newComponentInfo.architectural_overview || ''
+                  const functionalOverview = newComponentInfo.functionalOverview || newComponentInfo.functional_overview || ''
+                  const capabilities = newComponentInfo.capabilities || []
+                  
+                  console.log('[Refresh] Has content:', !!hasContent)
+                  console.log('[Refresh] Architectural overview length:', architecturalOverview?.length || 0)
+                  console.log('[Refresh] Functional overview length:', functionalOverview?.length || 0)
+                  console.log('[Refresh] Capabilities count:', capabilities?.length || 0)
+                  
+                  // Normalize component info to match expected structure
+                  const normalizedComponentInfo: ComponentInfo = {
+                    componentName: newComponentInfo.componentName || newComponentInfo.component_name || componentInfo?.componentName || '',
+                    componentType: newComponentInfo.componentType || newComponentInfo.component_type || componentInfo?.componentType || '',
+                    architecturalOverview: architecturalOverview,
+                    functionalOverview: functionalOverview,
+                    capabilities: capabilities,
+                    relatedServices: newComponentInfo.relatedServices || newComponentInfo.related_services || [],
+                    dataSource: newComponentInfo.dataSource || newComponentInfo.data_source,
+                    relationships: newComponentInfo.relationships || []
+                  }
+                  
+                  console.log('[Refresh] Normalized component info:', normalizedComponentInfo)
                   
                   // Create updated result with new component info
                   const updatedResult: AnalysisResult = {
                     ...result,
-                    componentInfo: newComponentInfo
+                    componentInfo: normalizedComponentInfo
                   }
                   console.log('[Refresh] Updated result:', updatedResult)
                   
@@ -2662,9 +2755,7 @@ function ComponentDetailPanel({
                   if (onRefresh) {
                     console.log('[Refresh] Calling onRefresh callback')
                     onRefresh(updatedResult)
-                    
-                    // Show success message silently - don't alert for non-strict format
-                    // The UI will display whatever content is available
+                    console.log('[Refresh] Refresh callback completed successfully')
                   } else {
                     console.warn('[Refresh] No onRefresh callback provided')
                   }
@@ -2672,15 +2763,15 @@ function ComponentDetailPanel({
                 console.warn('[Refresh] No componentInfo in response. First result:', firstResult)
                 if (firstResult?.error) {
                   console.error('[Refresh] Component refresh error:', firstResult.error)
-                  // Don't show alert, just log the error - UI will show existing data
+                  alert(`Failed to refresh component information: ${firstResult.error}`)
                 } else {
                   console.warn('[Refresh] No component information returned. Possible causes: RAG API not configured, service not identified, or backend error.')
-                  // Don't show alert, just log the warning - UI will show existing data
+                  alert('No component information returned. Please check that the RAG API is configured and the service is identified correctly.')
                 }
               }
             } else {
               console.warn('[Refresh] Empty results array. Full response:', response)
-              // Don't show alert, just log the warning - UI will show existing data
+              alert('No results returned from refresh. Please check backend logs for details.')
             }
             } catch (error: any) {
               console.error('[Refresh] Failed to refresh component info:', error)

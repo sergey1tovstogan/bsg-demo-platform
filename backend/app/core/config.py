@@ -36,8 +36,8 @@ class Settings(BaseSettings):
         description="Database connection string (Azure Cosmos DB MongoDB API)"
     )
     DATABASE_NAME: str = Field(default="bsg_demo", description="Database name")
-    DB_MAX_POOL_SIZE: int = Field(default=50, description="Database connection pool size")
-    DB_MIN_POOL_SIZE: int = Field(default=10, description="Minimum connection pool size")
+    DB_MAX_POOL_SIZE: int = Field(default=20, description="Database connection pool size (reduced from 50 for cost optimization)")
+    DB_MIN_POOL_SIZE: int = Field(default=5, description="Minimum connection pool size (reduced from 10 for cost optimization)")
     DB_CONNECT_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
 
     # MSSQL External Database - TDH (ODS/SDS)

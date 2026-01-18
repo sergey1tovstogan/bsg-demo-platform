@@ -81,22 +81,26 @@ class TemenosRAGAdapter(RAGAdapter):
     ) -> Dict[str, Any]:
         """
         Query the Temenos RAG API.
+        
+        Always uses the global token from settings unless jwt_token is explicitly provided.
+        This ensures all RAG calls use the same global token.
 
         Args:
             question: The question to ask
             region: Region context (default: "global")
             rag_model_id: Model ID to use (optional)
             context: Additional context (optional)
-            jwt_token: Custom JWT token to use for this request (optional, uses default if not provided)
+            jwt_token: Custom JWT token to use for this request (optional, uses global token if not provided)
 
         Returns:
             Response dictionary with answer and sources
         """
-        # Ensure token is loaded
+        # Always refresh token from settings to ensure we use the latest global token
+        # This ensures that when the token is updated via Settings API, all subsequent queries use it
         await self._ensure_token()
         
         try:
-            # Use custom token if provided, otherwise use default
+            # Use custom token only if explicitly provided, otherwise use global token from settings
             token = jwt_token if jwt_token else self.jwt_token
 
             url = f"{self.api_base}/query"

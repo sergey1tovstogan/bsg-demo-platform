@@ -896,9 +896,8 @@ class ApiService {
   async updateRAGToken(jwtToken: string) {
     const response = await this.client.post<ApiResponse<{
       message: string
-      token_preview: string
-    }>>('/deployment/temenos/update-token', {
-      jwt_token: jwtToken
+    }>>('/settings/rag/jwt-token', {
+      token: jwtToken
     })
     return response.data
   }

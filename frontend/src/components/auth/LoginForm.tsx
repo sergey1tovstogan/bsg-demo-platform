@@ -87,9 +87,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             aria-required="true"
             aria-invalid={error ? 'true' : 'false'}
           />
-          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#718096' }}>
-            Enter any username (mocked authentication)
-          </p>
         </div>
 
         <div className="login-form-group">
@@ -106,9 +103,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             aria-required="true"
             aria-invalid={error ? 'true' : 'false'}
           />
-          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#718096' }}>
-            Enter your Temenos email address (e.g., apostolos.georgas@temenos.com)
-          </p>
         </div>
 
         <div className="login-form-options">
@@ -134,7 +128,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
 
         <div className="login-form-footer">
           <p className="login-form-help">
-            Need help? Contact your administrator.
+            Need help? Contact apostolos.georgas@temenos.com
           </p>
         </div>
       </form>

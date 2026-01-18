@@ -1948,15 +1948,19 @@ class RAGTokenUpdateRequest(BaseModel):
 
 
 @router.post("/temenos/update-token")
-async def update_rag_jwt_token(request: RAGTokenUpdateRequest):
+async def update_rag_jwt_token(
+    request: RAGTokenUpdateRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
     """
-    Update the RAG JWT token at runtime.
+    Update the RAG JWT token at runtime (GLOBAL token for all users).
     
     This allows updating the token without restarting the application.
-    The token is cached in memory and used for all subsequent RAG API calls.
+    The token is stored in MongoDB and used for all RAG API calls.
     
     Args:
         request: Request containing the new JWT token
+        db: Database dependency
         
     Returns:
         Success status and token preview
@@ -1967,30 +1971,41 @@ async def update_rag_jwt_token(request: RAGTokenUpdateRequest):
         
         token = request.jwt_token.strip()
         
-        # Update token in adapter
+        # Store in MongoDB as global token (not user-specific)
+        try:
+            await db.settings.update_one(
+                {"key": "rag_jwt_token"},
+                {"$set": {"value": token, "updated_at": "now"}},
+                upsert=True
+            )
+            logger.info("RAG JWT token stored in MongoDB as global token")
+        except Exception as e:
+            logger.warning(f"Failed to store RAG JWT token in MongoDB: {e}, using in-memory storage")
+            # Fallback to in-memory storage in settings API
+            from app.api.settings import _rag_jwt_token_memory
+            import app.api.settings as settings_module
+            settings_module._rag_jwt_token_memory = token
+        
+        # Update token in adapter instance (singleton)
         from app.adapters.rag.factory import update_rag_token
         success = update_rag_token(token)
         
-        if success:
-            # Also update settings for consistency (though adapter uses its own copy)
-            # This ensures that if adapter is recreated, it will use the new token
-            from app.core.config import get_settings
-            settings = get_settings()
-            settings.RAG_JWT_TOKEN = token
-            
-            token_preview = token[:20] + "..." if len(token) > 20 else token
-            logger.info(f"RAG JWT token updated successfully. Preview: {token_preview}")
-            
-            return {
-                "status": "success",
-                "message": "RAG JWT token updated successfully",
-                "token_preview": token_preview
-            }
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to update RAG token. Adapter may not support token updates."
-            )
+        if not success:
+            logger.warning("Failed to update RAG adapter token, but token is stored in MongoDB")
+        
+        # Also update settings config for consistency
+        from app.core.config import get_settings
+        settings = get_settings()
+        settings.RAG_JWT_TOKEN = token
+        
+        token_preview = token[:20] + "..." if len(token) > 20 else token
+        logger.info(f"✅ RAG JWT token updated successfully (GLOBAL). Preview: {token_preview}")
+        
+        return {
+            "status": "success",
+            "message": "RAG JWT token updated successfully",
+            "token_preview": token_preview
+        }
             
     except HTTPException:
         raise
