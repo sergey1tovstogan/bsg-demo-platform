@@ -253,8 +253,9 @@ app.include_router(proxy_router, prefix=f"{settings.API_V1_PREFIX}/integration",
 app.include_router(grafana_proxy.router, prefix=settings.API_V1_PREFIX)
 app.include_router(grafana_auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(security.router, prefix=settings.API_V1_PREFIX)
-app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
+# Register chatbot router BEFORE deployment router to avoid potential path conflicts
 app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
+app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(cache.router, prefix=settings.API_V1_PREFIX)
 app.include_router(settings_api.router, prefix=settings.API_V1_PREFIX)
 app.include_router(payments.router, prefix=settings.API_V1_PREFIX)
