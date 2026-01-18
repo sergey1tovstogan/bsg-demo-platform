@@ -437,6 +437,7 @@ class CostService:
         total_cost = 0.0
         
         if 'properties' not in result or 'rows' not in result['properties']:
+            # Invalid response structure is an actual error
             return {
                 'resource_group': resource_group_name,
                 'total_cost': 0.0,
@@ -449,11 +450,14 @@ class CostService:
         rows = result['properties']['rows']
         
         if not rows:
+            # No rows is NOT an error - it just means no cost data (normal for new/unused RGs)
+            logger.info(f"ℹ No cost rows returned for {resource_group_name} - this is normal if the RG has no costs")
             return {
                 'resource_group': resource_group_name,
                 'total_cost': 0.0,
                 'services': {},
-                'error': 'No cost data rows returned',
+                'error': None,  # No error - just no data
+                'note': 'No cost data found for the specified period. This is normal for new or unused resource groups.',
                 'start_date': start_date.isoformat(),
                 'end_date': end_date.isoformat()
             }
@@ -483,6 +487,10 @@ class CostService:
             else:
                 logger.warning(f"Row {idx} has insufficient columns ({len(row)}), expected at least 5. Row: {row}")
         
+        # If we parsed rows but found no matching resource group, that's still "no data" not an error
+        if total_cost == 0.0 and len(services) == 0:
+            logger.info(f"ℹ Parsed {len(rows)} rows but found no costs for {resource_group_name} - this is normal if the RG has no costs")
+        
         logger.info(f"Parsed costs for {resource_group_name}: total=${total_cost:.2f}, services={len(services)}")
         
         # Calculate projections
@@ -502,7 +510,7 @@ class CostService:
             'total_cost': round(total_cost, 2),
             'currency': currency,
             'services': {k: round(v, 2) for k, v in services.items()},
-            'error': None,
+            'error': None,  # Always None when parsing succeeds (even if total_cost is 0)
             'start_date': start_date.isoformat(),
             'end_date': end_date.isoformat(),
             'projections': {

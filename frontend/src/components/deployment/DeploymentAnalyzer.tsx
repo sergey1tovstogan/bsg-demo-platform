@@ -471,9 +471,9 @@ export function DeploymentAnalyzer() {
                 // First, add all cost data from the response
                 costDataArray.forEach((costData: any) => {
                   if (costData?.resource_group) {
-                    // Only treat as error if error field exists AND is not null/empty
+                    // Only treat as error if error field exists AND is not null/empty string
                     // A null error or missing error means no error (just no data, which is normal)
-                    const hasError = costData.error && costData.error.trim().length > 0
+                    const hasError = costData.error != null && typeof costData.error === 'string' && costData.error.trim().length > 0
                     costMap[costData.resource_group] = {
                       resource_group: costData.resource_group,
                       total_cost: costData.total_cost || 0,
@@ -492,8 +492,8 @@ export function DeploymentAnalyzer() {
                       resource_group: rgName,
                       total_cost: 0,
                       services: {},
-                      error: null,  // No error - just no data returned
-                      note: 'No cost data returned for this resource group'
+                      error: null,  // No error - just no data returned yet
+                      note: costsLoading ? 'Loading...' : 'No cost data returned for this resource group'
                     }
                   }
                 })
@@ -1908,12 +1908,13 @@ function ServiceAnalysis({
                   // Ensure all selected resource groups are accounted for in aggregation
                   const allRGs = selectedResourceGroups || []
                   const costEntries = allRGs.map(rgName => {
-                    // Get cost data for this RG, or create a default entry if not found
+                    // Get cost data for this RG, or create a default entry if not found (no error - just no data yet)
                     return costs[rgName] || {
                       resource_group: rgName,
                       total_cost: 0,
                       services: {},
-                      error: costsLoading ? undefined : 'No cost data available'
+                      error: null,  // No error - just no data available yet (might still be loading or no costs)
+                      note: costsLoading ? 'Loading...' : 'No cost data available yet'
                     }
                   })
 

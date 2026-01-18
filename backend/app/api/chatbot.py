@@ -93,7 +93,14 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
         
         # For deployment component, use RAG API directly
         if component_id == "deployment":
-            temenos_service = TemenosService()
+            try:
+                temenos_service = TemenosService()
+            except Exception as e:
+                logger.error(f"Failed to initialize TemenosService for deployment: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to initialize RAG service: {str(e)}. Please check RAG API configuration in Settings."
+                )
             
             # Build context from conversation history
             context_parts = []
@@ -110,12 +117,32 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
             context = "\n".join(context_parts)
             
             # Query RAG API with deployment and architecture topics
-            result = await temenos_service.query_rag(
-                question=message,
-                region="global",
-                rag_model_id="ModularBanking, TechnologyOverview, Platform",
-                context=context
-            )
+            try:
+                result = await temenos_service.query_rag(
+                    question=message,
+                    region="global",
+                    rag_model_id="ModularBanking, TechnologyOverview, Platform",
+                    context=context
+                )
+            except RuntimeError as rag_error:
+                error_msg = str(rag_error)
+                logger.error(f"RAG API error for deployment: {error_msg}", exc_info=True)
+                if "token" in error_msg.lower() or "not configured" in error_msg.lower() or "401" in error_msg or "unauthorized" in error_msg.lower():
+                    raise HTTPException(
+                        status_code=401,
+                        detail="RAG API token is not configured or has expired. Please configure it in Settings to use BSG Guru."
+                    )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"RAG API error: {error_msg}. Please check RAG API configuration in Settings."
+                )
+            except Exception as rag_error:
+                error_msg = str(rag_error)
+                logger.error(f"Unexpected RAG API error for deployment: {error_msg}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to query RAG API: {error_msg}. Please check RAG API configuration in Settings."
+                )
             
             # Extract answer from response
             # RAG API response format: {"data": {"answer": "...", "sources": [...]}}
@@ -155,7 +182,14 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
 
         # For data-architecture component, use RAG API
         elif component_id == "data-architecture":
-            temenos_service = TemenosService()
+            try:
+                temenos_service = TemenosService()
+            except Exception as e:
+                logger.error(f"Failed to initialize TemenosService for data-architecture: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to initialize RAG service: {str(e)}. Please check RAG API configuration in Settings."
+                )
 
             # Build context from conversation history
             context_parts = []
@@ -172,12 +206,32 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
             context = "\n".join(context_parts)
 
             # Query RAG API with data architecture topics
-            result = await temenos_service.query_rag(
-                question=message,
-                region="global",
-                rag_model_id="DataHub, Analytics, TechnologyOverview",
-                context=context
-            )
+            try:
+                result = await temenos_service.query_rag(
+                    question=message,
+                    region="global",
+                    rag_model_id="DataHub, Analytics, TechnologyOverview",
+                    context=context
+                )
+            except RuntimeError as rag_error:
+                error_msg = str(rag_error)
+                logger.error(f"RAG API error for data-architecture: {error_msg}", exc_info=True)
+                if "token" in error_msg.lower() or "not configured" in error_msg.lower() or "401" in error_msg or "unauthorized" in error_msg.lower():
+                    raise HTTPException(
+                        status_code=401,
+                        detail="RAG API token is not configured or has expired. Please configure it in Settings to use BSG Guru."
+                    )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"RAG API error: {error_msg}. Please check RAG API configuration in Settings."
+                )
+            except Exception as rag_error:
+                error_msg = str(rag_error)
+                logger.error(f"Unexpected RAG API error for data-architecture: {error_msg}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to query RAG API: {error_msg}. Please check RAG API configuration in Settings."
+                )
 
             # Extract answer from response
             # RAG API response format: {"data": {"answer": "...", "sources": [...]}}
@@ -217,7 +271,14 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
 
 
         # Initialize Temenos service for RAG API access
-        temenos_service = TemenosService()
+        try:
+            temenos_service = TemenosService()
+        except Exception as e:
+            logger.error(f"Failed to initialize TemenosService: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to initialize RAG service: {str(e)}. Please check RAG API configuration in Settings."
+            )
 
         # Build context from conversation history
         context_parts = []
@@ -249,12 +310,33 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
         context = "\n".join(context_parts)
 
         # Query RAG API with the same model IDs for all components
-        result = await temenos_service.query_rag(
-            question=message,
-            region="global",
-            rag_model_id="TechnologyOverview",
-            context=context
-        )
+        try:
+            result = await temenos_service.query_rag(
+                question=message,
+                region="global",
+                rag_model_id="TechnologyOverview",
+                context=context
+            )
+        except RuntimeError as rag_error:
+            error_msg = str(rag_error)
+            logger.error(f"RAG API error: {error_msg}", exc_info=True)
+            # Check if it's a token issue
+            if "token" in error_msg.lower() or "not configured" in error_msg.lower() or "401" in error_msg or "unauthorized" in error_msg.lower():
+                raise HTTPException(
+                    status_code=401,
+                    detail="RAG API token is not configured or has expired. Please configure it in Settings to use BSG Guru."
+                )
+            raise HTTPException(
+                status_code=500,
+                detail=f"RAG API error: {error_msg}. Please check RAG API configuration in Settings."
+            )
+        except Exception as rag_error:
+            error_msg = str(rag_error)
+            logger.error(f"Unexpected RAG API error: {error_msg}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to query RAG API: {error_msg}. Please check RAG API configuration in Settings."
+            )
 
         # Extract answer from response
         # RAG API response format: {"data": {"answer": "...", "sources": [...]}}
