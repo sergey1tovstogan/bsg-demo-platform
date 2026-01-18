@@ -124,12 +124,15 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
             context = "\n".join(context_parts)
             
             # Query RAG API with deployment and architecture topics
-            # Note: "Platform" is not a valid model ID, using "PlatformFrameworkMea" instead
+            # Using valid model IDs from RAG API:
+            # - ModularBanking (maps to "Modular" in UI)
+            # - TechnologyOverview (maps to "Technology Overview" in UI)
+            # - SecurityFramework (maps to "Security" in UI)
             try:
                 result = await temenos_service.query_rag(
                     question=message,
                     region="global",
-                    rag_model_id="ModularBanking, TechnologyOverview, PlatformFrameworkMea",
+                    rag_model_id="ModularBanking, TechnologyOverview, SecurityFramework",
                     context=context
                 )
             except RuntimeError as rag_error:
@@ -214,6 +217,10 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
             context = "\n".join(context_parts)
 
             # Query RAG API with data architecture topics
+            # Using valid model IDs from RAG API:
+            # - DataHub (maps to "Data Hub" in UI)
+            # - Analytics (maps to "Analytics" in UI)
+            # - TechnologyOverview (maps to "Technology Overview" in UI)
             try:
                 result = await temenos_service.query_rag(
                     question=message,
@@ -299,30 +306,59 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
                 elif msg.get("role") == "assistant":
                     context_parts.append(f"Assistant: {msg.get('content', '')[:100]}...")
 
-        # Add component-specific context
-        component_contexts = {
-            "deployment": "This is about Temenos cloud deployment, Azure infrastructure, and deployment best practices.",
-            "security": "This is about Temenos security features, authentication, authorization, encryption, and security best practices.",
-            "connectivity": "This is about Temenos connectivity, API integrations, microservices communication, and integration patterns.",
-            "payment": "This is about Temenos payment processing, payment gateway integrations, transaction handling, and payment workflows.",
-            "observability": "This is about Temenos observability, monitoring, logging, metrics, tracing, and operational insights.",
-            "api": "This is about Temenos APIs, API design, endpoints, API management, and API best practices."
+        # Add component-specific context and RAG model IDs
+        # Mapping UI options to valid API model IDs from RAG Swagger:
+        # Generic: TemenosPolicies (Policies), Exchange, InvestorRelations (Temenos Annual Reports)
+        # Technology: TechnologyOverview, digital_model (Digital), TechTAP (TAP), FuncPaymentsHub (Payments Hub),
+        #            DataHub (Data Hub), Analytics, DataSource (Data Source), ModularBanking (Modular),
+        #            SaaSUniformTerms (SaaS), SecurityFramework (Security), ExtensibilityAdvisor (Extensibility)
+        # Functionality: FuncTransactGeneric (Transact Generic), FuncTransactWealth (Transact Wealth),
+        #                funcWealthTAP (TAP Wealth), Payments, FuncFCM (FCM)
+        
+        component_configs = {
+            "deployment": {
+                "context": "This is about Temenos cloud deployment, Azure infrastructure, and deployment best practices.",
+                "rag_model_id": "ModularBanking, TechnologyOverview, SecurityFramework"
+            },
+            "security": {
+                "context": "This is about Temenos security features, authentication, authorization, encryption, and security best practices.",
+                "rag_model_id": "SecurityFramework, TechnologyOverview"
+            },
+            "connectivity": {
+                "context": "This is about Temenos connectivity, API integrations, microservices communication, and integration patterns.",
+                "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
+            },
+            "payment": {
+                "context": "This is about Temenos payment processing, payment gateway integrations, transaction handling, and payment workflows.",
+                "rag_model_id": "Payments, FuncPaymentsHub, TechnologyOverview"
+            },
+            "observability": {
+                "context": "This is about Temenos observability, monitoring, logging, metrics, tracing, and operational insights.",
+                "rag_model_id": "TechnologyOverview, Analytics"
+            },
+            "api": {
+                "context": "This is about Temenos APIs, API design, endpoints, API management, and API best practices.",
+                "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
+            }
         }
 
-        # Use component-specific context or generic Temenos context
-        component_context = component_contexts.get(
+        # Use component-specific config or generic Temenos context
+        component_config = component_configs.get(
             component_id,
-            f"This is about Temenos {component_id} component, its features, capabilities, and best practices."
+            {
+                "context": f"This is about Temenos {component_id} component, its features, capabilities, and best practices.",
+                "rag_model_id": "TechnologyOverview"
+            }
         )
-        context_parts.append(component_context)
+        context_parts.append(component_config["context"])
         context = "\n".join(context_parts)
 
-        # Query RAG API with the same model IDs for all components
+        # Query RAG API with component-specific model IDs
         try:
             result = await temenos_service.query_rag(
                 question=message,
                 region="global",
-                rag_model_id="TechnologyOverview",
+                rag_model_id=component_config["rag_model_id"],
                 context=context
             )
         except RuntimeError as rag_error:
