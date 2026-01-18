@@ -90,7 +90,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         </div>
 
         <div className="login-form-group">
-          <label htmlFor="password">Password (Temenos Email)</label>
+          <label htmlFor="password">Password</label>
           <input
             id="password"
             type="text"

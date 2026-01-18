@@ -46,26 +46,57 @@ export function Chatbot({ componentId }: ChatbotProps) {
     try {
       setInitializing(true)
       setChatError(null)
+      console.log(`[Chatbot] Initializing session for component: ${componentId}`)
+      
       const response = await apiService.createChatSession(componentId, {
         topic: componentId,
         user_level: 'beginner',
       })
-      const newSessionId = response.data.session_id
+      
+      console.log(`[Chatbot] Session creation response:`, response)
+      
+      const newSessionId = response.data?.session_id || response.data?.data?.session_id
+      
+      if (!newSessionId) {
+        throw new Error('Session ID not returned from server')
+      }
+      
+      console.log(`[Chatbot] Session created with ID: ${newSessionId}`)
       setSessionId(newSessionId)
       sessionIdRef.current = newSessionId
 
+      // Try to get history, but don't fail if there's no history yet
       if (newSessionId) {
         try {
           const historyResponse = await apiService.getChatHistory(componentId, newSessionId)
-          setMessages(historyResponse.data.messages || [])
-        } catch {
-          // No history yet
+          console.log(`[Chatbot] History loaded:`, historyResponse)
+          setMessages(historyResponse.data?.messages || historyResponse.data?.data?.messages || [])
+        } catch (historyErr: any) {
+          // No history yet - this is normal for new sessions
+          console.log(`[Chatbot] No history yet (this is normal for new sessions):`, historyErr?.response?.status)
+          setMessages([])
         }
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to initialize chat session'
+      console.error('[Chatbot] Failed to initialize chat session:', err)
+      let errorMessage = 'Failed to initialize chat session'
+      
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (typeof err === 'object' && err !== null) {
+        const axiosErr = err as any
+        if (axiosErr.response?.status === 404) {
+          errorMessage = 'Chatbot endpoint not found. Please check backend configuration.'
+        } else if (axiosErr.response?.data?.detail) {
+          errorMessage = typeof axiosErr.response.data.detail === 'string' 
+            ? axiosErr.response.data.detail 
+            : axiosErr.response.data.detail.error || errorMessage
+        } else if (axiosErr.message) {
+          errorMessage = axiosErr.message
+        }
+      }
+      
       setChatError(errorMessage)
-      console.error('Failed to initialize chat session:', err)
     } finally {
       setInitializing(false)
     }
@@ -82,6 +113,14 @@ export function Chatbot({ componentId }: ChatbotProps) {
       }
     }
   }, [componentId, initializeSession])
+  
+  // Reinitialize session if sessionId becomes null (e.g., after 404 error)
+  useEffect(() => {
+    if (!sessionId && !initializing) {
+      console.log('[Chatbot] Session ID is null, reinitializing...')
+      initializeSession()
+    }
+  }, [sessionId, initializing, initializeSession])
 
   useEffect(() => {
     scrollToBottom()
@@ -102,15 +141,47 @@ export function Chatbot({ componentId }: ChatbotProps) {
     }
 
     setMessages((prev) => [...prev, userMessage])
+    const messageToSend = input
     setInput('')
     setLoading(true)
     setChatError(null)
 
     try {
-      const response = await apiService.sendChatMessage(componentId, sessionId, input)
-      setMessages((prev) => [...prev, response.data])
+      console.log(`[Chatbot] Sending message to session ${sessionId}:`, messageToSend)
+      const response = await apiService.sendChatMessage(componentId, sessionId, messageToSend)
+      console.log(`[Chatbot] Message response:`, response)
+      
+      const assistantMessage = response.data || response.data?.data
+      if (assistantMessage) {
+        setMessages((prev) => [...prev, assistantMessage])
+      } else {
+        throw new Error('No response data received from server')
+      }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
+      console.error('[Chatbot] Failed to send message:', err)
+      
+      let errorMessage = 'Failed to send message'
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (typeof err === 'object' && err !== null) {
+        const axiosErr = err as any
+        if (axiosErr.response?.status === 404) {
+          errorMessage = 'Chat session not found. Please refresh the page to create a new session.'
+          // Clear the invalid session ID
+          console.log('[Chatbot] Session not found, clearing session ID')
+          setSessionId(null)
+          sessionIdRef.current = null
+        } else if (axiosErr.response?.status === 401) {
+          errorMessage = 'RAG API token is not configured or has expired. Please configure it in Settings to use BSG Guru.'
+        } else if (axiosErr.response?.data?.detail) {
+          errorMessage = typeof axiosErr.response.data.detail === 'string' 
+            ? axiosErr.response.data.detail 
+            : axiosErr.response.data.detail.error || errorMessage
+        } else if (axiosErr.message) {
+          errorMessage = axiosErr.message
+        }
+      }
+      
       setChatError(errorMessage)
       setMessages((prev) => prev.filter((msg) => msg.message_id !== userMessage.message_id))
     } finally {
