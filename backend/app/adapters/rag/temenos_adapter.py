@@ -113,11 +113,20 @@ class TemenosRAGAdapter(RAGAdapter):
             # Use default if not provided
             model_id = rag_model_id if rag_model_id else "ModularBanking, TechnologyOverview"
             
+            # Strip whitespace to ensure clean model IDs
+            if model_id:
+                model_id = model_id.strip()
+            
+            # Log the exact model_id being sent to help debug
+            logger.info(f"🔍 RAG Adapter - Sending RAGmodelId: '{model_id}' (type: {type(model_id)}, length: {len(model_id) if model_id else 0})")
+            
             payload = {
                 "question": question,
                 "region": region,
                 "RAGmodelId": model_id  # Required field
             }
+            
+            logger.debug(f"🔍 RAG Adapter - Full payload RAGmodelId: '{payload.get('RAGmodelId')}'")
             
             if context:
                 payload["context"] = context

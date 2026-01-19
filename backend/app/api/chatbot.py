@@ -131,11 +131,14 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
             # - ModularBanking (maps to "Modular" in UI)
             # - TechnologyOverview (maps to "Technology Overview" in UI)
             # - SecurityFramework (maps to "Security" in UI)
+            # - PlatformFrameworkMea (for platform-related queries)
+            rag_model_id_value = "ModularBanking, TechnologyOverview, SecurityFramework"
+            logger.info(f"💬 Deployment component - Using RAG model IDs: {rag_model_id_value}")
             try:
                 result = await temenos_service.query_rag(
                     question=message,
                     region="global",
-                    rag_model_id="ModularBanking, TechnologyOverview, SecurityFramework",
+                    rag_model_id=rag_model_id_value,
                     context=context
                 )
             except RuntimeError as rag_error:
