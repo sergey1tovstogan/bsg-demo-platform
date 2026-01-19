@@ -24,8 +24,11 @@ class ChatSessionRequest(BaseModel):
 
 class ChatMessageRequest(BaseModel):
     """Request model for sending a chat message."""
-    session_id: str = Field(..., description="Chat session ID")
-    message: str = Field(..., description="User message")
+    session_id: str = Field(..., description="Chat session ID", alias="session_id")
+    message: str = Field(..., description="User message", alias="message")
+    
+    class Config:
+        populate_by_name = True  # Allow both field name and alias
 
 
 @router.post("/session")
@@ -64,7 +67,7 @@ async def create_chat_session(component_id: str, request: ChatSessionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/query")
+@router.post("/query", status_code=200, response_model=Dict[str, Any])
 async def send_chat_message(component_id: str, request: ChatMessageRequest):
     """
     Send a chat message and get RAG-based response.
@@ -78,8 +81,9 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
     Returns:
         Assistant response
     """
-    # Log immediately when endpoint is hit
+    # Log immediately when endpoint is hit - this should appear if route is matched
     logger.info(f"💬💬💬 CHATBOT QUERY ENDPOINT HIT - component_id: {component_id}")
+    logger.info(f"💬 Request object type: {type(request)}, has session_id: {hasattr(request, 'session_id')}")
     try:
         logger.info(f"💬 Chatbot query endpoint called - component_id: {component_id}, session_id: {request.session_id}")
         logger.info(f"💬 Message: {request.message[:100] if request.message else 'None'}...")
