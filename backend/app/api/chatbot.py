@@ -4,7 +4,7 @@ Chatbot API Endpoints
 Provides chatbot endpoints that use RAG API for all components.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 from app.services.temenos_service import TemenosService
@@ -65,7 +65,7 @@ async def create_chat_session(component_id: str, request: ChatSessionRequest):
 
 
 @router.post("/query")
-async def send_chat_message(component_id: str, request: ChatMessageRequest):
+async def send_chat_message(component_id: str, request: ChatMessageRequest, http_request: Request = None):
     """
     Send a chat message and get RAG-based response.
 
@@ -80,6 +80,8 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
     """
     # Log immediately when endpoint is hit - this should appear if route is matched
     logger.info(f"💬💬💬 CHATBOT QUERY ENDPOINT HIT - component_id: {component_id}")
+    if http_request:
+        logger.info(f"💬 HTTP Request path: {http_request.url.path}, method: {http_request.method}")
     logger.info(f"💬 Request object type: {type(request)}, has session_id: {hasattr(request, 'session_id')}")
     try:
         logger.info(f"💬 Chatbot query endpoint called - component_id: {component_id}, session_id: {request.session_id}")
