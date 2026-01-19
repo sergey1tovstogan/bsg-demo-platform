@@ -24,11 +24,8 @@ class ChatSessionRequest(BaseModel):
 
 class ChatMessageRequest(BaseModel):
     """Request model for sending a chat message."""
-    session_id: str = Field(..., description="Chat session ID", alias="session_id")
-    message: str = Field(..., description="User message", alias="message")
-    
-    class Config:
-        populate_by_name = True  # Allow both field name and alias
+    session_id: str = Field(..., description="Chat session ID")
+    message: str = Field(..., description="User message")
 
 
 @router.post("/session")
@@ -67,7 +64,7 @@ async def create_chat_session(component_id: str, request: ChatSessionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/query", status_code=200, response_model=Dict[str, Any])
+@router.post("/query")
 async def send_chat_message(component_id: str, request: ChatMessageRequest):
     """
     Send a chat message and get RAG-based response.
