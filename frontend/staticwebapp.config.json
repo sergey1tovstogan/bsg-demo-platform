@@ -3,7 +3,7 @@
     {
       "route": "/api/*",
       "allowedRoles": ["anonymous"],
-      "rewrite": "https://bsg-demo-platform-app.azurewebsites.net/api/*"
+      "rewrite": "https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/*"
     }
   ],
   "navigationFallback": {

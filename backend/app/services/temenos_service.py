@@ -1138,6 +1138,146 @@ Open Questions
 - Real-time consistency: Not part of the documented scope.
 - Workflow orchestration: Not part of the documented scope.
 """
+
+    def _is_generic_config_microservice(self, component_name: str, service: AzureResource) -> bool:
+        """
+        Detect Generic Config microservice across naming/namespace variants.
+
+        We use this to short-circuit RAG calls because this microservice's
+        documentation is stable and provided as static content.
+        """
+        name_lower = (component_name or "").lower()
+        if any(k in name_lower for k in ["generic config", "generic configuration", "genericconfig"]):
+            return True
+
+        # Extra signals from AKS pods / containerized deployments
+        namespace = (
+            (service.properties.get("namespace") if getattr(service, "properties", None) else None)
+            or (service.tags.get("namespace") if getattr(service, "tags", None) else None)
+            or ""
+        )
+        namespace_lower = str(namespace).lower()
+        if "genericconfig" in namespace_lower or "generic-config" in namespace_lower:
+            return True
+
+        service_name_lower = (service.name or "").lower()
+        if "genericconfig" in service_name_lower or "generic-config" in service_name_lower:
+            return True
+
+        return False
+
+    def _build_generic_config_static_docs(self, component_name: str) -> Tuple[str, str, List[str]]:
+        """
+        Static documentation for Generic Configuration Microservice.
+
+        Returns:
+            architectural_overview (strict 12-section doc),
+            functional_overview,
+            capabilities list.
+        """
+        # Keep architectural_overview in strict format so existing caching/validation accepts it.
+        architectural_overview = f"""# {component_name}
+
+## 1. Purpose & Scope
+
+- Microservice name: {component_name}
+- Responsibility: Centralized, versioned, document-based configuration management for Temenos applications and microservices via stateless REST APIs.
+- Out of scope: Business domain processing (this service is a configuration backbone).
+
+## 2. Architectural Role
+
+- Position in Temenos ecosystem: Central configuration backbone enabling consistent configuration access through APIs across distributed systems.
+- Relationship to core transactional services: Provides externalized configuration artifacts consumed by multiple services/applications.
+
+## 3. Design Patterns & Guarantees
+
+- Stateless REST APIs for configuration lifecycle operations.
+- Dedicated persistent data store for configuration artifacts.
+- Version-controlled configuration artifacts enabling consistent consumption.
+
+## 4. Core Components
+
+The Generic Configuration Microservice can be deployed (among other options) on Azure Container Apps (ACA) and is composed of:
+
+- API Container App – Exposes REST APIs for configuration lifecycle operations
+- Ingester Container App – Handles asynchronous ingestion and event processing
+- Scheduler Container App – Executes scheduled/bulk cache synchronization jobs
+- App Init Job – One time initialization job executed during deployment
+
+## 5. Data Model & Consistency
+
+- Types of data managed: Externalized, versioned, document-based configuration artifacts.
+- Consistency implications: Consumers retrieve configuration by group/name and optionally version.
+
+## 6. APIs & Access Patterns
+
+The service exposes REST APIs for the complete configuration lifecycle:
+
+- POST – Add new configuration artifact (Base64 encoded content)
+- PUT – Update existing configuration artifact
+- GET (Configuration) – Retrieve configuration by Group ID, Configuration Name, and optional Version ID
+- GET (Group) – Retrieve list of configuration names under a group
+
+## 7. Deployment Architecture
+
+Each component is deployed as an independent containerized application. The App Init component runs as a job and is responsible for initializing required database schemas and streaming artifacts.
+
+## 8. Scalability & Performance
+
+- Horizontal scaling model: Designed to be scalable in cloud-native deployments.
+- Notes: API is stateless; scale depends on backing data store and optional cache.
+
+## 9. Security Model
+
+- Authentication boundary: Not part of the documented scope.
+- Authorization model: Not part of the documented scope.
+
+## 10. Observability & Operations
+
+- Not part of the documented scope.
+
+## 11. Functional Capabilities
+
+Key characteristics:
+
+- Central Configuration Service for Temenos platforms
+- Stateless REST APIs
+- Dedicated persistent data store
+- Distributed and cloud native deployment support
+- Version controlled configuration artifacts
+
+Supported Technology Stack:
+
+- Platform: Azure Container Apps (ACA)
+- Database: PostgreSQL or MongoDB
+- Streaming Platform: Azure Event Hubs
+- Cache (Optional): Redis compatible cache
+
+## 12. Explicit Non-Goals / Out-of-Scope
+
+- Not part of the documented scope.
+"""
+
+        functional_overview = """## Overview
+The Generic Configuration Microservice (GC MS) is a scalable, centralized configuration store that enables Temenos applications and microservices to manage their configuration through a stateless, REST based API interface. It acts as a central configuration backbone for Temenos applications, enabling consistent configuration access through APIs across distributed systems.
+It provides externalized, versioned, document based configuration management, allowing multiple applications to consume configuration consistently in distributed, cloud native deployments.
+
+## Exposed APIs
+- POST – Add new configuration artifact (Base64 encoded content)
+- PUT – Update existing configuration artifact
+- GET (Configuration) – Retrieve configuration by Group ID, Configuration Name, and optional Version ID
+- GET (Group) – Retrieve list of configuration names under a group
+"""
+
+        capabilities = [
+            "Central configuration service for Temenos platforms",
+            "Stateless REST APIs for configuration lifecycle operations",
+            "Version-controlled, document-based configuration artifacts",
+            "Dedicated persistent configuration data store",
+            "Cloud-native deployment support (e.g., Azure Container Apps)",
+        ]
+
+        return architectural_overview, functional_overview, capabilities
     
     def _clean_text(self, text: str) -> str:
         """Remove redundancies, marketing fluff, and normalize text."""
@@ -3271,6 +3411,39 @@ Open Questions
             component_category = extracted_info["componentCategory"]
             
             logger.info(f"Identifying component for {service.name}: {component_name}")
+
+            # SPECIAL CASE: Generic Config microservice should never call RAG (stable static documentation).
+            if self._is_generic_config_microservice(component_name, service):
+                arch, func, caps = self._build_generic_config_static_docs(component_name)
+                component_info = TemenosComponentInfo(
+                    component_name=component_name,
+                    component_type=self._determine_component_type(service),
+                    architectural_overview=arch,
+                    functional_overview=func,
+                    capabilities=caps,
+                    related_services=[service.name],
+                    relationships=[],
+                    data_source="static",
+                )
+
+                # Cache in-memory + persistent so we never RAG this component.
+                if use_cache:
+                    cache_key = component_name.lower()
+                    self._component_cache[cache_key] = component_info
+                    try:
+                        cache_service = await self._get_cache_service()
+                        await cache_service.set_component_info(component_name, {
+                            "component_name": component_info.component_name,
+                            "component_type": component_info.component_type,
+                            "architectural_overview": component_info.architectural_overview,
+                            "functional_overview": component_info.functional_overview,
+                            "capabilities": component_info.capabilities,
+                            "related_services": component_info.related_services
+                        })
+                    except Exception as e:
+                        logger.warning(f"Failed to save static component info to persistent cache for {component_name}: {e}")
+
+                return component_info
             
             # Check persistent cache first (unless force_refresh is True)
             # If force_refresh, skip cache entirely and fetch fresh from RAG

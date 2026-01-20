@@ -28,6 +28,8 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
     
     # Excluded paths that don't require authentication
     EXCLUDED_PATHS = [
+        # Allow API access (frontend uses JWT-based auth; basic auth is for direct/manual access)
+        "/api/v1",
         "/api/v1/health",
         "/api/v1/ready",
         "/api/v1/live",
