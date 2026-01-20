@@ -4,17 +4,21 @@ Chatbot API Endpoints
 Provides chatbot endpoints that use RAG API for all components.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 from app.services.temenos_service import TemenosService
 from app.core.logging import get_logger
+from app.core.database import get_database
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/components/{component_id}/chatbot", tags=["chatbot"])
 logger = get_logger(__name__)
 
 # In-memory session storage (in production, use database)
 chat_sessions: Dict[str, Dict[str, Any]] = {}
+CHAT_SESSIONS_COLLECTION = "chat_sessions"
 
 
 class ChatSessionRequest(BaseModel):
@@ -29,7 +33,11 @@ class ChatMessageRequest(BaseModel):
 
 
 @router.post("/session")
-async def create_chat_session(component_id: str, request: ChatSessionRequest):
+async def create_chat_session(
+    component_id: str,
+    request: ChatSessionRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
     """
     Create a new chat session.
     
@@ -43,14 +51,28 @@ async def create_chat_session(component_id: str, request: ChatSessionRequest):
     try:
         import uuid
         session_id = str(uuid.uuid4())
-        
-        chat_sessions[session_id] = {
+
+        now = datetime.now(timezone.utc).isoformat()
+        session_doc: Dict[str, Any] = {
             "session_id": session_id,
             "component_id": component_id,
             "context": request.context or {},
             "messages": [],
-            "created_at": str(uuid.uuid4())  # Simple timestamp placeholder
+            "created_at": now,
+            "updated_at": now,
         }
+
+        # Persist session for multi-worker/multi-instance deployments.
+        # Falls back to in-memory if DB is unavailable.
+        try:
+            await db[CHAT_SESSIONS_COLLECTION].update_one(
+                {"session_id": session_id},
+                {"$setOnInsert": session_doc},
+                upsert=True,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to persist chat session to DB, using in-memory storage: {e}")
+            chat_sessions[session_id] = session_doc
         
         return {
             "status": "success",
@@ -65,7 +87,11 @@ async def create_chat_session(component_id: str, request: ChatSessionRequest):
 
 
 @router.post("/query")
-async def send_chat_message(component_id: str, request: ChatMessageRequest):
+async def send_chat_message(
+    component_id: str,
+    request: ChatMessageRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
     """
     Send a chat message and get RAG-based response.
 
@@ -95,11 +121,22 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
         if not message:
             raise HTTPException(status_code=400, detail="message is required")
 
-        # Get or create session
-        if session_id not in chat_sessions:
-            raise HTTPException(status_code=404, detail="Session not found")
+        # Load session (DB-first for multi-worker/multi-instance deployments; fallback to in-memory)
+        session: Optional[Dict[str, Any]] = None
+        session_in_db = False
+        try:
+            session = await db[CHAT_SESSIONS_COLLECTION].find_one({"session_id": session_id})
+            session_in_db = session is not None
+        except Exception as e:
+            logger.warning(f"Failed to load chat session from DB, falling back to in-memory: {e}")
+            session = None
 
-        session = chat_sessions[session_id]
+        if session is None:
+            session = chat_sessions.get(session_id)
+            session_in_db = False
+
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
         
         # For deployment component, use RAG API directly
         if component_id == "deployment":
@@ -174,23 +211,38 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
             
             # Create assistant message
             import uuid
-            from datetime import datetime
             assistant_message = {
                 "message_id": str(uuid.uuid4()),
                 "role": "assistant",
                 "content": answer,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "sources": sources
             }
             
-            # Add messages to session
-            session["messages"].append({
+            user_message = {
                 "message_id": f"user-{uuid.uuid4()}",
                 "role": "user",
                 "content": message,
-                "timestamp": datetime.utcnow().isoformat()
-            })
-            session["messages"].append(assistant_message)
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+            # Persist messages
+            if session_in_db:
+                try:
+                    await db[CHAT_SESSIONS_COLLECTION].update_one(
+                        {"session_id": session_id},
+                        {
+                            "$push": {"messages": {"$each": [user_message, assistant_message]}},
+                            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+                        },
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to persist chat messages to DB, falling back to in-memory: {e}")
+                    chat_sessions.setdefault(session_id, session).setdefault("messages", []).extend(
+                        [user_message, assistant_message]
+                    )
+            else:
+                session.setdefault("messages", []).extend([user_message, assistant_message])
             
             return {
                 "status": "success",
@@ -267,23 +319,38 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
 
             # Create assistant message
             import uuid
-            from datetime import datetime
             assistant_message = {
                 "message_id": str(uuid.uuid4()),
                 "role": "assistant",
                 "content": answer,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "sources": sources
             }
 
-            # Add messages to session
-            session["messages"].append({
+            user_message = {
                 "message_id": f"user-{uuid.uuid4()}",
                 "role": "user",
                 "content": message,
-                "timestamp": datetime.utcnow().isoformat()
-            })
-            session["messages"].append(assistant_message)
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+            # Persist messages
+            if session_in_db:
+                try:
+                    await db[CHAT_SESSIONS_COLLECTION].update_one(
+                        {"session_id": session_id},
+                        {
+                            "$push": {"messages": {"$each": [user_message, assistant_message]}},
+                            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+                        },
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to persist chat messages to DB, falling back to in-memory: {e}")
+                    chat_sessions.setdefault(session_id, session).setdefault("messages", []).extend(
+                        [user_message, assistant_message]
+                    )
+            else:
+                session.setdefault("messages", []).extend([user_message, assistant_message])
 
             return {
                 "status": "success",
@@ -401,23 +468,38 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
 
         # Create assistant message
         import uuid
-        from datetime import datetime
         assistant_message = {
             "message_id": str(uuid.uuid4()),
             "role": "assistant",
             "content": answer,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "sources": sources
         }
 
-        # Add messages to session
-        session["messages"].append({
+        user_message = {
             "message_id": f"user-{uuid.uuid4()}",
             "role": "user",
             "content": message,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-        session["messages"].append(assistant_message)
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+        # Persist messages
+        if session_in_db:
+            try:
+                await db[CHAT_SESSIONS_COLLECTION].update_one(
+                    {"session_id": session_id},
+                    {
+                        "$push": {"messages": {"$each": [user_message, assistant_message]}},
+                        "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"Failed to persist chat messages to DB, falling back to in-memory: {e}")
+                chat_sessions.setdefault(session_id, session).setdefault("messages", []).extend(
+                    [user_message, assistant_message]
+                )
+        else:
+            session.setdefault("messages", []).extend([user_message, assistant_message])
 
         return {
             "status": "success",
@@ -442,7 +524,11 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
 
 
 @router.get("/history/{session_id}")
-async def get_chat_history(component_id: str, session_id: str):
+async def get_chat_history(
+    component_id: str,
+    session_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
     """
     Get chat history for a session.
     
@@ -454,10 +540,18 @@ async def get_chat_history(component_id: str, session_id: str):
         Chat history
     """
     try:
-        if session_id not in chat_sessions:
+        session: Optional[Dict[str, Any]] = None
+        try:
+            session = await db[CHAT_SESSIONS_COLLECTION].find_one({"session_id": session_id})
+        except Exception as e:
+            logger.warning(f"Failed to load chat history from DB, falling back to in-memory: {e}")
+            session = None
+
+        if session is None:
+            session = chat_sessions.get(session_id)
+
+        if session is None:
             raise HTTPException(status_code=404, detail="Session not found")
-        
-        session = chat_sessions[session_id]
         
         return {
             "status": "success",
@@ -474,7 +568,11 @@ async def get_chat_history(component_id: str, session_id: str):
 
 
 @router.delete("/session/{session_id}")
-async def delete_chat_session(component_id: str, session_id: str):
+async def delete_chat_session(
+    component_id: str,
+    session_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
     """
     Delete a chat session.
     
@@ -483,6 +581,12 @@ async def delete_chat_session(component_id: str, session_id: str):
         session_id: Session ID
     """
     try:
+        # Remove from persistent storage first (ignore failures)
+        try:
+            await db[CHAT_SESSIONS_COLLECTION].delete_one({"session_id": session_id})
+        except Exception as e:
+            logger.warning(f"Failed to delete chat session from DB, falling back to in-memory: {e}")
+
         if session_id in chat_sessions:
             del chat_sessions[session_id]
         

@@ -988,7 +988,8 @@ async def _analyze_services_impl(request: AnalyzeRequest):
         
         # Add Azure service descriptions for non-Temenos services
         try:
-            db = await get_database().__anext__()
+            # get_database is an async dependency function (not an async generator)
+            db = await get_database()
             unidentified_services = [r for r in deduplicated_results if not r.component_info]
             if unidentified_services:
                 service_types = list(set([r.service.type for r in unidentified_services]))
@@ -997,7 +998,7 @@ async def _analyze_services_impl(request: AnalyzeRequest):
                 for result in unidentified_services:
                     if result.service.type in descriptions:
                         result.service.description = descriptions[result.service.type]
-        except (StopAsyncIteration, Exception) as e:
+        except Exception as e:
             logger.debug(f"Could not add Azure service descriptions: {e}")
         
         return {
