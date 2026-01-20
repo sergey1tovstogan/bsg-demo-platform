@@ -122,26 +122,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Login function with mocked authentication
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
-      // Mocked authentication: Accept any username (no validation), password must be valid @temenos.com email
-      const temenosEmailPattern = /^[^\s@]+\.[^\s@]+@temenos\.com$/
+      // Mocked authentication: accept any Temenos mailbox (no examples in errors)
+      const temenosEmailPattern = /^[^\s@]+@temenos\.[a-zA-Z]{2,}$/i
       
       if (!temenosEmailPattern.test(credentials.password)) {
-        throw new Error('Password must be a valid Temenos email address (e.g., firstname.lastname@temenos.com)')
+        // Avoid leaking validation rules in the UI
+        throw new Error('Invalid credentials')
       }
 
-      // Extract name from email (first part before @)
-      const emailParts = credentials.password.split('@')
-      const name = emailParts[0].split('.')[0] // Get first part before dot
-      const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+      // Extract welcome name from email (first part before @, then before first dot if present)
+      const localPart = credentials.password.split('@')[0] || ''
+      const displayName = (localPart.split('.')[0] || localPart).trim()
 
       // Create mock user data
       const mockUser: User = {
-        user_id: `usr_${name.toLowerCase()}_001`,
+        user_id: `usr_${displayName.toLowerCase()}_001`,
         email: credentials.password, // Use the password email as the user email
-        username: capitalizedName,
+        username: displayName,
         role: 'viewer', // Default role
         profile: {
-          first_name: capitalizedName,
+          first_name: displayName,
         },
         is_active: true,
       }
@@ -158,8 +158,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(mockUser)
       setupAutoRefresh()
     } catch (error: any) {
-      const errorMessage = error.message || 'Login failed'
-      throw new Error(errorMessage)
+      // Never surface detailed validation errors here
+      throw new Error('Login failed')
     }
   }, [setupAutoRefresh])
 

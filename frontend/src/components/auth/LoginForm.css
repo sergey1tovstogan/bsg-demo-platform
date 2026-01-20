@@ -107,6 +107,8 @@
   font-size: 1rem;
   transition: all 0.2s;
   box-sizing: border-box;
+  color: #1a202c;
+  background: #ffffff;
 }
 
 .login-form-group input:focus {

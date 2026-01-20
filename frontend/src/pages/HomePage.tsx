@@ -95,9 +95,9 @@ export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: Home
   // Extract username from email (first part before @)
   const getDisplayName = () => {
     if (!user?.email) return null
-    const emailParts = user.email.split('@')
-    const name = emailParts[0].split('.')[0] // Get first part before dot
-    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+    const localPart = user.email.split('@')[0] || ''
+    // First part before dot, if present (e.g. firstname.lastname -> firstname)
+    return (localPart.split('.')[0] || localPart).trim() || null
   }
   
   const displayName = getDisplayName()
