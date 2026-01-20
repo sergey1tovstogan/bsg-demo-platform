@@ -83,7 +83,7 @@ jobs:
           mkdir -p public
           cat > public/config.json << 'EOF'
           {
-            "apiUrl": "https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1",
+            "apiUrl": "/api/v1",
             "environment": "production"
           }
           EOF

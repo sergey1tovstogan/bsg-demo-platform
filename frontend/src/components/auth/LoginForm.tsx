@@ -21,7 +21,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [error, setError] = useState<string | null>(null)
 
   const validateTemenosEmail = (email: string): boolean => {
-    return /^[^\s@]+\.[^\s@]+@temenos\.com$/.test(email)
+    // Accept any Temenos mailbox, e.g. scomsa@temenos.com or firstname.lastname@temenos.com
+    return /^[^\s@]+@temenos\.[a-zA-Z]{2,}$/.test(email)
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -36,7 +37,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     }
 
     if (!validateTemenosEmail(password)) {
-      setError('Password must be a valid Temenos email address (e.g., firstname.lastname@temenos.com)')
+      setError('Password must be a valid Temenos email address (e.g., scomsa@temenos.com)')
       return
     }
 
