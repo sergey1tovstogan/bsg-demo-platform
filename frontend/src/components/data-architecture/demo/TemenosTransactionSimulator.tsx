@@ -19,8 +19,10 @@ const EventSourceIndicator: React.FC<{
   mode: 'mock' | 'real'
   eventCount: number
   connectionStatus?: 'connected' | 'connecting' | 'disconnected' | 'error'
-  eventHubHealth?: { status: string; buffer_size?: number }
-}> = ({ mode, eventCount, connectionStatus, eventHubHealth }) => {
+  eventHubHealth?: { status: string; buffer_size?: number; message?: string; error?: string }
+  connectionError?: string | null
+  onManualReconnect?: () => void
+}> = ({ mode, eventCount, connectionStatus, eventHubHealth, connectionError, onManualReconnect }) => {
   const isMock = mode === 'mock'
 
   return (
@@ -519,6 +521,8 @@ export const TemenosTransactionSimulator: React.FC = () => {
                   eventCount={simulation.state.kafkaEvents.length}
                   connectionStatus={connectionStatus}
                   eventHubHealth={eventHubHealth || undefined}
+                  connectionError={connectionError}
+                  onManualReconnect={handleManualReconnect}
                 />
               </div>
               <KafkaEventStream
