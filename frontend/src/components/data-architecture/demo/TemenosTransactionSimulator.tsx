@@ -153,24 +153,70 @@ export const TemenosTransactionSimulator: React.FC = () => {
     }
   }, [simulation.state.animationTriggers, sendTriggers])
 
-  // Check Event Hub health periodically
+  // Check Event Hub health periodically and auto-reconnect if disconnected
   useEffect(() => {
+    let reconnectAttempts = 0
+    const maxReconnectAttempts = 3
+
     const checkEventHubHealth = async () => {
       try {
         // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
         // CORS is already configured on the backend to allow Azure Static Web Apps domains
-        const healthUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-          ? 'http://localhost:8000/api/v1/components/data-architecture/events/health'
-          : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/components/data-architecture/events/health'
+        const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+          ? 'http://localhost:8000/api/v1/components/data-architecture/events'
+          : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/components/data-architecture/events'
+        
+        const healthUrl = `${baseUrl}/health`
         const response = await fetch(healthUrl)
         if (response.ok) {
           const health = await response.json()
           setEventHubHealth(health)
-          setConnectionStatus(health.running ? 'connected' : 'disconnected')
+          const isRunning = health.running || health.connected
+          setConnectionStatus(isRunning ? 'connected' : 'disconnected')
+          
+          // Auto-reconnect if disconnected and we haven't exceeded max attempts
+          if (!isRunning && reconnectAttempts < maxReconnectAttempts) {
+            console.log(`[EventHub] Auto-reconnecting (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})...`)
+            reconnectAttempts++
+            setConnectionStatus('connecting')
+            
+            try {
+              const startUrl = `${baseUrl}/start`
+              const startResponse = await fetch(startUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              })
+              
+              if (startResponse.ok) {
+                const result = await startResponse.json()
+                if (result.success) {
+                  console.log('[EventHub] Successfully reconnected')
+                  reconnectAttempts = 0 // Reset on success
+                  // Re-check health after a short delay
+                  setTimeout(() => checkEventHubHealth(), 2000)
+                } else {
+                  console.warn('[EventHub] Reconnect attempt failed:', result.error || result.message)
+                  setConnectionStatus('disconnected')
+                }
+              } else {
+                console.warn('[EventHub] Reconnect request failed:', startResponse.statusText)
+                setConnectionStatus('disconnected')
+              }
+            } catch (reconnectError) {
+              console.error('[EventHub] Error during reconnect:', reconnectError)
+              setConnectionStatus('error')
+            }
+          } else if (isRunning) {
+            // Reset reconnect attempts when connected
+            reconnectAttempts = 0
+          }
         } else {
           setConnectionStatus('error')
         }
       } catch (error) {
+        console.error('[EventHub] Health check error:', error)
         setConnectionStatus('error')
       }
     }

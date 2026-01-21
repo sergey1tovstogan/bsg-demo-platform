@@ -205,6 +205,45 @@ async def check_event_health():
         )
 
 
+@router.post("/events/start")
+async def start_eventhub():
+    """
+    Start or restart the EventHub adapter.
+    
+    This endpoint can be used to manually start the EventHub adapter if it failed
+    to start during application startup or if it was stopped.
+
+    **Example Response:**
+    ```json
+    {
+        "success": true,
+        "message": "Event Hub adapter started successfully",
+        "status": "healthy"
+    }
+    ```
+    """
+    try:
+        service = get_data_architecture_service()
+        result = await service.start_eventhub_adapter()
+        
+        if result.get("success"):
+            return result
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("error", "Failed to start Event Hub adapter")
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting EventHub adapter: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start Event Hub adapter: {str(e)}"
+        )
+
+
 # =============================================================================
 # Demo Endpoints
 # =============================================================================

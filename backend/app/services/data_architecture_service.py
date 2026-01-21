@@ -172,6 +172,53 @@ class DataArchitectureService:
                 "message": f"Health check failed: {str(e)}"
             }
 
+    async def start_eventhub_adapter(self) -> Dict[str, Any]:
+        """
+        Start or restart the EventHub adapter.
+
+        Returns:
+            Dictionary with success status and message
+
+        Example:
+            {
+                "success": True,
+                "message": "Event Hub adapter started successfully"
+            }
+        """
+        try:
+            # Stop if already running
+            if self.eventhub_adapter._running:
+                logger.info("EventHub adapter is already running, stopping first...")
+                await self.eventhub_adapter.stop()
+
+            # Start the adapter
+            await self.eventhub_adapter.start()
+
+            # Verify it started successfully
+            health = await self.eventhub_adapter.health_check()
+
+            if health.get("running") or health.get("connected"):
+                return {
+                    "success": True,
+                    "message": "Event Hub adapter started successfully",
+                    "status": health.get("status", "healthy")
+                }
+            else:
+                error_msg = health.get("error", "Unknown error")
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "message": f"Failed to start Event Hub adapter: {error_msg}"
+                }
+
+        except Exception as e:
+            logger.error(f"Error starting EventHub adapter: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to start Event Hub adapter: {str(e)}"
+            }
+
 
 # =============================================================================
 # Global Instance (Singleton)

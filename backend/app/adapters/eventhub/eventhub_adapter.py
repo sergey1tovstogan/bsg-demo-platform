@@ -67,32 +67,47 @@ class AzureEventHubAdapter(EventHubAdapter):
             logger.warning("Event Hub consumer is already running")
             return
 
+        # Ensure we're not running before starting
+        self._running = False
+
         # Try to get config from MongoDB first, then fallback to .env
+        config = None
         try:
             from app.api.settings import get_eventhub_config_from_db
             config = await get_eventhub_config_from_db()
+            logger.info("EventHub config loaded from MongoDB")
         except Exception as e:
-            logger.warning(f"Failed to get config from hybrid source: {e}, trying direct .env")
+            logger.warning(f"Failed to get config from MongoDB: {e}, trying .env fallback")
             config = None
 
         # Fallback to direct .env reading if hybrid config failed
         if not config:
             if not settings.EVENTHUB_CONNECTION_STRING:
-                logger.error("EVENTHUB_CONNECTION_STRING not configured in MongoDB or .env - Event Hub consumer will not start")
-                return
+                error_msg = "EVENTHUB_CONNECTION_STRING not configured in MongoDB or .env - Event Hub consumer cannot start"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
             config = {
                 "connection_string": settings.EVENTHUB_CONNECTION_STRING,
                 "name": settings.EVENTHUB_NAME,
                 "consumer_group": settings.EVENTHUB_CONSUMER_GROUP,
                 "buffer_size": settings.EVENTHUB_BUFFER_SIZE
             }
+            logger.info("EventHub config loaded from .env")
 
         # Validate required config
         if not config.get("connection_string"):
-            logger.error("EventHub connection_string not configured - Event Hub consumer will not start")
-            return
+            error_msg = "EventHub connection_string not configured - Event Hub consumer cannot start"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        # Validate eventhub name
+        if not config.get("name"):
+            error_msg = "EventHub name not configured - Event Hub consumer cannot start"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
         try:
+            logger.info(f"Initializing EventHub client for: {config['name']}")
             self._client = EventHubConsumerClient.from_connection_string(
                 conn_str=config["connection_string"],
                 consumer_group=config.get("consumer_group", "$Default"),
@@ -101,11 +116,13 @@ class AzureEventHubAdapter(EventHubAdapter):
 
             self._running = True
             self._consumer_task = asyncio.create_task(self._consume_events())
-            logger.info(f"Event Hub consumer started for topic: {config['name']}")
+            logger.info(f"Event Hub consumer started successfully for topic: {config['name']}")
 
         except Exception as e:
-            logger.error(f"Failed to start Event Hub consumer: {e}")
+            logger.error(f"Failed to start Event Hub consumer: {e}", exc_info=True)
             self._running = False
+            self._client = None
+            # Re-raise to let caller know startup failed
             raise
 
     async def stop(self) -> None:
