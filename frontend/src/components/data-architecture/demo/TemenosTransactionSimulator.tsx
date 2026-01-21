@@ -188,7 +188,21 @@ export const TemenosTransactionSimulator: React.FC = () => {
           : '/api/v1/components/data-architecture/events'
         
         const healthUrl = `${baseUrl}/health`
-        const response = await fetch(healthUrl)
+        console.log('[EventHub] Checking health at:', healthUrl)
+        const response = await fetch(healthUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        console.log('[EventHub] Health check response:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type'),
+          url: response.url,
+        })
         
         // Check if response is OK and is JSON
         const contentType = response.headers.get('content-type') || ''
@@ -306,8 +320,20 @@ export const TemenosTransactionSimulator: React.FC = () => {
             // Received HTML or other non-JSON response (likely an error page)
             try {
               const text = await response.text()
+              console.error('[EventHub] Received non-JSON response:', {
+                status: response.status,
+                contentType,
+                textPreview: text.substring(0, 200),
+                responseUrl: response.url,
+              })
+              
               if (text.includes('<!doctype') || text.includes('<html')) {
-                errorMessage = `Health endpoint returned HTML instead of JSON. The endpoint may not exist or the backend may not be properly deployed. (Status: ${response.status})`
+                // Check if it's the index.html fallback
+                if (text.includes('root') || text.includes('react') || text.includes('vite')) {
+                  errorMessage = `Backend endpoint not accessible. The request was rewritten but the backend Container App may not be responding. Please check if the backend is deployed and accessible at: https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io (Status: ${response.status})`
+                } else {
+                  errorMessage = `Health endpoint returned HTML instead of JSON. The endpoint may not exist or the backend may not be properly deployed. (Status: ${response.status})`
+                }
               } else {
                 errorMessage = `Health endpoint returned non-JSON response: ${text.substring(0, 100)}`
               }
