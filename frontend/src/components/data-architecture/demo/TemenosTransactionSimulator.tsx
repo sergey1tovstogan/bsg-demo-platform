@@ -1,7 +1,7 @@
 // TemenosTransactionSimulator - Main transaction simulator container
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, TrendingUp, User, CreditCard, Send, CheckCircle2, Wrench, Globe, Cloud, Terminal, Zap } from 'lucide-react'
+import { RefreshCw, TrendingUp, User, CreditCard, Send, CheckCircle2, Wrench, Globe, Cloud, Terminal, Zap, Power } from 'lucide-react'
 import { useSimulation } from '../hooks/useSimulation'
 import { useCrossTabSync } from '../hooks/useCrossTabSync'
 import { StepCard } from './StepCard'
@@ -48,21 +48,37 @@ const EventSourceIndicator: React.FC<{
 
       {/* Event Hub Connection Status */}
       {!isMock && connectionStatus && (
-        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-          <div
-            className={`w-2 h-2 rounded-full ${
-              connectionStatus === 'connected'
-                ? 'bg-emerald-500'
-                : connectionStatus === 'connecting'
-                ? 'bg-amber-500 animate-pulse'
-                : connectionStatus === 'error'
-                ? 'bg-red-500'
-                : 'bg-slate-400'
-            }`}
-          />
-          <span className="text-xs text-slate-700 dark:text-slate-300 capitalize font-medium">{connectionStatus}</span>
-          {eventHubHealth?.buffer_size !== undefined && (
-            <span className="text-xs text-slate-500 dark:text-slate-400">| Buffer: {eventHubHealth.buffer_size}</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                connectionStatus === 'connected'
+                  ? 'bg-emerald-500'
+                  : connectionStatus === 'connecting'
+                  ? 'bg-amber-500 animate-pulse'
+                  : connectionStatus === 'error'
+                  ? 'bg-red-500'
+                  : 'bg-slate-400'
+              }`}
+            />
+            <span className="text-xs text-slate-700 dark:text-slate-300 capitalize font-medium">{connectionStatus}</span>
+            {eventHubHealth?.buffer_size !== undefined && connectionStatus === 'connected' && (
+              <span className="text-xs text-slate-500 dark:text-slate-400">| Buffer: {eventHubHealth.buffer_size}</span>
+            )}
+          </div>
+          {connectionError && connectionStatus !== 'connected' && (
+            <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800 max-w-md">
+              <span className="flex-1">{connectionError}</span>
+              <button
+                onClick={handleManualReconnect}
+                disabled={connectionStatus === 'connecting'}
+                className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 rounded text-red-700 dark:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Click to manually reconnect"
+              >
+                <Power className="w-3 h-3" />
+                <span>Reconnect</span>
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -137,8 +153,9 @@ export const TemenosTransactionSimulator: React.FC = () => {
   const { sendTriggers } = useCrossTabSync()
 
   // Event Hub health state
-  const [eventHubHealth, setEventHubHealth] = useState<{ status: string; running?: boolean; buffer_size?: number } | null>(null)
+  const [eventHubHealth, setEventHubHealth] = useState<{ status: string; running?: boolean; buffer_size?: number; message?: string; error?: string } | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected' | 'error'>('connecting')
+  const [connectionError, setConnectionError] = useState<string | null>(null)
 
   const stats = simulation.getStats()
   const isComplete = simulation.isSimulationComplete()
@@ -172,52 +189,83 @@ export const TemenosTransactionSimulator: React.FC = () => {
           const health = await response.json()
           setEventHubHealth(health)
           const isRunning = health.running || health.connected
-          setConnectionStatus(isRunning ? 'connected' : 'disconnected')
           
-          // Auto-reconnect if disconnected and we haven't exceeded max attempts
-          if (!isRunning && reconnectAttempts < maxReconnectAttempts) {
-            console.log(`[EventHub] Auto-reconnecting (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})...`)
-            reconnectAttempts++
-            setConnectionStatus('connecting')
+          // Set connection status and error message
+          if (isRunning) {
+            setConnectionStatus('connected')
+            setConnectionError(null)
+            reconnectAttempts = 0 // Reset on success
+          } else {
+            setConnectionStatus('disconnected')
+            // Show helpful error message if available
+            if (health.message) {
+              setConnectionError(health.message)
+            } else if (health.error) {
+              setConnectionError(health.error)
+            } else if (!health.config_available) {
+              setConnectionError('EventHub configuration not found')
+            } else {
+              setConnectionError(null)
+            }
             
-            try {
-              const startUrl = `${baseUrl}/start`
-              const startResponse = await fetch(startUrl, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-              })
+            // Auto-reconnect if disconnected and we haven't exceeded max attempts
+            if (reconnectAttempts < maxReconnectAttempts) {
+              console.log(`[EventHub] Auto-reconnecting (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})...`)
+              reconnectAttempts++
+              setConnectionStatus('connecting')
               
-              if (startResponse.ok) {
-                const result = await startResponse.json()
-                if (result.success) {
-                  console.log('[EventHub] Successfully reconnected')
-                  reconnectAttempts = 0 // Reset on success
-                  // Re-check health after a short delay
-                  setTimeout(() => checkEventHubHealth(), 2000)
+              try {
+                const startUrl = `${baseUrl}/start`
+                const startResponse = await fetch(startUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                })
+                
+                if (startResponse.ok) {
+                  const result = await startResponse.json()
+                  if (result.success) {
+                    console.log('[EventHub] Successfully reconnected')
+                    reconnectAttempts = 0 // Reset on success
+                    setConnectionError(null)
+                    // Re-check health after a short delay
+                    setTimeout(() => checkEventHubHealth(), 2000)
+                    return // Exit early to avoid setting status again
+                  } else {
+                    const errorMsg = result.error || result.message || 'Unknown error'
+                    console.warn('[EventHub] Reconnect attempt failed:', errorMsg)
+                    setConnectionError(errorMsg)
+                    setConnectionStatus('disconnected')
+                  }
                 } else {
-                  console.warn('[EventHub] Reconnect attempt failed:', result.error || result.message)
+                  const errorText = await startResponse.text()
+                  console.warn('[EventHub] Reconnect request failed:', startResponse.status, errorText)
+                  setConnectionError(`Failed to start: ${startResponse.statusText}`)
                   setConnectionStatus('disconnected')
                 }
-              } else {
-                console.warn('[EventHub] Reconnect request failed:', startResponse.statusText)
-                setConnectionStatus('disconnected')
+              } catch (reconnectError) {
+                const errorMsg = reconnectError instanceof Error ? reconnectError.message : 'Unknown error'
+                console.error('[EventHub] Error during reconnect:', reconnectError)
+                setConnectionError(`Reconnect error: ${errorMsg}`)
+                setConnectionStatus('error')
               }
-            } catch (reconnectError) {
-              console.error('[EventHub] Error during reconnect:', reconnectError)
-              setConnectionStatus('error')
+            } else {
+              // Max attempts reached
+              if (!connectionError) {
+                setConnectionError('Auto-reconnect failed after multiple attempts')
+              }
             }
-          } else if (isRunning) {
-            // Reset reconnect attempts when connected
-            reconnectAttempts = 0
           }
         } else {
           setConnectionStatus('error')
+          setConnectionError(`Health check failed: ${response.statusText}`)
         }
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error'
         console.error('[EventHub] Health check error:', error)
         setConnectionStatus('error')
+        setConnectionError(`Health check failed: ${errorMsg}`)
       }
     }
 
@@ -249,6 +297,60 @@ export const TemenosTransactionSimulator: React.FC = () => {
   const handleReset = () => {
     simulation.resetSimulation()
     setKafkaPaused(false)
+  }
+
+  // Manual reconnect handler
+  const handleManualReconnect = async () => {
+    setConnectionStatus('connecting')
+    setConnectionError(null)
+    
+    try {
+      const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+        ? 'http://localhost:8000/api/v1/components/data-architecture/events'
+        : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/components/data-architecture/events'
+      
+      const startUrl = `${baseUrl}/start`
+      const startResponse = await fetch(startUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (startResponse.ok) {
+        const result = await startResponse.json()
+        if (result.success) {
+          console.log('[EventHub] Manually reconnected successfully')
+          setConnectionError(null)
+          // Re-check health after a short delay
+          setTimeout(() => {
+            const healthUrl = `${baseUrl}/health`
+            fetch(healthUrl)
+              .then(res => res.json())
+              .then(health => {
+                setEventHubHealth(health)
+                setConnectionStatus(health.running || health.connected ? 'connected' : 'disconnected')
+              })
+              .catch(err => {
+                console.error('[EventHub] Health check after reconnect failed:', err)
+                setConnectionStatus('error')
+              })
+          }, 2000)
+        } else {
+          const errorMsg = result.error || result.message || 'Unknown error'
+          setConnectionError(errorMsg)
+          setConnectionStatus('disconnected')
+        }
+      } else {
+        const errorText = await startResponse.text()
+        setConnectionError(`Failed to start: ${startResponse.status} ${errorText}`)
+        setConnectionStatus('disconnected')
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      setConnectionError(`Reconnect error: ${errorMsg}`)
+      setConnectionStatus('error')
+    }
   }
 
   // API mode toggle disabled - always use real mode

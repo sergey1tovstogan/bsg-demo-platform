@@ -161,6 +161,23 @@ class DataArchitectureService:
         """
         try:
             health = await self.eventhub_adapter.health_check()
+            
+            # Add configuration status if not running
+            if not health.get("running") and not health.get("connected"):
+                # Check if configuration is available
+                try:
+                    from app.api.settings import get_eventhub_config_from_db
+                    config = await get_eventhub_config_from_db()
+                    if config:
+                        health["config_available"] = True
+                        health["config_source"] = "mongodb" if config.get("connection_string") else "env"
+                    else:
+                        health["config_available"] = False
+                        health["message"] = "EventHub configuration not found. Please configure EVENTHUB_CONNECTION_STRING in MongoDB settings or environment variables."
+                except Exception as e:
+                    logger.debug(f"Could not check config status: {e}")
+                    health["config_available"] = None
+            
             return health
 
         except Exception as e:
@@ -168,6 +185,7 @@ class DataArchitectureService:
             return {
                 "status": "error",
                 "connected": False,
+                "running": False,
                 "error": str(e),
                 "message": f"Health check failed: {str(e)}"
             }
