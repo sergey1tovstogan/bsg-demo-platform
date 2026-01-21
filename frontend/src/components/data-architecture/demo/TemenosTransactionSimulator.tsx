@@ -181,15 +181,19 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
     const checkEventHubHealth = async () => {
       try {
-        // Use relative URL in production (Azure Static Web Apps will rewrite /api/* to backend)
-        // Use direct backend URL only for localhost development
+        // Define URLs - try relative first (through Static Web Apps rewrite), then direct Container App URL as fallback
+        const relativeBaseUrl = '/api/v1/components/data-architecture/events'
+        const directBackendUrl = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1/components/data-architecture/events'
+        
+        // Use direct backend URL for localhost, relative URL for production (with direct fallback)
         const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
           ? 'http://localhost:8000/api/v1/components/data-architecture/events'
-          : '/api/v1/components/data-architecture/events'
+          : relativeBaseUrl
         
         const healthUrl = `${baseUrl}/health`
         console.log('[EventHub] Checking health at:', healthUrl)
-        const response = await fetch(healthUrl, {
+        
+        let response = await fetch(healthUrl, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -205,8 +209,31 @@ export const TemenosTransactionSimulator: React.FC = () => {
         })
         
         // Check if response is OK and is JSON
-        const contentType = response.headers.get('content-type') || ''
-        const isJson = contentType.includes('application/json')
+        let contentType = response.headers.get('content-type') || ''
+        let isJson = contentType.includes('application/json')
+        
+        // If we got HTML response (rewrite failed), try direct Container App URL as fallback
+        if (!isJson && response.status === 200 && baseUrl === relativeBaseUrl) {
+          const text = await response.text()
+          if (text.includes('<!doctype') || text.includes('<html')) {
+            console.warn('[EventHub] Received HTML from Static Web Apps rewrite, trying direct Container App URL')
+            const directHealthUrl = `${directBackendUrl}/health`
+            response = await fetch(directHealthUrl, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+            })
+            contentType = response.headers.get('content-type') || ''
+            isJson = contentType.includes('application/json')
+            console.log('[EventHub] Direct backend response:', {
+              status: response.status,
+              contentType,
+              isJson,
+            })
+          }
+        }
         
         if (response.ok && isJson) {
           const health = await response.json()
@@ -238,8 +265,9 @@ export const TemenosTransactionSimulator: React.FC = () => {
               setConnectionStatus('connecting')
               
               try {
-                const startUrl = `${baseUrl}/start`
-                const startResponse = await fetch(startUrl, {
+                // Try relative URL first, then fallback to direct Container App URL
+                let startUrl = `${baseUrl}/start`
+                let startResponse = await fetch(startUrl, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -247,8 +275,25 @@ export const TemenosTransactionSimulator: React.FC = () => {
                 })
                 
                 // Check content type before parsing JSON
-                const startContentType = startResponse.headers.get('content-type') || ''
-                const startIsJson = startContentType.includes('application/json')
+                let startContentType = startResponse.headers.get('content-type') || ''
+                let startIsJson = startContentType.includes('application/json')
+                
+                // If we got HTML response, try direct Container App URL as fallback
+                if (!startIsJson && startResponse.status === 200 && baseUrl === relativeBaseUrl) {
+                  const startText = await startResponse.text()
+                  if (startText.includes('<!doctype') || startText.includes('<html')) {
+                    console.warn('[EventHub] Reconnect: Received HTML from Static Web Apps rewrite, trying direct Container App URL')
+                    startUrl = `${directBackendUrl}/start`
+                    startResponse = await fetch(startUrl, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                    })
+                    startContentType = startResponse.headers.get('content-type') || ''
+                    startIsJson = startContentType.includes('application/json')
+                  }
+                }
                 
                 if (startResponse.ok && startIsJson) {
                   const result = await startResponse.json()
@@ -420,13 +465,34 @@ export const TemenosTransactionSimulator: React.FC = () => {
         if (result.success) {
           console.log('[EventHub] Manually reconnected successfully')
           setConnectionError(null)
-          // Re-check health after a short delay
+          // Re-check health after a short delay (use same baseUrl logic)
           setTimeout(() => {
-            const healthUrl = `${baseUrl}/health`
+            const healthUrl = baseUrl === relativeBaseUrl 
+              ? `${relativeBaseUrl}/health`
+              : `${baseUrl}/health`
             fetch(healthUrl)
               .then(async res => {
-                const contentType = res.headers.get('content-type') || ''
-                if (res.ok && contentType.includes('application/json')) {
+                let contentType = res.headers.get('content-type') || ''
+                let isJson = contentType.includes('application/json')
+                
+                // Fallback to direct URL if needed
+                if (!isJson && res.status === 200 && baseUrl === relativeBaseUrl) {
+                  const text = await res.text()
+                  if (text.includes('<!doctype') || text.includes('<html')) {
+                    const directHealthUrl = `${directBackendUrl}/health`
+                    const fallbackRes = await fetch(directHealthUrl)
+                    contentType = fallbackRes.headers.get('content-type') || ''
+                    isJson = contentType.includes('application/json')
+                    if (fallbackRes.ok && isJson) {
+                      const health = await fallbackRes.json()
+                      setEventHubHealth(health)
+                      setConnectionStatus(health.running || health.connected ? 'connected' : 'disconnected')
+                      return
+                    }
+                  }
+                }
+                
+                if (res.ok && isJson) {
                   const health = await res.json()
                   setEventHubHealth(health)
                   setConnectionStatus(health.running || health.connected ? 'connected' : 'disconnected')
