@@ -208,8 +208,9 @@ async def update_eventhub_config(
 
         return {
             "status": "success",
-            "message": "EventHub configuration updated successfully. Restart backend to apply changes.",
-            "restart_required": True
+            "message": "EventHub configuration updated successfully. Use POST /api/v1/components/data-architecture/events/start to start the adapter.",
+            "restart_required": False,
+            "start_endpoint": "/api/v1/components/data-architecture/events/start"
         }
     except HTTPException:
         raise

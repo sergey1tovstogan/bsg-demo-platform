@@ -61,8 +61,13 @@ class AzureEventHubAdapter(EventHubAdapter):
         self._running: bool = False
         self._lock = asyncio.Lock()
 
-    async def start(self) -> None:
-        """Start the Event Hub consumer with hybrid config (MongoDB + .env fallback)."""
+    async def start(self, force_reload_config: bool = False) -> None:
+        """
+        Start the Event Hub consumer with hybrid config (MongoDB + .env fallback).
+        
+        Args:
+            force_reload_config: If True, reload config from MongoDB even if already loaded
+        """
         if self._running:
             logger.warning("Event Hub consumer is already running")
             return
@@ -71,11 +76,15 @@ class AzureEventHubAdapter(EventHubAdapter):
         self._running = False
 
         # Try to get config from MongoDB first, then fallback to .env
+        # Always reload from MongoDB to get latest config (useful when config is added via API)
         config = None
         try:
             from app.api.settings import get_eventhub_config_from_db
             config = await get_eventhub_config_from_db()
-            logger.info("EventHub config loaded from MongoDB")
+            if config:
+                logger.info("EventHub config loaded from MongoDB")
+            else:
+                logger.debug("No EventHub config found in MongoDB")
         except Exception as e:
             logger.warning(f"Failed to get config from MongoDB: {e}, trying .env fallback")
             config = None
@@ -83,7 +92,7 @@ class AzureEventHubAdapter(EventHubAdapter):
         # Fallback to direct .env reading if hybrid config failed
         if not config:
             if not settings.EVENTHUB_CONNECTION_STRING:
-                error_msg = "EVENTHUB_CONNECTION_STRING not configured in MongoDB or .env - Event Hub consumer cannot start"
+                error_msg = "EVENTHUB_CONNECTION_STRING not configured in MongoDB or .env - Event Hub consumer cannot start. Please configure it via /api/v1/settings/eventhub/config endpoint or set EVENTHUB_CONNECTION_STRING environment variable."
                 logger.error(error_msg)
                 raise ValueError(error_msg)
             config = {
@@ -96,7 +105,7 @@ class AzureEventHubAdapter(EventHubAdapter):
 
         # Validate required config
         if not config.get("connection_string"):
-            error_msg = "EventHub connection_string not configured - Event Hub consumer cannot start"
+            error_msg = "EventHub connection_string not configured - Event Hub consumer cannot start. Please configure it via /api/v1/settings/eventhub/config endpoint or set EVENTHUB_CONNECTION_STRING environment variable."
             logger.error(error_msg)
             raise ValueError(error_msg)
 
