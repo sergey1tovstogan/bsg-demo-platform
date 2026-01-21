@@ -161,6 +161,10 @@ export const TemenosTransactionSimulator: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected' | 'error'>('connecting')
   const [connectionError, setConnectionError] = useState<string | null>(null)
 
+  // Define backend URLs - shared across health check and reconnect functions
+  const relativeBaseUrl = '/api/v1/components/data-architecture/events'
+  const directBackendUrl = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1/components/data-architecture/events'
+
   const stats = simulation.getStats()
   const isComplete = simulation.isSimulationComplete()
 
@@ -181,10 +185,6 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
     const checkEventHubHealth = async () => {
       try {
-        // Define URLs - try relative first (through Static Web Apps rewrite), then direct Container App URL as fallback
-        const relativeBaseUrl = '/api/v1/components/data-architecture/events'
-        const directBackendUrl = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1/components/data-architecture/events'
-        
         // Use direct backend URL for localhost, relative URL for production (with direct fallback)
         const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
           ? 'http://localhost:8000/api/v1/components/data-architecture/events'
@@ -442,14 +442,12 @@ export const TemenosTransactionSimulator: React.FC = () => {
     setConnectionError(null)
     
     try {
-      // Use relative URL in production (Azure Static Web Apps will rewrite /api/* to backend)
-      // Use direct backend URL only for localhost development
       const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
         ? 'http://localhost:8000/api/v1/components/data-architecture/events'
-        : '/api/v1/components/data-architecture/events'
+        : relativeBaseUrl
       
-      const startUrl = `${baseUrl}/start`
-      const startResponse = await fetch(startUrl, {
+      let startUrl = `${baseUrl}/start`
+      let startResponse = await fetch(startUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -457,19 +455,34 @@ export const TemenosTransactionSimulator: React.FC = () => {
       })
       
       // Check content type before parsing JSON
-      const startContentType = startResponse.headers.get('content-type') || ''
-      const startIsJson = startContentType.includes('application/json')
+      let startContentType = startResponse.headers.get('content-type') || ''
+      let startIsJson = startContentType.includes('application/json')
+      
+      // If we got HTML response, try direct Container App URL as fallback
+      if (!startIsJson && startResponse.status === 200 && baseUrl === relativeBaseUrl) {
+        const startText = await startResponse.text()
+        if (startText.includes('<!doctype') || startText.includes('<html')) {
+          console.warn('[EventHub] Manual reconnect: Received HTML from Static Web Apps rewrite, trying direct Container App URL')
+          startUrl = `${directBackendUrl}/start`
+          startResponse = await fetch(startUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+          startContentType = startResponse.headers.get('content-type') || ''
+          startIsJson = startContentType.includes('application/json')
+        }
+      }
       
       if (startResponse.ok && startIsJson) {
         const result = await startResponse.json()
         if (result.success) {
           console.log('[EventHub] Manually reconnected successfully')
           setConnectionError(null)
-          // Re-check health after a short delay (use same baseUrl logic)
+          // Re-check health after a short delay
           setTimeout(() => {
-            const healthUrl = baseUrl === relativeBaseUrl 
-              ? `${relativeBaseUrl}/health`
-              : `${baseUrl}/health`
+            const healthUrl = `${baseUrl}/health`
             fetch(healthUrl)
               .then(async res => {
                 let contentType = res.headers.get('content-type') || ''
