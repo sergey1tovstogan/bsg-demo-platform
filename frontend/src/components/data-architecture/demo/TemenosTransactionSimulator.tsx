@@ -181,11 +181,11 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
     const checkEventHubHealth = async () => {
       try {
-        // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
-        // CORS is already configured on the backend to allow Azure Static Web Apps domains
+        // Use relative URL in production (Azure Static Web Apps will rewrite /api/* to backend)
+        // Use direct backend URL only for localhost development
         const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
           ? 'http://localhost:8000/api/v1/components/data-architecture/events'
-          : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/components/data-architecture/events'
+          : '/api/v1/components/data-architecture/events'
         
         const healthUrl = `${baseUrl}/health`
         const response = await fetch(healthUrl)
@@ -245,7 +245,20 @@ export const TemenosTransactionSimulator: React.FC = () => {
                 } else {
                   const errorText = await startResponse.text()
                   console.warn('[EventHub] Reconnect request failed:', startResponse.status, errorText)
-                  setConnectionError(`Failed to start: ${startResponse.statusText}`)
+                  
+                  let errorMessage = `Failed to start: ${startResponse.status}`
+                  if (startResponse.status === 404) {
+                    errorMessage = 'Start endpoint not found. The backend may not be deployed yet with the latest changes.'
+                  } else if (errorText) {
+                    try {
+                      const errorJson = JSON.parse(errorText)
+                      errorMessage = errorJson.detail || errorJson.error || errorMessage
+                    } catch {
+                      errorMessage = `${errorMessage} ${errorText}`
+                    }
+                  }
+                  
+                  setConnectionError(errorMessage)
                   setConnectionStatus('disconnected')
                 }
               } catch (reconnectError) {
@@ -309,9 +322,11 @@ export const TemenosTransactionSimulator: React.FC = () => {
     setConnectionError(null)
     
     try {
+      // Use relative URL in production (Azure Static Web Apps will rewrite /api/* to backend)
+      // Use direct backend URL only for localhost development
       const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
         ? 'http://localhost:8000/api/v1/components/data-architecture/events'
-        : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/components/data-architecture/events'
+        : '/api/v1/components/data-architecture/events'
       
       const startUrl = `${baseUrl}/start`
       const startResponse = await fetch(startUrl, {
@@ -347,7 +362,20 @@ export const TemenosTransactionSimulator: React.FC = () => {
         }
       } else {
         const errorText = await startResponse.text()
-        setConnectionError(`Failed to start: ${startResponse.status} ${errorText}`)
+        let errorMessage = `Failed to start: ${startResponse.status}`
+        
+        if (startResponse.status === 404) {
+          errorMessage = 'Start endpoint not found. The backend may not be deployed yet with the latest changes. Please wait for deployment to complete or contact support.'
+        } else if (errorText) {
+          try {
+            const errorJson = JSON.parse(errorText)
+            errorMessage = errorJson.detail || errorJson.error || errorMessage
+          } catch {
+            errorMessage = `${errorMessage} ${errorText}`
+          }
+        }
+        
+        setConnectionError(errorMessage)
         setConnectionStatus('disconnected')
       }
     } catch (error) {
