@@ -189,7 +189,12 @@ export const TemenosTransactionSimulator: React.FC = () => {
         
         const healthUrl = `${baseUrl}/health`
         const response = await fetch(healthUrl)
-        if (response.ok) {
+        
+        // Check if response is OK and is JSON
+        const contentType = response.headers.get('content-type') || ''
+        const isJson = contentType.includes('application/json')
+        
+        if (response.ok && isJson) {
           const health = await response.json()
           setEventHubHealth(health)
           const isRunning = health.running || health.connected
@@ -227,7 +232,11 @@ export const TemenosTransactionSimulator: React.FC = () => {
                   },
                 })
                 
-                if (startResponse.ok) {
+                // Check content type before parsing JSON
+                const startContentType = startResponse.headers.get('content-type') || ''
+                const startIsJson = startContentType.includes('application/json')
+                
+                if (startResponse.ok && startIsJson) {
                   const result = await startResponse.json()
                   if (result.success) {
                     console.log('[EventHub] Successfully reconnected')
@@ -243,19 +252,34 @@ export const TemenosTransactionSimulator: React.FC = () => {
                     setConnectionStatus('disconnected')
                   }
                 } else {
-                  const errorText = await startResponse.text()
-                  console.warn('[EventHub] Reconnect request failed:', startResponse.status, errorText)
+                  // Handle error response
+                  let errorMessage = `Failed to start: ${startResponse.status} ${startResponse.statusText}`
                   
-                  let errorMessage = `Failed to start: ${startResponse.status}`
-                  if (startResponse.status === 404) {
-                    errorMessage = 'Start endpoint not found. The backend may not be deployed yet with the latest changes.'
-                  } else if (errorText) {
-                    try {
-                      const errorJson = JSON.parse(errorText)
-                      errorMessage = errorJson.detail || errorJson.error || errorMessage
-                    } catch {
-                      errorMessage = `${errorMessage} ${errorText}`
+                  try {
+                    const errorText = await startResponse.text()
+                    console.warn('[EventHub] Reconnect request failed:', startResponse.status, errorText)
+                    
+                    if (startResponse.status === 404) {
+                      errorMessage = 'Start endpoint not found (404). The backend may not be deployed yet with the latest changes, or the route may be incorrect.'
+                    } else if (startResponse.status === 405) {
+                      errorMessage = 'Method not allowed (405). The endpoint exists but POST method is not supported. Please check the backend configuration.'
+                    } else if (errorText) {
+                      // Check if response is HTML
+                      if (errorText.includes('<!doctype') || errorText.includes('<html')) {
+                        errorMessage = `Received HTML error page instead of JSON. Endpoint may not exist or routing is incorrect. (Status: ${startResponse.status})`
+                      } else {
+                        // Try to parse as JSON
+                        try {
+                          const errorJson = JSON.parse(errorText)
+                          errorMessage = errorJson.detail || errorJson.error || errorJson.message || errorMessage
+                        } catch {
+                          // Not JSON, use text as-is (truncated)
+                          errorMessage = `${errorMessage}: ${errorText.substring(0, 200)}`
+                        }
+                      }
                     }
+                  } catch (textError) {
+                    errorMessage = `Failed to start: ${startResponse.status} ${startResponse.statusText} (Could not read response)`
                   }
                   
                   setConnectionError(errorMessage)
@@ -275,8 +299,33 @@ export const TemenosTransactionSimulator: React.FC = () => {
             }
           }
         } else {
+          // Handle non-JSON or error responses
+          let errorMessage = `Health check failed: ${response.status} ${response.statusText}`
+          
+          if (!isJson) {
+            // Received HTML or other non-JSON response (likely an error page)
+            try {
+              const text = await response.text()
+              if (text.includes('<!doctype') || text.includes('<html')) {
+                errorMessage = `Health endpoint returned HTML instead of JSON. The endpoint may not exist or the backend may not be properly deployed. (Status: ${response.status})`
+              } else {
+                errorMessage = `Health endpoint returned non-JSON response: ${text.substring(0, 100)}`
+              }
+            } catch (textError) {
+              errorMessage = `Health check failed: ${response.status} ${response.statusText} (Could not read response)`
+            }
+          } else {
+            // JSON response but status not OK
+            try {
+              const errorData = await response.json()
+              errorMessage = errorData.detail || errorData.error || errorData.message || errorMessage
+            } catch (jsonError) {
+              // Already have errorMessage from above
+            }
+          }
+          
           setConnectionStatus('error')
-          setConnectionError(`Health check failed: ${response.statusText}`)
+          setConnectionError(errorMessage)
         }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error'
@@ -336,7 +385,11 @@ export const TemenosTransactionSimulator: React.FC = () => {
         },
       })
       
-      if (startResponse.ok) {
+      // Check content type before parsing JSON
+      const startContentType = startResponse.headers.get('content-type') || ''
+      const startIsJson = startContentType.includes('application/json')
+      
+      if (startResponse.ok && startIsJson) {
         const result = await startResponse.json()
         if (result.success) {
           console.log('[EventHub] Manually reconnected successfully')
@@ -345,14 +398,23 @@ export const TemenosTransactionSimulator: React.FC = () => {
           setTimeout(() => {
             const healthUrl = `${baseUrl}/health`
             fetch(healthUrl)
-              .then(res => res.json())
-              .then(health => {
-                setEventHubHealth(health)
-                setConnectionStatus(health.running || health.connected ? 'connected' : 'disconnected')
+              .then(async res => {
+                const contentType = res.headers.get('content-type') || ''
+                if (res.ok && contentType.includes('application/json')) {
+                  const health = await res.json()
+                  setEventHubHealth(health)
+                  setConnectionStatus(health.running || health.connected ? 'connected' : 'disconnected')
+                } else {
+                  const text = await res.text()
+                  console.error('[EventHub] Health check after reconnect failed:', res.status, text.substring(0, 100))
+                  setConnectionStatus('error')
+                  setConnectionError(`Health check failed: ${res.status} ${text.includes('<!doctype') ? '(HTML response)' : text.substring(0, 50)}`)
+                }
               })
               .catch(err => {
                 console.error('[EventHub] Health check after reconnect failed:', err)
                 setConnectionStatus('error')
+                setConnectionError(`Health check error: ${err.message}`)
               })
           }, 2000)
         } else {
@@ -361,18 +423,33 @@ export const TemenosTransactionSimulator: React.FC = () => {
           setConnectionStatus('disconnected')
         }
       } else {
-        const errorText = await startResponse.text()
-        let errorMessage = `Failed to start: ${startResponse.status}`
+        // Handle error response
+        let errorMessage = `Failed to start: ${startResponse.status} ${startResponse.statusText}`
         
-        if (startResponse.status === 404) {
-          errorMessage = 'Start endpoint not found. The backend may not be deployed yet with the latest changes. Please wait for deployment to complete or contact support.'
-        } else if (errorText) {
-          try {
-            const errorJson = JSON.parse(errorText)
-            errorMessage = errorJson.detail || errorJson.error || errorMessage
-          } catch {
-            errorMessage = `${errorMessage} ${errorText}`
+        try {
+          const errorText = await startResponse.text()
+          
+          if (startResponse.status === 404) {
+            errorMessage = 'Start endpoint not found (404). The backend may not be deployed yet with the latest changes, or the route may be incorrect.'
+          } else if (startResponse.status === 405) {
+            errorMessage = 'Method not allowed (405). The endpoint exists but POST method is not supported. Please check the backend configuration.'
+          } else if (errorText) {
+            // Check if response is HTML
+            if (errorText.includes('<!doctype') || errorText.includes('<html')) {
+              errorMessage = `Received HTML error page instead of JSON. Endpoint may not exist or routing is incorrect. (Status: ${startResponse.status})`
+            } else {
+              // Try to parse as JSON
+              try {
+                const errorJson = JSON.parse(errorText)
+                errorMessage = errorJson.detail || errorJson.error || errorJson.message || errorMessage
+              } catch {
+                // Not JSON, use text as-is (truncated)
+                errorMessage = `${errorMessage}: ${errorText.substring(0, 200)}`
+              }
+            }
           }
+        } catch (textError) {
+          errorMessage = `Failed to start: ${startResponse.status} ${startResponse.statusText} (Could not read response)`
         }
         
         setConnectionError(errorMessage)
