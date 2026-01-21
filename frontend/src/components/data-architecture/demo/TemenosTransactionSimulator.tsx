@@ -71,15 +71,17 @@ const EventSourceIndicator: React.FC<{
           {connectionError && connectionStatus !== 'connected' && (
             <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800 max-w-md">
               <span className="flex-1">{connectionError}</span>
-              <button
-                onClick={handleManualReconnect}
-                disabled={connectionStatus === 'connecting'}
-                className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 rounded text-red-700 dark:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="Click to manually reconnect"
-              >
-                <Power className="w-3 h-3" />
-                <span>Reconnect</span>
-              </button>
+              {onManualReconnect && (
+                <button
+                  onClick={onManualReconnect}
+                  disabled={connectionStatus === 'connecting'}
+                  className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 rounded text-red-700 dark:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Click to manually reconnect"
+                >
+                  <Power className="w-3 h-3" />
+                  <span>Reconnect</span>
+                </button>
+              )}
             </div>
           )}
         </div>
