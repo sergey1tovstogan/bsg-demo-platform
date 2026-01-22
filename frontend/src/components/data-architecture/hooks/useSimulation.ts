@@ -354,6 +354,9 @@ export const useSimulation = () => {
     }
 
     const startTime = Date.now()
+    
+    // Clear events and set transaction start time to show only new events
+    simulationState.setTransactionStartTime(startTime)
 
     try {
       // Simulate API call
@@ -518,6 +521,9 @@ export const useSimulation = () => {
     }
 
     const startTime = Date.now()
+    
+    // Clear events and set transaction start time to show only new events
+    simulationState.setTransactionStartTime(startTime)
 
     try {
       // Simulate API call
