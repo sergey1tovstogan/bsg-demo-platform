@@ -189,20 +189,51 @@ class EventStoreService {
       params.set('minutes', minutes.toString())
       params.set('limit', limit.toString())
       if (customerId) {
-        params.set('customer_id', customerId)
+        params.set('customerId', customerId)  // Backend expects camelCase 'customerId', not 'customer_id'
       }
-      const url = `${this.baseUrl}/events/recent?${params.toString()}`
-
+      
+      // Define URLs - try relative first, then direct Container App URL as fallback
+      const relativeBaseUrl = '/api/v1/components/data-architecture'
+      const directBackendUrl = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1/components/data-architecture'
+      
+      // Use relative URL for production (Static Web Apps rewrite), direct URL for localhost
+      const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+        ? 'http://localhost:8000/api/v1/components/data-architecture'
+        : relativeBaseUrl
+      
+      let url = `${baseUrl}/events/recent?${params.toString()}`
       console.log('[EventStoreService] Fetching from:', url)
 
-      const response = await fetch(url, {
+      let response = await fetch(url, {
         method: 'GET',
         headers: {
           Accept: 'application/json',
         },
       })
+      
+      // Check content type
+      let contentType = response.headers.get('content-type') || ''
+      let isJson = contentType.includes('application/json')
+      
+      // If we got HTML response (rewrite failed), try direct Container App URL as fallback
+      if (!isJson && response.status === 200 && baseUrl === relativeBaseUrl) {
+        const text = await response.text()
+        if (text.includes('<!doctype') || text.includes('<html')) {
+          console.warn('[EventStoreService] Received HTML from Static Web Apps rewrite, trying direct Container App URL')
+          url = `${directBackendUrl}/events/recent?${params.toString()}`
+          response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              Accept: 'application/json',
+            },
+          })
+          contentType = response.headers.get('content-type') || ''
+          isJson = contentType.includes('application/json')
+        }
+      }
 
       console.log('[EventStoreService] Response status:', response.status, response.statusText)
+      console.log('[EventStoreService] Response content-type:', contentType)
 
       if (!response.ok) {
         const errorText = await response.text()
@@ -213,14 +244,10 @@ class EventStoreService {
         })
         throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`)
       }
-
-      // Check content type
-      const contentType = response.headers.get('content-type')
-      console.log('[EventStoreService] Response content-type:', contentType)
       
-      if (!contentType || !contentType.includes('application/json')) {
+      if (!isJson) {
         const text = await response.text()
-        console.error('[EventStoreService] Non-JSON response:', text)
+        console.error('[EventStoreService] Non-JSON response:', text.substring(0, 500))
         throw new Error(`Expected JSON but got ${contentType}: ${text.substring(0, 200)}`)
       }
 

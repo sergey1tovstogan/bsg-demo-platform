@@ -28,11 +28,11 @@ export const API_CONFIG = {
  */
 export const EVENT_STORE_CONFIG = {
   // Backend proxy URL for Event Store API (component-specific endpoints)
-  // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
-  // CORS is already configured on the backend to allow Azure Static Web Apps domains
+  // Use relative URL in production (Azure Static Web Apps will rewrite /api/* to Container App)
+  // Use direct backend URL for localhost development
   BACKEND_PROXY_URL: typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:8000/api/v1/components/data-architecture'  // Full URL for local dev
-    : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/components/data-architecture',  // Direct backend URL for production
+    : '/api/v1/components/data-architecture',  // Relative URL for production (Static Web Apps rewrite)
 
   // Polling settings
   POLLING_INTERVAL: 3000, // Poll every 3 seconds
