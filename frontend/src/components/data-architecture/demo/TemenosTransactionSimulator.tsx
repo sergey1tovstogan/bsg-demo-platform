@@ -155,6 +155,11 @@ export const TemenosTransactionSimulator: React.FC = () => {
   // Always use real mode - mock mode disabled
   const [apiMode] = useState<'mock' | 'real'>('real')
   const { sendTriggers } = useCrossTabSync()
+
+  // Event Hub health state
+  const [eventHubHealth, setEventHubHealth] = useState<{ status: string; running?: boolean; buffer_size?: number; message?: string; error?: string } | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected' | 'error'>('connecting')
+  const [connectionError, setConnectionError] = useState<string | null>(null)
   
   // Enable EventStore polling when component mounts and connection is established
   useEffect(() => {
@@ -176,11 +181,6 @@ export const TemenosTransactionSimulator: React.FC = () => {
       simulation.enableEventStore()
     }
   }, [connectionStatus, simulation])
-
-  // Event Hub health state
-  const [eventHubHealth, setEventHubHealth] = useState<{ status: string; running?: boolean; buffer_size?: number; message?: string; error?: string } | null>(null)
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected' | 'error'>('connecting')
-  const [connectionError, setConnectionError] = useState<string | null>(null)
 
   // Define backend URLs - shared across health check and reconnect functions
   const relativeBaseUrl = '/api/v1/components/data-architecture/events'
