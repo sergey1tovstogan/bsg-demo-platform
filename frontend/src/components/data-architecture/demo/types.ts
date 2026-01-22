@@ -234,6 +234,7 @@ export interface SimulationState {
   apiLogs: ApiLog[]
   kafkaEvents: KafkaEvent[]
   animationTriggers: AnimationTrigger[]
+  lastTransactionStartTime?: number // Timestamp when last transaction started - used to filter events
 }
 
 /**

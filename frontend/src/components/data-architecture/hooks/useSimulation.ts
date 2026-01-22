@@ -161,6 +161,9 @@ export const useSimulation = () => {
     const payload: CustomerPayload = mockDataGenerator.generateSampleCustomerPayload()
 
     const startTime = Date.now()
+    
+    // Clear events and set transaction start time to show only new events
+    simulationState.setTransactionStartTime(startTime)
 
     try {
       // Simulate API call
@@ -673,8 +676,25 @@ export const useSimulation = () => {
     // Subscribe to events from Event Store
     eventStoreUnsubscribe.current = eventStoreService.onEvents((newEvents: KafkaEvent[]) => {
       debugLog(`Received ${newEvents.length} events from Event Store`)
-      // Add events to simulation state
-      simulationState.addKafkaEvents(newEvents)
+      
+      // Filter events to only include those after the last transaction start time
+      const lastTransactionStart = simulationState.state.lastTransactionStartTime
+      if (lastTransactionStart) {
+        const filteredEvents = newEvents.filter((event) => {
+          // Event timestamp should be after transaction start (with small buffer for clock skew)
+          return event.timestamp >= (lastTransactionStart - 5000) // 5 second buffer
+        })
+        
+        if (filteredEvents.length > 0) {
+          debugLog(`Filtered ${filteredEvents.length} new events (out of ${newEvents.length} total) after transaction start`)
+          simulationState.addKafkaEvents(filteredEvents)
+        } else {
+          debugLog(`All ${newEvents.length} events were before transaction start, skipping`)
+        }
+      } else {
+        // No transaction started yet, don't add events from continuous polling
+        debugLog(`No transaction started yet, skipping ${newEvents.length} events from continuous polling`)
+      }
     })
 
     // Start polling

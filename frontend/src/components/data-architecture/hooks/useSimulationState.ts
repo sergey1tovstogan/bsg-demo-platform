@@ -29,7 +29,8 @@ const initialState: SimulationState = {
   },
   apiLogs: [],
   kafkaEvents: [],
-  animationTriggers: []
+  animationTriggers: [],
+  lastTransactionStartTime: undefined
 }
 
 /**
@@ -181,6 +182,17 @@ export const useSimulationState = () => {
   }, [])
 
   /**
+   * Set transaction start time and clear events to show only new events
+   */
+  const setTransactionStartTime = useCallback((startTime: number) => {
+    setState((prev) => ({
+      ...prev,
+      lastTransactionStartTime: startTime,
+      kafkaEvents: [] // Clear events when new transaction starts
+    }))
+  }, [])
+
+  /**
    * Reset entire simulation
    */
   const resetSimulation = useCallback(() => {
@@ -283,6 +295,7 @@ export const useSimulationState = () => {
     addApiLog,
     addKafkaEvent,
     addKafkaEvents,
+    setTransactionStartTime,
     addAnimationTrigger,
     advanceStep,
 
