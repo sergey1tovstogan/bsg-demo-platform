@@ -155,6 +155,27 @@ export const TemenosTransactionSimulator: React.FC = () => {
   // Always use real mode - mock mode disabled
   const [apiMode] = useState<'mock' | 'real'>('real')
   const { sendTriggers } = useCrossTabSync()
+  
+  // Enable EventStore polling when component mounts and connection is established
+  useEffect(() => {
+    // Wait a bit for health check to complete, then enable EventStore if connected
+    const timer = setTimeout(() => {
+      if (connectionStatus === 'connected' && !simulation.isEventStoreEnabled()) {
+        console.log('[TemenosTransactionSimulator] Enabling EventStore polling')
+        simulation.enableEventStore()
+      }
+    }, 3000) // Wait 3 seconds after mount
+    
+    return () => clearTimeout(timer)
+  }, [connectionStatus, simulation])
+  
+  // Also enable EventStore when connection status changes to connected
+  useEffect(() => {
+    if (connectionStatus === 'connected' && !simulation.isEventStoreEnabled()) {
+      console.log('[TemenosTransactionSimulator] Connection established, enabling EventStore polling')
+      simulation.enableEventStore()
+    }
+  }, [connectionStatus, simulation])
 
   // Event Hub health state
   const [eventHubHealth, setEventHubHealth] = useState<{ status: string; running?: boolean; buffer_size?: number; message?: string; error?: string } | null>(null)
