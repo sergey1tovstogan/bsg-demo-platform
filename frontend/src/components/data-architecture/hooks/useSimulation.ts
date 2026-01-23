@@ -164,6 +164,12 @@ export const useSimulation = () => {
     
     // Clear events and set transaction start time to show only new events
     simulationState.setTransactionStartTime(startTime)
+    
+    // Restart polling with transaction start time to only fetch new events
+    if (eventStoreEnabled.current) {
+      eventStoreService.stopPolling()
+      eventStoreService.startPolling(EVENT_STORE_CONFIG.POLLING_INTERVAL, startTime)
+    }
 
     try {
       // Simulate API call
