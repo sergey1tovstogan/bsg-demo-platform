@@ -1,13 +1,19 @@
 # BSG Demo Platform
 
-> **Automation**: This repository includes automated GitHub Actions monitoring. See [automation/README.md](./automation/README.md) for details.
+> **Production-Ready**: This is a production-ready, fully documented demonstration platform deployed on Azure.
 
 ## Overview
 
-The **BSG Demo Platform** serves as the central hub for demonstrating Temenos products and capabilities.  
-It provides a unified environment where architecture, deployments, presentations, videos, and technical documentation are consolidated and maintained in one place.  
+The **BSG Demo Platform** is a production-ready, component-based demonstration platform designed to showcase Temenos products and capabilities. It provides a unified environment where architecture diagrams, technical presentations, videos, and documentation are consolidated and maintained in one place.
 
-This repository is designed to support the **Business Solution Group (BSG)** in preparing and delivering high-quality demonstrations and proof-of-concepts that highlight the full range of Temenos technologies, from **Transact** and **Infinity** to supporting microservices and integration layers.
+This repository supports the **Business Solution Group (BSG)** in preparing and delivering high-quality demonstrations and proof-of-concepts that highlight the full range of Temenos technologies, from **Transact** and **Infinity** to supporting microservices and integration layers.
+
+## Quick Links
+
+- **[Complete Project Documentation](./docs/PROJECT_DOCUMENTATION.md)** - Comprehensive documentation including Azure services, architecture, and code statistics
+- **[Architecture Guide](./docs/ARCHITECTURE.md)** - System architecture and design patterns
+- **[Deployment Guide](./docs/DEPLOYMENT.md)** - How to deploy to Azure
+- **[Local Development](./docs/LOCAL_DEV.md)** - Setting up and running locally
 
 ---
 
@@ -74,13 +80,36 @@ For detailed structure, see [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE
 
 **CLOUD (Azure):**
 
-- **MongoDB Database (Azure Cosmos DB)**
-  - Account: bsg-demo-platform-mongodb
-  - Host: bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255
-  - Database: bsg_demo
-  - Resource Group: bsg-demo-platform
-  - Status: Cloud-hosted, accessible via connection string
-  - Type: Fully managed MongoDB service in Azure
+- **Frontend**: Azure Static Web Apps
+  - URL: `https://kind-beach-01c0a990f.3.azurestaticapps.net`
+  - Technology: React 18.2.0 with TypeScript, Vite 5.0.8
+  - Lines of Code: ~25,000+ lines
+  - API Proxy: Routes `/api/*` to backend Container App
+
+- **Backend**: Azure Container Apps
+  - URL: `https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io`
+  - Technology: FastAPI 0.109.0, Python 3.11
+  - Lines of Code: ~15,000+ lines
+  - Container Registry: Azure Container Registry (ACR)
+
+- **Database**: Azure Cosmos DB (MongoDB API) - Serverless
+  - Account: `bsg-demo-platform-mongodb`
+  - Host: `bsg-demo-platform-mongodb.mongo.cosmos.azure.com:10255`
+  - Database: `bsg_demo`
+  - Resource Group: `bsg-demo-platform`
+  - Collections: 9+ collections (users, components, content, cache, settings, etc.)
+  - Purpose: Primary application database for all application data
+
+- **Event Streaming**: Azure Event Hubs
+  - Namespace: `bbkeventstoreehnseventstore.servicebus.windows.net`
+  - Event Hub: `modelbank-event-topic`
+  - Purpose: Real-time event streaming for Data Architecture demonstrations
+  - Buffer Size: 1000 events
+
+- **External Database**: Azure SQL Database (TDH)
+  - Server: `bsgtdh-sql-r2510.database.windows.net`
+  - Databases: ODS (Operational Data Store), SDS (Structured Data Store)
+  - Purpose: External data source for Temenos Data Hub queries
 
 **MongoDB Collections:**
 - `users` - User accounts and authentication
@@ -101,13 +130,47 @@ The application uses browser localStorage to store user preferences and temporar
 
 **Note**: localStorage is browser-based storage that persists data locally on the user's machine. It's separate from MongoDB, which stores server-side persistent data in Azure Cosmos DB.
 
-For detailed documentation, see:
+## Technology Stack
+
+**Frontend**:
+- React 18.2.0 with TypeScript 5.3.3
+- Vite 5.0.8 build system
+- TailwindCSS 3.4.0 for styling
+- React Router 6.21.1 for routing
+- ~25,000+ lines of TypeScript/React code
+
+**Backend**:
+- FastAPI 0.109.0 (Python 3.11)
+- Motor 3.3.2 (async MongoDB driver)
+- Azure EventHub 5.11.5 for event streaming
+- Pydantic 2.5.3 for data validation
+- ~15,000+ lines of Python code
+
+**Infrastructure**:
+- Azure Static Web Apps (frontend hosting)
+- Azure Container Apps (backend hosting)
+- Azure Cosmos DB - Serverless (MongoDB API)
+- Azure Event Hubs (event streaming)
+- Azure Container Registry (container images)
+- GitHub Actions (CI/CD)
+
+## Key Features
+
+- ✅ **Component-Based Architecture**: Modular demo components (Data Architecture, Security, Integration, etc.)
+- ✅ **Real-Time Event Streaming**: Azure EventHub integration for live event monitoring
+- ✅ **RAG-Powered Chatbot**: AI-powered assistance using Temenos RAG API
+- ✅ **Multi-Database Support**: MongoDB (Cosmos DB) for application data, MSSQL for external data sources
+- ✅ **Production-Ready**: Authentication, caching, monitoring, health checks, CI/CD automation
+
+## Documentation
+
+- **[Complete Project Documentation](./docs/PROJECT_DOCUMENTATION.md)** - Comprehensive documentation with Azure services, architecture, code statistics, and production readiness details
+- [Architecture Documentation](./docs/ARCHITECTURE.md) - System design and structure
 - [User Guide](./docs/USER_GUIDE.md) - Getting started and platform overview
 - [Usage Guide](./docs/USAGE.md) - Quick reference for common tasks
 - [Local Development](./docs/LOCAL_DEV.md) - Setting up and running locally
 - [Deployment Guide](./docs/DEPLOYMENT.md) - How to deploy to Azure
 - [Debugging Guide](./docs/DEBUGGING.md) - How to access and analyze logs
-- [Architecture Documentation](./docs/ARCHITECTURE.md) - System design and structure
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Azure Configuration](./docs/providers/AZURE_CONFIGURATION.md) - Azure setup and configuration
 
