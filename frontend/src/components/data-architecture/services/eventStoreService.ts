@@ -65,6 +65,7 @@ class EventStoreService {
   }
   private eventCallbacks: Set<(events: KafkaEvent[]) => void> = new Set()
   private statusCallbacks: Set<(status: EventStoreConnectionStatus) => void> = new Set()
+  private lastEventTimestamp: number = 0 // Track the most recent event timestamp we've seen
 
   constructor() {
     // Use backend API proxy URL
@@ -284,6 +285,11 @@ class EventStoreService {
         this.state.lastError = undefined
 
         if (data.events && data.events.length > 0) {
+          // Update lastEventTimestamp to the most recent event
+          const maxTimestamp = Math.max(...data.events.map((e: KafkaEvent) => e.timestamp || 0))
+          if (maxTimestamp > this.lastEventTimestamp) {
+            this.lastEventTimestamp = maxTimestamp
+          }
           this.notifyEvents(data.events)
         }
       } else {
@@ -352,22 +358,38 @@ class EventStoreService {
   /**
    * Start polling for events
    */
-  startPolling(intervalMs: number = EVENT_STORE_CONFIG.POLLING_INTERVAL): void {
+  startPolling(intervalMs: number = EVENT_STORE_CONFIG.POLLING_INTERVAL, transactionStartTime?: number): void {
     if (this.pollingInterval !== null) {
       this.stopPolling()
     }
 
-    console.log(`[EventStoreService] Starting polling every ${intervalMs}ms`)
+    // If transaction start time is provided, reset lastEventTimestamp to only fetch new events
+    if (transactionStartTime) {
+      this.lastEventTimestamp = transactionStartTime - 10000 // 10 second buffer before transaction
+      console.log(`[EventStoreService] Starting polling with transaction start time: ${new Date(transactionStartTime).toISOString()}`)
+    } else {
+      // For initial polling, use a short time window (2 minutes) to avoid loading all historical events
+      const minutesSinceLastEvent = this.lastEventTimestamp > 0 
+        ? Math.max(1, Math.ceil((Date.now() - this.lastEventTimestamp) / 60000)) // Minutes since last event, min 1
+        : 2 // Default to 2 minutes if no previous events
+      console.log(`[EventStoreService] Starting polling every ${intervalMs}ms, fetching events from last ${minutesSinceLastEvent} minutes`)
+    }
 
-    // Fetch immediately
-    this.fetchRecentEvents(EVENT_STORE_CONFIG.DEFAULT_TIME_RANGE_MINUTES, EVENT_STORE_CONFIG.MAX_EVENTS_PER_REQUEST)
+    // Fetch immediately with appropriate time window
+    const timeWindowMinutes = transactionStartTime 
+      ? 5 // 5 minutes window when transaction starts
+      : (this.lastEventTimestamp > 0 
+          ? Math.max(1, Math.ceil((Date.now() - this.lastEventTimestamp) / 60000))
+          : 2)
+    
+    this.fetchRecentEvents(timeWindowMinutes, EVENT_STORE_CONFIG.MAX_EVENTS_PER_REQUEST)
 
     // Start interval
     this.pollingInterval = window.setInterval(() => {
-      this.fetchRecentEvents(
-        EVENT_STORE_CONFIG.DEFAULT_TIME_RANGE_MINUTES,
-        EVENT_STORE_CONFIG.MAX_EVENTS_PER_REQUEST
-      )
+      const windowMinutes = this.lastEventTimestamp > 0
+        ? Math.max(1, Math.ceil((Date.now() - this.lastEventTimestamp) / 60000))
+        : 2
+      this.fetchRecentEvents(windowMinutes, EVENT_STORE_CONFIG.MAX_EVENTS_PER_REQUEST)
     }, intervalMs)
   }
 
