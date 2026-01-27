@@ -10,10 +10,8 @@ This repository supports the **Business Solution Group (BSG)** in preparing and 
 
 ## Quick Links
 
-- **[Complete Project Documentation](./docs/PROJECT_DOCUMENTATION.md)** - Comprehensive documentation including Azure services, architecture, and code statistics
-- **[Architecture Guide](./docs/ARCHITECTURE.md)** - System architecture and design patterns
-- **[Deployment Guide](./docs/DEPLOYMENT.md)** - How to deploy to Azure
-- **[Local Development](./docs/LOCAL_DEV.md)** - Setting up and running locally
+- **[Project Documentation](./docs/PROJECT_DOCUMENTATION.md)** - Azure services, architecture, code statistics, and technical reference
+- **[User Guide](./docs/USER_GUIDE.md)** - How to use the platform (navigation, components, demos, BSG Guru)
 
 ---
 
@@ -49,14 +47,13 @@ bsg-demo-platform/
 | `backend/` | FastAPI backend with API routes, services, adapters, and models |
 | `frontend/` | React frontend with components, pages, and services |
 | `infrastructure/` | Azure deployment scripts, GitHub Actions workflows |
-| `docs/` | All documentation including ARCHITECTURE.md, USAGE.md, and guides |
+| `docs/` | Documentation: PROJECT_DOCUMENTATION.md, USER_GUIDE.md |
 | `scripts/` | Start/Stop/Restart all services scripts only |
 | `tools/` | Development tools, utilities, and other scripts |
 | `.claude/` | Claude AI development context (synced with .cursor/rules) |
 
-For detailed structure, see [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md).
-
 ---
+
 
 ## Architecture
 
@@ -164,15 +161,8 @@ The application uses browser localStorage to store user preferences and temporar
 
 ## Documentation
 
-- **[Complete Project Documentation](./docs/PROJECT_DOCUMENTATION.md)** - Comprehensive documentation with Azure services, architecture, code statistics, and production readiness details
-- [Architecture Documentation](./docs/ARCHITECTURE.md) - System design and structure
-- [User Guide](./docs/USER_GUIDE.md) - Getting started and platform overview
-- [Usage Guide](./docs/USAGE.md) - Quick reference for common tasks
-- [Local Development](./docs/LOCAL_DEV.md) - Setting up and running locally
-- [Deployment Guide](./docs/DEPLOYMENT.md) - How to deploy to Azure
-- [Debugging Guide](./docs/DEBUGGING.md) - How to access and analyze logs
-- [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
-- [Azure Configuration](./docs/providers/AZURE_CONFIGURATION.md) - Azure setup and configuration
+- **[Project Documentation](./docs/PROJECT_DOCUMENTATION.md)** - Azure services, architecture, code statistics, database, RAG API, EventHub, deployment
+- **[User Guide](./docs/USER_GUIDE.md)** - How to use the platform: navigation, components, demos, BSG Guru, settings, troubleshooting
 
 ---
 
