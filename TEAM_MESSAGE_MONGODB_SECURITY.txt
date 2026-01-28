@@ -1,0 +1,35 @@
+Subject: Security Advisory: MongoDB Vulnerability CVE-2025-14847 - Action Required
+
+Hi Team,
+
+We've been notified about a critical MongoDB security vulnerability (CVE-2025-14847 - MongoBleed). 
+
+GOOD NEWS: Our project uses Azure Cosmos DB (managed service) and is NOT directly affected. However, we need to verify that no team members have local MongoDB installations.
+
+ACTION REQUIRED - Please run this check script:
+
+```bash
+cd backend
+python scripts/check_mongodb_vulnerability.py
+```
+
+This script will check if you have any local MongoDB servers installed. If it finds any, please either:
+1. Remove them (if unused), OR
+2. Update them to a patched version (see SECURITY_ADVISORY_MONGODB.md for versions)
+
+WHAT TO EXPECT:
+- If no MongoDB found: Script will show "[OK] No local MongoDB servers found" ✅
+- If MongoDB found: Script will show warnings and you'll need to take action ⚠️
+
+DOCUMENTATION:
+- Quick guide: See SECURITY_ADVISORY_MONGODB.md (in repository root)
+- Full assessment: See MONGODB_VULNERABILITY_ASSESSMENT.md (in repository root)
+
+IMPORTANT NOTES:
+- This vulnerability affects MongoDB SERVERS, not client libraries
+- Our project only uses MongoDB client libraries (pymongo, motor) - these are safe
+- Azure Cosmos DB is managed by Azure and should be automatically patched
+
+Please run the script and confirm your results. If you have any questions or concerns, let us know.
+
+Thanks!
