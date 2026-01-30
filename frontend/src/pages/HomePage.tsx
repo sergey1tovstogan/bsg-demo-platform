@@ -92,14 +92,13 @@ export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: Home
   const [selectedCategories, setSelectedCategories] = useState<Set<ComponentId>>(new Set())
   const { user } = useAuth()
   
-  // Extract username from email (first part before @)
-  const getDisplayName = () => {
-    if (!user?.email) return null
-    const localPart = user.email.split('@')[0] || ''
-    // First part before dot, if present (e.g. firstname.lastname -> firstname)
-    return (localPart.split('.')[0] || localPart).trim() || null
+  // Display name: prefer context username (set at login), fallback to email local part; capitalize
+  const getDisplayName = (): string | null => {
+    const name = user?.username ?? (user?.email ? (user.email.split('@')[0] || '').split('.')[0]?.trim() || user.email.split('@')[0] : null)
+    if (!name) return null
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
   }
-  
+
   const displayName = getDisplayName()
 
   // Load selected categories from localStorage on mount and when storage changes
