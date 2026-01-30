@@ -143,13 +143,15 @@ export function Chatbot({ componentId }: ChatbotProps) {
     }
   }, [componentId, initializeSession])
   
-  // Reinitialize session if sessionId becomes null (e.g., after 404 error)
+  // Reinitialize session only if sessionId is null, not currently initializing, and we don't have an error.
+  // (Avoid infinite loop: when init fails we set chatError and initializing=false; without the !chatError
+  // check we would call initializeSession() again immediately, fail again, repeat.)
   useEffect(() => {
-    if (!sessionId && !initializing) {
+    if (!sessionId && !initializing && !chatError) {
       console.log('[Chatbot] Session ID is null, reinitializing...')
       initializeSession()
     }
-  }, [sessionId, initializing, initializeSession])
+  }, [sessionId, initializing, chatError, initializeSession])
 
   useEffect(() => {
     scrollToBottom()
