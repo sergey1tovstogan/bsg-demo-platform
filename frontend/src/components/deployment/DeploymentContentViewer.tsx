@@ -21,8 +21,8 @@ import {
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 
-const CACHE_KEY = 'deployment_rag_content_cache'
-const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp'
+const CACHE_KEY = 'deployment_rag_content_cache_v2'
+const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp_v2'
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days (1 month)
 
 // Icon mapping for Azure services and categories

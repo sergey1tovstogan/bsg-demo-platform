@@ -47,7 +47,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// API base URL
+// API base URL (when on Azure SWA use direct backend URL so POST works; SWA does not proxy POST to external)
 const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined' && (window as any).API_BASE_URL) {
     return (window as any).API_BASE_URL
@@ -55,6 +55,9 @@ const getApiBaseUrl = (): string => {
   const viteEnv = (import.meta as any).env
   if (viteEnv && viteEnv.VITE_API_URL) {
     return viteEnv.VITE_API_URL as string
+  }
+  if (typeof window !== 'undefined' && window.location.hostname.includes('azurestaticapps.net')) {
+    return 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1'
   }
   return '/api/v1'
 }
@@ -146,20 +149,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Mocked authentication: accept any Temenos mailbox (no examples in errors)
       const temenosEmailPattern = /^[^\s@]+@temenos\.[a-zA-Z]{2,}$/i
-      
-      if (!temenosEmailPattern.test(credentials.password)) {
-        // Avoid leaking validation rules in the UI
+      const emailFromPassword = temenosEmailPattern.test(credentials.password)
+      const emailFromUsername = temenosEmailPattern.test(credentials.email?.trim() || '')
+      if (!emailFromPassword && !emailFromUsername) {
         throw new Error('Invalid credentials')
       }
-
-      // Extract welcome name from email (first part before @, then before first dot if present)
-      const localPart = credentials.password.split('@')[0] || ''
+      // Use Temenos email from Password field (primary); fallback to Username field
+      const userEmail = emailFromPassword ? credentials.password : (credentials.email?.trim() || '')
+      const localPart = userEmail.split('@')[0] || ''
       const displayName = (localPart.split('.')[0] || localPart).trim()
 
       // Create mock user data
       const mockUser: User = {
         user_id: `usr_${displayName.toLowerCase()}_001`,
-        email: credentials.password, // Use the password email as the user email
+        email: userEmail,
         username: displayName,
         role: 'viewer', // Default role
         profile: {
