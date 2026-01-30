@@ -42,16 +42,24 @@ export function Chatbot({ componentId }: ChatbotProps) {
     checkRAGToken()
   }, [])
 
+  const SESSION_INIT_TIMEOUT_MS = 20000
+
   const initializeSession = useCallback(async () => {
     try {
       setInitializing(true)
       setChatError(null)
       console.log(`[Chatbot] Initializing session for component: ${componentId}`)
-      
-      const response = await apiService.createChatSession(componentId, {
-        topic: componentId,
-        user_level: 'beginner',
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Session initialization timed out. The backend may be slow or unreachable.')), SESSION_INIT_TIMEOUT_MS)
       })
+      const response = await Promise.race([
+        apiService.createChatSession(componentId, {
+          topic: componentId,
+          user_level: 'beginner',
+        }),
+        timeoutPromise
+      ])
       
       console.log(`[Chatbot] Session creation response:`, response)
       
@@ -85,23 +93,39 @@ export function Chatbot({ componentId }: ChatbotProps) {
     } catch (err: unknown) {
       console.error('[Chatbot] Failed to initialize chat session:', err)
       let errorMessage = 'Failed to initialize chat session'
-      
+      let recoveryActions: string[] = []
+
       if (err instanceof Error) {
         errorMessage = err.message
-      } else if (typeof err === 'object' && err !== null) {
+      }
+      if (typeof err === 'object' && err !== null) {
         const axiosErr = err as any
         if (axiosErr.response?.status === 404) {
-          errorMessage = 'Chatbot endpoint not found. Please check backend configuration.'
+          errorMessage = 'Chatbot endpoint not found. The backend may not be running or the API route is missing.'
+          recoveryActions = ['Ensure the backend server is running', 'Check that the chatbot API is registered at /api/v1/chatbot/session', 'Refresh the page to retry']
+        } else if (axiosErr.response?.status === 405) {
+          errorMessage = 'The server returned Method Not Allowed. The chatbot API may not be configured correctly.'
+          recoveryActions = ['Ensure the backend is running and accepts POST at the chatbot session endpoint', 'Check proxy/API configuration if using Azure Static Web Apps or a reverse proxy', 'Refresh the page to retry']
+        } else if (axiosErr.code === 'ERR_NETWORK' || axiosErr.message === 'Network Error' || !axiosErr.response) {
+          errorMessage = 'Cannot reach the backend. The API may be down or the URL may be wrong.'
+          recoveryActions = ['Check that the backend server is running', 'Verify the API URL in Settings or config', 'Refresh the page to retry']
         } else if (axiosErr.response?.data?.detail) {
-          errorMessage = typeof axiosErr.response.data.detail === 'string' 
-            ? axiosErr.response.data.detail 
+          errorMessage = typeof axiosErr.response.data.detail === 'string'
+            ? axiosErr.response.data.detail
             : axiosErr.response.data.detail.error || errorMessage
+          recoveryActions = ['Check backend logs for details', 'Configure RAG token in Settings if required', 'Refresh the page to retry']
         } else if (axiosErr.message) {
           errorMessage = axiosErr.message
+          recoveryActions = ['Refresh the page to retry', 'Check backend and API configuration']
         }
       }
-      
-      setChatError(errorMessage)
+      if (recoveryActions.length === 0) {
+        recoveryActions = ['Refresh the page to retry', 'Configure RAG token in Settings if you see a warning above', 'Ensure the backend is running']
+      }
+      const fullMessage = recoveryActions.length > 0
+        ? `${errorMessage}\n\nWhat you can do:\n${recoveryActions.map((a, i) => `${i + 1}. ${a}`).join('\n')}`
+        : errorMessage
+      setChatError(fullMessage)
     } finally {
       setInitializing(false)
     }
@@ -260,7 +284,17 @@ export function Chatbot({ componentId }: ChatbotProps) {
       )}
       {chatError && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
-          {chatError}
+          <p className="whitespace-pre-wrap">{chatError}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setChatError(null)
+              initializeSession()
+            }}
+            className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Retry
+          </button>
         </div>
       )}
 

@@ -235,6 +235,19 @@ export function DeploymentAnalyzer() {
         }
       }
 
+      // 405 Method Not Allowed: API endpoint may not accept POST or proxy misconfiguration
+      if (err.response?.status === 405) {
+        errorMessage = 'The server returned Method Not Allowed (405). The deployment API may not be configured to accept POST requests at this URL.'
+        if (recoverySteps.length === 0) {
+          recoverySteps = [
+            'Ensure the backend API is running and reachable at the configured API URL',
+            'If using Azure Static Web Apps or a reverse proxy, ensure POST requests to /api/v1/deployment/azure/connect are forwarded to the backend',
+            'Check browser Network tab: confirm the request is sent as POST and the request URL is correct',
+            'Try running the backend locally and point the frontend to it (e.g. http://localhost:8000) to verify the API works'
+          ]
+        }
+      }
+
       // For 500 errors, provide default recovery steps if none found
       if (recoverySteps.length === 0 && err.response?.status === 500) {
         errorMessage = 'Azure connection failed. This usually means Azure CLI authentication is required.'
@@ -249,6 +262,24 @@ export function DeploymentAnalyzer() {
           'Set the subscription: az account set --subscription ' + subscriptionId,
           'After login completes, refresh this page and try connecting again'
         ]
+      }
+
+      // Network or non-2xx with no recovery steps yet: add generic recovery
+      if (recoverySteps.length === 0 && (err.response?.status >= 400 || err.code === 'ERR_NETWORK' || !err.response)) {
+        if (err.code === 'ERR_NETWORK' || !err.response) {
+          errorMessage = errorMessage || 'Unable to reach the deployment API. The backend may be down or not reachable.'
+          recoverySteps = [
+            'Ensure the backend server is running',
+            'Check the API URL in Settings or config (e.g. /api for same-origin or full backend URL)',
+            'If using CORS, ensure the backend allows the frontend origin'
+          ]
+        } else {
+          errorMessage = errorMessage || `Request failed (${err.response?.status}). See details above.`
+          recoverySteps = [
+            'Check that the backend deployment API is available and accepts POST at /api/v1/deployment/azure/connect',
+            'Retry after a moment; if it persists, check backend logs for errors'
+          ]
+        }
       }
 
       // Format error message with recovery steps
@@ -1127,7 +1158,8 @@ function ResourceGroupSelector({
 
       {error && (
         <div className="card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
-          {error}
+          <div className="font-semibold mb-2">Error</div>
+          <div className="whitespace-pre-line text-sm">{error}</div>
         </div>
       )}
 
