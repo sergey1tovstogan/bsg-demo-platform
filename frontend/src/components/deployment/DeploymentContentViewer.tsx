@@ -21,8 +21,8 @@ import {
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 
-const CACHE_KEY = 'deployment_rag_content_cache'
-const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp'
+const CACHE_KEY = 'deployment_rag_content_cache_v2'
+const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp_v2'
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days (1 month)
 
 // Icon mapping for Azure services and categories
@@ -254,28 +254,26 @@ export function DeploymentContentViewer() {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null) // 'Azure' or 'AWS'
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null) // Category like 'Databases', 'Infrastructure', etc.
 
+  // Fixed category order for sub-cards (same for Azure and AWS)
+  const CATEGORY_ORDER = ['Container Orchestration', 'Infrastructure', 'Databases', 'Messaging']
+
   useEffect(() => {
     // Check cache immediately on mount
     const cached = loadCachedContent()
     if (cached) {
-      // Filter to only include Architecture Overview category
-      const filtered = cached.filter((item: any) => item.category === 'Architecture Overview')
-      
-      if (filtered.length > 0) {
-        // Sort cached content for consistent display
-        const sorted = [...filtered].sort((a, b) => {
-          return (a.order || 0) - (b.order || 0)
-        })
+      // Use items that have provider + category (new format), or legacy Architecture Overview
+      const hasNewFormat = cached.some((item: any) => item.provider && item.category)
+      const usable = hasNewFormat ? cached : cached.filter((item: any) => item.category === 'Architecture Overview')
+      if (usable.length > 0) {
+        const sorted = [...usable].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
         setRagContent(sorted)
         setRagLoading(false)
         setIsFromCache(true)
-        console.log('Loaded RAG content from cache (Architecture Overview only)')
+        console.log('Loaded RAG content from cache')
       } else {
-        // No Architecture Overview in cache, load from API
         loadRAGContent()
       }
     } else {
-      // Only load from API if no cache
       loadRAGContent()
     }
   }, [])
@@ -330,22 +328,17 @@ export function DeploymentContentViewer() {
       setRagLoading(true)
       setRagError(null)
 
-      // Query RAG API for cloud-native deployments on Azure and AWS - focus on services and capabilities
-      // Questions are phrased to ensure positive, informative responses suitable for customer demos
-      // Questions are organized with display order and category for better presentation
+      // Query RAG API with separate questions per category so each sub-card has distinct content
+      // (Container Orchestration, Infrastructure, Databases, Messaging) for Azure and AWS
       const questions = [
-        {
-          order: 1,
-          category: "Architecture Overview",
-          title: "Azure Cloud Services Architecture",
-          question: "Describe the Azure cloud services architecture for Temenos cloud-native deployments. Detail the specific Azure services used for databases (Azure SQL Database, Azure Database for PostgreSQL, MongoDB), messaging (Azure Event Hub, Apache ActiveMQ), container orchestration (Azure Kubernetes Service AKS, Azure Container Apps ACA), and other infrastructure components, including their roles and purposes."
-        },
-        {
-          order: 2,
-          category: "Architecture Overview",
-          title: "AWS Cloud Services Architecture",
-          question: "Describe the AWS cloud services architecture for Temenos cloud-native deployments. Detail the specific AWS services used for databases (Amazon RDS, DocumentDB, PostgreSQL), messaging (Amazon Kinesis, Apache ActiveMQ), container orchestration (AWS Elastic Kubernetes Service EKS, Amazon ECS), and other infrastructure components, including their roles and purposes."
-        },
+        { order: 1, provider: 'Azure', category: 'Container Orchestration', title: 'Azure – Container Orchestration', question: 'Describe only the container orchestration and application deployment services for Temenos on Azure. Focus exclusively on Azure Kubernetes Service (AKS) and Azure Container Apps (ACA): what they are, how they are used for Temenos workloads, scaling, load balancing, and self-healing. Do not include databases, messaging, or general infrastructure.' },
+        { order: 2, provider: 'Azure', category: 'Infrastructure', title: 'Azure – Infrastructure', question: 'Describe only the infrastructure and automation layer for Temenos on Azure. Focus on compute (Virtual Machines, App Service), storage accounts, networking (VNet, load balancers), Infrastructure as Code (ARM, Terraform), Helm charts for deployment, and operational tooling. Do not include container orchestration (AKS/ACA), databases, or messaging.' },
+        { order: 3, provider: 'Azure', category: 'Databases', title: 'Azure – Databases', question: 'Describe only the database services used for Temenos on Azure. Focus on Azure SQL Database, Azure Database for PostgreSQL, Cosmos DB / MongoDB, and their roles in Temenos cloud-native deployments. Do not include container orchestration, messaging, or general infrastructure.' },
+        { order: 4, provider: 'Azure', category: 'Messaging', title: 'Azure – Messaging', question: 'Describe only the messaging and event streaming services for Temenos on Azure. Focus on Azure Event Hub, Apache ActiveMQ, and event-driven integration. Do not include container orchestration, databases, or general infrastructure.' },
+        { order: 5, provider: 'AWS', category: 'Container Orchestration', title: 'AWS – Container Orchestration', question: 'Describe only the container orchestration and application deployment services for Temenos on AWS. Focus exclusively on Amazon EKS (Elastic Kubernetes Service) and Amazon ECS: what they are, how they are used for Temenos workloads, scaling, and deployment. Do not include databases, messaging, or general infrastructure.' },
+        { order: 6, provider: 'AWS', category: 'Infrastructure', title: 'AWS – Infrastructure', question: 'Describe only the infrastructure and automation layer for Temenos on AWS. Focus on EC2, Lambda, networking (VPC, load balancers), Infrastructure as Code (CloudFormation, Terraform), Helm charts, and operational tooling. Do not include container orchestration (EKS/ECS), databases, or messaging.' },
+        { order: 7, provider: 'AWS', category: 'Databases', title: 'AWS – Databases', question: 'Describe only the database services used for Temenos on AWS. Focus on Amazon RDS, DocumentDB, and PostgreSQL options and their roles in Temenos cloud-native deployments. Do not include container orchestration, messaging, or general infrastructure.' },
+        { order: 8, provider: 'AWS', category: 'Messaging', title: 'AWS – Messaging', question: 'Describe only the messaging and event streaming services for Temenos on AWS. Focus on Amazon Kinesis, Apache ActiveMQ, SQS/SNS, and event-driven integration. Do not include container orchestration, databases, or general infrastructure.' },
       ]
 
       // Query multiple questions and combine results
@@ -380,6 +373,7 @@ export function DeploymentContentViewer() {
             const filteredAnswer = removeSummaryOfRolesAndPurposes(ragData.answer)
             ragResults.push({
               order: questionItem.order,
+              provider: questionItem.provider,
               category: questionItem.category,
               title: questionItem.title,
               question: questionItem.question,
@@ -444,61 +438,23 @@ export function DeploymentContentViewer() {
       }
 
       if (ragResults.length > 0) {
-        // Filter to only include Architecture Overview category
-        const filteredResults = ragResults.filter((item: any) => item.category === 'Architecture Overview')
-        
-        if (filteredResults.length > 0) {
-          // Sort results by order for coherent presentation
-          filteredResults.sort((a, b) => {
-            return (a.order || 0) - (b.order || 0)
-          })
-          
-          setRagContent(filteredResults)
-          saveCachedContent(filteredResults)
-          setIsFromCache(false)
-          setRagError(null)
-          console.log('Loaded RAG content from API and cached (Architecture Overview only)')
-
-          // If some queries failed, show a warning but still display successful results
-          if (errors.length > 0) {
-            const partialErrorMsg = `Some queries failed (${errors.length}/${questions.length}). Showing available results.`
-            console.warn(partialErrorMsg, errors)
-            // Don't set as error since we have some results, just log it
-          }
-        } else {
-          // No Architecture Overview results - restore cached content if available
-          if (forceRefresh && cachedContent) {
-            const filteredCached = Array.isArray(cachedContent) 
-              ? cachedContent.filter((item: any) => item.category === 'Architecture Overview')
-              : []
-            if (filteredCached.length > 0) {
-              setRagContent(filteredCached)
-              setIsFromCache(true)
-              setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
-              console.warn('Refresh failed, restored cached content', errors)
-            } else {
-              setRagError(`No Architecture Overview content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
-            }
-          } else {
-            setRagError(`No Architecture Overview content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
-          }
+        ragResults.sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+        setRagContent(ragResults)
+        saveCachedContent(ragResults)
+        setIsFromCache(false)
+        setRagError(null)
+        console.log('Loaded RAG content from API and cached')
+        if (errors.length > 0) {
+          console.warn(`Some queries failed (${errors.length}/${questions.length}). Showing available results.`, errors)
         }
       } else {
-        // All queries failed - restore cached content if available
-        if (forceRefresh && cachedContent) {
-          const filteredCached = Array.isArray(cachedContent) 
-            ? cachedContent.filter((item: any) => item.category === 'Architecture Overview')
-            : []
-          if (filteredCached.length > 0) {
-            setRagContent(filteredCached)
-            setIsFromCache(true)
-            setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
-            console.warn('Refresh failed, restored cached content', errors)
-          } else {
-            setRagError(`No Architecture Overview content available. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
-          }
+        if (forceRefresh && cachedContent && Array.isArray(cachedContent) && cachedContent.length > 0) {
+          setRagContent(cachedContent)
+          setIsFromCache(true)
+          setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
+          console.warn('Refresh failed, restored cached content', errors)
         } else {
-          setRagError(`No Architecture Overview content available. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
+          setRagError(`No content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
         }
       }
     } catch (err: any) {
@@ -511,18 +467,10 @@ export function DeploymentContentViewer() {
       // If refresh failed, try to restore cached content
       if (forceRefresh) {
         const cachedContent = loadCachedContent()
-        if (cachedContent) {
-          // Filter to only include Architecture Overview category
-          const filteredCached = Array.isArray(cachedContent) 
-            ? cachedContent.filter((item: any) => item.category === 'Architecture Overview')
-            : []
-          if (filteredCached.length > 0) {
-            setRagContent(filteredCached)
-            setIsFromCache(true)
-            setRagError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
-          } else {
-            setRagError(errorMsg)
-          }
+        if (cachedContent && Array.isArray(cachedContent) && cachedContent.length > 0) {
+          setRagContent(cachedContent)
+          setIsFromCache(true)
+          setRagError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
         } else {
           setRagError(errorMsg)
         }
@@ -602,22 +550,10 @@ export function DeploymentContentViewer() {
         {ragContent && ragContent.length > 0 && (
           <div className="space-y-8">
             {(() => {
-              // Filter to only show Architecture Overview category
-              const architectureItems = ragContent.filter((item: any) => item.category === 'Architecture Overview')
-              
-              if (architectureItems.length === 0) {
-                return null
-              }
-
-              // Group by category (should only be Architecture Overview now)
-              const grouped: { [key: string]: any[] } = {}
-              architectureItems.forEach((item: any) => {
-                const cat = item.category || 'Architecture Overview'
-                if (!grouped[cat]) {
-                  grouped[cat] = []
-                }
-                grouped[cat].push(item)
-              })
+              const hasNewFormat = ragContent.some((item: any) => item.provider)
+              const architectureItems = hasNewFormat ? ragContent : ragContent.filter((item: any) => item.category === 'Architecture Overview')
+              if (architectureItems.length === 0) return null
+              const grouped: { [key: string]: any[] } = { 'Architecture Overview': architectureItems }
 
               return Object.entries(grouped).map(([category, items]) => {
                 const categoryStyle = CATEGORY_STYLES[category] || {
@@ -649,17 +585,22 @@ export function DeploymentContentViewer() {
                     {/* Special handling for Architecture Overview - hierarchical Azure/AWS cards with sub-categories */}
                     {category === 'Architecture Overview' ? (
                       (() => {
-                        // Separate Azure and AWS items
-                        const azureItem = items.find((item: any) => item.title?.includes('Azure') || item.answer?.includes('Azure'))
-                        const awsItem = items.find((item: any) => item.title?.includes('AWS') || item.answer?.includes('AWS'))
-                        
+                        const hasProviderBased = items.some((i: any) => i.provider)
+                        const azureItems = hasProviderBased ? items.filter((i: any) => i.provider === 'Azure') : []
+                        const awsItems = hasProviderBased ? items.filter((i: any) => i.provider === 'AWS') : []
+                        const azureItem = hasProviderBased ? null : items.find((item: any) => item.title?.includes('Azure') || item.answer?.includes('Azure'))
+                        const awsItem = hasProviderBased ? null : items.find((item: any) => item.title?.includes('AWS') || item.answer?.includes('AWS'))
                         return (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Azure Card */}
-                            {azureItem && (() => {
+                            {(azureItems.length > 0 || azureItem) && (() => {
                               const isSelected = selectedProvider === 'Azure'
-                              const categories = parseContentByCategories(azureItem.answer || '')
-                              const categoryKeys = Object.keys(categories).sort()
+                              const categoryKeys = hasProviderBased
+                                ? CATEGORY_ORDER.filter((cat) => azureItems.some((i: any) => i.category === cat))
+                                : Object.keys(parseContentByCategories(azureItem?.answer || '')).sort()
+                              const categories: { [k: string]: string } = hasProviderBased
+                                ? Object.fromEntries(azureItems.map((i: any) => [i.category, i.answer || '']))
+                                : parseContentByCategories(azureItem?.answer || '')
                               
                               return (
                                 <div className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 cursor-pointer ${
@@ -764,10 +705,14 @@ export function DeploymentContentViewer() {
                             })()}
                             
                             {/* AWS Card */}
-                            {awsItem && (() => {
+                            {(awsItems.length > 0 || awsItem) && (() => {
                               const isSelected = selectedProvider === 'AWS'
-                              const categories = parseContentByCategories(awsItem.answer || '')
-                              const categoryKeys = Object.keys(categories).sort()
+                              const categoryKeys = hasProviderBased
+                                ? CATEGORY_ORDER.filter((cat) => awsItems.some((i: any) => i.category === cat))
+                                : Object.keys(parseContentByCategories(awsItem?.answer || '')).sort()
+                              const categories: { [k: string]: string } = hasProviderBased
+                                ? Object.fromEntries(awsItems.map((i: any) => [i.category, i.answer || '']))
+                                : parseContentByCategories(awsItem?.answer || '')
                               
                               return (
                                 <div className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 cursor-pointer ${

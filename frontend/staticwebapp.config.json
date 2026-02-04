@@ -2,8 +2,9 @@
   "routes": [
     {
       "route": "/api/*",
+      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
       "allowedRoles": ["anonymous"],
-      "rewrite": "https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/*"
+      "rewrite": "https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/{*restOfPath}"
     }
   ],
   "navigationFallback": {

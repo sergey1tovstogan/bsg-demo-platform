@@ -75,37 +75,24 @@ const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
 }
 
 // Determine API base URL at runtime
-// Priority: 1. Runtime config.json, 2. Environment detection, 3. Default relative path
+// Priority: 1. On Azure SWA use direct backend URL (POST works), 2. Runtime config, 3. Default relative path
 const getApiBaseUrl = async (): Promise<string> => {
-  // Load runtime configuration
+  // When on Azure Static Web Apps, always call backend directly so POST/PUT/DELETE work (SWA does not proxy them to external URLs)
+  if (typeof window !== 'undefined' && window.location.hostname.includes('azurestaticapps.net')) {
+    const directUrl = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1'
+    console.log('[API] Azure Static Web Apps detected, using direct backend URL for POST support:', directUrl)
+    return directUrl
+  }
+
   const config = await loadRuntimeConfig()
-  
-  // If config has a full URL, use it
   if (config.apiUrl && (config.apiUrl.startsWith('http://') || config.apiUrl.startsWith('https://'))) {
     console.log('[API] Using runtime config API URL:', config.apiUrl)
     return config.apiUrl
   }
-  
-  // If config has a relative path, use it
   if (config.apiUrl) {
     console.log('[API] Using runtime config relative API URL:', config.apiUrl)
     return config.apiUrl
   }
-  
-  // Fallback: Environment detection for Azure Static Web Apps
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname
-    // If on Azure Static Web Apps domain, construct backend URL
-    if (hostname.includes('azurestaticapps.net')) {
-      // Use the same origin for API if backend is proxied, or construct from hostname
-      // For now, default to relative path which works if backend is proxied
-      const defaultUrl = '/api/v1'
-      console.log('[API] Detected Azure Static Web Apps, using relative URL:', defaultUrl)
-      return defaultUrl
-    }
-  }
-  
-  // Default to relative path (for local development or when backend is proxied)
   const defaultUrl = '/api/v1'
   console.log('[API] Using default relative URL:', defaultUrl)
   return defaultUrl

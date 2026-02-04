@@ -47,7 +47,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// API base URL
+// API base URL (when on Azure SWA use direct backend URL so POST works; SWA does not proxy POST to external)
 const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined' && (window as any).API_BASE_URL) {
     return (window as any).API_BASE_URL
@@ -55,6 +55,9 @@ const getApiBaseUrl = (): string => {
   const viteEnv = (import.meta as any).env
   if (viteEnv && viteEnv.VITE_API_URL) {
     return viteEnv.VITE_API_URL as string
+  }
+  if (typeof window !== 'undefined' && window.location.hostname.includes('azurestaticapps.net')) {
+    return 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1'
   }
   return '/api/v1'
 }
@@ -81,7 +84,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load user from localStorage on mount
+  // Clear auth state (defined first so login/logout can use it)
+  const clearAuth = useCallback(() => {
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
+    setUser(null)
+  }, [])
+
+  // Load user from localStorage on mount and when auth changes in another tab
   useEffect(() => {
     const loadUser = () => {
       try {
@@ -94,6 +105,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           // Set up auto-refresh
           setupAutoRefresh()
+        } else {
+          setUser(null)
         }
       } catch (error) {
         console.error('Error loading user from storage:', error)
@@ -104,6 +117,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     loadUser()
+
+    // Sync auth when localStorage changes (e.g. login/logout in another tab)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === USER_KEY || e.key === ACCESS_TOKEN_KEY) {
+        loadUser()
+      }
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
   // Setup auto-refresh (every 14 minutes)
@@ -122,22 +144,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Login function with mocked authentication
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
+      // Clear previous user so the UI never shows a stale "Welcome previous_user" after new login
+      clearAuth()
+
       // Mocked authentication: accept any Temenos mailbox (no examples in errors)
       const temenosEmailPattern = /^[^\s@]+@temenos\.[a-zA-Z]{2,}$/i
-      
-      if (!temenosEmailPattern.test(credentials.password)) {
-        // Avoid leaking validation rules in the UI
+      const emailFromPassword = temenosEmailPattern.test(credentials.password)
+      const emailFromUsername = temenosEmailPattern.test(credentials.email?.trim() || '')
+      if (!emailFromPassword && !emailFromUsername) {
         throw new Error('Invalid credentials')
       }
-
-      // Extract welcome name from email (first part before @, then before first dot if present)
-      const localPart = credentials.password.split('@')[0] || ''
+      // Use Temenos email from Password field (primary); fallback to Username field
+      const userEmail = emailFromPassword ? credentials.password : (credentials.email?.trim() || '')
+      const localPart = userEmail.split('@')[0] || ''
       const displayName = (localPart.split('.')[0] || localPart).trim()
 
       // Create mock user data
       const mockUser: User = {
         user_id: `usr_${displayName.toLowerCase()}_001`,
-        email: credentials.password, // Use the password email as the user email
+        email: userEmail,
         username: displayName,
         role: 'viewer', // Default role
         profile: {
@@ -161,7 +186,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Never surface detailed validation errors here
       throw new Error('Login failed')
     }
-  }, [setupAutoRefresh])
+  }, [clearAuth, setupAutoRefresh])
 
   // Logout function
   const logout = useCallback(() => {
@@ -179,15 +204,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     clearAuth()
-  }, [])
-
-  // Clear auth state
-  const clearAuth = () => {
-    localStorage.removeItem(ACCESS_TOKEN_KEY)
-    localStorage.removeItem(REFRESH_TOKEN_KEY)
-    localStorage.removeItem(USER_KEY)
-    setUser(null)
-  }
+  }, [clearAuth])
 
   // Refresh token function
   const refreshToken = useCallback(async () => {
