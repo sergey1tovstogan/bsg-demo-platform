@@ -89,6 +89,27 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to start Event Hub adapter: {e}")
         logger.warning("Application will start but Event Hub features may not work")
 
+    # Proactive Azure identity check so platform does not hang during demos (SP/Managed Identity expired)
+    async def _startup_azure_check():
+        try:
+            from app.api.deployment import _check_azure_health
+            from app.core.config import get_settings
+            s = get_settings()
+            result = await _check_azure_health(s.AZURE_SUBSCRIPTION_ID)
+            if result.get("status") != "ok":
+                logger.warning(
+                    "Azure identity check failed - Deployment demo may not work. %s "
+                    "Ensure Managed Identity or Service Principal (AZURE_CLIENT_ID/SECRET/TENANT_ID) has Reader on the subscription, or renew SP secret if expired.",
+                    result.get("message", "No message"),
+                )
+            else:
+                logger.info("Azure identity check passed - Deployment demo connectivity OK")
+        except Exception as e:
+            logger.warning("Azure startup check failed (non-fatal): %s. Deployment demo may fail until identity is fixed.", e)
+
+    import asyncio
+    asyncio.create_task(_startup_azure_check())
+
     yield
 
     # Shutdown

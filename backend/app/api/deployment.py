@@ -109,6 +109,112 @@ def get_azure_service(subscription_id: str) -> AzureService:
     return azure_service_cache[subscription_id]
 
 
+async def _check_azure_health(subscription_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Check Azure identity and optional subscription access.
+    Used for proactive health checks so the platform does not hang during demos.
+    """
+    import os
+    from azure.identity import DefaultAzureCredential
+    from azure.core.exceptions import ClientAuthenticationError
+
+    result: Dict[str, Any] = {
+        "status": "unknown",
+        "identity_type": "unknown",
+        "subscription_check": "not_checked",
+        "message": None,
+    }
+    if os.getenv("AZURE_CLIENT_ID"):
+        identity_type = "service_principal"
+    elif os.getenv("WEBSITE_SITE_NAME") or os.getenv("CONTAINER_APP_NAME"):
+        identity_type = "managed_identity"
+    else:
+        identity_type = "default_credential_chain"  # local: CLI or env
+    result["identity_type"] = identity_type
+
+    def _get_token():
+        cred = DefaultAzureCredential()
+        return cred.get_token("https://management.azure.com/.default")
+
+    try:
+        loop = asyncio.get_event_loop()
+        token = await loop.run_in_executor(None, _get_token)
+        if not token or not token.token:
+            result["status"] = "unavailable"
+            result["message"] = "Azure identity returned no token"
+            return result
+        result["status"] = "ok"
+        result["message"] = "Azure identity is valid"
+    except ClientAuthenticationError as e:
+        err_str = getattr(e, "message", None) or str(e)
+        msg = err_str.lower()
+        result["status"] = "unavailable"
+        result["subscription_check"] = "credential_failed"
+        if "expired" in msg or "refresh token" in msg or ("token" in msg and "invalid" in msg):
+            result["message"] = (
+                "Azure credential may have expired. "
+                "If using Service Principal: renew the client secret in Azure Portal (App registration → Certificates & secrets). "
+                "If using Managed Identity: ensure it still has Reader role on the subscription."
+            )
+            result["subscription_check"] = "expired"
+        else:
+            result["message"] = err_str
+        return result
+    except Exception as e:
+        result["status"] = "unavailable"
+        result["message"] = str(e)
+        result["subscription_check"] = "credential_failed"
+        return result
+
+    if not subscription_id:
+        return result
+
+    result["subscription_check"] = "checking"
+    try:
+        azure_service = get_azure_service(subscription_id)
+        await azure_service.test_connection()
+        result["subscription_check"] = "ok"
+        result["message"] = "Azure identity and subscription access are valid"
+        return result
+    except RuntimeError as e:
+        err_msg = str(e).lower()
+        result["subscription_check"] = "no_access"
+        if "expired" in err_msg or "refresh token" in err_msg or "401" in err_msg:
+            result["subscription_check"] = "expired"
+            result["message"] = (
+                "Azure credential may have expired. Renew the Service Principal secret or re-grant Managed Identity access to the subscription."
+            )
+        else:
+            result["message"] = str(e)
+        result["status"] = "unavailable"
+        return result
+    except Exception as e:
+        result["subscription_check"] = "no_access"
+        err_str = str(e).lower()
+        if "expired" in err_str or "refresh token" in err_str:
+            result["subscription_check"] = "expired"
+            result["message"] = (
+                "Azure credential may have expired. Renew the Service Principal secret or re-grant Managed Identity access to the subscription, then restart the backend."
+            )
+        else:
+            result["message"] = str(e)
+        result["status"] = "unavailable"
+        return result
+
+
+@router.get("/azure/health")
+async def azure_health_check(subscription_id: Optional[str] = None):
+    """
+    Proactive Azure connectivity check for demos.
+    Call this before or during demo to avoid platform hanging when backend identity has expired or lost access.
+    """
+    from app.core.config import get_settings
+    settings = get_settings()
+    sub_id = subscription_id or settings.AZURE_SUBSCRIPTION_ID
+    result = await _check_azure_health(sub_id)
+    return result
+
+
 @router.post("/azure/connect")
 async def connect_azure_subscription(request: SubscriptionConnectRequest):
     """
@@ -166,8 +272,16 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
         error_msg = str(e)
         error_type = "unknown"
         recovery_steps = []
-        
-        if "authentication" in error_msg.lower() or "credential" in error_msg.lower():
+        err_lower = error_msg.lower()
+        if "expired" in err_lower or "credential may have expired" in err_lower:
+            error_type = "credential_expired"
+            recovery_steps = [
+                "If using Service Principal: renew the client secret in Azure Portal (App registration → Certificates & secrets)",
+                "If using Managed Identity: in Azure Portal ensure the Container App/App Service identity has Reader role on the subscription",
+                "Restart the backend after renewing credentials",
+                "Verify subscription ID is correct and the subscription is active",
+            ]
+        elif "authentication" in err_lower or "credential" in err_lower:
             error_type = "authentication"
             # Check if running in Azure App Service
             import os

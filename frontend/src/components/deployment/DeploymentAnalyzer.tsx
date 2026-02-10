@@ -93,6 +93,17 @@ export function DeploymentAnalyzer() {
   const [selectedResourceGroupForLogs, setSelectedResourceGroupForLogs] = useState<string | null>(null)
   const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
   const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
+  const [azureHealth, setAzureHealth] = useState<{ status: string; message?: string | null } | null>(null)
+
+  // Proactive Azure health check when on subscription step so demos don't hang if backend identity expired
+  useEffect(() => {
+    if (currentStep !== 'subscription') return
+    let cancelled = false
+    apiService.getAzureHealth(subscriptionId || undefined)
+      .then((res) => { if (!cancelled) setAzureHealth({ status: res.status, message: res.message ?? undefined }) })
+      .catch(() => { if (!cancelled) setAzureHealth({ status: 'unknown', message: null }) })
+    return () => { cancelled = true }
+  }, [currentStep, subscriptionId])
 
   const loadResourceGroups = async (subId: string, refresh: boolean = false) => {
     try {
@@ -138,15 +149,12 @@ export function DeploymentAnalyzer() {
         code: err.code,
         config: err.config
       })
-      // Handle different error formats
+      // Handle different error formats (err may be axios error with err.response.data.detail, or a thrown detail object)
       let errorMessage = 'Failed to connect to Azure'
       let recoverySteps: string[] = []
-
-      // FastAPI returns errors in different formats:
-      // 1. { detail: { error: "...", recoverySteps: [...] } }
-      // 2. { detail: "string error" }
-      // 3. Direct error object
-      const errorDetail = err.response?.data?.detail
+      const responseStatus = err.response?.status
+      const payload = err.response?.data ?? (err && typeof err === 'object' && (err.error || err.errorType) ? err : null)
+      const errorDetail = payload?.detail ?? (payload && (payload.error || payload.errorType) ? payload : null)
 
       if (errorDetail) {
         if (typeof errorDetail === 'string') {
@@ -167,38 +175,63 @@ export function DeploymentAnalyzer() {
             recoverySteps = errorDetail.recoverySteps
           }
         }
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error
-        if (err.response.data.recoverySteps) {
-          recoverySteps = err.response.data.recoverySteps
+      } else if (payload?.error) {
+        errorMessage = payload.error
+        if (Array.isArray(payload.recoverySteps)) {
+          recoverySteps = payload.recoverySteps
         }
       } else if (err.message) {
         errorMessage = err.message
       }
 
       // If we still don't have a good error message, use the status code
-      if (errorMessage === 'Failed to connect to Azure' && err.response?.status) {
-        // Try to extract a better error message from the response
-        if (err.response.data?.detail) {
-          const detail = err.response.data.detail
-          if (typeof detail === 'object' && detail.error) {
-            errorMessage = detail.error
-            // Make sure we have recovery steps if they exist
-            if (detail.recoverySteps && Array.isArray(detail.recoverySteps) && recoverySteps.length === 0) {
-              recoverySteps = detail.recoverySteps
-            }
-          } else if (typeof detail === 'string') {
-            errorMessage = detail
-          } else {
-        errorMessage = `Request failed with status code ${err.response.status}`
+      if (errorMessage === 'Failed to connect to Azure' && (payload || responseStatus)) {
+        const detail = payload?.detail ?? payload
+        if (detail && typeof detail === 'object' && detail.error) {
+          errorMessage = detail.error
+          if (Array.isArray(detail.recoverySteps) && recoverySteps.length === 0) {
+            recoverySteps = detail.recoverySteps
           }
-        } else {
-          errorMessage = `Request failed with status code ${err.response.status}`
+        } else if (typeof detail === 'string') {
+          errorMessage = detail
+        } else if (responseStatus) {
+          errorMessage = `Request failed with status code ${responseStatus}`
         }
       }
 
-      // Check for common Azure authentication errors
-      if (errorMessage.includes('refresh token has expired') || errorMessage.includes('AADSTS70043')) {
+      // 500 with subscription/credential error: backend (Container App) could not access – not a user Azure CLI issue
+      const errorType = payload?.errorType ?? errorDetail?.errorType
+      const isBackendIdentityError = responseStatus === 500 && (
+        errorType === 'subscription' ||
+        errorType === 'credential_expired' ||
+        (errorMessage && /Subscription\s+['\"]?[a-f0-9-]+|subscription.*(?:not found|no access|not have access|active)/i.test(errorMessage)) ||
+        (errorMessage && /credential may have expired|renew.*secret|managed identity/i.test(errorMessage))
+      )
+      if (isBackendIdentityError) {
+        if (errorType === 'credential_expired' && errorMessage && !errorMessage.includes('Azure CLI')) {
+          // Keep backend message for credential expired; use backend recovery steps if present
+          if (Array.isArray(errorDetail?.recoverySteps) && errorDetail.recoverySteps.length > 0) {
+            recoverySteps = errorDetail.recoverySteps
+          } else {
+            recoverySteps = [
+              'If using Service Principal: renew the client secret in Azure Portal (App registration → Certificates & secrets)',
+              'If using Managed Identity: ensure the Container App identity has Reader role on the subscription',
+              'Restart the backend after renewing credentials',
+              'Verify subscription ID is correct and the subscription is active'
+            ]
+          }
+        } else {
+          errorMessage = 'The backend could not access this Azure subscription. The subscription may not exist, may be in another tenant, or the backend\'s Azure identity may not have access.'
+          recoverySteps = [
+            'Verify the subscription ID in Azure Portal (Subscriptions) and that it is active',
+            'Ensure the backend\'s managed identity or service principal has at least Reader access to this subscription',
+            'If the subscription is in a different tenant, configure the backend to use credentials for that tenant',
+            'Contact your administrator to check backend Azure identity and subscription access'
+          ]
+        }
+      }
+      // Check for common Azure authentication errors (user-side only when not a backend subscription error)
+      else if (errorMessage.includes('refresh token has expired') || errorMessage.includes('AADSTS70043')) {
         errorMessage = 'Azure authentication token has expired. Please re-authenticate.'
         recoverySteps = [
           'Open PowerShell or Command Prompt',
@@ -236,7 +269,7 @@ export function DeploymentAnalyzer() {
       }
 
       // 405 Method Not Allowed: API endpoint may not accept POST or proxy misconfiguration
-      if (err.response?.status === 405) {
+      if (responseStatus === 405) {
         errorMessage = 'The server returned Method Not Allowed (405). The deployment API may not be configured to accept POST requests at this URL.'
         if (recoverySteps.length === 0) {
           recoverySteps = [
@@ -248,24 +281,19 @@ export function DeploymentAnalyzer() {
         }
       }
 
-      // For 500 errors, provide default recovery steps if none found
-      if (recoverySteps.length === 0 && err.response?.status === 500) {
-        errorMessage = 'Azure connection failed. This usually means Azure CLI authentication is required.'
+      // For other 500 errors (not subscription/credential), suggest checking backend
+      if (recoverySteps.length === 0 && responseStatus === 500 && !isBackendIdentityError) {
+        errorMessage = errorMessage || 'Azure connection failed on the server. The backend could not complete the request.'
         recoverySteps = [
-          'Open PowerShell or Command Prompt (as Administrator if needed)',
-          'Check if Azure CLI is installed: az --version',
-          'If not installed, download from: https://aka.ms/installazurecliwindows',
-          'Login to Azure: az login --use-device-code',
-          'A browser will open - complete authentication',
-          'Select your subscription (usually option 1)',
-          'Verify login: az account show',
-          'Set the subscription: az account set --subscription ' + subscriptionId,
-          'After login completes, refresh this page and try connecting again'
+          'Verify the subscription ID is correct and active in Azure Portal',
+          'Check backend logs (e.g. Container App logs) for the exact error',
+          'Ensure the backend\'s Azure identity has Reader (or appropriate) role on the subscription',
+          'Refresh this page and try again; if it persists, contact your administrator'
         ]
       }
 
       // Network or non-2xx with no recovery steps yet: add generic recovery
-      if (recoverySteps.length === 0 && (err.response?.status >= 400 || err.code === 'ERR_NETWORK' || !err.response)) {
+      if (recoverySteps.length === 0 && (responseStatus != null && responseStatus >= 400 || err.code === 'ERR_NETWORK' || !err.response)) {
         if (err.code === 'ERR_NETWORK' || !err.response) {
           errorMessage = errorMessage || 'Unable to reach the deployment API. The backend may be down or not reachable.'
           recoverySteps = [
@@ -720,6 +748,13 @@ export function DeploymentAnalyzer() {
 
   return (
     <div className="space-y-6 min-h-[400px]">
+      {currentStep === 'subscription' && azureHealth?.status === 'unavailable' && (
+        <div className="rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4 text-amber-800 dark:text-amber-200">
+          <p className="font-medium">Azure connectivity issue</p>
+          <p className="text-sm mt-1">{azureHealth.message || 'Backend Azure identity may have expired or lost access to the subscription.'}</p>
+          <p className="text-sm mt-1">Contact your administrator to renew the Service Principal secret or re-grant Managed Identity access, then restart the backend.</p>
+        </div>
+      )}
       {currentStep === 'subscription' && (
         <SubscriptionInput
           onSubmit={handleSubscriptionSubmit}

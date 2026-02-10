@@ -491,16 +491,29 @@ class ApiService {
         url: error.config?.url,
         baseURL: error.config?.baseURL
       })
-      // Re-throw with better error handling
-      if (error.response?.data?.detail) {
-        throw error.response.data.detail
-      }
-      // Provide more detailed error message for network errors
+      // Do not throw detail alone - caller needs response.status and full structure
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
         throw new Error(`Network Error - Unable to reach the backend API at ${this.baseUrl}. Please check if the backend service is running and accessible.`)
       }
       throw error
     }
+  }
+
+  /** Proactive Azure connectivity check (backend identity / subscription access). Call before demo to avoid platform hanging. */
+  async getAzureHealth(subscriptionId?: string): Promise<{
+    status: string
+    identity_type?: string
+    subscription_check?: string
+    message?: string | null
+  }> {
+    const params = subscriptionId ? `?subscription_id=${encodeURIComponent(subscriptionId)}` : ''
+    const response = await this.client.get<{
+      status: string
+      identity_type?: string
+      subscription_check?: string
+      message?: string | null
+    }>(`/deployment/azure/health${params}`)
+    return response.data
   }
 
   async getAzureResourceGroups(subscriptionId: string, refresh: boolean = false) {
