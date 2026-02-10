@@ -56,7 +56,8 @@ const getApiBaseUrl = (): string => {
   if (viteEnv && viteEnv.VITE_API_URL) {
     return viteEnv.VITE_API_URL as string
   }
-  if (typeof window !== 'undefined' && window.location.hostname.includes('azurestaticapps.net')) {
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+  if (hostname.includes('azurestaticapps.net') || hostname.includes('demo-platform.bsg.temenos.com')) {
     return 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1'
   }
   return '/api/v1'

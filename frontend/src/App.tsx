@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
 import { SettingsModal } from './components/SettingsModal'
 import { ComingSoonModal } from './components/ComingSoonModal'
 import { HomePage } from './pages/HomePage'
+import { LandingPage } from './pages/LandingPage'
 import { ComponentPage } from './pages/ComponentPage'
 import { LoginPage } from './pages/LoginPage'
 import { UserManagement } from './pages/UserManagement'
@@ -98,9 +99,9 @@ function Dashboard({ theme, onThemeChange }: DashboardProps) {
           </div>
         </div>
 
-        {/* Content Container */}
-        <div className="relative z-10 px-8 py-8 h-full overflow-y-auto custom-scrollbar">
-          <div className="max-w-7xl mx-auto">
+        {/* Content Container - responsive padding (developer-portal style) */}
+        <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 h-full overflow-y-auto custom-scrollbar">
+          <div className="max-w-7xl mx-auto w-full">
             <div className="animate-fade-in">
               {currentComponent ? (
                 <ComponentPage
@@ -184,9 +185,21 @@ function App() {
           }
         />
 
-        {/* Dashboard Routes - Show login if not authenticated */}
+        {/* Landing page - authenticated users see tech pillars first */}
         <Route
-          path="/*"
+          path="/"
+          element={
+            isAuthenticated ? (
+              <LandingPage />
+            ) : (
+              <LoginPage />
+            )
+          }
+        />
+
+        {/* Dashboard (main app with cards) - at /platform */}
+        <Route
+          path="/platform/*"
           element={
             isAuthenticated ? (
               <Dashboard
@@ -194,7 +207,7 @@ function App() {
                 onThemeChange={handleThemeChange}
               />
             ) : (
-              <LoginPage />
+              <Navigate to="/login" replace />
             )
           }
         />

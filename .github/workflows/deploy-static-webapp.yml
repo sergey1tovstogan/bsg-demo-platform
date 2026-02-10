@@ -246,6 +246,7 @@ jobs:
           echo "## Frontend Deployment Complete ≡ƒÜÇ" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Frontend URL**: https://kind-beach-01c0a990f.3.azurestaticapps.net" >> $GITHUB_STEP_SUMMARY
+          echo "**Custom Domain**: https://demo-platform.bsg.temenos.com" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "The frontend is now live and accessible!" >> $GITHUB_STEP_SUMMARY
 

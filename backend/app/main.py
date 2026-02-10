@@ -150,7 +150,7 @@ app.add_middleware(BasicAuthMiddleware)
 # This is more flexible than hardcoding specific origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://.*\.azurestaticapps\.net|https://.*\.azurewebsites\.net|http://localhost:\d+|http://127\.0\.0\.1:\d+",
+    allow_origin_regex=r"https://.*\.azurestaticapps\.net|https://.*\.azurewebsites\.net|https://demo-platform\.bsg\.temenos\.com|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
     allow_headers=["*"],

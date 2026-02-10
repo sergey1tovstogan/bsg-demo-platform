@@ -78,7 +78,7 @@ bsg-demo-platform/
 **CLOUD (Azure):**
 
 - **Frontend**: Azure Static Web Apps
-  - URL: `https://kind-beach-01c0a990f.3.azurestaticapps.net`
+  - URL: `https://demo-platform.bsg.temenos.com` (custom domain) or `https://kind-beach-01c0a990f.3.azurestaticapps.net`
   - Technology: React 18.2.0 with TypeScript, Vite 5.0.8
   - Lines of Code: ~25,000+ lines
   - API Proxy: Routes `/api/*` to backend Container App

@@ -387,7 +387,8 @@ class CostService:
         end_date: Optional[datetime] = None
     ) -> List[Dict[str, Any]]:
         """
-        Get cost data for multiple resource groups.
+        Get cost data for multiple resource groups using a single subscription-level query
+        (matching the working bash script approach - one API call, filter in memory).
         
         Args:
             resource_group_names: List of resource group names
@@ -397,37 +398,159 @@ class CostService:
         Returns:
             List of cost information dictionaries
         """
-        results = []
-        total = len(resource_group_names)
+        if not resource_group_names:
+            return []
         
-        logger.info(f"Fetching costs for {total} resource groups...")
-        
-        # For large batches, reduce delay and process more efficiently
-        delay = 0.2 if total > 20 else 0.5
-        
-        for idx, rg_name in enumerate(resource_group_names, 1):
-            try:
-                logger.info(f"Processing resource group {idx}/{total}: {rg_name}")
-                cost_data = self.get_resource_group_costs(rg_name, start_date, end_date)
-                results.append(cost_data)
-                
-                # Reduced delay for large batches to speed up processing
-                if idx < total:  # Don't delay after last item
-                    time.sleep(delay)
-            except Exception as e:
-                logger.error(f"Error fetching costs for {rg_name}: {e}")
-                # Add error result instead of failing completely
-                results.append({
+        try:
+            if end_date is None:
+                end_date = datetime.now()
+            if start_date is None:
+                start_date = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            
+            # Single query at subscription scope - NO filter (matching working script)
+            scope = f"/subscriptions/{self.subscription_id}"
+            url = f"{self.base_url}{scope}/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
+            
+            query_definition = {
+                "type": "ActualCost",
+                "timeframe": "Custom",
+                "timePeriod": {
+                    "from": start_date.strftime("%Y-%m-%dT00:00:00Z"),
+                    "to": end_date.strftime("%Y-%m-%dT23:59:59Z")
+                },
+                "dataset": {
+                    "granularity": "Daily",
+                    "aggregation": {"totalCost": {"name": "PreTaxCost", "function": "Sum"}},
+                    "grouping": [
+                        {"type": "Dimension", "name": "ResourceGroup"},
+                        {"type": "Dimension", "name": "ServiceName"}
+                    ]
+                }
+            }
+            
+            logger.info(f"Fetching costs for {len(resource_group_names)} RGs via single subscription query...")
+            result = self._make_api_request(url, "POST", query_definition)
+            
+            if result.get('error'):
+                error_msg = result.get('error', 'Unknown error')
+                status_code = result.get('status_code', 500)
+                if status_code == 403:
+                    error_msg = 'Permission denied. Verify "Cost Management Reader" role on the subscription.'
+                elif status_code == 404:
+                    error_msg = 'Cost data not available. Cost data may take 24-48 hours to appear.'
+                return [
+                    {
+                        'resource_group': rg_name,
+                        'total_cost': 0.0,
+                        'services': {},
+                        'error': error_msg,
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat()
+                    }
+                    for rg_name in resource_group_names
+                ]
+            
+            rows = result.get('properties', {}).get('rows', [])
+            if not rows:
+                logger.info("No cost data rows returned from Cost Management API")
+                return [
+                    {
+                        'resource_group': rg_name,
+                        'total_cost': 0.0,
+                        'services': {},
+                        'error': None,
+                        'note': 'No cost data found for the specified period.',
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat()
+                    }
+                    for rg_name in resource_group_names
+                ]
+            
+            # Filter selected RGs (case-insensitive)
+            selected_set = {r.strip().lower() for r in resource_group_names if r}
+            
+            # Aggregate by RG: {rg_name: {total, services: {svc: cost}}}
+            rg_costs: Dict[str, Dict[str, Any]] = {}
+            for row in rows:
+                if len(row) < 5:
+                    continue
+                cost = float(row[0]) if row[0] is not None else 0.0
+                rg = (row[2] or "").strip()
+                service = (row[3] or "Unknown Service").strip()
+                if not rg:
+                    continue
+                rg_lower = rg.lower()
+                if rg_lower not in selected_set:
+                    continue
+                if rg not in rg_costs:
+                    rg_costs[rg] = {"total": 0.0, "services": {}}
+                rg_costs[rg]["total"] += cost
+                rg_costs[rg]["services"][service] = rg_costs[rg]["services"].get(service, 0) + cost
+            
+            # Projections
+            now = datetime.now()
+            days_in_month = (now.replace(month=now.month % 12 + 1, day=1) - timedelta(days=1)).day
+            days_passed = now.day
+            month_progress = days_passed / days_in_month if days_in_month > 0 else 1.0
+            currency = result.get('properties', {}).get('currency', 'USD')
+            
+            # Build results for each requested RG
+            results = []
+            for rg_name in resource_group_names:
+                data = rg_costs.get(rg_name) or next(
+                    (rg_costs[k] for k in rg_costs if k.lower() == rg_name.lower()),
+                    None
+                )
+                if data:
+                    total_cost = data["total"]
+                    services = {k: round(v, 2) for k, v in data["services"].items()}
+                    full_month = total_cost / month_progress if month_progress > 0 else total_cost
+                    annual = full_month * 12
+                    results.append({
+                        'resource_group': rg_name,
+                        'total_cost': round(total_cost, 2),
+                        'currency': currency,
+                        'services': services,
+                        'error': None,
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat(),
+                        'projections': {
+                            'full_month': round(full_month, 2),
+                            'annual': round(annual, 2),
+                            'month_progress': round(month_progress * 100, 1),
+                            'days_passed': days_passed,
+                            'days_in_month': days_in_month
+                        }
+                    })
+                else:
+                    results.append({
+                        'resource_group': rg_name,
+                        'total_cost': 0.0,
+                        'services': {},
+                        'error': None,
+                        'note': 'No cost data found for the specified period.',
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat()
+                    })
+            
+            logger.info(f"Cost fetch completed: {len([r for r in results if r.get('total_cost', 0) > 0])} RGs with data")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error fetching costs for multiple RGs: {e}", exc_info=True)
+            _sd = start_date.isoformat() if (start_date is not None) else None
+            _ed = end_date.isoformat() if (end_date is not None) else None
+            return [
+                {
                     'resource_group': rg_name,
                     'total_cost': 0.0,
                     'services': {},
-                    'error': f'Error fetching costs: {str(e)}',
-                    'start_date': start_date.isoformat() if start_date else None,
-                    'end_date': end_date.isoformat() if end_date else None
-                })
-        
-        logger.info(f"Completed fetching costs for {len(results)} resource groups")
-        return results
+                    'error': f'Cost Management API error: {str(e)}',
+                    'start_date': _sd,
+                    'end_date': _ed
+                }
+                for rg_name in resource_group_names
+            ]
     
     def _parse_cost_result(
         self, 

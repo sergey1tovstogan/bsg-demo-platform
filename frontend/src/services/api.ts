@@ -51,15 +51,11 @@ const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
       }
     } catch (error) {
       console.warn('[API] Error loading config.json:', error)
-      // If we're on Azure Static Web Apps, use relative URL (API is on same domain)
+      // If we're on Azure SWA or custom domain, use relative URL (API rewritten via staticwebapp config)
       if (typeof window !== 'undefined') {
         const hostname = window.location.hostname
-        if (hostname.includes('azurestaticapps.net')) {
-          console.log('[API] Detected Azure Static Web Apps, using relative API URL')
-          return {
-            apiUrl: '/api/v1',
-            environment: 'production'
-          }
+        if (hostname.includes('azurestaticapps.net') || hostname.includes('demo-platform.bsg.temenos.com')) {
+          return { apiUrl: '/api/v1', environment: 'production' }
         }
       }
     }
@@ -77,10 +73,11 @@ const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
 // Determine API base URL at runtime
 // Priority: 1. On Azure SWA use direct backend URL (POST works), 2. Runtime config, 3. Default relative path
 const getApiBaseUrl = async (): Promise<string> => {
-  // When on Azure Static Web Apps, always call backend directly so POST/PUT/DELETE work (SWA does not proxy them to external URLs)
-  if (typeof window !== 'undefined' && window.location.hostname.includes('azurestaticapps.net')) {
+  // When on Azure SWA or custom domain, call backend directly so POST/PUT/DELETE work (SWA does not proxy them)
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+  if (hostname.includes('azurestaticapps.net') || hostname.includes('demo-platform.bsg.temenos.com')) {
     const directUrl = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1'
-    console.log('[API] Azure Static Web Apps detected, using direct backend URL for POST support:', directUrl)
+    console.log('[API] Production host detected, using direct backend URL:', directUrl)
     return directUrl
   }
 
