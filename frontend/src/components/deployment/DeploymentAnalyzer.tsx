@@ -98,19 +98,64 @@ export function DeploymentAnalyzer() {
   const [azureHealth, setAzureHealth] = useState<{ status: string; message?: string | null } | null>(null)
   const [lastPreloadedSubId, setLastPreloadedSubId] = useState<string | null>(null)
 
-  // Preload RGs when we have cached subscription ID - instant Connect when user has used this sub before
+  const RG_CACHE_KEY = 'bsg_azure_rg_cache'
+  const RG_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+  const getRgCache = (subId: string): AzureResourceGroup[] | null => {
+    try {
+      const raw = localStorage.getItem(`${RG_CACHE_KEY}_${subId}`)
+      if (!raw) return null
+      const { data, cachedAt } = JSON.parse(raw) as { data: AzureResourceGroup[]; cachedAt: number }
+      if (!Array.isArray(data) || data.length === 0) return null
+      if (Date.now() - cachedAt > RG_CACHE_TTL_MS) return null
+      return data
+    } catch {
+      return null
+    }
+  }
+
+  const setRgCache = (subId: string, data: AzureResourceGroup[]) => {
+    try {
+      localStorage.setItem(`${RG_CACHE_KEY}_${subId}`, JSON.stringify({ data, cachedAt: Date.now() }))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const clearRgCache = (subId: string) => {
+    try {
+      localStorage.removeItem(`${RG_CACHE_KEY}_${subId}`)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Preload RGs: show cached immediately, then refresh from API in background
   useEffect(() => {
     if (currentStep !== 'subscription') return
     const cachedSubId = localStorage.getItem('lastAzureSubscriptionId')?.trim()
     if (!cachedSubId) return
     let cancelled = false
+
+    // 1. Instant: show client-side cached RGs if available
+    const localRgs = getRgCache(cachedSubId)
+    if (localRgs && localRgs.length > 0) {
+      setResourceGroups(localRgs)
+      setResourceGroupsCached(true)
+      setLastPreloadedSubId(cachedSubId)
+    }
+
+    // 2. Background: fetch from backend (uses server cache when available)
     apiService.getAzureResourceGroups(cachedSubId, false)
       .then((body) => {
         if (cancelled) return
         const rgList = Array.isArray(body?.data) ? body.data : []
-        setResourceGroups(rgList)
-        setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
-        setLastPreloadedSubId(cachedSubId)
+        if (rgList.length > 0) {
+          setResourceGroups(rgList)
+          setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
+          setLastPreloadedSubId(cachedSubId)
+          setRgCache(cachedSubId, rgList)
+        }
       })
       .catch(() => { /* ignore - will fetch on Connect */ })
     return () => { cancelled = true }
@@ -130,9 +175,12 @@ export function DeploymentAnalyzer() {
     try {
       setResourceGroupsLoading(true)
       setError(null)
-      const response = await apiService.getAzureResourceGroups(subId, refresh)
-      setResourceGroups(response.data?.data || response.data || [])
-      setResourceGroupsCached((response.data as { cached?: boolean })?.cached ?? false)
+      if (refresh) clearRgCache(subId)
+      const body = await apiService.getAzureResourceGroups(subId, refresh)
+      const rgList = Array.isArray(body?.data) ? body.data : []
+      setResourceGroups(rgList)
+      setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
+      if (rgList.length > 0) setRgCache(subId, rgList)
     } catch (err: any) {
       console.error('[DeploymentAnalyzer] Error loading resource groups:', err)
       setError(err.response?.data?.detail?.error || err.message || 'Failed to load resource groups')
@@ -154,18 +202,27 @@ export function DeploymentAnalyzer() {
       localStorage.setItem('lastAzureSubscriptionId', subId)
       setSubscriptionId(subId)
 
-      // Use preloaded RGs if we already have them for this subscription (instant)
+      // Instant: use preloaded RGs (from background fetch) or client-side localStorage cache
       if (lastPreloadedSubId === subId) {
         setCurrentStep('resourceGroups')
         return
       }
+      const localCached = getRgCache(subId)
+      if (localCached && localCached.length > 0) {
+        setResourceGroups(localCached)
+        setResourceGroupsCached(true)
+        setLastPreloadedSubId(subId)
+        setCurrentStep('resourceGroups')
+        return
+      }
 
-      // Load RGs - instant when cached (skips slow connect/validate call)
+      // No cache: fetch from API (backend may have cache for fast response)
       const rgBody = await apiService.getAzureResourceGroups(subId, false)
       const rgList = Array.isArray(rgBody?.data) ? rgBody.data : []
       setResourceGroups(rgList)
       setResourceGroupsCached((rgBody as { cached?: boolean })?.cached ?? false)
       setLastPreloadedSubId(subId)
+      if (rgList.length > 0) setRgCache(subId, rgList)
       setCurrentStep('resourceGroups')
     } catch (err: any) {
       console.error('[DeploymentAnalyzer] Azure connection error:', {

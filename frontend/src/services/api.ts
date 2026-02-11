@@ -139,10 +139,10 @@ class ApiService {
   }
 
   private setupInterceptors() {
-    // Request interceptor for auth token
+    // Request interceptor for auth token (use same keys as AuthContext)
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('access_token')
+        const token = localStorage.getItem('auth_access_token') || localStorage.getItem('access_token')
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
         }
@@ -156,25 +156,32 @@ class ApiService {
       (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Try to refresh token
-          const refreshToken = localStorage.getItem('refresh_token')
+          // Try to refresh token (use same keys as AuthContext)
+          const refreshToken = localStorage.getItem('auth_refresh_token') || localStorage.getItem('refresh_token')
           if (refreshToken) {
             try {
               const response = await axios.post(`${this.baseUrl}/auth/refresh`, {
                 refresh_token: refreshToken,
               })
-              const { access_token } = response.data.data
-              localStorage.setItem('access_token', access_token)
+              const { access_token } = response.data?.data ?? response.data
+              const tokenToStore = access_token
+              localStorage.setItem('auth_access_token', tokenToStore)
+              localStorage.setItem('access_token', tokenToStore)
               // Retry original request
               if (error.config) {
-                error.config.headers.Authorization = `Bearer ${access_token}`
+                error.config.headers.Authorization = `Bearer ${tokenToStore}`
                 return this.client.request(error.config)
               }
             } catch (refreshError) {
-              // Refresh failed, redirect to login
-              localStorage.removeItem('access_token')
-              localStorage.removeItem('refresh_token')
-              window.location.href = '/login'
+              // Refresh failed - only redirect if token looks like real JWT (not mock)
+              const isMockToken = refreshToken.startsWith('mock_')
+              if (!isMockToken) {
+                localStorage.removeItem('auth_access_token')
+                localStorage.removeItem('auth_refresh_token')
+                localStorage.removeItem('access_token')
+                localStorage.removeItem('refresh_token')
+                window.location.href = '/login'
+              }
             }
           }
         }

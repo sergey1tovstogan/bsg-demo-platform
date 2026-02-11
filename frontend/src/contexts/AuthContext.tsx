@@ -129,17 +129,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
-  // Setup auto-refresh (every 14 minutes)
+  // Setup auto-refresh (every 14 minutes) - skip for mock tokens (no backend refresh)
   const setupAutoRefresh = useCallback(() => {
+    const refreshVal = localStorage.getItem(REFRESH_TOKEN_KEY)
+    if (refreshVal?.startsWith('mock_')) {
+      // Mock auth: tokens never expire, no need to call backend refresh
+      return () => {}
+    }
     const interval = setInterval(() => {
       refreshToken().catch((error) => {
         console.error('Auto-refresh failed:', error)
-        // If refresh fails, logout user
         logout()
       })
     }, 14 * 60 * 1000) // 14 minutes
-
     return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshToken, logout defined later
   }, [])
 
   // Login function with mocked authentication
@@ -209,20 +213,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Refresh token function
   const refreshToken = useCallback(async () => {
+    const refreshTokenValue = localStorage.getItem(REFRESH_TOKEN_KEY)
+    if (!refreshTokenValue) {
+      throw new Error('No refresh token available')
+    }
+    // Mock tokens: no backend call needed, stay logged in
+    if (refreshTokenValue.startsWith('mock_')) {
+      return
+    }
     try {
-      const refreshTokenValue = localStorage.getItem(REFRESH_TOKEN_KEY)
-      if (!refreshTokenValue) {
-        throw new Error('No refresh token available')
-      }
-
       const response = await authClient.post<{ access_token: string }>('/auth/refresh', {
         refresh_token: refreshTokenValue,
       })
-
       const { access_token } = response.data
       localStorage.setItem(ACCESS_TOKEN_KEY, access_token)
     } catch (error: any) {
-      // If refresh fails, logout
       clearAuth()
       throw error
     }

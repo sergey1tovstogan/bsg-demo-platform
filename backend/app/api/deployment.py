@@ -1746,7 +1746,7 @@ async def get_jwt_info(
 ):
     """
     Get JWT token information including expiration status.
-    Uses user's stored token if available, falls back to system token.
+    Uses token from Settings (db.settings) first, then deployment/user token, then env.
 
     Returns:
         JWT token expiration information
@@ -1755,23 +1755,26 @@ async def get_jwt_info(
     from datetime import datetime
 
     try:
-        # Use a default user_id for demo purposes if not provided
-        if not user_id:
-            user_id = "demo_user"
+        # Priority 1: Token from Settings (saved via Settings UI) - this is the canonical source
+        from app.api.settings import get_rag_jwt_token_value
+        jwt_token = await get_rag_jwt_token_value()
 
-        # Try to get user's JWT token from database first
-        jwt_token = None
-        jwt_doc = await db.deployment.find_one({"user_id": user_id, "type": "jwt_token"})
-        if jwt_doc and jwt_doc.get("jwt_token"):
-            jwt_token = jwt_doc.get("jwt_token")
-            logger.info(f"Using user's stored JWT token for {user_id}")
-        elif settings.RAG_JWT_TOKEN:
+        # Priority 2: User's JWT from deployment collection (legacy)
+        if not jwt_token and user_id:
+            jwt_doc = await db.deployment.find_one({"user_id": user_id, "type": "jwt_token"})
+            if jwt_doc and jwt_doc.get("jwt_token"):
+                jwt_token = jwt_doc.get("jwt_token")
+                logger.info(f"Using user's stored JWT token for {user_id}")
+
+        # Priority 3: System env token
+        if not jwt_token and settings.RAG_JWT_TOKEN:
             jwt_token = settings.RAG_JWT_TOKEN
             logger.info("Using system default JWT token")
-        else:
+
+        if not jwt_token:
             raise HTTPException(
                 status_code=500,
-                detail="RAG_JWT_TOKEN not configured"
+                detail="RAG JWT token not configured. Please set it in Settings to use BSG Guru."
             )
 
         # Decode JWT without verification to get payload

@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import { Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { Sidebar } from './components/Sidebar'
+import { TopNav } from './components/TopNav'
 import { ThemeToggle } from './components/ThemeToggle'
 import { SettingsModal } from './components/SettingsModal'
 import { ComingSoonModal } from './components/ComingSoonModal'
 import { BSGGuruFloating } from './components/BSGGuruFloating'
-import { Footer } from './components/Footer'
 import { LandingPage } from './pages/LandingPage'
 import { ComponentPage } from './pages/ComponentPage'
 import { LoginPage } from './pages/LoginPage'
@@ -45,38 +45,28 @@ function Dashboard({ theme, onThemeChange }: DashboardProps) {
   }
 
   return (
-    <>
-      <Sidebar
-        currentComponent={componentId}
-        onComponentChange={handleComponentChange}
-        onHomeClick={handleHomeClick}
-        onSettingsClick={() => setSettingsOpen(true)}
-        onCollapseRef={(collapseFn) => {
-          collapseSidebarRef.current = collapseFn
-        }}
-      />
+    <div className="flex flex-col flex-1 min-h-0">
+      <TopNav theme={theme} onSettingsClick={() => setSettingsOpen(true)} />
+      <div className="flex flex-1 min-h-0 relative">
+        <Sidebar
+          currentComponent={componentId}
+          onComponentChange={handleComponentChange}
+          onHomeClick={handleHomeClick}
+          onSettingsClick={() => setSettingsOpen(true)}
+          onCollapseRef={(collapseFn) => {
+            collapseSidebarRef.current = collapseFn
+          }}
+          topOffset="3.5rem"
+        />
 
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        currentTheme={theme}
-        onThemeChange={onThemeChange}
-      />
-
-      <ComingSoonModal
-        isOpen={Boolean(pendingFeature)}
-        featureName={pendingFeature || ''}
-        onClose={() => setPendingFeature(null)}
-      />
-
-      <main
-        className="flex-1 ml-20 relative overflow-hidden transition-all duration-300"
-        onClick={() => {
-          if (collapseSidebarRef.current) {
-            collapseSidebarRef.current()
-          }
-        }}
-      >
+        <main
+          className="flex-1 ml-20 relative overflow-hidden transition-all duration-300"
+          onClick={() => {
+            if (collapseSidebarRef.current) {
+              collapseSidebarRef.current()
+            }
+          }}
+        >
         {/* Modern Background Elements */}
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
           {/* Main Gradient Orb */}
@@ -101,15 +91,26 @@ function Dashboard({ theme, onThemeChange }: DashboardProps) {
             {componentId ? (
               <div className="animate-fade-in">
                 <ComponentPage componentId={componentId} />
-                <Footer theme={theme} />
               </div>
             ) : (
               <Navigate to="/" replace />
             )}
           </div>
         </div>
-      </main>
-    </>
+        </main>
+      </div>
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        currentTheme={theme}
+        onThemeChange={onThemeChange}
+      />
+      <ComingSoonModal
+        isOpen={Boolean(pendingFeature)}
+        featureName={pendingFeature || ''}
+        onClose={() => setPendingFeature(null)}
+      />
+    </div>
   )
 }
 

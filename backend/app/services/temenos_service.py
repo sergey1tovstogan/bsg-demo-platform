@@ -10,6 +10,11 @@ import asyncio
 from app.adapters.rag import get_rag_adapter
 from app.core.logging import get_logger
 from app.services.azure_service import AzureResource
+from app.data.static_microservice_info import (
+    get_canonical_name,
+    get_static_info,
+    has_static_content,
+)
 
 logger = get_logger(__name__)
 
@@ -2435,10 +2440,10 @@ It provides externalized, versioned, document based configuration management, al
         configured_bullets.append("- Retry thresholds, retention policies, scaling parameters")
         
         # Environment-specific details
-        if "bbkeventstore" in arch_text.lower() or "eventstore" in arch_text.lower():
-            rg_match = re.search(r'resource.*group[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
-            location_match = re.search(r'location[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
-            eventhub_rg = rg_match.group(1) if rg_match else "bbkeventstore"
+        if "eventstore" in arch_text.lower() or "event.hub" in arch_text.lower() or "eventhub" in arch_text.lower():
+            rg_match = re.search(r'resource.*group[:\s]+([a-z0-9_-]+)', arch_text, re.IGNORECASE)
+            location_match = re.search(r'location[:\s]+([a-z0-9_-]+)', arch_text, re.IGNORECASE)
+            eventhub_rg = rg_match.group(1) if rg_match else "eventhub"
             eventhub_location = location_match.group(1) if location_match else "northeurope"
             env_details_bullets.append(f"- Azure Event Hubs namespace: Microsoft.EventHub/namespaces, RG={eventhub_rg}, location={eventhub_location}")
         
@@ -2709,10 +2714,10 @@ It provides externalized, versioned, document based configuration management, al
         # Extract Azure Event Hub details if present
         eventhub_rg = None
         eventhub_location = None
-        if "bbkeventstore" in arch_text.lower() or "eventstore" in arch_text.lower():
-            rg_match = re.search(r'resource.*group[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
-            location_match = re.search(r'location[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
-            eventhub_rg = rg_match.group(1) if rg_match else "bbkeventstore"
+        if "eventstore" in arch_text.lower() or "event.hub" in arch_text.lower() or "eventhub" in arch_text.lower():
+            rg_match = re.search(r'resource.*group[:\s]+([a-z0-9_-]+)', arch_text, re.IGNORECASE)
+            location_match = re.search(r'location[:\s]+([a-z0-9_-]+)', arch_text, re.IGNORECASE)
+            eventhub_rg = rg_match.group(1) if rg_match else "eventhub"
             eventhub_location = location_match.group(1) if location_match else "northeurope"
         
         # Runtime
@@ -3008,11 +3013,11 @@ It provides externalized, versioned, document based configuration management, al
         # Extract Azure Event Hub namespace details from architectural text
         eventhub_rg = None
         eventhub_location = None
-        if "bbkeventstore" in arch_text.lower() or "eventstore" in arch_text.lower():
+        if "eventstore" in arch_text.lower() or "event.hub" in arch_text.lower() or "eventhub" in arch_text.lower():
             # Try to extract resource group and location
-            rg_match = re.search(r'resource.*group[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
-            location_match = re.search(r'location[:\s]+([a-z0-9-]+)', arch_text, re.IGNORECASE)
-            eventhub_rg = rg_match.group(1) if rg_match else "bbkeventstore"
+            rg_match = re.search(r'resource.*group[:\s]+([a-z0-9_-]+)', arch_text, re.IGNORECASE)
+            location_match = re.search(r'location[:\s]+([a-z0-9_-]+)', arch_text, re.IGNORECASE)
+            eventhub_rg = rg_match.group(1) if rg_match else "eventhub"
             eventhub_location = location_match.group(1) if location_match else "northeurope"
         
         # Runtime
@@ -3444,6 +3449,40 @@ It provides externalized, versioned, document based configuration management, al
                         logger.warning(f"Failed to save static component info to persistent cache for {component_name}: {e}")
 
                 return component_info
+            
+            # Check static microservice info (no RAG) - maps e.g. ms-genericconfig -> Generic Configuration
+            canonical = get_canonical_name(component_name) or get_canonical_name(service.name)
+            if canonical and has_static_content(canonical):
+                static_data = get_static_info(canonical)
+                if static_data:
+                    display_name = canonical
+                    component_info = TemenosComponentInfo(
+                        component_name=display_name,
+                        component_type=self._determine_component_type(service),
+                        architectural_overview=static_data.get("architectural_overview", ""),
+                        functional_overview=static_data.get("functional_overview", ""),
+                        capabilities=static_data.get("capabilities", []) or [],
+                        related_services=[service.name],
+                        relationships=[],
+                        data_source="static",
+                    )
+                    if use_cache:
+                        cache_key = display_name.lower()
+                        self._component_cache[cache_key] = component_info
+                        try:
+                            cache_service = await self._get_cache_service()
+                            await cache_service.set_component_info(display_name, {
+                                "component_name": component_info.component_name,
+                                "component_type": component_info.component_type,
+                                "architectural_overview": component_info.architectural_overview,
+                                "functional_overview": component_info.functional_overview,
+                                "capabilities": component_info.capabilities,
+                                "related_services": component_info.related_services
+                            })
+                        except Exception as e:
+                            logger.warning(f"Failed to cache static component info for {display_name}: {e}")
+                    logger.info(f"✓ Using static content for {display_name} (no RAG)")
+                    return component_info
             
             # Check persistent cache first (unless force_refresh is True)
             # If force_refresh, skip cache entirely and fetch fresh from RAG

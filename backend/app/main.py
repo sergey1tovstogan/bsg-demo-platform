@@ -3,7 +3,6 @@ BSG Demo Platform - Backend Application
 
 Main FastAPI application with middleware, routing, and configuration.
 """
-# CI trigger
 
 from fastapi import FastAPI, Request, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware

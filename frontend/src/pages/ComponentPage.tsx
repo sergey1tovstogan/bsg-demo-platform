@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, Video, MessageSquare, Play, ChevronLeft } from 'lucide-react'
+import { BookOpen, Video, Play, ChevronLeft } from 'lucide-react'
 import { ContentViewer } from '../components/ContentViewer'
-import { Chatbot } from '../components/Chatbot'
 import { DemoFrame } from '../components/DemoFrame'
 import { TemplateCardWrapper } from '../components/template-renderer/TemplateCardWrapper'
 import { ObservabilityContent } from '../components/observability/ObservabilityContent'
 import { DeploymentAnalyzer } from '../components/deployment/DeploymentAnalyzer'
 import { DeploymentContentViewer } from '../components/deployment/DeploymentContentViewer'
 import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
-import { ChatbotWithQuestions } from '../components/data-architecture/ChatbotWithQuestions'
 import { DesignTimeContentViewer } from '../components/design-time/DesignTimeContentViewer'
 import { LayoutShowcaseContent } from '../components/layout-showcase/LayoutShowcaseContent'
 import { CardGallery } from '../components/gallery/CardGallery'
@@ -18,10 +16,10 @@ import type { ComponentId } from '../types'
 interface ComponentPageProps {
   componentId: ComponentId
   initialSelectedCard?: number // For security component sub-sections
-  initialTab?: 'content' | 'video' | 'demo' | 'chatbot' // For specific tabs
+  initialTab?: 'content' | 'video' | 'demo' // For specific tabs
 }
 
-type Tab = 'content' | 'video' | 'demo' | 'chatbot'
+type Tab = 'content' | 'video' | 'demo'
 
 export function ComponentPage({ componentId, initialSelectedCard, initialTab }: ComponentPageProps) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'content')
@@ -80,13 +78,11 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
       ? [
         { id: 'content' as Tab, label: 'Content', icon: BookOpen },
         { id: 'demo' as Tab, label: 'Demo', icon: Play },
-        { id: 'chatbot' as Tab, label: 'BSG Guru', icon: MessageSquare },
       ]
       : [
         { id: 'content' as Tab, label: 'Content', icon: BookOpen },
         { id: 'video' as Tab, label: 'Videos', icon: Video },
         { id: 'demo' as Tab, label: 'Demo', icon: Play },
-        { id: 'chatbot' as Tab, label: 'BSG Guru', icon: MessageSquare },
       ]
 
   return (
@@ -140,13 +136,6 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
             <DeploymentAnalyzer />
           ) : (
             <DemoFrame componentId={componentId} view="demo" />
-          )
-        )}
-        {activeTab === 'chatbot' && (
-          componentId === 'data-architecture' ? (
-            <ChatbotWithQuestions componentId={componentId} />
-          ) : (
-            <Chatbot componentId={componentId} />
           )
         )}
       </div>

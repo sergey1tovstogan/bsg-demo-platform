@@ -3,7 +3,7 @@ import type { ComponentId } from '../types'
 export interface SearchResult {
   componentId: ComponentId
   selectedCard?: number // For security component sub-sections
-  tab?: 'content' | 'video' | 'demo' | 'chatbot' // For specific tabs
+  tab?: 'content' | 'video' | 'demo' // For specific tabs (no chatbot - use floating BSG Guru)
 }
 
 // Search term mappings to components and sub-pages

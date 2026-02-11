@@ -431,6 +431,23 @@ class CostService:
             logger.info(f"Fetching costs for {len(resource_group_names)} RGs via single subscription query...")
             result = self._make_api_request(url, "POST", query_definition)
             
+            # Follow nextLink if paginated (Azure returns nextLink for large result sets)
+            all_rows = []
+            first_result = result
+            while result and not result.get('error'):
+                props = result.get('properties', {})
+                rows = props.get('rows', [])
+                all_rows.extend(rows)
+                next_link = props.get('nextLink')
+                if not next_link:
+                    break
+                logger.info(f"Cost API pagination: fetching next page ({len(all_rows)} rows so far)")
+                result = self._make_api_request(next_link, "GET")
+            if all_rows and first_result and not first_result.get('error'):
+                first_result = dict(first_result)
+                first_result.setdefault('properties', {})['rows'] = all_rows
+            result = first_result or result or {}
+            
             if result.get('error'):
                 error_msg = result.get('error', 'Unknown error')
                 status_code = result.get('status_code', 500)
@@ -451,6 +468,7 @@ class CostService:
                 ]
             
             rows = result.get('properties', {}).get('rows', [])
+            columns = result.get('properties', {}).get('columns', [])
             if not rows:
                 logger.info("No cost data rows returned from Cost Management API")
                 return [
@@ -466,17 +484,24 @@ class CostService:
                     for rg_name in resource_group_names
                 ]
             
+            # Build column index map - per cost-analysis.sh: [cost, date, resourceGroup, serviceName, currency]
+            col_names = [c.get('name', '') for c in columns] if isinstance(columns, list) else []
+            idx_cost = next((i for i, n in enumerate(col_names) if n in ('PreTaxCost', 'Cost', 'totalCost')), 0)
+            idx_rg = next((i for i, n in enumerate(col_names) if n in ('ResourceGroup', 'ResourceGroupName')), 2)
+            idx_service = next((i for i, n in enumerate(col_names) if n == 'ServiceName'), 3)
+            logger.info(f"Cost API column indices: cost={idx_cost}, rg={idx_rg}, service={idx_service} (columns={col_names})")
+            
             # Filter selected RGs (case-insensitive)
             selected_set = {r.strip().lower() for r in resource_group_names if r}
             
             # Aggregate by RG: {rg_name: {total, services: {svc: cost}}}
             rg_costs: Dict[str, Dict[str, Any]] = {}
             for row in rows:
-                if len(row) < 5:
+                if len(row) <= max(idx_cost, idx_rg, idx_service):
                     continue
-                cost = float(row[0]) if row[0] is not None else 0.0
-                rg = (row[2] or "").strip()
-                service = (row[3] or "Unknown Service").strip()
+                cost = float(row[idx_cost]) if row[idx_cost] is not None else 0.0
+                rg = (row[idx_rg] or "").strip() if idx_rg < len(row) else ""
+                service = (row[idx_service] or "Unknown Service").strip() if idx_service < len(row) else "Unknown Service"
                 if not rg:
                     continue
                 rg_lower = rg.lower()
@@ -589,30 +614,28 @@ class CostService:
                 'end_date': end_date.isoformat()
             }
         
-        # Parse rows - format is [cost, date, resource_group, service, currency] (matching working script)
-        logger.info(f"Parsing {len(rows)} cost rows for resource group {resource_group_name}")
+        # Parse rows - per cost-analysis.sh: [cost, date, resourceGroup, serviceName, currency]
+        columns = result.get('properties', {}).get('columns', [])
+        col_names = [c.get('name', '') for c in columns] if isinstance(columns, list) else []
+        idx_cost = next((i for i, n in enumerate(col_names) if n in ('PreTaxCost', 'Cost', 'totalCost')), 0)
+        idx_rg = next((i for i, n in enumerate(col_names) if n in ('ResourceGroup', 'ResourceGroupName')), 2)
+        idx_service = next((i for i, n in enumerate(col_names) if n == 'ServiceName'), 3)
+        logger.info(f"Parsing {len(rows)} cost rows for {resource_group_name} (columns={col_names})")
         
-        # Log all unique resource group names found in the data for debugging
         unique_rgs = set()
-        for idx, row in enumerate(rows):
-            if len(row) >= 3:
-                try:
-                    rg_name = row[2] if row[2] else "Unknown"
-                    unique_rgs.add(rg_name)
-                except:
-                    pass
-        
+        for row in rows:
+            if len(row) > idx_rg and row[idx_rg]:
+                unique_rgs.add(str(row[idx_rg]).strip())
         if unique_rgs:
-            logger.info(f"Found {len(unique_rgs)} unique resource groups in cost data: {list(unique_rgs)[:10]}")  # Log first 10
-            logger.info(f"Looking for resource group: '{resource_group_name}' (case-insensitive)")
+            logger.info(f"Found {len(unique_rgs)} unique resource groups in cost data: {list(unique_rgs)[:10]}")
         
         matching_rows_count = 0
         for idx, row in enumerate(rows):
-            if len(row) >= 5:  # [cost, date, resource_group, service, currency]
+            if len(row) > max(idx_cost, idx_rg, idx_service):
                 try:
-                    cost = float(row[0]) if row[0] is not None else 0.0
-                    rg_name = row[2] if row[2] else "Unknown"
-                    service_name = row[3] if row[3] else "Unknown Service"
+                    cost = float(row[idx_cost]) if row[idx_cost] is not None else 0.0
+                    rg_name = (row[idx_rg] or "Unknown") if idx_rg < len(row) else "Unknown"
+                    service_name = (row[idx_service] or "Unknown Service") if idx_service < len(row) else "Unknown Service"
                     
                     # Filter by resource group name (case-insensitive, matching working script)
                     # Also strip whitespace and normalize to handle any formatting differences
