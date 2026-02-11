@@ -15,12 +15,29 @@
   padding: 2rem;
   position: relative;
   overflow: hidden;
-  /* Layered gradient - modern depth */
+  /* Dark theme - default */
   background:
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent),
     radial-gradient(ellipse 60% 40% at 100% 50%, rgba(139, 92, 246, 0.12), transparent),
     radial-gradient(ellipse 50% 50% at 0% 100%, rgba(59, 130, 246, 0.1), transparent),
     linear-gradient(160deg, #0f172a 0%, #1e293b 35%, #312e81 70%, #4c1d95 100%);
+}
+
+/* Light theme - responds to theme toggle */
+.login-form-container--light {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(139, 92, 246, 0.08), transparent),
+    radial-gradient(ellipse 50% 50% at 0% 100%, rgba(59, 130, 246, 0.06), transparent),
+    linear-gradient(160deg, #f8fafc 0%, #e2e8f0 35%, #c7d2fe 70%, #e0e7ff 100%);
+}
+
+/* Theme toggle - top-right, above background */
+.login-form-theme-toggle {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 10;
 }
 
 /* Technology pillar icons - scattered background */
@@ -59,6 +76,13 @@
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   z-index: 1;
+}
+
+.login-form-container--light .login-form {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.04) inset;
 }
 
 @keyframes slideUp {

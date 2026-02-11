@@ -17,7 +17,7 @@ const CATEGORIES: CategoryOption[] = [
   { id: 'deployment', name: 'Deployment & Cloud', icon: Cloud },
   { id: 'security', name: 'Security', icon: Shield },
   { id: 'observability', name: 'Observability', icon: Eye },
-  { id: 'design-time', name: 'Design Time', icon: Palette },
+  { id: 'design-time', name: 'DevOps', icon: Palette },
 ]
 
 const STORAGE_KEY = 'bsg_selected_categories'

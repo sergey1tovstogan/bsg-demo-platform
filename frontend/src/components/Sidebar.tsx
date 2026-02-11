@@ -85,8 +85,8 @@ const components: ComponentCard[] = [
   },
   {
     id: 'design-time',
-    name: 'Design',
-    description: 'Principles & Patterns',
+    name: 'DevOps',
+    description: 'CI/CD & Automation',
     icon: Palette,
     color: 'text-indigo-500',
     gradient: 'from-indigo-500 to-blue-400',

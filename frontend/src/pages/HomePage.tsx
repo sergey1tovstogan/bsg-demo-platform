@@ -68,8 +68,8 @@ const ALL_COMPONENTS: ComponentCard[] = [
   },
   {
     id: 'design-time',
-    name: 'Design Time',
-    description: 'Software design principles and architecture patterns',
+    name: 'DevOps',
+    description: 'CI/CD, automation, and continuous delivery',
     icon: Palette,
     color: 'text-indigo-500',
     gradient: 'from-indigo-500/20 to-blue-400/20',

@@ -298,10 +298,10 @@ export function DesignTimeContentViewer() {
         <div className="flex flex-col items-center justify-center py-12">
           <Loader2 className="w-12 h-12 animate-spin text-[#283054] dark:text-blue-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Retrieving Design Time Information
+            Retrieving DevOps Information
           </h3>
           <p className="text-gray-600 dark:text-gray-300 text-center max-w-md">
-            Querying Temenos RAG Knowledge Base for software design principles, architecture patterns, and best practices. This may take a few moments...
+            Querying Temenos RAG Knowledge Base for DevOps principles, CI/CD patterns, and best practices. This may take a few moments...
           </p>
           <div className="mt-6 w-full max-w-md">
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -315,14 +315,42 @@ export function DesignTimeContentViewer() {
 
   return (
     <div className="space-y-6">
-      {/* RAG Content - Design Time Topics */}
+      {/* DevOps Hero - Visual intro with imagery */}
+      <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-900">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+          <div className="p-8 lg:p-12 flex flex-col justify-center">
+            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-4">
+              DevOps & Continuous Delivery
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              Automated testing, CI/CD pipelines, and continuous upgrade. Temenos leverages industry-standard tools for rapid, reliable deployments.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-3 py-1.5 rounded-lg bg-emerald-200/80 dark:bg-emerald-800/40 text-emerald-800 dark:text-emerald-200 text-sm font-medium">Jenkins</span>
+              <span className="px-3 py-1.5 rounded-lg bg-blue-200/80 dark:bg-blue-800/40 text-blue-800 dark:text-blue-200 text-sm font-medium">GitLab CI</span>
+              <span className="px-3 py-1.5 rounded-lg bg-amber-200/80 dark:bg-amber-800/40 text-amber-800 dark:text-amber-200 text-sm font-medium">Azure DevOps</span>
+              <span className="px-3 py-1.5 rounded-lg bg-slate-200/80 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 text-sm font-medium">Kubernetes</span>
+            </div>
+          </div>
+          <div className="relative h-48 lg:h-64 lg:min-h-[280px]">
+            <img
+              src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80"
+              alt="DevOps team collaboration"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          </div>
+        </div>
+      </div>
+
+      {/* RAG Content - DevOps Topics */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Palette className="w-8 h-8 text-[#283054] dark:text-purple-400" />
             <div>
               <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">
-                Design Time Principles & Patterns
+                DevOps Principles & Patterns
               </h2>
               <p className="text-lg text-gray-700 dark:text-gray-300">
                 Information from Temenos RAG Knowledge Base

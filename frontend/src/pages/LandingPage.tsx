@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ComponentType } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Cpu,
   Puzzle,
@@ -24,6 +25,7 @@ export const TECHNOLOGY_PILLARS: Array<{
   tagline: string
   bullets: string[]
   techs: string[]
+  platformPath: string
 }> = [
   {
     id: 'architecture',
@@ -38,6 +40,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Gen AI, Agentic AI, AI Platform (vision)',
     ],
     techs: ['Azure', 'AWS', 'OpenShift', 'GCP'],
+    platformPath: '/platform/deployment',
   },
   {
     id: 'extensibility',
@@ -52,6 +55,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Extensible by the bank / partner',
     ],
     techs: ['Temenos Workbench'],
+    platformPath: '/platform/integration',
   },
   {
     id: 'devops',
@@ -66,6 +70,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Continuous update and annual upgrade',
     ],
     techs: ['Jenkins', 'GitLab', 'Git', 'Bitbucket'],
+    platformPath: '/platform/design-time',
   },
   {
     id: 'integration',
@@ -80,6 +85,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Real-time data streaming',
     ],
     techs: ['OpenAPI', 'Swagger', 'Kafka', 'Event Hubs'],
+    platformPath: '/platform/integration',
   },
   {
     id: 'observability',
@@ -93,6 +99,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Pre-configured dashboards for technology operations',
     ],
     techs: ['Grafana', 'Prometheus', 'OpenTelemetry'],
+    platformPath: '/platform/observability',
   },
   {
     id: 'security',
@@ -107,6 +114,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Data protection at rest and transit, protecting PII',
     ],
     techs: ['SOC', 'ISO', 'CSA'],
+    platformPath: '/platform/security',
   },
 ]
 
@@ -118,11 +126,17 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
+  const navigate = useNavigate()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [activePillarIndex, setActivePillarIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const isDark = theme === 'dark'
+
+  const handlePillarClick = () => {
+    const path = TECHNOLOGY_PILLARS[activePillarIndex]?.platformPath
+    if (path) navigate(path)
+  }
 
   const goNext = useCallback(() => {
     setActivePillarIndex((i) => (i + 1) % TECHNOLOGY_PILLARS.length)
@@ -194,7 +208,12 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
               </button>
 
               <div
-                className={`w-full rounded-3xl border p-8 md:p-12 lg:p-16 transition-all duration-500 ${isDark ? 'bg-white/[0.04] border-white/15 backdrop-blur-md' : 'bg-white border-slate-200 shadow-xl'} ${pillar.glow}`}
+                role="button"
+                tabIndex={0}
+                onClick={handlePillarClick}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillarClick() } }}
+                className={`group w-full rounded-3xl border p-8 md:p-12 lg:p-16 transition-all duration-500 cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${isDark ? 'bg-white/[0.04] border-white/15 backdrop-blur-md hover:bg-white/[0.07]' : 'bg-white border-slate-200 shadow-xl hover:shadow-2xl'}`}
+                aria-label={`Go to ${pillar.title} - ${pillar.tagline}`}
               >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
                   <div>
@@ -217,7 +236,7 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
                     </div>
                   </div>
                   <div className="hidden lg:flex justify-center items-center">
-                    <div className={`w-40 h-40 lg:w-48 lg:h-48 rounded-3xl bg-gradient-to-br ${pillar.color} flex items-center justify-center shadow-2xl opacity-90`}>
+                    <div className={`w-40 h-40 lg:w-48 lg:h-48 rounded-3xl bg-gradient-to-br ${pillar.color} flex items-center justify-center shadow-2xl opacity-90 group-hover:scale-105 transition-transform`}>
                       <Icon className="w-20 h-20 lg:w-24 lg:h-24 text-white/95" />
                     </div>
                   </div>

@@ -2148,6 +2148,11 @@ function ServiceAnalysis({
                           Cost data may take 24-48h to appear. Ensure &quot;Cost Management Reader&quot; role is assigned to the subscription.
                         </p>
                       )}
+                      {!costsLoading && hasErrors && costEntries.some((c: any) => c.error) && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                          {costEntries.find((c: any) => c.error)?.error || 'Cost fetch failed. Check Cost Management Reader role.'}
+                        </p>
+                      )}
                     </>
                   )
                 })()}
@@ -2977,8 +2982,8 @@ function ComponentDetailPanel({
           (componentInfo?.functionalOverview && componentInfo.functionalOverview.trim().length > 0) ||
           (Array.isArray(componentInfo?.capabilities) && componentInfo.capabilities.length > 0)) ? (
           <StructuredRAGDisplay
-            architecturalOverview={componentInfo.architecturalOverview || ''}
-            functionalOverview={componentInfo.functionalOverview || ''}
+            architecturalOverview={componentInfo.architecturalOverview || (componentInfo as any).architectural_overview || ''}
+            functionalOverview={componentInfo.functionalOverview || (componentInfo as any).functional_overview || ''}
             capabilities={componentInfo.capabilities || []}
             componentName={componentInfo.componentName}
             componentType={componentInfo.componentType}

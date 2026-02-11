@@ -15,6 +15,7 @@ import {
   Shield,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { ThemeToggle } from '../ThemeToggle'
 import './LoginForm.css'
 
 const PILLAR_ICONS: Array<{
@@ -38,9 +39,15 @@ const PILLAR_ICONS: Array<{
 
 interface LoginFormProps {
   onSuccess?: () => void
+  theme?: 'light' | 'dark'
+  onThemeChange?: (theme: 'light' | 'dark') => void
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({
+  onSuccess,
+  theme = 'dark',
+  onThemeChange,
+}) => {
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -90,7 +97,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   }
 
   return (
-    <div className="login-form-container">
+    <div
+      className={`login-form-container login-form-container--${theme}`}
+      data-theme={theme}
+    >
+      {onThemeChange && (
+        <div className="login-form-theme-toggle">
+          <ThemeToggle theme={theme} onThemeChange={onThemeChange} />
+        </div>
+      )}
       {/* Technology pillar icons as decorative background */}
       <div className="login-form-bg-icons" aria-hidden="true">
         {PILLAR_ICONS.map(({ Icon, size, opacity, color, style }, i) => (

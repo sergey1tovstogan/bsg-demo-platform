@@ -10,7 +10,7 @@ const PLATFORM_MODULES: Array<{ id: ComponentId; name: string }> = [
   { id: 'deployment', name: 'Deployment & Cloud' },
   { id: 'security', name: 'Security' },
   { id: 'observability', name: 'Observability' },
-  { id: 'design-time', name: 'Design Time' },
+  { id: 'design-time', name: 'DevOps' },
 ]
 
 const CATEGORIES_STORAGE_KEY = 'bsg_selected_categories'

@@ -167,13 +167,17 @@ function App() {
     )
   }
 
+  const isLoginPage = location.pathname === '/login' || (location.pathname === '/' && !isAuthenticated)
+
   return (
     <div className={`min-h-screen flex transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
-      <div className="fixed top-4 right-4 z-50">
-        <ThemeToggle theme={theme} onThemeChange={handleThemeChange} />
-      </div>
+      {!isLoginPage && (
+        <div className="fixed top-4 right-4 z-50">
+          <ThemeToggle theme={theme} onThemeChange={handleThemeChange} />
+        </div>
+      )}
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage theme={theme} onThemeChange={handleThemeChange} />} />
 
         {/* Protected Admin Routes */}
         <Route
@@ -192,7 +196,7 @@ function App() {
             isAuthenticated ? (
               <LandingPage theme={theme} onThemeChange={handleThemeChange} />
             ) : (
-              <LoginPage />
+              <LoginPage theme={theme} onThemeChange={handleThemeChange} />
             )
           }
         />
