@@ -5,9 +5,10 @@ import type { ComponentId, ChatMessage } from '../types'
 
 interface ChatbotProps {
   componentId: ComponentId
+  embedded?: boolean
 }
 
-export function Chatbot({ componentId }: ChatbotProps) {
+export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
   // Chatbot State (for non-security components)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -239,7 +240,7 @@ export function Chatbot({ componentId }: ChatbotProps) {
   }
 
   return (
-    <div className="card flex flex-col h-[600px]">
+    <div className={`flex flex-col overflow-hidden ${embedded ? 'h-full min-h-0 p-4' : 'card h-[600px]'}`}>
       {/* Input at the top */}
       <div className="mb-4 pb-4 border-b border-gray-200">
         <div className="flex items-center space-x-2">
