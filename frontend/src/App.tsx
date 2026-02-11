@@ -1,18 +1,27 @@
 import { useState, useEffect, useRef } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
-import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
+import { ThemeToggle } from './components/ThemeToggle'
 import { SettingsModal } from './components/SettingsModal'
 import { ComingSoonModal } from './components/ComingSoonModal'
-import { HomePage } from './pages/HomePage'
+import { BSGGuruFloating } from './components/BSGGuruFloating'
+import { Footer } from './components/Footer'
 import { LandingPage } from './pages/LandingPage'
 import { ComponentPage } from './pages/ComponentPage'
 import { LoginPage } from './pages/LoginPage'
 import { UserManagement } from './pages/UserManagement'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import type { ComponentId } from './types'
-import type { SearchResult } from './utils/searchMapping'
+
+const VALID_COMPONENT_IDS: ComponentId[] = [
+  'integration', 'data-architecture', 'deployment', 'security',
+  'observability', 'design-time', 'layout-showcase', 'gallery', 'editor'
+]
+
+function isValidComponentId(id: string | undefined): id is ComponentId {
+  return !!id && VALID_COMPONENT_IDS.includes(id as ComponentId)
+}
 
 interface DashboardProps {
   theme: 'light' | 'dark'
@@ -20,38 +29,25 @@ interface DashboardProps {
 }
 
 function Dashboard({ theme, onThemeChange }: DashboardProps) {
-  const [currentComponent, setCurrentComponent] = useState<ComponentId | null>(null)
-  const [selectedCard, setSelectedCard] = useState<number | undefined>(undefined)
-  const [activeTab, setActiveTab] = useState<'content' | 'video' | 'demo' | 'chatbot' | undefined>(undefined)
+  const navigate = useNavigate()
+  const { componentId: paramId } = useParams<{ componentId: string }>()
+  const componentId = isValidComponentId(paramId) ? paramId : null
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pendingFeature, setPendingFeature] = useState<string | null>(null)
   const collapseSidebarRef = useRef<(() => void) | null>(null)
 
-  const handleComponentChange = (componentId: ComponentId) => {
-    setCurrentComponent(componentId)
-    setSelectedCard(undefined)
-    setActiveTab(undefined)
+  const handleComponentChange = (id: ComponentId) => {
+    navigate(`/platform/${id}`)
   }
 
   const handleHomeClick = () => {
-    setCurrentComponent(null)
-    setSelectedCard(undefined)
-    setActiveTab(undefined)
-  }
-
-  const handleSearch = (result: SearchResult) => {
-    setCurrentComponent(result.componentId)
-    setSelectedCard(result.selectedCard)
-    setActiveTab(result.tab)
-    if (collapseSidebarRef.current) {
-      collapseSidebarRef.current()
-    }
+    navigate('/')
   }
 
   return (
     <>
       <Sidebar
-        currentComponent={currentComponent}
+        currentComponent={componentId}
         onComponentChange={handleComponentChange}
         onHomeClick={handleHomeClick}
         onSettingsClick={() => setSettingsOpen(true)}
@@ -99,24 +95,17 @@ function Dashboard({ theme, onThemeChange }: DashboardProps) {
           </div>
         </div>
 
-        {/* Content Container - responsive padding (developer-portal style) */}
-        <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 h-full overflow-y-auto custom-scrollbar">
+        {/* Content Container */}
+        <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 overflow-y-auto custom-scrollbar">
           <div className="max-w-7xl mx-auto w-full">
-            <div className="animate-fade-in">
-              {currentComponent ? (
-                <ComponentPage
-                  componentId={currentComponent}
-                  initialSelectedCard={selectedCard}
-                  initialTab={activeTab}
-                />
-              ) : (
-                <HomePage
-                  onSelectComponent={handleComponentChange}
-                  onSettingsClick={() => setSettingsOpen(true)}
-                  searchBar={<Header onSearch={handleSearch} showSearch={true} />}
-                />
-              )}
-            </div>
+            {componentId ? (
+              <div className="animate-fade-in">
+                <ComponentPage componentId={componentId} />
+                <Footer theme={theme} />
+              </div>
+            ) : (
+              <Navigate to="/" replace />
+            )}
           </div>
         </div>
       </main>
@@ -126,7 +115,14 @@ function Dashboard({ theme, onThemeChange }: DashboardProps) {
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+
+  const guruComponentId = ((): ComponentId => {
+    const match = location.pathname.match(/^\/platform\/([^/]+)/)
+    const id = match?.[1]
+    return isValidComponentId(id) ? id : 'integration'
+  })()
 
   // Load theme from localStorage on mount
   useEffect(() => {
@@ -172,6 +168,9 @@ function App() {
 
   return (
     <div className={`min-h-screen flex transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle theme={theme} onThemeChange={handleThemeChange} />
+      </div>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
@@ -185,21 +184,24 @@ function App() {
           }
         />
 
-        {/* Landing page - authenticated users see tech pillars first */}
+        {/* Landing page (Home) - main page for authenticated users */}
         <Route
           path="/"
           element={
             isAuthenticated ? (
-              <LandingPage />
+              <LandingPage theme={theme} onThemeChange={handleThemeChange} />
             ) : (
               <LoginPage />
             )
           }
         />
 
-        {/* Dashboard (main app with cards) - at /platform */}
+        {/* Redirect /platform to home */}
+        <Route path="/platform" element={<Navigate to="/" replace />} />
+
+        {/* Platform module - at /platform/:componentId */}
         <Route
-          path="/platform/*"
+          path="/platform/:componentId"
           element={
             isAuthenticated ? (
               <Dashboard
@@ -212,6 +214,7 @@ function App() {
           }
         />
       </Routes>
+      {isAuthenticated && <BSGGuruFloating componentId={guruComponentId} />}
     </div>
   )
 }
