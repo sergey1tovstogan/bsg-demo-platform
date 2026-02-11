@@ -1,12 +1,39 @@
 /**
  * Login Form Component
- * 
- * Provides a beautiful login form with validation and error handling.
+ *
+ * Modern centered login with technology pillar icons background.
  */
 
 import React, { useState, FormEvent } from 'react'
+import {
+  Cpu,
+  Puzzle,
+  GitBranch,
+  Plug,
+  Activity,
+  Shield,
+} from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import './LoginForm.css'
+
+const PILLAR_ICONS: Array<{
+  Icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
+  size: number
+  opacity: number
+  color: string
+  style: React.CSSProperties
+}> = [
+  { Icon: Cpu, size: 80, opacity: 0.2, color: '#3b82f6', style: { top: '8%', left: '5%' } },
+  { Icon: Puzzle, size: 88, opacity: 0.18, color: '#8b5cf6', style: { top: '15%', right: '10%', left: 'auto' } },
+  { Icon: GitBranch, size: 72, opacity: 0.17, color: '#10b981', style: { bottom: '25%', left: '8%', top: 'auto' } },
+  { Icon: Plug, size: 84, opacity: 0.2, color: '#f59e0b', style: { top: '40%', right: '6%', left: 'auto' } },
+  { Icon: Activity, size: 76, opacity: 0.18, color: '#ec4899', style: { bottom: '15%', right: '15%', left: 'auto', top: 'auto' } },
+  { Icon: Shield, size: 88, opacity: 0.19, color: '#6366f1', style: { top: '25%', left: '15%' } },
+  { Icon: Cpu, size: 64, opacity: 0.15, color: '#06b6d4', style: { bottom: '8%', right: '25%', left: 'auto', top: 'auto' } },
+  { Icon: Plug, size: 68, opacity: 0.16, color: '#f97316', style: { top: '60%', left: '12%' } },
+  { Icon: Activity, size: 72, opacity: 0.17, color: '#d946ef', style: { bottom: '35%', right: '8%', left: 'auto', top: 'auto' } },
+  { Icon: Shield, size: 60, opacity: 0.15, color: '#4f46e5', style: { top: '75%', left: '20%' } },
+]
 
 interface LoginFormProps {
   onSuccess?: () => void
@@ -63,6 +90,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
 
   return (
     <div className="login-form-container">
+      {/* Technology pillar icons as decorative background */}
+      <div className="login-form-bg-icons" aria-hidden="true">
+        {PILLAR_ICONS.map(({ Icon, size, opacity, color, style }, i) => (
+          <div
+            key={i}
+            className="login-form-bg-icon"
+            style={{
+              width: size,
+              height: size,
+              opacity,
+              color,
+              ...style,
+            }}
+          >
+            <Icon size={size} strokeWidth={1.2} />
+          </div>
+        ))}
+      </div>
       <form onSubmit={handleSubmit} className="login-form">
         <div className="login-form-header">
           <h1>Welcome Back</h1>

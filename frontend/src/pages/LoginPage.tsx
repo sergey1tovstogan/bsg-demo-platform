@@ -17,7 +17,7 @@ export const LoginPage: React.FC = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div className="min-h-screen w-full flex flex-col">
       <LoginForm onSuccess={handleSuccess} />
     </div>
   )
