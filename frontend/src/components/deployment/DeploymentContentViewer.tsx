@@ -16,10 +16,23 @@ import {
   HardDrive,
   Globe,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  FileText,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
+import { BriefPage } from './brief'
+import { HOLDINGS_BRIEF_RAW, EVENT_STORE_BRIEF_RAW, PARTY_BRIEF_RAW, ADAPTER_BRIEF_RAW, VIRTUAL_TABLE_BRIEF_RAW, GENERIC_CONFIGURATION_BRIEF_RAW, CAMT_BRIEF_RAW } from './brief/mockBrief'
+
+const BRIEF_OPTIONS = [
+  { id: 'holdings', name: 'Holdings', rawText: HOLDINGS_BRIEF_RAW },
+  { id: 'eventstore', name: 'Event Store', rawText: EVENT_STORE_BRIEF_RAW },
+  { id: 'party', name: 'Party', rawText: PARTY_BRIEF_RAW },
+  { id: 'adapter', name: 'Adapter', rawText: ADAPTER_BRIEF_RAW },
+  { id: 'virtualtable', name: 'Virtual Table', rawText: VIRTUAL_TABLE_BRIEF_RAW },
+  { id: 'genericconfiguration', name: 'Generic Configuration', rawText: GENERIC_CONFIGURATION_BRIEF_RAW },
+  { id: 'camt', name: 'CAMT', rawText: CAMT_BRIEF_RAW },
+] as const
 
 const CACHE_KEY = 'deployment_rag_content_cache_v2'
 const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp_v2'
@@ -253,6 +266,8 @@ export function DeploymentContentViewer() {
   const [isFromCache, setIsFromCache] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null) // 'Azure' or 'AWS'
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null) // Category like 'Databases', 'Infrastructure', etc.
+  const [briefPreviewOpen, setBriefPreviewOpen] = useState(false) // Technical Brief preview
+  const [selectedBriefId, setSelectedBriefId] = useState<'holdings' | 'eventstore' | 'party' | 'adapter' | 'virtualtable' | 'genericconfiguration' | 'camt'>('holdings')
 
   // Fixed category order for sub-cards (same for Azure and AWS)
   const CATEGORY_ORDER = ['Container Orchestration', 'Infrastructure', 'Databases', 'Messaging']
@@ -505,6 +520,48 @@ export function DeploymentContentViewer() {
 
   return (
     <div className="space-y-6">
+      {/* Technical Brief Preview - Microservice RAG output */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
+        <button
+          onClick={() => setBriefPreviewOpen(!briefPreviewOpen)}
+          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <FileText className="w-6 h-6 text-[#283054] dark:text-blue-400" />
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Technical Brief Preview</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">RAG microservice brief with expandable sub-cards</p>
+            </div>
+          </div>
+          {briefPreviewOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+        </button>
+        {briefPreviewOpen && (
+          <div className="border-t border-gray-200 dark:border-gray-700 p-4 max-h-[70vh] overflow-y-auto">
+            <div className="mb-4 flex gap-2">
+              {BRIEF_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setSelectedBriefId(opt.id)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    selectedBriefId === opt.id
+                      ? 'bg-[#283054] text-white dark:bg-blue-600 dark:text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {opt.name}
+                </button>
+              ))}
+            </div>
+            <BriefPage
+              rawText={BRIEF_OPTIONS.find((o) => o.id === selectedBriefId)!.rawText}
+              name={BRIEF_OPTIONS.find((o) => o.id === selectedBriefId)!.name}
+              className="min-h-0"
+            />
+          </div>
+        )}
+      </div>
+
       {/* RAG Content - Temenos Cloud Architecture */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="mb-6 flex items-center justify-between">

@@ -11,6 +11,8 @@ import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
 import { StructuredRAGDisplay } from './StructuredRAGDisplay'
+import { BriefPage } from './brief'
+import { getBriefForComponent } from './brief/briefRegistry'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -94,6 +96,25 @@ export function DeploymentAnalyzer() {
   const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
   const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
   const [azureHealth, setAzureHealth] = useState<{ status: string; message?: string | null } | null>(null)
+  const [lastPreloadedSubId, setLastPreloadedSubId] = useState<string | null>(null)
+
+  // Preload RGs when we have cached subscription ID - instant Connect when user has used this sub before
+  useEffect(() => {
+    if (currentStep !== 'subscription') return
+    const cachedSubId = localStorage.getItem('lastAzureSubscriptionId')?.trim()
+    if (!cachedSubId) return
+    let cancelled = false
+    apiService.getAzureResourceGroups(cachedSubId, false)
+      .then((body) => {
+        if (cancelled) return
+        const rgList = Array.isArray(body?.data) ? body.data : []
+        setResourceGroups(rgList)
+        setResourceGroupsCached(body?.cached ?? false)
+        setLastPreloadedSubId(cachedSubId)
+      })
+      .catch(() => { /* ignore - will fetch on Connect */ })
+    return () => { cancelled = true }
+  }, [currentStep])
 
   // Proactive Azure health check when on subscription step so demos don't hang if backend identity expired
   useEffect(() => {
@@ -130,16 +151,22 @@ export function DeploymentAnalyzer() {
     try {
       setLoading(true)
       setError(null)
-      // Save subscription ID to localStorage
       localStorage.setItem('lastAzureSubscriptionId', subId)
-      const connectResponse = await apiService.connectAzureSubscription(subId)
-      if (connectResponse.data?.status === 'success' || (connectResponse as any).status === 'success') {
-        setSubscriptionId(subId)
-        await loadResourceGroups(subId, false)
+      setSubscriptionId(subId)
+
+      // Use preloaded RGs if we already have them for this subscription (instant)
+      if (lastPreloadedSubId === subId) {
         setCurrentStep('resourceGroups')
-      } else {
-        setError((connectResponse.data as any)?.error || (connectResponse as any).error || 'Failed to connect to Azure')
+        return
       }
+
+      // Load RGs - instant when cached (skips slow connect/validate call)
+      const rgBody = await apiService.getAzureResourceGroups(subId, false)
+      const rgList = Array.isArray(rgBody?.data) ? rgBody.data : []
+      setResourceGroups(rgList)
+      setResourceGroupsCached(rgBody?.cached ?? false)
+      setLastPreloadedSubId(subId)
+      setCurrentStep('resourceGroups')
     } catch (err: any) {
       console.error('[DeploymentAnalyzer] Azure connection error:', {
         error: err,
@@ -304,7 +331,7 @@ export function DeploymentAnalyzer() {
         } else {
           errorMessage = errorMessage || `Request failed (${err.response?.status}). See details above.`
           recoverySteps = [
-            'Check that the backend deployment API is available and accepts POST at /api/v1/deployment/azure/connect',
+            'Check that the backend deployment API is available (GET /azure/resource-groups, POST /azure/connect)',
             'Retry after a moment; if it persists, check backend logs for errors'
           ]
         }
@@ -742,7 +769,7 @@ export function DeploymentAnalyzer() {
       setClusterNamespaces([])
     } else if (currentStep === 'resourceGroups') {
       setCurrentStep('subscription')
-      setResourceGroups([])
+      // Keep resourceGroups for instant Connect when returning with same subscription
     }
   }
 
@@ -2647,6 +2674,7 @@ function ComponentDetailPanel({
   const hasStrictDocumentation = componentInfo?.architecturalOverview?.includes('## 1. Purpose & Scope') ?? false
   const hasRelatedServices = Array.isArray(componentInfo?.relatedServices) && componentInfo.relatedServices.length > 0
   const hasRelationships = Array.isArray(componentInfo?.relationships) && componentInfo.relationships.length > 0
+  const briefEntry = componentInfo?.componentName ? getBriefForComponent(componentInfo.componentName) : null
 
 
   if (!componentInfo) {
@@ -2907,6 +2935,17 @@ function ComponentDetailPanel({
               </p>
             )}
           </div>
+        )}
+
+        {briefEntry && (
+          <details className="group bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4 border border-cyan-200 dark:border-cyan-700">
+            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+              Technical Brief ({briefEntry.name})
+            </summary>
+            <div className="mt-4 rounded-lg overflow-hidden">
+              <BriefPage rawText={briefEntry.rawText} name={briefEntry.name} className="min-h-0 rounded-lg" />
+            </div>
+          </details>
         )}
 
         {hasStrictDocumentation && componentInfo.architecturalOverview && (
