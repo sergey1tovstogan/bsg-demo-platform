@@ -206,8 +206,7 @@ export function Sidebar({
           </div>
           {isExpanded && (
             <div className="flex flex-col overflow-hidden whitespace-nowrap">
-              <span className="text-white font-bold text-lg tracking-tight">BSG Demo</span>
-              <span className="text-slate-400 text-xs font-medium">Platform</span>
+              <span className="text-white font-bold text-lg tracking-tight">BSG Demo Platform</span>
             </div>
           )}
         </div>

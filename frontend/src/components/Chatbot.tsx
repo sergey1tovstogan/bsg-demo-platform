@@ -43,7 +43,9 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
     checkRAGToken()
   }, [])
 
-  const SESSION_INIT_TIMEOUT_MS = 20000
+  const SESSION_INIT_TIMEOUT_MS = 25000
+  const SESSION_INIT_RETRIES = 3
+  const SESSION_INIT_RETRY_DELAY_MS = 3000
 
   const initializeSession = useCallback(async () => {
     try {
@@ -51,46 +53,60 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
       setChatError(null)
       console.log(`[Chatbot] Initializing session for component: ${componentId}`)
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Session initialization timed out. The backend may be slow or unreachable.')), SESSION_INIT_TIMEOUT_MS)
-      })
-      const response = await Promise.race([
-        apiService.createChatSession(componentId, {
-          topic: componentId,
-          user_level: 'beginner',
-        }),
-        timeoutPromise
-      ])
-      
-      console.log(`[Chatbot] Session creation response:`, response)
-      
-      // Backend returns {"status": "success", "data": {"session_id": "..."}}
-      // API service returns response.data which is the whole response object
-      const newSessionId = (response as any).data?.session_id || (response as any).session_id
-      
-      if (!newSessionId) {
-        console.error('[Chatbot] Full response structure:', JSON.stringify(response, null, 2))
-        throw new Error('Session ID not returned from server. Response: ' + JSON.stringify(response))
-      }
-      
-      console.log(`[Chatbot] Session created with ID: ${newSessionId}`)
-      setSessionId(newSessionId)
-      sessionIdRef.current = newSessionId
+      // Wait for API base URL to be resolved (avoids race with config load)
+      await apiService.ensureReady()
 
-      // Try to get history, but don't fail if there's no history yet
-      if (newSessionId) {
+      let lastError: unknown = null
+      for (let attempt = 1; attempt <= SESSION_INIT_RETRIES; attempt++) {
         try {
-          const historyResponse = await apiService.getChatHistory(componentId, newSessionId)
-          console.log(`[Chatbot] History loaded:`, historyResponse)
-          // Backend returns {"status": "success", "data": {"messages": [...]}}
-          const messages = (historyResponse as any).data?.messages || (historyResponse as any).messages || []
-          setMessages(messages)
-        } catch (historyErr: any) {
-          // No history yet - this is normal for new sessions
-          console.log(`[Chatbot] No history yet (this is normal for new sessions):`, historyErr?.response?.status)
-          setMessages([])
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Session initialization timed out. The backend may be slow or unreachable.')), SESSION_INIT_TIMEOUT_MS)
+          })
+          const response = await Promise.race([
+            apiService.createChatSession(componentId, {
+              topic: componentId,
+              user_level: 'beginner',
+            }),
+            timeoutPromise
+          ])
+          console.log(`[Chatbot] Session creation response (attempt ${attempt}):`, response)
+          
+          // Backend returns {"status": "success", "data": {"session_id": "..."}}
+          const newSessionId = (response as any).data?.session_id || (response as any).session_id
+          
+          if (!newSessionId) {
+            throw new Error('Session ID not returned from server')
+          }
+          
+          console.log(`[Chatbot] Session created with ID: ${newSessionId}`)
+          setSessionId(newSessionId)
+          sessionIdRef.current = newSessionId
+
+          // Try to get history, but don't fail if there's no history yet
+          if (newSessionId) {
+            try {
+              const historyResponse = await apiService.getChatHistory(componentId, newSessionId)
+              const messages = (historyResponse as any).data?.messages || (historyResponse as any).messages || []
+              setMessages(messages)
+            } catch {
+              setMessages([])
+            }
+          }
+          return // Success - exit
+        } catch (err) {
+          lastError = err
+          const ax = err as { code?: string; message?: string; response?: unknown }
+          const isRetryable = ax?.code === 'ERR_NETWORK' || ax?.message === 'Network Error' || !ax?.response ||
+            (ax?.message && /timed out|timeout|unreachable/i.test(String(ax.message)))
+          if (isRetryable && attempt < SESSION_INIT_RETRIES) {
+            console.warn(`[Chatbot] Connection error on attempt ${attempt}/${SESSION_INIT_RETRIES}, retrying in ${SESSION_INIT_RETRY_DELAY_MS / 1000}s...`)
+            await new Promise(r => setTimeout(r, SESSION_INIT_RETRY_DELAY_MS))
+          } else {
+            throw err
+          }
         }
       }
+      throw lastError
     } catch (err: unknown) {
       console.error('[Chatbot] Failed to initialize chat session:', err)
       let errorMessage = 'Failed to initialize chat session'

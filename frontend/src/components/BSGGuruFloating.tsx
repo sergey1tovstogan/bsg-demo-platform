@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MessageSquare, X } from 'lucide-react'
 import { Chatbot } from './Chatbot'
+import { apiService } from '../services/api'
 import type { ComponentId } from '../types'
 
 interface BSGGuruFloatingProps {
@@ -9,6 +10,13 @@ interface BSGGuruFloatingProps {
 
 export function BSGGuruFloating({ componentId }: BSGGuruFloatingProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+
+  // Pre-warm API connection when floating button mounts - ensures fast response when user opens chat
+  useEffect(() => {
+    apiService.ensureReady().then(() => {
+      apiService.getHealth().catch(() => { /* ignore - just warming connection */ })
+    })
+  }, [])
 
   return (
     <>

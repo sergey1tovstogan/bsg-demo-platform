@@ -189,7 +189,7 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
-            <div className="relative w-full">
+            <div className="relative w-full max-w-4xl mx-auto">
               <button
                 type="button"
                 onClick={goPrev}
@@ -212,7 +212,7 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
                 tabIndex={0}
                 onClick={handlePillarClick}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillarClick() } }}
-                className={`group w-full rounded-3xl border p-8 md:p-12 lg:p-16 transition-all duration-500 cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${isDark ? 'bg-white/[0.04] border-white/15 backdrop-blur-md hover:bg-white/[0.07]' : 'bg-white border-slate-200 shadow-xl hover:shadow-2xl'}`}
+                className={`group w-full rounded-3xl border p-8 md:p-12 lg:p-16 min-h-[320px] flex flex-col justify-center transition-all duration-500 cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${isDark ? 'bg-white/[0.04] border-white/15 backdrop-blur-md hover:bg-white/[0.07]' : 'bg-white border-slate-200 shadow-xl hover:shadow-2xl'}`}
                 aria-label={`Go to ${pillar.title} - ${pillar.tagline}`}
               >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">

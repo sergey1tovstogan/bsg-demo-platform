@@ -98,6 +98,7 @@ const getApiBaseUrl = async (): Promise<string> => {
 class ApiService {
   private client: AxiosInstance
   private baseUrl: string
+  private configReadyPromise: Promise<void>
 
   constructor() {
     // Initialize with default, will be updated when config loads
@@ -107,16 +108,22 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
       },
+      timeout: 30000, // 30s - prevents indefinite hangs, Chatbot has its own retry logic
     })
     
     // Setup interceptors
     this.setupInterceptors()
     
-    // Load and apply runtime configuration
-    this.initializeConfig()
+    // Load and apply runtime configuration - store promise so callers can await readiness
+    this.configReadyPromise = this.initializeConfig()
+  }
+
+  /** Wait for API base URL to be resolved before making requests. Use before critical calls (e.g. Chatbot init). */
+  async ensureReady(): Promise<void> {
+    return this.configReadyPromise
   }
   
-  private async initializeConfig() {
+  private async initializeConfig(): Promise<void> {
     if (typeof window === 'undefined') {
       return // Server-side rendering, skip
     }

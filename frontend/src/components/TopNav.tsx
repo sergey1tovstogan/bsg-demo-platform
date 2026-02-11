@@ -80,7 +80,7 @@ export function TopNav({ theme, onSettingsClick }: TopNavProps) {
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
               <span className="text-white font-bold text-sm">B</span>
             </div>
-            <span className="font-semibold hidden sm:inline">BSG Demo</span>
+            <span className="font-semibold hidden sm:inline">BSG Demo Platform</span>
           </button>
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 -ml-2" aria-label="Menu">
             <Menu className="w-6 h-6" />
