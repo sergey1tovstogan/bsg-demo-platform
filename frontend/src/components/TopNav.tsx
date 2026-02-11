@@ -128,6 +128,14 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
                 </>
               )}
             </div>
+            <a
+              href="https://developer.bsg.temenos.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`text-sm font-medium ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              Temenos Ecosystem
+            </a>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -186,6 +194,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
                 )
               })}
             </div>
+            <a href="https://developer.bsg.temenos.com/" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="block w-full text-left py-2">Temenos Ecosystem</a>
           </div>
         </div>
       )}

@@ -10,7 +10,6 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
 } from 'lucide-react'
 import { SettingsModal } from '../components/SettingsModal'
 import { Footer } from '../components/Footer'
@@ -171,13 +170,21 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
         <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20 py-8 md:py-12 lg:py-16">
           {/* Hero - full width */}
           <div className={`mb-8 lg:mb-12 transition-all duration-700 text-center ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border mb-6 ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-100 border-slate-200'}`}>
-              <Sparkles className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-amber-500'}`} />
-              <span className={`text-xs font-semibold uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-700'}`}>Temenos Technology</span>
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-slate-200/60 border border-slate-300'}`}>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isDark ? 'bg-sky-400' : 'bg-blue-500'}`} />
+              <span className={`text-xs font-semibold uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-700'}`}>
+                The Banking Cloud Standard
+              </span>
             </div>
-            <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              Cloud-native, event-driven architecture and extensible APIs
+            <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <span>Temenos</span>
+              <span className={isDark ? 'bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent' : 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent'}>
+                {' '}Technology
+              </span>
             </h1>
+            <p className={`text-xl sm:text-2xl font-medium mb-4 lowercase max-w-3xl mx-auto ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              Cloud-native, event-driven architecture and extensible APIs
+            </p>
             <p className={`text-lg md:text-xl max-w-3xl mx-auto ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               Leading banking forward by embedding technology principles into our architecture, extensibility, and operations.
             </p>

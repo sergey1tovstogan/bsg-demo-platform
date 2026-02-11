@@ -166,8 +166,6 @@ function App() {
     )
   }
 
-  const isLoginPage = location.pathname === '/login' || (location.pathname === '/' && !isAuthenticated)
-
   return (
     <div className={`min-h-screen flex transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
       <Routes>
