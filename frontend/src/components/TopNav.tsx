@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ChevronDown, LogOut, Menu, Settings } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { ThemeToggle } from './ThemeToggle'
 import type { ComponentId } from '../types'
 
 const PLATFORM_MODULES: Array<{ id: ComponentId; name: string }> = [
@@ -30,10 +31,11 @@ function loadSelectedCategories(): Set<ComponentId> {
 
 interface TopNavProps {
   theme: 'light' | 'dark'
+  onThemeChange?: (theme: 'light' | 'dark') => void
   onSettingsClick: () => void
 }
 
-export function TopNav({ theme, onSettingsClick }: TopNavProps) {
+export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAuthenticated, user, logout, hasRole } = useAuth()
@@ -128,7 +130,12 @@ export function TopNav({ theme, onSettingsClick }: TopNavProps) {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {onThemeChange && (
+            <div className="flex items-center">
+              <ThemeToggle theme={theme} onThemeChange={onThemeChange} className="shrink-0" />
+            </div>
+          )}
           <button
             onClick={onSettingsClick}
             title="Settings (API token, categories)"

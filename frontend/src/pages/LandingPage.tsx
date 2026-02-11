@@ -164,7 +164,7 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
         currentTheme={theme}
         onThemeChange={onThemeChange}
       />
-      <TopNav theme={theme} onSettingsClick={() => setSettingsOpen(true)} />
+      <TopNav theme={theme} onThemeChange={onThemeChange} onSettingsClick={() => setSettingsOpen(true)} />
 
       {/* Main Content - full width layout */}
       <main className="flex-1 w-full">
@@ -189,7 +189,7 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
-            <div className="relative w-full max-w-4xl mx-auto">
+            <div className="relative w-full max-w-6xl mx-auto">
               <button
                 type="button"
                 onClick={goPrev}

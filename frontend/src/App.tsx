@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, useParams, useNavigate, useLocation } from 're
 import { useAuth } from './contexts/AuthContext'
 import { Sidebar } from './components/Sidebar'
 import { TopNav } from './components/TopNav'
-import { ThemeToggle } from './components/ThemeToggle'
 import { SettingsModal } from './components/SettingsModal'
 import { ComingSoonModal } from './components/ComingSoonModal'
 import { BSGGuruFloating } from './components/BSGGuruFloating'
@@ -46,7 +45,7 @@ function Dashboard({ theme, onThemeChange }: DashboardProps) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <TopNav theme={theme} onSettingsClick={() => setSettingsOpen(true)} />
+      <TopNav theme={theme} onThemeChange={onThemeChange} onSettingsClick={() => setSettingsOpen(true)} />
       <div className="flex flex-1 min-h-0 relative">
         <Sidebar
           currentComponent={componentId}
@@ -171,11 +170,6 @@ function App() {
 
   return (
     <div className={`min-h-screen flex transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
-      {!isLoginPage && (
-        <div className="fixed top-4 right-4 z-50">
-          <ThemeToggle theme={theme} onThemeChange={handleThemeChange} />
-        </div>
-      )}
       <Routes>
         <Route path="/login" element={<LoginPage theme={theme} onThemeChange={handleThemeChange} />} />
 

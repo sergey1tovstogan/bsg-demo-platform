@@ -23,7 +23,7 @@ interface ComponentPageProps {
 type Tab = 'content' | 'video' | 'demo'
 
 export function ComponentPage({ componentId, initialSelectedCard, initialTab, onOpenSettings }: ComponentPageProps) {
-  const tabs = componentId === 'layout-showcase' || componentId === 'security'
+  const tabs = componentId === 'layout-showcase' || componentId === 'security' || componentId === 'design-time'
     ? [{ id: 'content' as Tab, label: 'Content', icon: BookOpen }]
     : componentId === 'deployment' || componentId === 'data-architecture'
       ? [
