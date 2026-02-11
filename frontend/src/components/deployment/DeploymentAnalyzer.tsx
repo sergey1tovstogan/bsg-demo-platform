@@ -2143,6 +2143,11 @@ function ServiceAnalysis({
                       {!costsLoading && costEntries.length === 0 && (
                         <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">No cost data available</p>
                       )}
+                      {!costsLoading && totalCost === 0 && costEntries.length > 0 && !hasErrors && (
+                        <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80 mt-1 italic">
+                          Cost data may take 24-48h to appear. Ensure &quot;Cost Management Reader&quot; role is assigned to the subscription.
+                        </p>
+                      )}
                     </>
                   )
                 })()}

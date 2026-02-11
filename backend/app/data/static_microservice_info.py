@@ -114,6 +114,294 @@ HOLDINGS_ARCH_OVERVIEW = """# Holdings Microservice
 - Workflow orchestration: Does not orchestrate multi-step workflows. Read-only service.
 """
 
+# Statement Generation Microservice - curated content
+STMT_GEN_ARCH_OVERVIEW = """# Statement Generation Microservice
+
+## 1. Purpose & Scope
+
+- Microservice name: Statement Generation Microservice
+- Responsibility: Generates account statements, reports, and document outputs (e.g. XML, PDF) for end customers. Transforms transactional data into presentable statement formats.
+- Out of scope: Does not perform transactional processing or data capture. Not responsible for real-time transaction feeds.
+
+## 2. Architectural Role
+
+- Position in Temenos Transact ecosystem: Downstream reporting and document generation service. Consumes events or data from core and Event Store; produces statement artifacts.
+- Relationship to core transactional services: Read-only consumer of transaction data. Outputs are generated on-demand or scheduled; does not write back to core.
+
+## 3. Design Patterns & Guarantees
+
+- CQRS role: Query-side document generation. Reads from read models or event streams.
+- Consistency model: Eventual consistency. Statements reflect data as of generation time.
+- Availability and latency guarantees: Batch-friendly; can tolerate higher latency for non-real-time statement generation.
+
+## 4. Core Components
+
+- Core service components: Statement engine, template processor, output formatter (XML/PDF), scheduler, storage for generated artifacts.
+- External dependencies: Event Store or data source for transactions; optionally blob storage for generated files.
+
+## 5. Data Model & Consistency
+
+- Types of data managed: Statement metadata, templates, generated documents. Ephemeral or persisted per retention policy.
+- Update propagation model: On-demand or scheduled triggers; reads from source of truth.
+- Consistency implications: Statements are point-in-time snapshots; may not reflect latest transactions until next run.
+
+## 6. APIs & Access Patterns
+
+- API style: REST for triggering generation, retrieving statements. May support webhooks for async completion.
+- Supported operations: Generate statement, retrieve statement by ID, list statements for account/customer.
+- Consumer expectations: Async generation for large statements; sync for small/simple statements.
+
+## 7. Deployment Architecture
+
+- Cloud-native model: Containerized, Kubernetes deployment. Azure Container Apps / AKS typical.
+- Kubernetes usage: Deployment, ConfigMap for templates, PersistentVolume for output storage.
+- Helm-based lifecycle management: Managed via Helm charts.
+
+## 8. Scalability & Performance
+
+- Horizontal scaling model: Stateless; scale out for concurrent generation jobs.
+- Read optimization techniques: Template caching, batch processing for multiple accounts.
+- Performance assumptions: CPU-bound for PDF generation; I/O-bound for data fetch.
+
+## 9. Security Model
+
+- Authentication boundary: API gateway or service mesh; no direct user auth.
+- Authorization model: RBAC; consumers need statement generation permission.
+- Data-in-transit and data-at-rest protections: TLS; encryption at rest for stored statements.
+
+## 10. Observability & Operations
+
+- Logging: Structured logs for generation jobs, errors, throughput.
+- Monitoring: Job duration, success/failure rates, queue depth.
+- Health checks: /health, /ready; dependency checks for data source.
+
+## 11. Functional Capabilities
+
+- Business-facing capabilities: Account statements, regulatory reports, custom document templates, multi-format output (XML, PDF).
+
+## 12. Explicit Non-Goals / Out-of-Scope
+
+- Write operations: Does not modify transactional data.
+- Real-time streaming: Batch/scheduled generation; not sub-second document delivery.
+- Workflow orchestration: Focused on document generation; orchestration handled elsewhere.
+"""
+
+# Event Store Microservice - curated content
+EVENT_STORE_ARCH_OVERVIEW = """# Event Store Microservice
+
+## 1. Purpose & Scope
+
+- Microservice name: Event Store Microservice
+- Responsibility: Central event sourcing backbone. Persists and distributes domain events from Temenos Transact to downstream consumers. Typically implemented via Azure Event Hubs or Kafka.
+- Out of scope: Does not perform business logic or event transformation. Not a message queue for arbitrary workloads.
+
+## 2. Architectural Role
+
+- Position in Temenos Transact ecosystem: Event backbone connecting core transactional systems to read models, projections, and integrations.
+- Relationship to core transactional services: Core publishes events; Event Store persists and streams to subscribers. Downstream services consume for CQRS projections.
+
+## 3. Design Patterns & Guarantees
+
+- CQRS role: Event source for all read models. Single source of truth for event stream.
+- Consistency model: At-least-once delivery with consumer checkpointing. Ordered within partition.
+- Availability and latency guarantees: High throughput; sub-second to low-second latency for event propagation.
+
+## 4. Core Components
+
+- Core service components: Event Hub/Kafka cluster, producer/consumer clients, schema registry (if used), retention and compaction policies.
+- External dependencies: Core Transact (event producer); downstream consumers (Holdings, Party, etc.).
+
+## 5. Data Model & Consistency
+
+- Types of data managed: Domain events (immutable). Partitioned by key for ordering.
+- Update propagation model: Append-only; no updates. Consumers read from offset.
+- Consistency implications: Eventual consistency for consumers; strong ordering within partition.
+
+## 6. APIs & Access Patterns
+
+- API style: Event Hub REST/Kafka protocol. Send events; consume via consumer groups.
+- Supported operations: Produce events, consume from partition, commit checkpoint.
+- Consumer expectations: At-least-once; idempotent handling required.
+
+## 7. Deployment Architecture
+
+- Cloud-native model: Azure Event Hubs or managed Kafka. Fully managed; no Kubernetes for Event Hubs.
+- Kubernetes usage: N/A for Event Hubs; Kafka may run on K8s.
+- Helm-based lifecycle management: Managed service; configuration via ARM/Bicep or Terraform.
+
+## 8. Scalability & Performance
+
+- Horizontal scaling model: Partition-based; add partitions for throughput.
+- Read optimization techniques: Consumer groups for parallel consumption; batching.
+- Performance assumptions: High throughput; millions of events per day.
+
+## 9. Security Model
+
+- Authentication boundary: SAS tokens or managed identity for producer/consumer.
+- Authorization model: Per-namespace/topic access policies.
+- Data-in-transit and data-at-rest protections: TLS; encryption at rest (Azure default).
+
+## 10. Observability & Operations
+
+- Logging: Event Hub metrics (incoming/outgoing messages, throttling).
+- Monitoring: Consumer lag, throughput, error rates.
+- Health checks: Namespace availability; consumer connectivity.
+
+## 11. Functional Capabilities
+
+- Business-facing capabilities: Reliable event distribution for CQRS, integrations, audit trails.
+
+## 12. Explicit Non-Goals / Out-of-Scope
+
+- Write operations: Events are append-only; no updates/deletes.
+- Business logic: Pure transport; no transformation.
+- Query API: Not a database; consume via stream.
+"""
+
+# Adapter Microservice - curated content
+ADAPTER_ARCH_OVERVIEW = """# Adapter Microservice
+
+## 1. Purpose & Scope
+
+- Microservice name: Adapter Microservice
+- Responsibility: Integration adapter for external systems. Translates between Temenos internal formats and external protocols (SWIFT, ISO 20022, proprietary APIs). Handles connectivity, mapping, and error handling.
+- Out of scope: Does not perform core banking logic. Not responsible for orchestration across multiple external systems.
+
+## 2. Architectural Role
+
+- Position in Temenos Transact ecosystem: Edge integration layer. Sits between Transact core and external world (payment networks, core banking, reporting).
+- Relationship to core transactional services: Bidirectional; receives from and sends to core. Transforms and routes messages.
+
+## 3. Design Patterns & Guarantees
+
+- CQRS role: Can be command (outbound) and query (inbound) side. Depends on adapter type.
+- Consistency model: Synchronous for request-response; async for fire-and-forget with retries.
+- Availability and latency guarantees: SLA for external connectivity; retries for transient failures.
+
+## 4. Core Components
+
+- Core service components: Protocol handlers, message mappers, connection pools, retry/backoff logic, dead-letter handling.
+- External dependencies: External APIs, messaging systems (e.g. Event Hubs for async), core Transact.
+
+## 5. Data Model & Consistency
+
+- Types of data managed: Message mappings, connection configs, audit logs of sent/received messages.
+- Update propagation model: Real-time for sync; event-driven for async.
+- Consistency implications: Outbound: at-least-once with idempotency; inbound: once per message.
+
+## 6. APIs & Access Patterns
+
+- API style: Protocol-specific (REST, SWIFT, ISO 20022, proprietary). Adapter exposes or consumes as per integration type.
+- Supported operations: Send message, receive message, status check, retry failed.
+- Consumer expectations: Timeouts, retries, idempotency keys for critical flows.
+
+## 7. Deployment Architecture
+
+- Cloud-native model: Containerized; often colocated with Event Hubs for async patterns.
+- Kubernetes usage: Deployment, ConfigMap for mappings, Secret for credentials.
+- Helm-based lifecycle management: Helm charts for adapter deployment.
+
+## 8. Scalability & Performance
+
+- Horizontal scaling model: Stateless; scale out for throughput. Partition by correlation ID for ordering.
+- Read optimization techniques: Connection pooling, async I/O, batching.
+- Performance assumptions: I/O-bound; latency depends on external system.
+
+## 9. Security Model
+
+- Authentication boundary: Mutual TLS, API keys, or OAuth for external systems.
+- Authorization model: Credential-based per connection; RBAC for admin.
+- Data-in-transit and data-at-rest protections: TLS; encryption for sensitive config.
+
+## 10. Observability & Operations
+
+- Logging: Message audit, mapping errors, connection failures.
+- Monitoring: Message throughput, error rate, latency to external systems.
+- Health checks: Connectivity to external endpoints; queue depth.
+
+## 11. Functional Capabilities
+
+- Business-facing capabilities: Payment connectivity (SWIFT, SEPA), core banking integration, regulatory reporting feeds.
+
+## 12. Explicit Non-Goals / Out-of-Scope
+
+- Core banking logic: Adapter only; business rules in core.
+- Long-running workflows: Request-response or event-driven; no multi-step orchestration in adapter.
+- Data storage: Ephemeral or audit-only; no primary data store.
+"""
+
+# Generic Config Microservice - curated content
+GENERIC_CONFIG_ARCH_OVERVIEW = """# Generic Config Microservice
+
+## 1. Purpose & Scope
+
+- Microservice name: Generic Config Microservice
+- Responsibility: Centralized configuration store for Temenos microservices. Provides shared config (feature flags, parameters, connection strings) to runtime components.
+- Out of scope: Does not store transactional or customer data. Not a secrets manager for highly sensitive credentials.
+
+## 2. Architectural Role
+
+- Position in Temenos Transact ecosystem: Configuration backbone. All microservices may depend on it for runtime config.
+- Relationship to core transactional services: Read by many; written by admin/tooling. No dependency from core Transact.
+
+## 3. Design Patterns & Guarantees
+
+- CQRS role: Read-heavy; occasional writes for config updates.
+- Consistency model: Eventual consistency for propagation; strong consistency for single read.
+- Availability and latency guarantees: High availability; low latency for config reads.
+
+## 4. Core Components
+
+- Core service components: Config store (e.g. Cosmos DB, Redis), REST API, cache layer, admin UI/API.
+- External dependencies: Database or key-value store; optionally Azure App Configuration.
+
+## 5. Data Model & Consistency
+
+- Types of data managed: Key-value config, hierarchical config (e.g. by service, environment).
+- Update propagation model: Push or pull; cache invalidation on update.
+- Consistency implications: Cached reads may be stale for short window.
+
+## 6. APIs & Access Patterns
+
+- API style: REST. GET config by key/scope; PUT for admin updates.
+- Supported operations: Get config, list configs, update config (admin), invalidate cache.
+- Consumer expectations: Fast reads; optional watch/poll for changes.
+
+## 7. Deployment Architecture
+
+- Cloud-native model: Containerized; often backed by Azure Cosmos DB or Redis.
+- Kubernetes usage: Deployment, ConfigMap for bootstrap; Secret for DB connection.
+- Helm-based lifecycle management: Helm charts.
+
+## 8. Scalability & Performance
+
+- Horizontal scaling model: Stateless; scale out. Cache reduces DB load.
+- Read optimization techniques: In-memory cache, CDN for static config.
+- Performance assumptions: Sub-100ms for cached reads.
+
+## 9. Security Model
+
+- Authentication boundary: Service identity for read; admin identity for write.
+- Authorization model: Read for all services; write for config admin only.
+- Data-in-transit and data-at-rest protections: TLS; encryption at rest.
+
+## 10. Observability & Operations
+
+- Logging: Config access, update audit.
+- Monitoring: Read latency, cache hit rate, update frequency.
+- Health checks: DB connectivity; cache health.
+
+## 11. Functional Capabilities
+
+- Business-facing capabilities: Feature toggles, environment-specific params, connection discovery.
+
+## 12. Explicit Non-Goals / Out-of-Scope
+
+- Secrets: Use Azure Key Vault for high-sensitivity secrets.
+- Transactional data: Config only; no business data.
+- Real-time event streaming: Config is pull/watch; not event-driven.
+"""
+
 # Static content per microservice (canonical names)
 # architectural_overview: Full 12-section strict format. When non-empty, used instead of RAG.
 STATIC_MICROSERVICE_INFO: Dict[str, Dict[str, Any]] = {
@@ -128,34 +416,34 @@ STATIC_MICROSERVICE_INFO: Dict[str, Dict[str, Any]] = {
         "capabilities": ["Holdings by account", "Holdings by customer", "Position valuations"],
     },
     "Generic Config Microservice": {
-        "architectural_overview": "",
+        "architectural_overview": GENERIC_CONFIG_ARCH_OVERVIEW,
         "functional_overview": "Centralized configuration store for Temenos applications.",
-        "capabilities": [],
+        "capabilities": ["Feature toggles", "Environment params", "Connection discovery"],
     },
     "Event Store Microservice": {
-        "architectural_overview": "",
+        "architectural_overview": EVENT_STORE_ARCH_OVERVIEW,
         "functional_overview": "Event sourcing backbone. Persists and distributes domain events.",
-        "capabilities": [],
+        "capabilities": ["Event persistence", "Stream distribution", "Consumer groups"],
     },
     "Event Store": {
-        "architectural_overview": "",
+        "architectural_overview": EVENT_STORE_ARCH_OVERVIEW,
         "functional_overview": "Event sourcing backbone for Temenos microservices.",
-        "capabilities": [],
+        "capabilities": ["Event persistence", "Stream distribution"],
     },
     "Statement Generation Microservice": {
-        "architectural_overview": "",
+        "architectural_overview": STMT_GEN_ARCH_OVERVIEW,
         "functional_overview": "Generates account statements and reports.",
-        "capabilities": [],
+        "capabilities": ["Account statements", "Regulatory reports", "XML/PDF output"],
     },
     "Adapter Microservice": {
-        "architectural_overview": "",
+        "architectural_overview": ADAPTER_ARCH_OVERVIEW,
         "functional_overview": "Adapter layer for external system integration.",
-        "capabilities": [],
+        "capabilities": ["SWIFT/SEPA connectivity", "Core banking integration", "Message mapping"],
     },
     "Adapter": {
-        "architectural_overview": "",
+        "architectural_overview": ADAPTER_ARCH_OVERVIEW,
         "functional_overview": "Adapter for external integrations.",
-        "capabilities": [],
+        "capabilities": ["External connectivity", "Message mapping"],
     },
     "Party Microservice": {
         "architectural_overview": "",

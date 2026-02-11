@@ -249,7 +249,7 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={`Ask about ${componentId === 'deployment' ? 'Temenos cloud deployment and architecture' : componentId}...`}
+            placeholder="Ask about Temenos Technology Pillars (Architecture, Extensibility, Integration, etc.)..."
             className="input-field flex-1"
             disabled={loading || !sessionId}
           />
@@ -307,7 +307,7 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
           <div className="text-center text-gray-600 dark:text-gray-300 py-8">
             <Bot className="w-12 h-12 mx-auto mb-4 text-purple-600 dark:text-purple-400" />
             <p className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Welcome to BSG Guru</p>
-            <p className="text-sm text-gray-600 dark:text-gray-300">Ask me anything about {componentId === 'deployment' ? 'Temenos cloud deployment, architecture, and best practices' : componentId}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Ask me anything about Temenos Technology Pillars: Architecture, Extensibility, Integration, Observability, Security, DevOps</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">Powered by Temenos RAG Knowledge Base</p>
           </div>
         ) : (

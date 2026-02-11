@@ -5,6 +5,7 @@
  */
 
 import React, { useState, FormEvent } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import {
   Cpu,
   Puzzle,
@@ -17,7 +18,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import './LoginForm.css'
 
 const PILLAR_ICONS: Array<{
-  Icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
+  Icon: LucideIcon
   size: number
   opacity: number
   color: string
