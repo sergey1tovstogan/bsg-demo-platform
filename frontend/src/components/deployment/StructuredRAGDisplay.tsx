@@ -723,6 +723,7 @@ export function StructuredRAGDisplay({
   )
 
   // Render 12-factor section content (markdown-like bullets to HTML)
+  // Exclude "Out of scope" lines from Purpose & Scope per user request
   const render12FactorContent = (content: string) => {
     const lines = content.split('\n').filter(l => l.trim())
     return (
@@ -730,11 +731,13 @@ export function StructuredRAGDisplay({
         {lines.map((line, idx) => {
           const trimmed = line.trim()
           if (!trimmed) return null
+          const textContent = (trimmed.startsWith('- ') || trimmed.startsWith('* ')) ? trimmed.replace(/^[-*]\s*/, '').trim() : trimmed
+          if (/^Out of scope:/i.test(textContent)) return null
           if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
             return (
               <div key={idx} className="flex gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <span className="text-gray-500 dark:text-gray-400">•</span>
-                <span>{trimmed.replace(/^[-*]\s*/, '').trim()}</span>
+                <span>{textContent}</span>
               </div>
             )
           }

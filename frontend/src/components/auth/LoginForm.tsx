@@ -161,7 +161,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             onChange={(e) => setPassword(e.target.value)}
             placeholder=""
             disabled={isLoading}
-            autoComplete="email"
+            autoComplete="off"
             required
             aria-required="true"
             aria-invalid={error ? 'true' : 'false'}

@@ -90,7 +90,7 @@ function Dashboard({ theme, onThemeChange }: DashboardProps) {
           <div className="max-w-7xl mx-auto w-full">
             {componentId ? (
               <div className="animate-fade-in">
-                <ComponentPage componentId={componentId} />
+                <ComponentPage componentId={componentId} onOpenSettings={() => setSettingsOpen(true)} />
               </div>
             ) : (
               <Navigate to="/" replace />

@@ -159,7 +159,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!emailFromPassword && !emailFromUsername) {
         throw new Error('Invalid credentials')
       }
-      // Use Temenos email from Username field (primary) so "Welcome X" matches who the user logged in as
+      // Prefer Username for identity - user typically types their email there. Password field is often
+      // autofilled with another user's credentials (e.g. scomsa) from browser/password manager.
       const userEmail = emailFromUsername ? (credentials.email?.trim() || '') : credentials.password
       const localPart = userEmail.split('@')[0] || ''
       const displayName = (localPart.split('.')[0] || localPart).trim()

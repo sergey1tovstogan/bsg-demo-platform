@@ -14,7 +14,6 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.services.azure_service import AzureService, AzureResourceGroup, AzureResource
 from app.services.temenos_service import TemenosService, TemenosAnalysisResult
 from app.services.aks_service import AKSService
-from app.services.cost_service import CostService
 from app.services.azure_service_info import get_azure_service_description, get_azure_service_descriptions_batch
 from app.services.rag_briefing_service import RAGBriefingService
 from app.core.database import get_database
@@ -80,14 +79,6 @@ class ClusterDiagnosticsRequest(BaseModel):
     subscription_id: str = Field(..., description="Azure subscription ID")
     resource_group: str = Field(..., description="Resource group name")
     cluster_name: str = Field(..., description="AKS cluster name")
-
-
-class CostRequest(BaseModel):
-    """Request model for getting costs."""
-    subscription_id: str = Field(..., description="Azure subscription ID")
-    resource_group_names: List[str] = Field(..., description="List of resource group names")
-    start_date: Optional[str] = Field(None, description="Start date in ISO format (YYYY-MM-DD). Defaults to first day of current month")
-    end_date: Optional[str] = Field(None, description="End date in ISO format (YYYY-MM-DD). Defaults to current date")
 
 
 class CloudLogsAnalyzeRequest(BaseModel):
@@ -1380,158 +1371,6 @@ async def query_rag(
         raise HTTPException(
             status_code=500,
             detail=f"[{error_type}] {error_msg}"
-        )
-
-
-@router.post("/azure/costs")
-async def get_resource_group_costs(request: CostRequest):
-    """
-    Get cost data for one or more resource groups.
-    
-    Args:
-        request: Cost request with subscription ID and resource group names
-        
-    Returns:
-        List of cost information for each resource group
-    """
-    try:
-        subscription_id = request.subscription_id
-        resource_group_names = request.resource_group_names
-        
-        logger.info(f"💰 COST API CALLED - Subscription: {subscription_id}, Resource Groups: {resource_group_names}")
-        
-        if not subscription_id:
-            logger.error("💰 COST API ERROR: Subscription ID is required")
-            raise HTTPException(status_code=400, detail="Subscription ID is required")
-        
-        if not resource_group_names or len(resource_group_names) == 0:
-            logger.error("💰 COST API ERROR: At least one resource group name is required")
-            raise HTTPException(status_code=400, detail="At least one resource group name is required")
-        
-        # Parse dates if provided
-        start_date = None
-        end_date = None
-        
-        if request.start_date:
-            try:
-                start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
-                logger.info(f"💰 Using provided start_date: {start_date}")
-            except ValueError:
-                logger.error(f"💰 COST API ERROR: Invalid start_date format: {request.start_date}")
-                raise HTTPException(status_code=400, detail=f"Invalid start_date format: {request.start_date}. Use ISO format (YYYY-MM-DD)")
-        
-        if request.end_date:
-            try:
-                end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
-                logger.info(f"💰 Using provided end_date: {end_date}")
-            except ValueError:
-                logger.error(f"💰 COST API ERROR: Invalid end_date format: {request.end_date}")
-                raise HTTPException(status_code=400, detail=f"Invalid end_date format: {request.end_date}. Use ISO format (YYYY-MM-DD)")
-        
-        # Create cost service
-        logger.info(f"💰 Creating CostService for subscription {subscription_id}")
-        cost_service = CostService(subscription_id)
-        
-        # Calculate timeout based on number of resource groups
-        # Each resource group takes ~2-3 seconds, plus delays
-        # For large batches, increase timeout significantly
-        num_rgs = len(resource_group_names)
-        if num_rgs > 50:
-            timeout_seconds = 300.0  # 5 minutes for 50+ resource groups
-        elif num_rgs > 20:
-            timeout_seconds = 180.0  # 3 minutes for 20-50 resource groups
-        elif num_rgs == 1:
-            timeout_seconds = 30.0   # 30 seconds for single resource group
-        else:
-            timeout_seconds = 60.0   # 60 seconds for small batches (2-20)
-        
-        logger.info(f"💰 Fetching costs for {num_rgs} resource groups: {resource_group_names}")
-        logger.info(f"💰 Timeout set to {timeout_seconds}s")
-        
-        # Wrap the cost fetching in a timeout
-        # Run the synchronous cost service in a thread pool to avoid blocking
-        async def fetch_costs_with_timeout():
-            loop = asyncio.get_event_loop()
-            try:
-                # Run the synchronous cost service call in a thread pool
-                cost_results = await asyncio.wait_for(
-                    loop.run_in_executor(
-                        None,
-                        cost_service.get_multiple_resource_group_costs,
-                        resource_group_names,
-                        start_date,
-                        end_date
-                    ),
-                    timeout=timeout_seconds
-                )
-                return cost_results
-            except asyncio.TimeoutError:
-                logger.error(f"Cost fetching timed out after {timeout_seconds} seconds for {num_rgs} resource groups")
-                # Return error results for all resource groups
-                return [
-                    {
-                        'resource_group': rg_name,
-                        'total_cost': 0.0,
-                        'services': {},
-                        'error': f'Request timed out after {int(timeout_seconds)}s. Cost Management API is taking too long to respond. Try selecting fewer resource groups or try again later.',
-                        'start_date': start_date.isoformat() if start_date else None,
-                        'end_date': end_date.isoformat() if end_date else None
-                    }
-                    for rg_name in resource_group_names
-                ]
-        
-        # Get costs for all resource groups with timeout
-        logger.info(f"💰 Starting cost fetch for {num_rgs} resource groups...")
-        cost_results = await fetch_costs_with_timeout()
-        
-        # Log results summary
-        success_count = len([r for r in cost_results if not r.get('error')])
-        error_count = len([r for r in cost_results if r.get('error')])
-        total_cost = sum([r.get('total_cost', 0) for r in cost_results if not r.get('error')])
-        
-        logger.info(f"💰 Cost fetch completed: {success_count} success, {error_count} errors, total_cost=${total_cost:.2f}")
-        if error_count > 0:
-            logger.warning(f"💰 Cost fetch errors: {[r.get('resource_group') + ': ' + r.get('error', 'Unknown') for r in cost_results if r.get('error')]}")
-        
-        return {
-            "status": "success",
-            "data": cost_results,
-            "count": len(cost_results)
-        }
-        
-    except HTTPException:
-        raise
-    except asyncio.TimeoutError:
-        logger.error("Cost fetching timed out at endpoint level")
-        raise HTTPException(
-            status_code=504,
-            detail={
-                "status": "error",
-                "error": "Request timed out. Cost Management API is taking too long to respond.",
-                "errorType": "TimeoutError",
-                "recoverySteps": [
-                    "Try again later - Azure Cost Management API may be experiencing delays",
-                    "Verify you have 'Cost Management Reader' role on the subscription",
-                    "Check that the subscription has billing enabled",
-                    "Cost data may take 24-48 hours to appear after resource creation"
-                ]
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error getting costs: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "status": "error",
-                "error": str(e),
-                "errorType": type(e).__name__,
-                "recoverySteps": [
-                    "Verify you have 'Cost Management Reader' role on the subscription",
-                    "Check that the subscription has billing enabled",
-                    "Ensure resource groups exist and are accessible",
-                    "Cost data may take 24-48 hours to appear after resource creation"
-                ]
-            }
         )
 
 

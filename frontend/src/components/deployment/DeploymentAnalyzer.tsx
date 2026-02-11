@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 import { LogAnalyzer } from './LogAnalyzer'
@@ -81,16 +81,6 @@ export function DeploymentAnalyzer() {
   const [error, setError] = useState<string | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState<{ current: number; total: number; message: string } | null>(null)
   const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
-  const [includeCostsInAnalysis, setIncludeCostsInAnalysis] = useState(false)
-  const [costs, setCosts] = useState<Record<string, {
-    total_cost: number
-    projections?: {
-      full_month: number
-      annual: number
-    }
-    error?: string
-  }>>({})
-  const [costsLoading, setCostsLoading] = useState(false)
   const [logAnalyzerOpen, setLogAnalyzerOpen] = useState(false)
   const [selectedResourceGroupForLogs, setSelectedResourceGroupForLogs] = useState<string | null>(null)
   const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
@@ -408,14 +398,12 @@ export function DeploymentAnalyzer() {
     }
   }
 
-  const handleResourceGroupsSelected = async (selected: string[], includeCosts: boolean) => {
+  const handleResourceGroupsSelected = async (selected: string[]) => {
     try {
       setLoading(true)
       setError(null)
       setAnalysisResults([]) // Clear previous results
       setSelectedResourceGroups(selected)
-      setIncludeCostsInAnalysis(includeCosts)
-      setCosts({}) // Clear previous costs
       setAnalysisProgress({ current: 0, total: 2, message: 'Fetching Azure resources...' })
 
       // Get Azure resources first
@@ -534,11 +522,10 @@ export function DeploymentAnalyzer() {
     }
   }
 
-  const handleNamespacesSelected = async (selected: string[], includeCosts: boolean) => {
+  const handleNamespacesSelected = async (selected: string[]) => {
     try {
       setLoading(true)
       setError(null)
-      setIncludeCostsInAnalysis(includeCosts)
 
       // Ensure we have services to analyze
       if (!services || services.length === 0) {
@@ -564,184 +551,6 @@ export function DeploymentAnalyzer() {
       setLoading(true)
       setError(null)
       setAnalysisProgress({ current: 0, total: servicesToAnalyze.length, message: 'Starting analysis...' })
-
-      // Fetch costs if requested (in parallel with analysis)
-      let costsPromise: Promise<void> | null = null
-      if (includeCostsInAnalysis && selectedResourceGroups.length > 0) {
-        setCostsLoading(true)
-        costsPromise = (async () => {
-          try {
-            console.log(`[Costs] Fetching costs for ${selectedResourceGroups.length} resource groups during analysis...`)
-            console.log(`[Costs] Selected resource groups:`, selectedResourceGroups)
-            console.log(`[Costs] Subscription ID:`, subscriptionId)
-            const numRGs = selectedResourceGroups.length
-            const timeoutMs = numRGs > 50 ? 300000 : numRGs > 20 ? 180000 : numRGs === 1 ? 30000 : 60000
-
-            const abortController = new AbortController()
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => {
-                abortController.abort()
-                reject(new Error(`Costs request timed out after ${timeoutMs / 1000} seconds`))
-              }, timeoutMs)
-            })
-
-            const response = await Promise.race([
-              apiService.getResourceGroupCosts(subscriptionId, selectedResourceGroups, undefined, undefined, abortController.signal),
-              timeoutPromise
-            ]) as any
-
-            console.log('[Costs] Response received:', response)
-            console.log('[Costs] Response data:', response?.data)
-            console.log('[Costs] Response data.data:', response?.data?.data)
-
-            if (!abortController.signal.aborted) {
-              // Handle different response structures
-              let costDataArray: any[] = []
-
-              if (response?.data?.data && Array.isArray(response.data.data)) {
-                costDataArray = response.data.data
-              } else if (Array.isArray(response?.data)) {
-                costDataArray = response.data
-              } else if (response?.data) {
-                // Single cost object
-                costDataArray = [response.data]
-              }
-
-              console.log('[Costs] Parsed cost data array:', costDataArray)
-
-              if (costDataArray.length > 0) {
-                const costMap: Record<string, any> = {}
-                // First, add all cost data from the response
-                costDataArray.forEach((costData: any) => {
-                  if (costData?.resource_group) {
-                    // Only treat as error if error field exists AND is not null/empty string
-                    // A null error or missing error means no error (just no data, which is normal)
-                    const hasError = costData.error != null && typeof costData.error === 'string' && costData.error.trim().length > 0
-                    costMap[costData.resource_group] = {
-                      resource_group: costData.resource_group,
-                      total_cost: costData.total_cost || 0,
-                      services: costData.services || {},
-                      projections: costData.projections,
-                      error: hasError ? costData.error : null,  // null means no error, just no data
-                      note: costData.note  // Include note if present
-                    }
-                  }
-                })
-                // Ensure all selected resource groups are in the map
-                // If a RG is missing from the response, add it with zero cost (no error)
-                selectedResourceGroups.forEach(rgName => {
-                  if (!costMap[rgName]) {
-                    costMap[rgName] = {
-                      resource_group: rgName,
-                      total_cost: 0,
-                      services: {},
-                      error: null,  // No error - just no data returned yet
-                      note: costsLoading ? 'Loading...' : 'No cost data returned for this resource group'
-                    }
-                  }
-                })
-                console.log('[Costs] Cost map created:', costMap)
-                setCosts(costMap)
-                setCostsLoading(false)
-                const successCount = Object.values(costMap).filter((c: any) => !c.error).length
-                const errorCount = Object.values(costMap).filter((c: any) => c.error).length
-                console.log(`[Costs] Successfully loaded costs: ${successCount} success, ${errorCount} errors, ${selectedResourceGroups.length} total`)
-              } else {
-                console.warn('[Costs] No cost data in response, setting empty costs')
-                // Set empty costs for all resource groups
-                const costMap: Record<string, any> = {}
-                selectedResourceGroups.forEach(rgName => {
-                  costMap[rgName] = {
-                    resource_group: rgName,
-                    total_cost: 0,
-                    services: {},
-                    error: 'No cost data returned from API'
-                  }
-                })
-                setCosts(costMap)
-                setCostsLoading(false)
-              }
-            } else {
-              setCostsLoading(false)
-            }
-          } catch (err: any) {
-            console.error('[Costs] Error fetching costs during analysis:', err)
-            console.error('[Costs] Error details:', {
-              message: err.message,
-              response: err.response?.data,
-              status: err.response?.status,
-              url: err.config?.url,
-              signal: err.name === 'AbortError' ? 'Request aborted' : 'Not aborted'
-            })
-            
-            // Set error state for costs but don't fail the analysis
-            const costMap: Record<string, any> = {}
-            
-            // Check if the response contains cost data with errors (partial success)
-            if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
-              // API returned data but some RGs may have errors
-              err.response.data.data.forEach((costData: any) => {
-                if (costData?.resource_group) {
-                  costMap[costData.resource_group] = {
-                    resource_group: costData.resource_group,
-                    total_cost: costData.total_cost || 0,
-                    services: costData.services || {},
-                    projections: costData.projections,
-                    error: costData.error
-                  }
-                }
-              })
-              // Ensure all selected RGs are in the map
-              selectedResourceGroups.forEach(rgName => {
-                if (!costMap[rgName]) {
-                  costMap[rgName] = {
-                    resource_group: rgName,
-                    total_cost: 0,
-                    services: {},
-                    error: 'No cost data returned for this resource group'
-                  }
-                }
-              })
-            } else {
-              // Complete failure - set error for all RGs
-              // Determine error message
-                let errorMessage = 'Failed to load costs'
-              if (err.message?.includes('timeout') || err.name === 'AbortError') {
-                errorMessage = 'Request timed out. Cost Management API is taking too long. Try selecting fewer resource groups.'
-              } else if (err.response?.data?.detail) {
-                  if (typeof err.response.data.detail === 'string') {
-                    errorMessage = err.response.data.detail
-                  } else if (err.response.data.detail.error) {
-                    errorMessage = err.response.data.detail.error
-                  } else if (err.response.data.detail.recoverySteps) {
-                    // Use first recovery step as hint
-                    errorMessage = `${err.response.data.detail.error || 'Failed to load costs'}. ${err.response.data.detail.recoverySteps[0] || ''}`
-                  }
-                } else if (err.message) {
-                  if (err.message.includes('timeout') || err.message.includes('aborted')) {
-                    errorMessage = `Request timed out. Cost Management API is taking too long to respond.`
-                  } else {
-                    errorMessage = err.message
-                  }
-                }
-              // Set error for all selected resource groups
-              selectedResourceGroups.forEach(rgName => {
-                costMap[rgName] = {
-                  resource_group: rgName,
-                  total_cost: 0,
-                  services: {},
-                  error: errorMessage
-                }
-              })
-            }
-            setCosts(costMap)
-            setCostsLoading(false)
-            console.log('[Costs] Set error costs for resource groups:', costMap)
-          }
-        })()
-      } else {
-        setCostsLoading(false)
-      }
 
       // Simulate progress updates
       const progressInterval = setInterval(() => {
@@ -771,15 +580,6 @@ export function DeploymentAnalyzer() {
         console.log('[Analysis] Parsed results:', results)
         setAnalysisResults(Array.isArray(results) ? results : [])
         setAnalysisProgress({ current: servicesToAnalyze.length, total: servicesToAnalyze.length, message: 'Analysis complete!' })
-
-        // Don't wait for costs - let them load in background
-        // Costs will update the UI when they're ready
-        if (costsPromise) {
-          costsPromise.catch(err => {
-            console.error('[Costs] Background cost fetching failed:', err)
-            // Error already handled in the promise
-          })
-        }
       } catch (analysisErr: any) {
         console.error('[Analysis] Analysis failed:', analysisErr)
         throw analysisErr // Re-throw to be caught by outer try-catch
@@ -868,7 +668,6 @@ export function DeploymentAnalyzer() {
           onSelected={handleNamespacesSelected}
           onBack={() => setCurrentStep('resourceGroups')}
           loading={loading}
-          includeCosts={includeCostsInAnalysis}
         />
       )}
 
@@ -881,9 +680,6 @@ export function DeploymentAnalyzer() {
           error={error}
           onBack={handleBack}
           onRefresh={() => analyzeServices(services)}
-          costs={costs}
-          costsLoading={costsLoading}
-          includeCosts={includeCostsInAnalysis}
           onOpenLogAnalyzer={(resourceGroup: string) => {
             setSelectedResourceGroupForLogs(resourceGroup)
             setLogAnalyzerOpen(true)
@@ -1198,7 +994,7 @@ function ResourceGroupSelector({
 }: {
 
   resourceGroups: AzureResourceGroup[]
-  onSelected: (selected: string[], includeCosts: boolean) => void
+  onSelected: (selected: string[]) => void
   onBack: () => void
   onRefresh: () => void
   loading: boolean
@@ -1209,7 +1005,6 @@ function ResourceGroupSelector({
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [includeCosts, setIncludeCosts] = useState(false)
   const [exportingRg, setExportingRg] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
 
@@ -1491,38 +1286,12 @@ function ResourceGroupSelector({
         })}
       </div>
 
-      {/* Include Costs Checkbox */}
-      {/* Include Costs Checkbox */}
-      <div className="card bg-gradient-to-r from-indigo-50 to-indigo-50 dark:from-indigo-900/20 dark:to-indigo-900/20 border-indigo-100 dark:border-indigo-500/30 transition-all hover:shadow-md">
-        <label className="flex items-center space-x-3 cursor-pointer group">
-          <div className="relative flex items-center justify-center">
-            <input
-              type="checkbox"
-              checked={includeCosts}
-              onChange={(e) => setIncludeCosts(e.target.checked)}
-              className="peer w-5 h-5 text-purple-600 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500 transition-all cursor-pointer"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-lg">
-              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <span className="text-base font-medium text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-              Include cost analysis for selected resource groups
-            </span>
-          </div>
-        </label>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 ml-11">
-          This will fetch cost data from Azure Cost Management API (may take a few moments)
-        </p>
-      </div>
-
       <div className="flex justify-end space-x-4">
         <button onClick={onBack} className="btn-secondary">
           Cancel
         </button>
         <button
-          onClick={() => onSelected(selected, includeCosts)}
+          onClick={() => onSelected(selected)}
           disabled={selected.length === 0 || loading}
           className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
         >
@@ -1545,8 +1314,7 @@ function NamespaceSelector({
   clusterNamespaces,
   onSelected,
   onBack,
-  loading,
-  includeCosts
+  loading
 }: {
   clusterNamespaces: Array<{ 
     cluster_name: string
@@ -1561,10 +1329,9 @@ function NamespaceSelector({
       for_azure_app_service?: string[]
     }
   }>
-  onSelected: (selected: string[], includeCosts: boolean) => void
+  onSelected: (selected: string[]) => void
   onBack: () => void
   loading: boolean
-  includeCosts: boolean
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -1700,7 +1467,7 @@ function NamespaceSelector({
               Back
             </button>
             <button
-              onClick={() => onSelected(selected, includeCosts)}
+              onClick={() => onSelected(selected)}
               disabled={selected.length === 0 || loading}
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
@@ -1729,9 +1496,6 @@ function ServiceAnalysis({
   error,
   onBack,
   onRefresh,
-  costs,
-  costsLoading,
-  includeCosts,
   onOpenLogAnalyzer,
   selectedResourceGroups,
   subscriptionId,
@@ -1744,16 +1508,6 @@ function ServiceAnalysis({
   error: string | null
   onBack: () => void
   onRefresh: () => void
-  costs: Record<string, {
-    total_cost: number
-    projections?: {
-      full_month: number
-      annual: number
-    }
-    error?: string
-  }>
-  costsLoading: boolean
-  includeCosts: boolean
   onOpenLogAnalyzer: (resourceGroup: string) => void
   selectedResourceGroups: string[]
   subscriptionId: string
@@ -2021,7 +1775,7 @@ function ServiceAnalysis({
       )}
 
       {/* Summary Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-3 ${includeCosts ? 'lg:grid-cols-4' : ''} gap-6`}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <div className="flex items-center space-x-3">
             <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -2049,117 +1803,6 @@ function ServiceAnalysis({
             </div>
           </div>
         </div>
-        {includeCosts && (
-          <div className="card bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-200/50 dark:border-yellow-500/20">
-            <div className="flex items-center space-x-3">
-              <DollarSign className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
-              <div className="flex-1">
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">Total Cost</p>
-                {(() => {
-                  // Ensure all selected resource groups are accounted for in aggregation
-                  const allRGs = selectedResourceGroups || []
-                  const costEntries = allRGs.map(rgName => {
-                    // Get cost data for this RG, or create a default entry if not found (no error - just no data yet)
-                    return costs[rgName] || {
-                      resource_group: rgName,
-                      total_cost: 0,
-                      services: {},
-                      error: null,  // No error - just no data available yet (might still be loading or no costs)
-                      note: costsLoading ? 'Loading...' : 'No cost data available yet'
-                    }
-                  })
-
-                  // Only count actual errors (non-null, non-empty error strings), not "no data" cases
-                  const hasErrors = costEntries.some(c => {
-                    const hasError = c.error && typeof c.error === 'string' && c.error.trim().length > 0
-                    return hasError && !costsLoading
-                  })
-                  // Calculate total cost - only include valid costs (no errors or still loading)
-                  const totalCost = costEntries.reduce((sum, cost) => {
-                    // Skip costs with actual errors (but only if not loading, as loading state might have temporary errors)
-                    const hasError = cost.error && typeof cost.error === 'string' && cost.error.trim().length > 0
-                    if (hasError && !costsLoading) return sum
-                    // Ensure total_cost is a valid number
-                    const costValue = typeof cost.total_cost === 'number' ? cost.total_cost : 0
-                    return sum + costValue
-                  }, 0)
-
-                  const hasProjections = costEntries.some(c => {
-                    const hasError = c.error && typeof c.error === 'string' && c.error.trim().length > 0
-                    return c.projections && !hasError && !costsLoading
-                  })
-                  const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
-                    // Skip costs with actual errors or missing projections
-                    const hasError = cost.error && typeof cost.error === 'string' && cost.error.trim().length > 0
-                    if (hasError && !costsLoading) return sum
-                    if (!cost.projections) return sum
-                    // Ensure full_month is a valid number
-                    const projectionValue = typeof cost.projections.full_month === 'number' ? cost.projections.full_month : 0
-                    return sum + projectionValue
-                  }, 0) : null
-
-                  // Only count actual errors (non-null, non-empty strings)
-                  const errorCount = costEntries.filter(c => {
-                    const hasError = c.error && typeof c.error === 'string' && c.error.trim().length > 0
-                    return hasError && !costsLoading
-                  }).length
-                  const successCount = costEntries.length - errorCount
-
-                  if (hasErrors && costEntries.length > 0 && !costsLoading) {
-                    return (
-                      <>
-                        <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
-                        {errorCount > 0 && (
-                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                            {errorCount} of {costEntries.length} RG{costEntries.length !== 1 ? 's' : ''} failed to load
-                          </p>
-                        )}
-                        {successCount > 0 && (
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                            Aggregated from {successCount} resource group{successCount !== 1 ? 's' : ''}
-                          </p>
-                        )}
-                      </>
-                    )
-                  }
-
-                  return (
-                    <>
-                      <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
-                      {monthlyProjection !== null && monthlyProjection > 0 && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
-                      )}
-                      {costEntries.length > 1 && !costsLoading && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                          Aggregated from {costEntries.length} resource group{costEntries.length !== 1 ? 's' : ''}
-                        </p>
-                      )}
-                      {costsLoading && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 flex items-center space-x-1">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Loading costs for {allRGs.length} resource group{allRGs.length !== 1 ? 's' : ''}...</span>
-                        </p>
-                      )}
-                      {!costsLoading && costEntries.length === 0 && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">No cost data available</p>
-                      )}
-                      {!costsLoading && totalCost === 0 && costEntries.length > 0 && !hasErrors && (
-                        <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80 mt-1 italic">
-                          Cost data may take 24-48h to appear. Ensure &quot;Cost Management Reader&quot; role is assigned to the subscription.
-                        </p>
-                      )}
-                      {!costsLoading && hasErrors && costEntries.some((c: any) => c.error) && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                          {costEntries.find((c: any) => c.error)?.error || 'Cost fetch failed. Check Cost Management Reader role.'}
-                        </p>
-                      )}
-                    </>
-                  )
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Horizontal Panel Layout: Main Content + Sidebar */}

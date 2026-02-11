@@ -1079,7 +1079,6 @@ Open Questions
 
 - Microservice name: {component_name}
 - Responsibility: Not part of the documented scope.
-- Out of scope: Not part of the documented scope.
 
 ## 2. Architectural Role
 
@@ -1187,7 +1186,6 @@ Open Questions
 
 - Microservice name: {component_name}
 - Responsibility: Centralized, versioned, document-based configuration management for Temenos applications and microservices via stateless REST APIs.
-- Out of scope: Business domain processing (this service is a configuration backbone).
 
 ## 2. Architectural Role
 

@@ -623,39 +623,6 @@ class ApiService {
     }
   }
 
-  async getResourceGroupCosts(
-    subscriptionId: string, 
-    resourceGroupNames: string[],
-    startDate?: string,
-    endDate?: string,
-    signal?: AbortSignal
-  ) {
-    const response = await this.client.post<ApiResponse<{
-      data: Array<{
-        resource_group: string
-        total_cost: number
-        services: Record<string, number>
-        error?: string
-        start_date?: string
-        end_date?: string
-        projections?: {
-          full_month: number
-          annual: number
-          month_progress: number
-          days_passed: number
-          days_in_month: number
-        }
-      }>
-      count: number
-    }>>('/deployment/azure/costs', {
-      subscription_id: subscriptionId,
-      resource_group_names: resourceGroupNames,
-      start_date: startDate,
-      end_date: endDate
-    }, { signal }) // Pass abort signal to axios for request cancellation
-    return response.data
-  }
-
   async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[], forceRefresh?: boolean) {
     const endpoint = forceRefresh ? '/deployment/temenos/analyze/refresh' : '/deployment/temenos/analyze'
     const response = await this.client.post<ApiResponse<{

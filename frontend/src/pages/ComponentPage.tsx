@@ -17,11 +17,12 @@ interface ComponentPageProps {
   componentId: ComponentId
   initialSelectedCard?: number // For security component sub-sections
   initialTab?: 'content' | 'video' | 'demo' // For specific tabs
+  onOpenSettings?: () => void
 }
 
 type Tab = 'content' | 'video' | 'demo'
 
-export function ComponentPage({ componentId, initialSelectedCard, initialTab }: ComponentPageProps) {
+export function ComponentPage({ componentId, initialSelectedCard, initialTab, onOpenSettings }: ComponentPageProps) {
   const tabs = componentId === 'layout-showcase' || componentId === 'security'
     ? [{ id: 'content' as Tab, label: 'Content', icon: BookOpen }]
     : componentId === 'deployment' || componentId === 'data-architecture'
@@ -119,7 +120,7 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab }: 
           ) : componentId === 'data-architecture' ? (
             <DataArchitectureContent />
           ) : componentId === 'design-time' ? (
-            <DesignTimeContentViewer />
+            <DesignTimeContentViewer onOpenSettings={onOpenSettings} />
           ) : (
             <ContentViewer componentId={componentId} initialSelectedCard={initialSelectedCard} />
           )

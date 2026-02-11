@@ -49,7 +49,6 @@ HOLDINGS_ARCH_OVERVIEW = """# Holdings Microservice
 
 - Microservice name: Holdings Microservice
 - Responsibility: Aggregates and exposes customer portfolio holdings data for read-only consumption. Provides a denormalized view of positions derived from core transactional systems.
-- Out of scope: Does not perform trades, settlement, or write operations. Not responsible for real-time order execution.
 
 ## 2. Architectural Role
 
@@ -121,7 +120,6 @@ STMT_GEN_ARCH_OVERVIEW = """# Statement Generation Microservice
 
 - Microservice name: Statement Generation Microservice
 - Responsibility: Generates account statements, reports, and document outputs (e.g. XML, PDF) for end customers. Transforms transactional data into presentable statement formats.
-- Out of scope: Does not perform transactional processing or data capture. Not responsible for real-time transaction feeds.
 
 ## 2. Architectural Role
 
@@ -193,7 +191,6 @@ EVENT_STORE_ARCH_OVERVIEW = """# Event Store Microservice
 
 - Microservice name: Event Store Microservice
 - Responsibility: Central event sourcing backbone. Persists and distributes domain events from Temenos Transact to downstream consumers. Typically implemented via Azure Event Hubs or Kafka.
-- Out of scope: Does not perform business logic or event transformation. Not a message queue for arbitrary workloads.
 
 ## 2. Architectural Role
 
@@ -265,7 +262,6 @@ ADAPTER_ARCH_OVERVIEW = """# Adapter Microservice
 
 - Microservice name: Adapter Microservice
 - Responsibility: Integration adapter for external systems. Translates between Temenos internal formats and external protocols (SWIFT, ISO 20022, proprietary APIs). Handles connectivity, mapping, and error handling.
-- Out of scope: Does not perform core banking logic. Not responsible for orchestration across multiple external systems.
 
 ## 2. Architectural Role
 
@@ -337,7 +333,6 @@ GENERIC_CONFIG_ARCH_OVERVIEW = """# Generic Config Microservice
 
 - Microservice name: Generic Config Microservice
 - Responsibility: Centralized configuration store for Temenos microservices. Provides shared config (feature flags, parameters, connection strings) to runtime components.
-- Out of scope: Does not store transactional or customer data. Not a secrets manager for highly sensitive credentials.
 
 ## 2. Architectural Role
 

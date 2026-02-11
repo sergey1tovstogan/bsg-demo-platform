@@ -7,7 +7,11 @@ const CACHE_KEY = 'design_time_rag_content_cache'
 const CACHE_TIMESTAMP_KEY = 'design_time_rag_content_cache_timestamp'
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days (1 month)
 
-export function DesignTimeContentViewer() {
+interface DesignTimeContentViewerProps {
+  onOpenSettings?: () => void
+}
+
+export function DesignTimeContentViewer({ onOpenSettings }: DesignTimeContentViewerProps = {}) {
   const [ragContent, setRagContent] = useState<any>(null)
   const [ragLoading, setRagLoading] = useState(true)
   const [ragError, setRagError] = useState<string | null>(null)
@@ -332,13 +336,12 @@ export function DesignTimeContentViewer() {
               <span className="px-3 py-1.5 rounded-lg bg-slate-200/80 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 text-sm font-medium">Kubernetes</span>
             </div>
           </div>
-          <div className="relative h-48 lg:h-64 lg:min-h-[280px]">
+          <div className="relative h-48 lg:h-64 lg:min-h-[280px] flex items-center justify-center bg-white dark:bg-slate-800 p-4">
             <img
-              src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80"
-              alt="DevOps team collaboration"
-              className="w-full h-full object-cover"
+              src="/images/devops-infinity-loop.png"
+              alt="DevOps infinity loop - Code, Build, Test, Plan, Release, Deploy, Operate, Monitor"
+              className="max-h-full w-auto object-contain"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           </div>
         </div>
       </div>
@@ -381,6 +384,17 @@ export function DesignTimeContentViewer() {
               {ragError.includes('Showing cached data') ? 'Warning:' : 'Error loading RAG content:'}
             </p>
             <p className="text-sm">{ragError}</p>
+            {(ragError.includes('Token expired') || ragError.includes('401')) && onOpenSettings && (
+              <p className="mt-3">
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  Update RAG token in Settings
+                </button>
+              </p>
+            )}
           </div>
         )}
 
