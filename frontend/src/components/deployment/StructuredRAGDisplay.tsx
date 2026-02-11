@@ -635,21 +635,6 @@ export function StructuredRAGDisplay({
   }
 
   // Parse 12-factor format: ## 1. Purpose & Scope, ## 2. Architectural Role, ... ## 12. Explicit Non-Goals / Out-of-Scope
-  const TWELVE_FACTOR_SECTIONS = [
-    '1. Purpose & Scope',
-    '2. Architectural Role',
-    '3. Design Patterns & Guarantees',
-    '4. Core Components',
-    '5. Data Model & Consistency',
-    '6. APIs & Access Patterns',
-    '7. Deployment Architecture',
-    '8. Scalability & Performance',
-    '9. Security Model',
-    '10. Observability & Operations',
-    '11. Functional Capabilities',
-    '12. Explicit Non-Goals / Out-of-Scope'
-  ]
-
   const parse12FactorSections = (text: string): Array<{ title: string; content: string }> => {
     const sections: Array<{ title: string; content: string }> = []
     if (!text || text.trim().length < 10) return sections
@@ -689,9 +674,6 @@ export function StructuredRAGDisplay({
   const runtimeDeployment = service?.runtimeDeployment || null
 
   const hasArchitectureSections = archSections.sections.length > 0
-  const hasLifecycle = archSections.lifecycle.length > 0
-  const hasComponents = archSections.components.length > 0
-  const hasDeployment = archSections.deployment.length > 0
   const hasFunctionalSections = funcSections.sections.length > 0
   const hasCapabilitiesTable = parsedCapabilities.length > 0
   const hasNonGoals = archSections.nonGoals.length > 0
@@ -872,6 +854,15 @@ export function StructuredRAGDisplay({
                   headers: ['Capability', 'Description'],
                   rows: parsedCapabilities.slice(0, 20).map((cap: any) => [cap.name, cap.description || '-'])
                 })
+              ) : hasFunctionalSections ? (
+                <div className="space-y-4">
+                  {funcSections.sections.map((section: any, idx: number) => (
+                    <div key={idx} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                      {section.heading && <h6 className="font-semibold text-gray-900 dark:text-white mb-3">{section.heading}</h6>}
+                      {renderParagraphs(section.paragraphs || [])}
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400 italic">Functional capabilities not available.</p>
               )}
