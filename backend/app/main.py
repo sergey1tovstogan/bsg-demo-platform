@@ -3,6 +3,7 @@ BSG Demo Platform - Backend Application
 
 Main FastAPI application with middleware, routing, and configuration.
 """
+# CI trigger
 
 from fastapi import FastAPI, Request, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -66,7 +67,14 @@ async def lifespan(app: FastAPI):
                 logger.info(f"✓ Found {component_info_count} cached component info entries in persistent storage")
                 logger.info("  Component info will be loaded from cache on-demand (no RAG API calls needed)")
             else:
-                logger.info("  No cached component info found - will query RAG API when needed")
+                logger.info("  No cached component info found - will use static content or RAG API when needed")
+            # Static microservice info (no RAG) - for Deployment demo
+            try:
+                from app.data.static_microservice_info import STATIC_MICROSERVICE_INFO, DEPLOYMENT_NAME_ALIASES
+                static_count = len([k for k, v in STATIC_MICROSERVICE_INFO.items() if v.get("architectural_overview") or v.get("functional_overview")])
+                logger.info(f"  Static microservice info: {len(STATIC_MICROSERVICE_INFO)} entries, {len(DEPLOYMENT_NAME_ALIASES)} aliases")
+            except Exception as e:
+                logger.warning(f"Failed to load static microservice info: {e}")
         except Exception as e:
             logger.warning(f"Failed to check cache status: {e}")
             # Don't fail startup if cache check fails
