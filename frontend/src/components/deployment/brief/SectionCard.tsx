@@ -2,8 +2,8 @@
  * Section Card - Expandable card for a single brief section
  */
 
-import React, { useState } from 'react'
-import { ChevronDown, ChevronRight, Copy, FileText } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, ChevronRight, Copy } from 'lucide-react'
 import type { Section } from './types'
 import { ContentGroupRenderer } from './SubCardRenderers'
 import { chunkParagraphGroups } from './parser'
@@ -45,8 +45,8 @@ export function SectionCard({
   expanded: expandedProp,
   onExpandChange,
   defaultExpanded = false,
-  searchHighlight,
-  showHighlightsOnly = false,
+  searchHighlight: _searchHighlight,
+  showHighlightsOnly: _showHighlightsOnly,
 }: SectionCardProps) {
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded)
   const isControlled = expandedProp !== undefined

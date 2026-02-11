@@ -10,11 +10,6 @@ import type {
   MicroserviceBrief,
   Section,
   ContentGroup,
-  BulletGroup,
-  KeyValueGroup,
-  ParagraphGroup,
-  CodeBlockGroup,
-  ReferenceGroup,
   SectionTag,
 } from './types'
 

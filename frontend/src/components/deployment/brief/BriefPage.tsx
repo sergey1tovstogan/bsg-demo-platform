@@ -5,18 +5,16 @@
  * expandable section cards, search, filter chips, copy actions.
  */
 
-import React, { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
-  Copy,
-  ExpandAll,
+  Expand,
   Minimize2,
   Search,
   FileJson,
   FileCode,
   Sparkles,
 } from 'lucide-react'
-import { parseMicroserviceBrief, chunkParagraphGroups } from './parser'
-import type { MicroserviceBrief, Section } from './types'
+import { parseMicroserviceBrief } from './parser'
 import { SectionCard } from './SectionCard'
 
 interface BriefPageProps {
@@ -124,7 +122,7 @@ export function BriefPage({ rawText, name, className = '' }: BriefPageProps) {
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-sm transition-colors"
                 title="Expand all sections"
               >
-                <ExpandAll className="w-4 h-4" />
+                <Expand className="w-4 h-4" />
                 Expand all
               </button>
               <button

@@ -4,9 +4,8 @@
  * Renders BulletGroup, KeyValueGroup, ParagraphGroup, CodeBlockGroup.
  */
 
-import React from 'react'
 import type { ContentGroup, BulletGroup, KeyValueGroup, ParagraphGroup, CodeBlockGroup } from './types'
-import { Copy, ChevronDown, ChevronRight } from 'lucide-react'
+import { Copy } from 'lucide-react'
 
 function CopyButton({ text, label }: { text: string; label?: string }) {
   const handleCopy = () => {

@@ -109,7 +109,7 @@ export function DeploymentAnalyzer() {
         if (cancelled) return
         const rgList = Array.isArray(body?.data) ? body.data : []
         setResourceGroups(rgList)
-        setResourceGroupsCached(body?.cached ?? false)
+        setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
         setLastPreloadedSubId(cachedSubId)
       })
       .catch(() => { /* ignore - will fetch on Connect */ })
@@ -132,7 +132,7 @@ export function DeploymentAnalyzer() {
       setError(null)
       const response = await apiService.getAzureResourceGroups(subId, refresh)
       setResourceGroups(response.data?.data || response.data || [])
-      setResourceGroupsCached(response.data?.cached || false)
+      setResourceGroupsCached((response.data as { cached?: boolean })?.cached ?? false)
     } catch (err: any) {
       console.error('[DeploymentAnalyzer] Error loading resource groups:', err)
       setError(err.response?.data?.detail?.error || err.message || 'Failed to load resource groups')
@@ -164,7 +164,7 @@ export function DeploymentAnalyzer() {
       const rgBody = await apiService.getAzureResourceGroups(subId, false)
       const rgList = Array.isArray(rgBody?.data) ? rgBody.data : []
       setResourceGroups(rgList)
-      setResourceGroupsCached(rgBody?.cached ?? false)
+      setResourceGroupsCached((rgBody as { cached?: boolean })?.cached ?? false)
       setLastPreloadedSubId(subId)
       setCurrentStep('resourceGroups')
     } catch (err: any) {
