@@ -17,7 +17,7 @@ const CATEGORIES: CategoryOption[] = [
   { id: 'deployment', name: 'Deployment & Cloud', icon: Cloud },
   { id: 'security', name: 'Security', icon: Shield },
   { id: 'observability', name: 'Observability', icon: Eye },
-  { id: 'design-time', name: 'Design Time', icon: Palette },
+  { id: 'design-time', name: 'DevOps', icon: Palette },
 ]
 
 const STORAGE_KEY = 'bsg_selected_categories'
@@ -250,7 +250,7 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
               RAG API JWT Token
             </label>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              Configure the JWT token for Temenos RAG API. Token is cached in browser and sent to backend when updated.
+              Configure the JWT token for Temenos RAG API. This same token is used for all platform cards (BSG Guru, Deployment content, Data Architecture, etc.). Token is cached in browser and sent to backend when updated.
             </p>
             
             {/* JWT Info Display */}

@@ -14,7 +14,6 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.services.azure_service import AzureService, AzureResourceGroup, AzureResource
 from app.services.temenos_service import TemenosService, TemenosAnalysisResult
 from app.services.aks_service import AKSService
-from app.services.cost_service import CostService
 from app.services.azure_service_info import get_azure_service_description, get_azure_service_descriptions_batch
 from app.services.rag_briefing_service import RAGBriefingService
 from app.core.database import get_database
@@ -82,31 +81,117 @@ class ClusterDiagnosticsRequest(BaseModel):
     cluster_name: str = Field(..., description="AKS cluster name")
 
 
-class CostRequest(BaseModel):
-    """Request model for getting costs."""
-    subscription_id: str = Field(..., description="Azure subscription ID")
-    resource_group_names: List[str] = Field(..., description="List of resource group names")
-    start_date: Optional[str] = Field(None, description="Start date in ISO format (YYYY-MM-DD). Defaults to first day of current month")
-    end_date: Optional[str] = Field(None, description="End date in ISO format (YYYY-MM-DD). Defaults to current date")
-
-
-class CloudLogsAnalyzeRequest(BaseModel):
-    """Request model for cloud logs analysis."""
-    platform: str = Field(..., description="Platform: 'aks' or 'aca'")
-    component_name: str = Field(..., description="Temenos component name (e.g. transact-app, transact-web, irf-provider)")
-    environment: str = Field(..., description="Environment description (e.g. zkb_poc, dev, test)")
-    log_snippet: str = Field(..., description="Log snippet to analyze (max a few hundred lines)")
-    symptoms: Optional[str] = Field(None, description="Optional symptoms (e.g. COB hangs, API 500s, CrashLoopBackOff)")
-    recent_changes: Optional[str] = Field(None, description="Optional recent changes (deploy, Helm values, DB password, scaling, etc.)")
-    resource_group: Optional[str] = Field(None, description="Azure resource group name")
-    subscription_id: Optional[str] = Field(None, description="Azure subscription ID")
-
-
 def get_azure_service(subscription_id: str) -> AzureService:
     """Get or create Azure service instance."""
     if subscription_id not in azure_service_cache:
         azure_service_cache[subscription_id] = AzureService(subscription_id)
     return azure_service_cache[subscription_id]
+
+
+async def _check_azure_health(subscription_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Check Azure identity and optional subscription access.
+    Used for proactive health checks so the platform does not hang during demos.
+    """
+    import os
+    from azure.identity import DefaultAzureCredential
+    from azure.core.exceptions import ClientAuthenticationError
+
+    result: Dict[str, Any] = {
+        "status": "unknown",
+        "identity_type": "unknown",
+        "subscription_check": "not_checked",
+        "message": None,
+    }
+    if os.getenv("AZURE_CLIENT_ID"):
+        identity_type = "service_principal"
+    elif os.getenv("WEBSITE_SITE_NAME") or os.getenv("CONTAINER_APP_NAME"):
+        identity_type = "managed_identity"
+    else:
+        identity_type = "default_credential_chain"  # local: CLI or env
+    result["identity_type"] = identity_type
+
+    def _get_token():
+        cred = DefaultAzureCredential()
+        return cred.get_token("https://management.azure.com/.default")
+
+    try:
+        loop = asyncio.get_event_loop()
+        token = await loop.run_in_executor(None, _get_token)
+        if not token or not token.token:
+            result["status"] = "unavailable"
+            result["message"] = "Azure identity returned no token"
+            return result
+        result["status"] = "ok"
+        result["message"] = "Azure identity is valid"
+    except ClientAuthenticationError as e:
+        err_str = getattr(e, "message", None) or str(e)
+        msg = err_str.lower()
+        result["status"] = "unavailable"
+        result["subscription_check"] = "credential_failed"
+        if "expired" in msg or "refresh token" in msg or ("token" in msg and "invalid" in msg):
+            result["message"] = (
+                "Azure credential may have expired. "
+                "If using Service Principal: renew the client secret in Azure Portal (App registration → Certificates & secrets). "
+                "If using Managed Identity: ensure it still has Reader role on the subscription."
+            )
+            result["subscription_check"] = "expired"
+        else:
+            result["message"] = err_str
+        return result
+    except Exception as e:
+        result["status"] = "unavailable"
+        result["message"] = str(e)
+        result["subscription_check"] = "credential_failed"
+        return result
+
+    if not subscription_id:
+        return result
+
+    result["subscription_check"] = "checking"
+    try:
+        azure_service = get_azure_service(subscription_id)
+        await azure_service.test_connection()
+        result["subscription_check"] = "ok"
+        result["message"] = "Azure identity and subscription access are valid"
+        return result
+    except RuntimeError as e:
+        err_msg = str(e).lower()
+        result["subscription_check"] = "no_access"
+        if "expired" in err_msg or "refresh token" in err_msg or "401" in err_msg:
+            result["subscription_check"] = "expired"
+            result["message"] = (
+                "Azure credential may have expired. Renew the Service Principal secret or re-grant Managed Identity access to the subscription."
+            )
+        else:
+            result["message"] = str(e)
+        result["status"] = "unavailable"
+        return result
+    except Exception as e:
+        result["subscription_check"] = "no_access"
+        err_str = str(e).lower()
+        if "expired" in err_str or "refresh token" in err_str:
+            result["subscription_check"] = "expired"
+            result["message"] = (
+                "Azure credential may have expired. Renew the Service Principal secret or re-grant Managed Identity access to the subscription, then restart the backend."
+            )
+        else:
+            result["message"] = str(e)
+        result["status"] = "unavailable"
+        return result
+
+
+@router.get("/azure/health")
+async def azure_health_check(subscription_id: Optional[str] = None):
+    """
+    Proactive Azure connectivity check for demos.
+    Call this before or during demo to avoid platform hanging when backend identity has expired or lost access.
+    """
+    from app.core.config import get_settings
+    settings = get_settings()
+    sub_id = subscription_id or settings.AZURE_SUBSCRIPTION_ID
+    result = await _check_azure_health(sub_id)
+    return result
 
 
 @router.post("/azure/connect")
@@ -166,8 +251,16 @@ async def connect_azure_subscription(request: SubscriptionConnectRequest):
         error_msg = str(e)
         error_type = "unknown"
         recovery_steps = []
-        
-        if "authentication" in error_msg.lower() or "credential" in error_msg.lower():
+        err_lower = error_msg.lower()
+        if "expired" in err_lower or "credential may have expired" in err_lower:
+            error_type = "credential_expired"
+            recovery_steps = [
+                "If using Service Principal: renew the client secret in Azure Portal (App registration → Certificates & secrets)",
+                "If using Managed Identity: in Azure Portal ensure the Container App/App Service identity has Reader role on the subscription",
+                "Restart the backend after renewing credentials",
+                "Verify subscription ID is correct and the subscription is active",
+            ]
+        elif "authentication" in err_lower or "credential" in err_lower:
             error_type = "authentication"
             # Check if running in Azure App Service
             import os
@@ -1269,361 +1362,6 @@ async def query_rag(
         )
 
 
-@router.post("/azure/costs")
-async def get_resource_group_costs(request: CostRequest):
-    """
-    Get cost data for one or more resource groups.
-    
-    Args:
-        request: Cost request with subscription ID and resource group names
-        
-    Returns:
-        List of cost information for each resource group
-    """
-    try:
-        subscription_id = request.subscription_id
-        resource_group_names = request.resource_group_names
-        
-        logger.info(f"💰 COST API CALLED - Subscription: {subscription_id}, Resource Groups: {resource_group_names}")
-        
-        if not subscription_id:
-            logger.error("💰 COST API ERROR: Subscription ID is required")
-            raise HTTPException(status_code=400, detail="Subscription ID is required")
-        
-        if not resource_group_names or len(resource_group_names) == 0:
-            logger.error("💰 COST API ERROR: At least one resource group name is required")
-            raise HTTPException(status_code=400, detail="At least one resource group name is required")
-        
-        # Parse dates if provided
-        start_date = None
-        end_date = None
-        
-        if request.start_date:
-            try:
-                start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
-                logger.info(f"💰 Using provided start_date: {start_date}")
-            except ValueError:
-                logger.error(f"💰 COST API ERROR: Invalid start_date format: {request.start_date}")
-                raise HTTPException(status_code=400, detail=f"Invalid start_date format: {request.start_date}. Use ISO format (YYYY-MM-DD)")
-        
-        if request.end_date:
-            try:
-                end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
-                logger.info(f"💰 Using provided end_date: {end_date}")
-            except ValueError:
-                logger.error(f"💰 COST API ERROR: Invalid end_date format: {request.end_date}")
-                raise HTTPException(status_code=400, detail=f"Invalid end_date format: {request.end_date}. Use ISO format (YYYY-MM-DD)")
-        
-        # Create cost service
-        logger.info(f"💰 Creating CostService for subscription {subscription_id}")
-        cost_service = CostService(subscription_id)
-        
-        # Calculate timeout based on number of resource groups
-        # Each resource group takes ~2-3 seconds, plus delays
-        # For large batches, increase timeout significantly
-        num_rgs = len(resource_group_names)
-        if num_rgs > 50:
-            timeout_seconds = 300.0  # 5 minutes for 50+ resource groups
-        elif num_rgs > 20:
-            timeout_seconds = 180.0  # 3 minutes for 20-50 resource groups
-        elif num_rgs == 1:
-            timeout_seconds = 30.0   # 30 seconds for single resource group
-        else:
-            timeout_seconds = 60.0   # 60 seconds for small batches (2-20)
-        
-        logger.info(f"💰 Fetching costs for {num_rgs} resource groups: {resource_group_names}")
-        logger.info(f"💰 Timeout set to {timeout_seconds}s")
-        
-        # Wrap the cost fetching in a timeout
-        # Run the synchronous cost service in a thread pool to avoid blocking
-        async def fetch_costs_with_timeout():
-            loop = asyncio.get_event_loop()
-            try:
-                # Run the synchronous cost service call in a thread pool
-                cost_results = await asyncio.wait_for(
-                    loop.run_in_executor(
-                        None,
-                        cost_service.get_multiple_resource_group_costs,
-                        resource_group_names,
-                        start_date,
-                        end_date
-                    ),
-                    timeout=timeout_seconds
-                )
-                return cost_results
-            except asyncio.TimeoutError:
-                logger.error(f"Cost fetching timed out after {timeout_seconds} seconds for {num_rgs} resource groups")
-                # Return error results for all resource groups
-                return [
-                    {
-                        'resource_group': rg_name,
-                        'total_cost': 0.0,
-                        'services': {},
-                        'error': f'Request timed out after {int(timeout_seconds)}s. Cost Management API is taking too long to respond. Try selecting fewer resource groups or try again later.',
-                        'start_date': start_date.isoformat() if start_date else None,
-                        'end_date': end_date.isoformat() if end_date else None
-                    }
-                    for rg_name in resource_group_names
-                ]
-        
-        # Get costs for all resource groups with timeout
-        logger.info(f"💰 Starting cost fetch for {num_rgs} resource groups...")
-        cost_results = await fetch_costs_with_timeout()
-        
-        # Log results summary
-        success_count = len([r for r in cost_results if not r.get('error')])
-        error_count = len([r for r in cost_results if r.get('error')])
-        total_cost = sum([r.get('total_cost', 0) for r in cost_results if not r.get('error')])
-        
-        logger.info(f"💰 Cost fetch completed: {success_count} success, {error_count} errors, total_cost=${total_cost:.2f}")
-        if error_count > 0:
-            logger.warning(f"💰 Cost fetch errors: {[r.get('resource_group') + ': ' + r.get('error', 'Unknown') for r in cost_results if r.get('error')]}")
-        
-        return {
-            "status": "success",
-            "data": cost_results,
-            "count": len(cost_results)
-        }
-        
-    except HTTPException:
-        raise
-    except asyncio.TimeoutError:
-        logger.error("Cost fetching timed out at endpoint level")
-        raise HTTPException(
-            status_code=504,
-            detail={
-                "status": "error",
-                "error": "Request timed out. Cost Management API is taking too long to respond.",
-                "errorType": "TimeoutError",
-                "recoverySteps": [
-                    "Try again later - Azure Cost Management API may be experiencing delays",
-                    "Verify you have 'Cost Management Reader' role on the subscription",
-                    "Check that the subscription has billing enabled",
-                    "Cost data may take 24-48 hours to appear after resource creation"
-                ]
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error getting costs: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "status": "error",
-                "error": str(e),
-                "errorType": type(e).__name__,
-                "recoverySteps": [
-                    "Verify you have 'Cost Management Reader' role on the subscription",
-                    "Check that the subscription has billing enabled",
-                    "Ensure resource groups exist and are accessible",
-                    "Cost data may take 24-48 hours to appear after resource creation"
-                ]
-            }
-        )
-
-
-@router.post("/cloud-logs/analyze")
-async def analyze_cloud_logs(request: CloudLogsAnalyzeRequest):
-    """
-    Analyze Temenos cloud logs using AI sub-agent.
-    
-    This endpoint uses the Temenos RAG API to analyze logs from Temenos components
-    deployed on AKS or ACA and provides structured troubleshooting guidance.
-    
-    Args:
-        request: Cloud logs analysis request
-        
-    Returns:
-        Structured analysis result with summary, classification, root causes,
-        recommended actions, and impact assessment
-    """
-    try:
-        # Validate platform
-        if request.platform not in ['aks', 'aca']:
-            raise HTTPException(
-                status_code=400,
-                detail="platform must be 'aks' or 'aca'"
-            )
-        
-        # Construct the analysis prompt based on the sub-agent specification
-        prompt_parts = [
-            "You are the 'Temenos Cloud Logs Analyzer' AI sub-agent.",
-            "",
-            "YOUR ROLE:",
-            "- You analyze and explain logs coming from Temenos core banking components",
-            f"  (e.g. Transact app/web, IRIS/IRF providers, batch/COB services, ingesters, adapters)",
-            f"  deployed on: {request.platform.upper()} ({'Azure Kubernetes Service' if request.platform == 'aks' else 'Azure Container Apps'})",
-            "",
-            "GOAL:",
-            "- Help cloud/DevOps/BSG engineers quickly understand what is going wrong.",
-            "- Propose concrete next troubleshooting steps and Azure / kubectl commands.",
-            "- When possible, map the issue to the most likely infrastructure or application layer.",
-            "",
-            "INPUT PROVIDED:",
-            f"- platform: {request.platform}",
-            f"- component_name: {request.component_name}",
-            f"- environment: {request.environment}",
-            f"- log_snippet: (provided below)",
-            f"- symptoms: {request.symptoms or 'Not specified'}",
-            f"- recent_changes: {request.recent_changes or 'Not specified'}",
-            "",
-            "LOG SNIPPET:",
-            "```",
-            request.log_snippet[:5000],  # Limit log snippet to 5000 chars
-            "```",
-            "",
-            "EXPECTED OUTPUT:",
-            "Respond ALWAYS using the following structure:",
-            "",
-            "1. Short Summary",
-            "- 2–4 sentences explaining in plain language what seems to be the problem.",
-            "",
-            "2. Classification",
-            f"- Platform: {request.platform.upper()}",
-            "- Layer: choose one or more: [Application, Database, Network, Configuration, Resource/Capacity, Azure Platform]",
-            "- Severity: choose one: [Info, Warning, Major, Critical]",
-            "- Category: short tag (e.g. 'DB connection', 'Timeout', 'Authentication', 'CrashLoopBackOff', 'OutOfMemory', 'Config mismatch')",
-            "",
-            "3. Most Likely Root Causes (bullet list)",
-            "- 2–5 bullets with concrete hypotheses linked to specific log lines.",
-            "- For each bullet, quote the minimum necessary log fragment (no more than one line) to justify your reasoning.",
-            "",
-            "4. Recommended Actions for Engineer",
-            "Split by platform:",
-            "",
-            "4.1. Checks to perform",
-            "- Concrete checks, e.g. verify DB connectivity, test DNS resolution, check secret/ConfigMap values, etc.",
-            "",
-            "4.2. Suggested commands",
-            f"- For {request.platform.upper()}, propose specific `{'kubectl' if request.platform == 'aks' else 'az containerapp'}` commands",
-            "- Include placeholders for names (e.g. <NAMESPACE>, <POD_NAME>, <RESOURCE_GROUP>, <CONTAINERAPP_NAME>).",
-            "",
-            "4.3. Possible configuration fixes",
-            "- Suggest which Helm values, environment variables, secrets, or scaling settings the engineer should review.",
-            "- When relevant, mention typical Temenos settings (e.g. DB URL, user, connection pool, JVM heap limits, thread pools)",
-            "  but do NOT invent proprietary values.",
-            "",
-            "5. Impact Assessment",
-            "- Briefly describe how this issue likely impacts the bank:",
-            "  e.g. 'Only COB batch affected', 'Only back-office UI', 'All APIs unavailable', 'Non-critical background job'.",
-            "",
-            "6. If Information Is Insufficient",
-            "- If the logs are not enough to be confident, clearly say what is missing.",
-            "- Ask 2–4 very specific follow-up questions.",
-            "",
-            "STYLE & RULES:",
-            "- Be concise but actionable. Prefer bullet points over long paragraphs.",
-            "- Never fabricate exact configuration values, passwords, or internal hostnames.",
-            "- If you are uncertain, explicitly say so and offer multiple plausible hypotheses.",
-            "- When suggesting commands, always provide them in code blocks.",
-            "- Assume the engineer is familiar with Azure and kubectl, but not necessarily with all Temenos internals.",
-            "",
-            "Now analyze the provided log snippet and respond in the exact structure specified above.",
-            "",
-            "IMPORTANT: Respond in valid JSON format with the following structure:",
-            "{",
-            '  "summary": "2-4 sentence summary",',
-            '  "classification": {',
-            f'    "platform": "{request.platform}",',
-            '    "layer": ["Application"],',
-            '    "severity": "Warning",',
-            '    "category": "category name"',
-            '  },',
-            '  "root_causes": [',
-            '    {"hypothesis": "...", "log_evidence": "..."}',
-            '  ],',
-            '  "recommended_actions": {',
-            '    "checks": ["check1", "check2"],',
-            f'    "commands": {{"{request.platform}": ["command1", "command2"]}},',
-            '    "configuration_fixes": ["fix1", "fix2"]',
-            '  },',
-            '  "impact_assessment": "impact description",',
-            '  "insufficient_info": {',
-            '    "message": "if info is insufficient (optional)",',
-            '    "follow_up_questions": ["q1", "q2"]',
-            '  }',
-            '}'
-        ]
-        
-        analysis_prompt = "\n".join(prompt_parts)
-        
-        # Call RAG API with the analysis prompt
-        temenos_service = TemenosService()
-        rag_result = await temenos_service.query_rag(
-            question=analysis_prompt,
-            region="global",
-            rag_model_id="ModularBanking, TechnologyOverview",
-            context=f"Analyzing logs from {request.component_name} component in {request.environment} environment on {request.platform.upper()}. "
-                   f"Resource group: {request.resource_group or 'Not specified'}. "
-                   f"Symptoms: {request.symptoms or 'Not specified'}. "
-                   f"Recent changes: {request.recent_changes or 'Not specified'}. "
-                   f"IMPORTANT: Provide actionable, professional guidance. If specific details are not available, focus on general best practices, "
-                   f"common troubleshooting approaches, and standard Azure/kubectl commands that would apply to similar scenarios. "
-                   f"Avoid phrases like 'I cannot provide' or 'information not available' - instead provide helpful, constructive guidance."
-        )
-        
-        # Parse the RAG response
-        answer = rag_result.get("data", {}).get("answer", rag_result.get("answer", ""))
-        
-        # Try to extract and parse JSON from the response
-        import json
-        import re
-        
-        try:
-            # Try to extract JSON from the response (look for JSON object)
-            json_match = re.search(r'\{[\s\S]*\}', answer, re.MULTILINE)
-            if json_match:
-                json_str = json_match.group()
-                parsed_result = json.loads(json_str)
-                # Ensure all required fields are present
-                if "summary" in parsed_result and "classification" in parsed_result:
-                    return {
-                        "status": "success",
-                        "data": parsed_result
-                    }
-        except (json.JSONDecodeError, AttributeError, KeyError) as e:
-            logger.warning(f"Failed to parse JSON from RAG response: {e}. Using fallback structure.")
-        
-        # Fallback: Return structured format with full analysis text
-        # Frontend can parse or display the full text
-        return {
-            "status": "success",
-            "data": {
-                "summary": answer.split('\n')[0] if answer else "Analysis completed. Please review the full analysis text.",
-                "classification": {
-                    "platform": request.platform,
-                    "layer": ["Application", "Infrastructure"],
-                    "severity": "Warning",
-                    "category": "Log Analysis"
-                },
-                "root_causes": [
-                    {
-                        "hypothesis": "See full analysis below for detailed root cause analysis",
-                        "log_evidence": "Refer to log snippet provided in the request"
-                    }
-                ],
-                "recommended_actions": {
-                    "checks": ["Review full analysis text for specific checks to perform"],
-                    "commands": {
-                        request.platform: ["See full analysis text for specific commands"]
-                    },
-                    "configuration_fixes": ["See full analysis text for configuration recommendations"]
-                },
-                "impact_assessment": "See full analysis text for impact assessment",
-                "full_analysis": answer,
-                "note": "Structured JSON parsing unavailable. Full analysis text provided. The AI sub-agent response is in the 'full_analysis' field."
-            }
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Cloud logs analysis error: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to analyze cloud logs: {str(e)}"
-        )
-
-
 @router.get("/temenos/jwt-info")
 async def get_jwt_info(
     user_id: Optional[str] = Header(None, alias="X-User-Id"),
@@ -1632,7 +1370,7 @@ async def get_jwt_info(
 ):
     """
     Get JWT token information including expiration status.
-    Uses user's stored token if available, falls back to system token.
+    Uses token from Settings (db.settings) first, then deployment/user token, then env.
 
     Returns:
         JWT token expiration information
@@ -1641,23 +1379,26 @@ async def get_jwt_info(
     from datetime import datetime
 
     try:
-        # Use a default user_id for demo purposes if not provided
-        if not user_id:
-            user_id = "demo_user"
+        # Priority 1: Token from Settings (saved via Settings UI) - this is the canonical source
+        from app.api.settings import get_rag_jwt_token_value
+        jwt_token = await get_rag_jwt_token_value()
 
-        # Try to get user's JWT token from database first
-        jwt_token = None
-        jwt_doc = await db.deployment.find_one({"user_id": user_id, "type": "jwt_token"})
-        if jwt_doc and jwt_doc.get("jwt_token"):
-            jwt_token = jwt_doc.get("jwt_token")
-            logger.info(f"Using user's stored JWT token for {user_id}")
-        elif settings.RAG_JWT_TOKEN:
+        # Priority 2: User's JWT from deployment collection (legacy)
+        if not jwt_token and user_id:
+            jwt_doc = await db.deployment.find_one({"user_id": user_id, "type": "jwt_token"})
+            if jwt_doc and jwt_doc.get("jwt_token"):
+                jwt_token = jwt_doc.get("jwt_token")
+                logger.info(f"Using user's stored JWT token for {user_id}")
+
+        # Priority 3: System env token
+        if not jwt_token and settings.RAG_JWT_TOKEN:
             jwt_token = settings.RAG_JWT_TOKEN
             logger.info("Using system default JWT token")
-        else:
+
+        if not jwt_token:
             raise HTTPException(
                 status_code=500,
-                detail="RAG_JWT_TOKEN not configured"
+                detail="RAG JWT token not configured. Please set it in Settings to use BSG Guru."
             )
 
         # Decode JWT without verification to get payload

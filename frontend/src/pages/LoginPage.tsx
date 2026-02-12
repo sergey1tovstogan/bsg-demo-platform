@@ -1,6 +1,6 @@
 /**
  * Login Page
- * 
+ *
  * Simple wrapper page for the LoginForm component.
  */
 
@@ -8,17 +8,28 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LoginForm } from '../components/auth'
 
-export const LoginPage: React.FC = () => {
+interface LoginPageProps {
+  theme?: 'light' | 'dark'
+  onThemeChange?: (theme: 'light' | 'dark') => void
+}
+
+export const LoginPage: React.FC<LoginPageProps> = ({
+  theme = 'dark',
+  onThemeChange,
+}) => {
   const navigate = useNavigate()
 
   const handleSuccess = () => {
-    // Redirect to home page after successful login
     navigate('/', { replace: true })
   }
 
   return (
-    <div style={{ minHeight: '100vh' }}>
-      <LoginForm onSuccess={handleSuccess} />
+    <div className="min-h-screen w-full flex flex-col">
+      <LoginForm
+        onSuccess={handleSuccess}
+        theme={theme}
+        onThemeChange={onThemeChange}
+      />
     </div>
   )
 }

@@ -388,26 +388,40 @@ async def send_chat_message(
         # Functionality: FuncTransactGeneric (Transact Generic), FuncTransactWealth (Transact Wealth),
         #                funcWealthTAP (TAP Wealth), Payments, FuncFCM (FCM)
         
+        # RAG model IDs per Swagger: ModularBanking, Payments, TechTAP, TechnologyOverview,
+        # DataHub, Analytics, SecurityFramework, ExtensibilityAdvisor, FuncPaymentsHub, etc.
         component_configs = {
             "deployment": {
-                "context": "This is about Temenos cloud deployment, Azure infrastructure, and deployment best practices.",
+                "context": "This is about Temenos cloud deployment, Azure infrastructure, AWS, and deployment best practices.",
                 "rag_model_id": "ModularBanking, TechnologyOverview, SecurityFramework"
             },
             "security": {
                 "context": "This is about Temenos security features, authentication, authorization, encryption, and security best practices.",
                 "rag_model_id": "SecurityFramework, TechnologyOverview"
             },
+            "integration": {
+                "context": "This is about Temenos integration, APIs, connectivity, microservices communication, and integration patterns.",
+                "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
+            },
             "connectivity": {
                 "context": "This is about Temenos connectivity, API integrations, microservices communication, and integration patterns.",
                 "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
             },
+            "data-architecture": {
+                "context": "This is about Temenos data architecture, Data Hub, Analytics, ODS/SDS, ETL, and data pipelines.",
+                "rag_model_id": "DataHub, Analytics, TechnologyOverview"
+            },
             "payment": {
-                "context": "This is about Temenos payment processing, payment gateway integrations, transaction handling, and payment workflows.",
+                "context": "This is about Temenos payment processing, Payments Hub, payment gateway integrations, and payment workflows.",
                 "rag_model_id": "Payments, FuncPaymentsHub, TechnologyOverview"
             },
             "observability": {
                 "context": "This is about Temenos observability, monitoring, logging, metrics, tracing, and operational insights.",
                 "rag_model_id": "TechnologyOverview, Analytics"
+            },
+            "design-time": {
+                "context": "This is about Temenos design-time tools, Workbench, configuration, and development workflow.",
+                "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
             },
             "api": {
                 "context": "This is about Temenos APIs, API design, endpoints, API management, and API best practices.",

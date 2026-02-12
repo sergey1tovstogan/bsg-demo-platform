@@ -66,7 +66,14 @@ async def lifespan(app: FastAPI):
                 logger.info(f"✓ Found {component_info_count} cached component info entries in persistent storage")
                 logger.info("  Component info will be loaded from cache on-demand (no RAG API calls needed)")
             else:
-                logger.info("  No cached component info found - will query RAG API when needed")
+                logger.info("  No cached component info found - will use static content or RAG API when needed")
+            # Static microservice info (no RAG) - for Deployment demo
+            try:
+                from app.data.static_microservice_info import STATIC_MICROSERVICE_INFO, DEPLOYMENT_NAME_ALIASES
+                static_count = len([k for k, v in STATIC_MICROSERVICE_INFO.items() if v.get("architectural_overview") or v.get("functional_overview")])
+                logger.info(f"  Static microservice info: {len(STATIC_MICROSERVICE_INFO)} entries, {len(DEPLOYMENT_NAME_ALIASES)} aliases")
+            except Exception as e:
+                logger.warning(f"Failed to load static microservice info: {e}")
         except Exception as e:
             logger.warning(f"Failed to check cache status: {e}")
             # Don't fail startup if cache check fails
@@ -88,6 +95,27 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to start Event Hub adapter: {e}")
         logger.warning("Application will start but Event Hub features may not work")
+
+    # Proactive Azure identity check so platform does not hang during demos (SP/Managed Identity expired)
+    async def _startup_azure_check():
+        try:
+            from app.api.deployment import _check_azure_health
+            from app.core.config import get_settings
+            s = get_settings()
+            result = await _check_azure_health(s.AZURE_SUBSCRIPTION_ID)
+            if result.get("status") != "ok":
+                logger.warning(
+                    "Azure identity check failed - Deployment demo may not work. %s "
+                    "Ensure Managed Identity or Service Principal (AZURE_CLIENT_ID/SECRET/TENANT_ID) has Reader on the subscription, or renew SP secret if expired.",
+                    result.get("message", "No message"),
+                )
+            else:
+                logger.info("Azure identity check passed - Deployment demo connectivity OK")
+        except Exception as e:
+            logger.warning("Azure startup check failed (non-fatal): %s. Deployment demo may fail until identity is fixed.", e)
+
+    import asyncio
+    asyncio.create_task(_startup_azure_check())
 
     yield
 
@@ -129,7 +157,7 @@ app.add_middleware(BasicAuthMiddleware)
 # This is more flexible than hardcoding specific origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://.*\.azurestaticapps\.net|https://.*\.azurewebsites\.net|http://localhost:\d+|http://127\.0\.0\.1:\d+",
+    allow_origin_regex=r"https://.*\.azurestaticapps\.net|https://.*\.azurewebsites\.net|https://demo-platform\.bsg\.temenos\.com|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
     allow_headers=["*"],

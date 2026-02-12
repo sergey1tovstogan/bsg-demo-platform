@@ -1,5 +1,10 @@
 # BSG Demo Platform - Complete Project Documentation
 
+## Related Documentation
+
+- [Deployment Guide](./DEPLOYMENT.md) — How to deploy and run locally
+- [User Guide](./USER_GUIDE.md) — How to use the platform
+
 ## Table of Contents
 1. [Project Overview](#project-overview)
 2. [Architecture](#architecture)
@@ -88,7 +93,7 @@ All external connectivity is handled through adapters:
 **Service**: Azure Static Web Apps  
 **Purpose**: Hosts the React frontend application  
 **Configuration**:
-- **URL**: `https://kind-beach-01c0a990f.3.azurestaticapps.net`
+- **URL**: `https://demo-platform.bsg.temenos.com` (or `https://kind-beach-01c0a990f.3.azurestaticapps.net`)
 - **Build System**: Vite 5.0.8
 - **Framework**: React 18.2.0 with TypeScript
 - **Routing**: Client-side routing with React Router
@@ -224,7 +229,7 @@ backend/
 │   ├── middleware/      # Request middleware (5 files)
 │   ├── core/            # Core configuration (3 files)
 │   └── utils/           # Utility functions (3 files)
-├── scripts/             # Utility scripts (24 files)
+├── scripts/             # Deployment/setup scripts (restart-all, setup-acr, etc.)
 └── tests/               # Test files (4 files)
 ```
 

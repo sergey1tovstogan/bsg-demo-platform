@@ -6,13 +6,20 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, RefreshCw, ExternalLink, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
-import { LogAnalyzer } from './LogAnalyzer'
 import { StructuredRAGDisplay } from './StructuredRAGDisplay'
+import { BriefPage } from './brief'
+import { getBriefForComponent } from './brief/briefRegistry'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
+
+function isLocalDeployment(): boolean {
+  if (typeof window === 'undefined') return false
+  const h = window.location.hostname
+  return h === 'localhost' || h === '127.0.0.1'
+}
 
 interface AzureResourceGroup {
   id: string
@@ -54,6 +61,30 @@ interface AnalysisResult {
   error?: string
 }
 
+/** Sample data for demo mode when backend is unavailable (local deployment) */
+const DEMO_RESOURCE_GROUPS: AzureResourceGroup[] = [
+  { id: 'rg-1', name: 'rg-temenos-prod', location: 'East US' },
+  { id: 'rg-2', name: 'rg-temenos-staging', location: 'East US' },
+]
+
+const DEMO_SERVICES: AzureResource[] = [
+  { id: 'svc-1', name: 'aks-temenos-cluster', type: 'Microsoft.ContainerService/managedClusters', location: 'East US', resourceGroup: 'rg-temenos-prod', description: 'Azure Kubernetes Service' },
+  { id: 'svc-2', name: 'sql-temenos-db', type: 'Microsoft.Sql/servers', location: 'East US', resourceGroup: 'rg-temenos-prod', description: 'Azure SQL Database' },
+  { id: 'svc-3', name: 'evthub-temenos-events', type: 'Microsoft.EventHub/namespaces', location: 'East US', resourceGroup: 'rg-temenos-prod', description: 'Azure Event Hubs' },
+]
+
+const DEMO_ANALYSIS_RESULTS: AnalysisResult[] = DEMO_SERVICES.map((s) => ({
+  service: s,
+  componentInfo: {
+    componentName: s.name.includes('aks') ? 'Kubernetes Cluster' : s.name.includes('sql') ? 'Database' : 'Event Hub',
+    componentType: 'Azure Service',
+    architecturalOverview: 'Sample component for demo mode. Run the backend to analyze real Azure deployments.',
+    functionalOverview: 'In demo mode, component details are simulated. Connect to your Azure subscription with the backend running for full analysis.',
+    capabilities: ['Demo mode', 'Local deployment'],
+    relatedServices: [],
+  },
+}))
+
 export function DeploymentAnalyzer() {
   const [currentStep, setCurrentStep] = useState<Step>('subscription')
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
@@ -79,28 +110,95 @@ export function DeploymentAnalyzer() {
   const [error, setError] = useState<string | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState<{ current: number; total: number; message: string } | null>(null)
   const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
-  const [includeCostsInAnalysis, setIncludeCostsInAnalysis] = useState(false)
-  const [costs, setCosts] = useState<Record<string, {
-    total_cost: number
-    projections?: {
-      full_month: number
-      annual: number
-    }
-    error?: string
-  }>>({})
-  const [costsLoading, setCostsLoading] = useState(false)
-  const [logAnalyzerOpen, setLogAnalyzerOpen] = useState(false)
-  const [selectedResourceGroupForLogs, setSelectedResourceGroupForLogs] = useState<string | null>(null)
   const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
   const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
+  const [azureHealth, setAzureHealth] = useState<{ status: string; message?: string | null } | null>(null)
+  const [lastPreloadedSubId, setLastPreloadedSubId] = useState<string | null>(null)
+  const [useDemoMode, setUseDemoMode] = useState(false)
+
+  const RG_CACHE_KEY = 'bsg_azure_rg_cache'
+  const RG_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+  const getRgCache = (subId: string): AzureResourceGroup[] | null => {
+    try {
+      const raw = localStorage.getItem(`${RG_CACHE_KEY}_${subId}`)
+      if (!raw) return null
+      const { data, cachedAt } = JSON.parse(raw) as { data: AzureResourceGroup[]; cachedAt: number }
+      if (!Array.isArray(data) || data.length === 0) return null
+      if (Date.now() - cachedAt > RG_CACHE_TTL_MS) return null
+      return data
+    } catch {
+      return null
+    }
+  }
+
+  const setRgCache = (subId: string, data: AzureResourceGroup[]) => {
+    try {
+      localStorage.setItem(`${RG_CACHE_KEY}_${subId}`, JSON.stringify({ data, cachedAt: Date.now() }))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const clearRgCache = (subId: string) => {
+    try {
+      localStorage.removeItem(`${RG_CACHE_KEY}_${subId}`)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Preload RGs: show cached immediately, then refresh from API in background
+  useEffect(() => {
+    if (currentStep !== 'subscription') return
+    const cachedSubId = localStorage.getItem('lastAzureSubscriptionId')?.trim()
+    if (!cachedSubId) return
+    let cancelled = false
+
+    // 1. Instant: show client-side cached RGs if available
+    const localRgs = getRgCache(cachedSubId)
+    if (localRgs && localRgs.length > 0) {
+      setResourceGroups(localRgs)
+      setResourceGroupsCached(true)
+      setLastPreloadedSubId(cachedSubId)
+    }
+
+    // 2. Background: fetch from backend (uses server cache when available)
+    apiService.getAzureResourceGroups(cachedSubId, false)
+      .then((body) => {
+        if (cancelled) return
+        const rgList = Array.isArray(body?.data) ? body.data : []
+        if (rgList.length > 0) {
+          setResourceGroups(rgList)
+          setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
+          setLastPreloadedSubId(cachedSubId)
+          setRgCache(cachedSubId, rgList)
+        }
+      })
+      .catch(() => { /* ignore - will fetch on Connect */ })
+    return () => { cancelled = true }
+  }, [currentStep])
+
+  // Proactive Azure health check when on subscription step so demos don't hang if backend identity expired
+  useEffect(() => {
+    if (currentStep !== 'subscription') return
+    let cancelled = false
+    apiService.getAzureHealth(subscriptionId || undefined)
+      .then((res) => { if (!cancelled) setAzureHealth({ status: res.status, message: res.message ?? undefined }) })
+      .catch(() => { if (!cancelled) setAzureHealth({ status: 'unknown', message: null }) })
+    return () => { cancelled = true }
+  }, [currentStep, subscriptionId])
 
   const loadResourceGroups = async (subId: string, refresh: boolean = false) => {
     try {
       setResourceGroupsLoading(true)
       setError(null)
-      const response = await apiService.getAzureResourceGroups(subId, refresh)
-      setResourceGroups(response.data?.data || response.data || [])
-      setResourceGroupsCached(response.data?.cached || false)
+      if (refresh) clearRgCache(subId)
+      const body = await apiService.getAzureResourceGroups(subId, refresh)
+      const rgList = Array.isArray(body?.data) ? body.data : []
+      setResourceGroups(rgList)
+      setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
+      if (rgList.length > 0) setRgCache(subId, rgList)
     } catch (err: any) {
       console.error('[DeploymentAnalyzer] Error loading resource groups:', err)
       setError(err.response?.data?.detail?.error || err.message || 'Failed to load resource groups')
@@ -110,6 +208,7 @@ export function DeploymentAnalyzer() {
   }
 
   const handleRefreshResourceGroups = async () => {
+    if (useDemoMode) return
     if (subscriptionId) {
       await loadResourceGroups(subscriptionId, true)
     }
@@ -119,16 +218,31 @@ export function DeploymentAnalyzer() {
     try {
       setLoading(true)
       setError(null)
-      // Save subscription ID to localStorage
       localStorage.setItem('lastAzureSubscriptionId', subId)
-      const connectResponse = await apiService.connectAzureSubscription(subId)
-      if (connectResponse.data?.status === 'success' || (connectResponse as any).status === 'success') {
-        setSubscriptionId(subId)
-        await loadResourceGroups(subId, false)
+      setSubscriptionId(subId)
+
+      // Instant: use preloaded RGs (from background fetch) or client-side localStorage cache
+      if (lastPreloadedSubId === subId) {
         setCurrentStep('resourceGroups')
-      } else {
-        setError((connectResponse.data as any)?.error || (connectResponse as any).error || 'Failed to connect to Azure')
+        return
       }
+      const localCached = getRgCache(subId)
+      if (localCached && localCached.length > 0) {
+        setResourceGroups(localCached)
+        setResourceGroupsCached(true)
+        setLastPreloadedSubId(subId)
+        setCurrentStep('resourceGroups')
+        return
+      }
+
+      // No cache: fetch from API (backend may have cache for fast response)
+      const rgBody = await apiService.getAzureResourceGroups(subId, false)
+      const rgList = Array.isArray(rgBody?.data) ? rgBody.data : []
+      setResourceGroups(rgList)
+      setResourceGroupsCached((rgBody as { cached?: boolean })?.cached ?? false)
+      setLastPreloadedSubId(subId)
+      if (rgList.length > 0) setRgCache(subId, rgList)
+      setCurrentStep('resourceGroups')
     } catch (err: any) {
       console.error('[DeploymentAnalyzer] Azure connection error:', {
         error: err,
@@ -138,15 +252,12 @@ export function DeploymentAnalyzer() {
         code: err.code,
         config: err.config
       })
-      // Handle different error formats
+      // Handle different error formats (err may be axios error with err.response.data.detail, or a thrown detail object)
       let errorMessage = 'Failed to connect to Azure'
       let recoverySteps: string[] = []
-
-      // FastAPI returns errors in different formats:
-      // 1. { detail: { error: "...", recoverySteps: [...] } }
-      // 2. { detail: "string error" }
-      // 3. Direct error object
-      const errorDetail = err.response?.data?.detail
+      const responseStatus = err.response?.status
+      const payload = err.response?.data ?? (err && typeof err === 'object' && (err.error || err.errorType) ? err : null)
+      const errorDetail = payload?.detail ?? (payload && (payload.error || payload.errorType) ? payload : null)
 
       if (errorDetail) {
         if (typeof errorDetail === 'string') {
@@ -167,38 +278,63 @@ export function DeploymentAnalyzer() {
             recoverySteps = errorDetail.recoverySteps
           }
         }
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error
-        if (err.response.data.recoverySteps) {
-          recoverySteps = err.response.data.recoverySteps
+      } else if (payload?.error) {
+        errorMessage = payload.error
+        if (Array.isArray(payload.recoverySteps)) {
+          recoverySteps = payload.recoverySteps
         }
       } else if (err.message) {
         errorMessage = err.message
       }
 
       // If we still don't have a good error message, use the status code
-      if (errorMessage === 'Failed to connect to Azure' && err.response?.status) {
-        // Try to extract a better error message from the response
-        if (err.response.data?.detail) {
-          const detail = err.response.data.detail
-          if (typeof detail === 'object' && detail.error) {
-            errorMessage = detail.error
-            // Make sure we have recovery steps if they exist
-            if (detail.recoverySteps && Array.isArray(detail.recoverySteps) && recoverySteps.length === 0) {
-              recoverySteps = detail.recoverySteps
-            }
-          } else if (typeof detail === 'string') {
-            errorMessage = detail
-          } else {
-        errorMessage = `Request failed with status code ${err.response.status}`
+      if (errorMessage === 'Failed to connect to Azure' && (payload || responseStatus)) {
+        const detail = payload?.detail ?? payload
+        if (detail && typeof detail === 'object' && detail.error) {
+          errorMessage = detail.error
+          if (Array.isArray(detail.recoverySteps) && recoverySteps.length === 0) {
+            recoverySteps = detail.recoverySteps
           }
-        } else {
-          errorMessage = `Request failed with status code ${err.response.status}`
+        } else if (typeof detail === 'string') {
+          errorMessage = detail
+        } else if (responseStatus) {
+          errorMessage = `Request failed with status code ${responseStatus}`
         }
       }
 
-      // Check for common Azure authentication errors
-      if (errorMessage.includes('refresh token has expired') || errorMessage.includes('AADSTS70043')) {
+      // 500 with subscription/credential error: backend (Container App) could not access – not a user Azure CLI issue
+      const errorType = payload?.errorType ?? errorDetail?.errorType
+      const isBackendIdentityError = responseStatus === 500 && (
+        errorType === 'subscription' ||
+        errorType === 'credential_expired' ||
+        (errorMessage && /Subscription\s+['\"]?[a-f0-9-]+|subscription.*(?:not found|no access|not have access|active)/i.test(errorMessage)) ||
+        (errorMessage && /credential may have expired|renew.*secret|managed identity/i.test(errorMessage))
+      )
+      if (isBackendIdentityError) {
+        if (errorType === 'credential_expired' && errorMessage && !errorMessage.includes('Azure CLI')) {
+          // Keep backend message for credential expired; use backend recovery steps if present
+          if (Array.isArray(errorDetail?.recoverySteps) && errorDetail.recoverySteps.length > 0) {
+            recoverySteps = errorDetail.recoverySteps
+          } else {
+            recoverySteps = [
+              'If using Service Principal: renew the client secret in Azure Portal (App registration → Certificates & secrets)',
+              'If using Managed Identity: ensure the Container App identity has Reader role on the subscription',
+              'Restart the backend after renewing credentials',
+              'Verify subscription ID is correct and the subscription is active'
+            ]
+          }
+        } else {
+          errorMessage = 'The backend could not access this Azure subscription. The subscription may not exist, may be in another tenant, or the backend\'s Azure identity may not have access.'
+          recoverySteps = [
+            'Verify the subscription ID in Azure Portal (Subscriptions) and that it is active',
+            'Ensure the backend\'s managed identity or service principal has at least Reader access to this subscription',
+            'If the subscription is in a different tenant, configure the backend to use credentials for that tenant',
+            'Contact your administrator to check backend Azure identity and subscription access'
+          ]
+        }
+      }
+      // Check for common Azure authentication errors (user-side only when not a backend subscription error)
+      else if (errorMessage.includes('refresh token has expired') || errorMessage.includes('AADSTS70043')) {
         errorMessage = 'Azure authentication token has expired. Please re-authenticate.'
         recoverySteps = [
           'Open PowerShell or Command Prompt',
@@ -236,7 +372,7 @@ export function DeploymentAnalyzer() {
       }
 
       // 405 Method Not Allowed: API endpoint may not accept POST or proxy misconfiguration
-      if (err.response?.status === 405) {
+      if (responseStatus === 405) {
         errorMessage = 'The server returned Method Not Allowed (405). The deployment API may not be configured to accept POST requests at this URL.'
         if (recoverySteps.length === 0) {
           recoverySteps = [
@@ -248,24 +384,19 @@ export function DeploymentAnalyzer() {
         }
       }
 
-      // For 500 errors, provide default recovery steps if none found
-      if (recoverySteps.length === 0 && err.response?.status === 500) {
-        errorMessage = 'Azure connection failed. This usually means Azure CLI authentication is required.'
+      // For other 500 errors (not subscription/credential), suggest checking backend
+      if (recoverySteps.length === 0 && responseStatus === 500 && !isBackendIdentityError) {
+        errorMessage = errorMessage || 'Azure connection failed on the server. The backend could not complete the request.'
         recoverySteps = [
-          'Open PowerShell or Command Prompt (as Administrator if needed)',
-          'Check if Azure CLI is installed: az --version',
-          'If not installed, download from: https://aka.ms/installazurecliwindows',
-          'Login to Azure: az login --use-device-code',
-          'A browser will open - complete authentication',
-          'Select your subscription (usually option 1)',
-          'Verify login: az account show',
-          'Set the subscription: az account set --subscription ' + subscriptionId,
-          'After login completes, refresh this page and try connecting again'
+          'Verify the subscription ID is correct and active in Azure Portal',
+          'Check backend logs (e.g. Container App logs) for the exact error',
+          'Ensure the backend\'s Azure identity has Reader (or appropriate) role on the subscription',
+          'Refresh this page and try again; if it persists, contact your administrator'
         ]
       }
 
       // Network or non-2xx with no recovery steps yet: add generic recovery
-      if (recoverySteps.length === 0 && (err.response?.status >= 400 || err.code === 'ERR_NETWORK' || !err.response)) {
+      if (recoverySteps.length === 0 && (responseStatus != null && responseStatus >= 400 || err.code === 'ERR_NETWORK' || !err.response)) {
         if (err.code === 'ERR_NETWORK' || !err.response) {
           errorMessage = errorMessage || 'Unable to reach the deployment API. The backend may be down or not reachable.'
           recoverySteps = [
@@ -276,7 +407,7 @@ export function DeploymentAnalyzer() {
         } else {
           errorMessage = errorMessage || `Request failed (${err.response?.status}). See details above.`
           recoverySteps = [
-            'Check that the backend deployment API is available and accepts POST at /api/v1/deployment/azure/connect',
+            'Check that the backend deployment API is available (GET /azure/resource-groups, POST /azure/connect)',
             'Retry after a moment; if it persists, check backend logs for errors'
           ]
         }
@@ -296,14 +427,22 @@ export function DeploymentAnalyzer() {
     }
   }
 
-  const handleResourceGroupsSelected = async (selected: string[], includeCosts: boolean) => {
+  const handleResourceGroupsSelected = async (selected: string[]) => {
     try {
       setLoading(true)
       setError(null)
       setAnalysisResults([]) // Clear previous results
       setSelectedResourceGroups(selected)
-      setIncludeCostsInAnalysis(includeCosts)
-      setCosts({}) // Clear previous costs
+
+      if (useDemoMode) {
+        setServices(DEMO_SERVICES)
+        setAnalysisResults(DEMO_ANALYSIS_RESULTS)
+        setCurrentStep('analysis')
+        setLoading(false)
+        setAnalysisProgress(null)
+        return
+      }
+
       setAnalysisProgress({ current: 0, total: 2, message: 'Fetching Azure resources...' })
 
       // Get Azure resources first
@@ -422,11 +561,10 @@ export function DeploymentAnalyzer() {
     }
   }
 
-  const handleNamespacesSelected = async (selected: string[], includeCosts: boolean) => {
+  const handleNamespacesSelected = async (selected: string[]) => {
     try {
       setLoading(true)
       setError(null)
-      setIncludeCostsInAnalysis(includeCosts)
 
       // Ensure we have services to analyze
       if (!services || services.length === 0) {
@@ -452,184 +590,6 @@ export function DeploymentAnalyzer() {
       setLoading(true)
       setError(null)
       setAnalysisProgress({ current: 0, total: servicesToAnalyze.length, message: 'Starting analysis...' })
-
-      // Fetch costs if requested (in parallel with analysis)
-      let costsPromise: Promise<void> | null = null
-      if (includeCostsInAnalysis && selectedResourceGroups.length > 0) {
-        setCostsLoading(true)
-        costsPromise = (async () => {
-          try {
-            console.log(`[Costs] Fetching costs for ${selectedResourceGroups.length} resource groups during analysis...`)
-            console.log(`[Costs] Selected resource groups:`, selectedResourceGroups)
-            console.log(`[Costs] Subscription ID:`, subscriptionId)
-            const numRGs = selectedResourceGroups.length
-            const timeoutMs = numRGs > 50 ? 300000 : numRGs > 20 ? 180000 : numRGs === 1 ? 30000 : 60000
-
-            const abortController = new AbortController()
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => {
-                abortController.abort()
-                reject(new Error(`Costs request timed out after ${timeoutMs / 1000} seconds`))
-              }, timeoutMs)
-            })
-
-            const response = await Promise.race([
-              apiService.getResourceGroupCosts(subscriptionId, selectedResourceGroups, undefined, undefined, abortController.signal),
-              timeoutPromise
-            ]) as any
-
-            console.log('[Costs] Response received:', response)
-            console.log('[Costs] Response data:', response?.data)
-            console.log('[Costs] Response data.data:', response?.data?.data)
-
-            if (!abortController.signal.aborted) {
-              // Handle different response structures
-              let costDataArray: any[] = []
-
-              if (response?.data?.data && Array.isArray(response.data.data)) {
-                costDataArray = response.data.data
-              } else if (Array.isArray(response?.data)) {
-                costDataArray = response.data
-              } else if (response?.data) {
-                // Single cost object
-                costDataArray = [response.data]
-              }
-
-              console.log('[Costs] Parsed cost data array:', costDataArray)
-
-              if (costDataArray.length > 0) {
-                const costMap: Record<string, any> = {}
-                // First, add all cost data from the response
-                costDataArray.forEach((costData: any) => {
-                  if (costData?.resource_group) {
-                    // Only treat as error if error field exists AND is not null/empty string
-                    // A null error or missing error means no error (just no data, which is normal)
-                    const hasError = costData.error != null && typeof costData.error === 'string' && costData.error.trim().length > 0
-                    costMap[costData.resource_group] = {
-                      resource_group: costData.resource_group,
-                      total_cost: costData.total_cost || 0,
-                      services: costData.services || {},
-                      projections: costData.projections,
-                      error: hasError ? costData.error : null,  // null means no error, just no data
-                      note: costData.note  // Include note if present
-                    }
-                  }
-                })
-                // Ensure all selected resource groups are in the map
-                // If a RG is missing from the response, add it with zero cost (no error)
-                selectedResourceGroups.forEach(rgName => {
-                  if (!costMap[rgName]) {
-                    costMap[rgName] = {
-                      resource_group: rgName,
-                      total_cost: 0,
-                      services: {},
-                      error: null,  // No error - just no data returned yet
-                      note: costsLoading ? 'Loading...' : 'No cost data returned for this resource group'
-                    }
-                  }
-                })
-                console.log('[Costs] Cost map created:', costMap)
-                setCosts(costMap)
-                setCostsLoading(false)
-                const successCount = Object.values(costMap).filter((c: any) => !c.error).length
-                const errorCount = Object.values(costMap).filter((c: any) => c.error).length
-                console.log(`[Costs] Successfully loaded costs: ${successCount} success, ${errorCount} errors, ${selectedResourceGroups.length} total`)
-              } else {
-                console.warn('[Costs] No cost data in response, setting empty costs')
-                // Set empty costs for all resource groups
-                const costMap: Record<string, any> = {}
-                selectedResourceGroups.forEach(rgName => {
-                  costMap[rgName] = {
-                    resource_group: rgName,
-                    total_cost: 0,
-                    services: {},
-                    error: 'No cost data returned from API'
-                  }
-                })
-                setCosts(costMap)
-                setCostsLoading(false)
-              }
-            } else {
-              setCostsLoading(false)
-            }
-          } catch (err: any) {
-            console.error('[Costs] Error fetching costs during analysis:', err)
-            console.error('[Costs] Error details:', {
-              message: err.message,
-              response: err.response?.data,
-              status: err.response?.status,
-              url: err.config?.url,
-              signal: err.name === 'AbortError' ? 'Request aborted' : 'Not aborted'
-            })
-            
-            // Set error state for costs but don't fail the analysis
-            const costMap: Record<string, any> = {}
-            
-            // Check if the response contains cost data with errors (partial success)
-            if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
-              // API returned data but some RGs may have errors
-              err.response.data.data.forEach((costData: any) => {
-                if (costData?.resource_group) {
-                  costMap[costData.resource_group] = {
-                    resource_group: costData.resource_group,
-                    total_cost: costData.total_cost || 0,
-                    services: costData.services || {},
-                    projections: costData.projections,
-                    error: costData.error
-                  }
-                }
-              })
-              // Ensure all selected RGs are in the map
-              selectedResourceGroups.forEach(rgName => {
-                if (!costMap[rgName]) {
-                  costMap[rgName] = {
-                    resource_group: rgName,
-                    total_cost: 0,
-                    services: {},
-                    error: 'No cost data returned for this resource group'
-                  }
-                }
-              })
-            } else {
-              // Complete failure - set error for all RGs
-              // Determine error message
-                let errorMessage = 'Failed to load costs'
-              if (err.message?.includes('timeout') || err.name === 'AbortError') {
-                errorMessage = 'Request timed out. Cost Management API is taking too long. Try selecting fewer resource groups.'
-              } else if (err.response?.data?.detail) {
-                  if (typeof err.response.data.detail === 'string') {
-                    errorMessage = err.response.data.detail
-                  } else if (err.response.data.detail.error) {
-                    errorMessage = err.response.data.detail.error
-                  } else if (err.response.data.detail.recoverySteps) {
-                    // Use first recovery step as hint
-                    errorMessage = `${err.response.data.detail.error || 'Failed to load costs'}. ${err.response.data.detail.recoverySteps[0] || ''}`
-                  }
-                } else if (err.message) {
-                  if (err.message.includes('timeout') || err.message.includes('aborted')) {
-                    errorMessage = `Request timed out. Cost Management API is taking too long to respond.`
-                  } else {
-                    errorMessage = err.message
-                  }
-                }
-              // Set error for all selected resource groups
-              selectedResourceGroups.forEach(rgName => {
-                costMap[rgName] = {
-                  resource_group: rgName,
-                  total_cost: 0,
-                  services: {},
-                  error: errorMessage
-                }
-              })
-            }
-            setCosts(costMap)
-            setCostsLoading(false)
-            console.log('[Costs] Set error costs for resource groups:', costMap)
-          }
-        })()
-      } else {
-        setCostsLoading(false)
-      }
 
       // Simulate progress updates
       const progressInterval = setInterval(() => {
@@ -659,15 +619,6 @@ export function DeploymentAnalyzer() {
         console.log('[Analysis] Parsed results:', results)
         setAnalysisResults(Array.isArray(results) ? results : [])
         setAnalysisProgress({ current: servicesToAnalyze.length, total: servicesToAnalyze.length, message: 'Analysis complete!' })
-
-        // Don't wait for costs - let them load in background
-        // Costs will update the UI when they're ready
-        if (costsPromise) {
-          costsPromise.catch(err => {
-            console.error('[Costs] Background cost fetching failed:', err)
-            // Error already handled in the promise
-          })
-        }
       } catch (analysisErr: any) {
         console.error('[Analysis] Analysis failed:', analysisErr)
         throw analysisErr // Re-throw to be caught by outer try-catch
@@ -714,18 +665,33 @@ export function DeploymentAnalyzer() {
       setClusterNamespaces([])
     } else if (currentStep === 'resourceGroups') {
       setCurrentStep('subscription')
-      setResourceGroups([])
+      setUseDemoMode(false)
+      // Keep resourceGroups for instant Connect when returning with same subscription
     }
   }
 
   return (
     <div className="space-y-6 min-h-[400px]">
+      {currentStep === 'subscription' && azureHealth?.status === 'unavailable' && (
+        <div className="rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4 text-amber-800 dark:text-amber-200">
+          <p className="font-medium">Azure connectivity issue</p>
+          <p className="text-sm mt-1">{azureHealth.message || 'Backend Azure identity may have expired or lost access to the subscription.'}</p>
+          <p className="text-sm mt-1">Contact your administrator to renew the Service Principal secret or re-grant Managed Identity access, then restart the backend.</p>
+        </div>
+      )}
       {currentStep === 'subscription' && (
         <SubscriptionInput
           onSubmit={handleSubscriptionSubmit}
           loading={loading}
           error={error}
           defaultSubscriptionId={subscriptionId}
+          onTryDemoMode={isLocalDeployment() ? () => {
+            setUseDemoMode(true)
+            setSubscriptionId('demo-subscription')
+            setResourceGroups(DEMO_RESOURCE_GROUPS)
+            setError(null)
+            setCurrentStep('resourceGroups')
+          } : undefined}
         />
       )}
 
@@ -749,7 +715,6 @@ export function DeploymentAnalyzer() {
           onSelected={handleNamespacesSelected}
           onBack={() => setCurrentStep('resourceGroups')}
           loading={loading}
-          includeCosts={includeCostsInAnalysis}
         />
       )}
 
@@ -762,14 +727,8 @@ export function DeploymentAnalyzer() {
           error={error}
           onBack={handleBack}
           onRefresh={() => analyzeServices(services)}
-          costs={costs}
-          costsLoading={costsLoading}
-          includeCosts={includeCostsInAnalysis}
-          onOpenLogAnalyzer={(resourceGroup: string) => {
-            setSelectedResourceGroupForLogs(resourceGroup)
-            setLogAnalyzerOpen(true)
-          }}
           selectedResourceGroups={selectedResourceGroups}
+          subscriptionId={subscriptionId}
           subscriptionId={subscriptionId}
           onUpdateAnalysisResult={(updatedResult: AnalysisResult) => {
             setAnalysisResults((prev: AnalysisResult[]) =>
@@ -781,16 +740,6 @@ export function DeploymentAnalyzer() {
         />
       )}
 
-      {/* Log Analyzer Modal */}
-      <LogAnalyzer
-        isOpen={logAnalyzerOpen}
-        onClose={() => {
-          setLogAnalyzerOpen(false)
-          setSelectedResourceGroupForLogs(null)
-        }}
-        resourceGroup={selectedResourceGroupForLogs || undefined}
-        subscriptionId={subscriptionId}
-      />
     </div>
   )
 }
@@ -800,12 +749,14 @@ function SubscriptionInput({
   onSubmit,
   loading,
   error,
-  defaultSubscriptionId
+  defaultSubscriptionId,
+  onTryDemoMode
 }: {
   onSubmit: (subId: string) => void
   loading: boolean
   error: string | null
   defaultSubscriptionId?: string
+  onTryDemoMode?: () => void
 }) {
   // Get last used subscription ID from localStorage, or use default
   const getInitialSubscriptionId = () => {
@@ -935,6 +886,20 @@ function SubscriptionInput({
             <span>Connect to Azure</span>
           )}
         </button>
+
+        {onTryDemoMode && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Backend unavailable?</p>
+            <button
+              type="button"
+              onClick={onTryDemoMode}
+              disabled={loading}
+              className="w-full px-6 py-2.5 border-2 border-blue-500 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
+            >
+              <span>Try demo mode</span>
+            </button>
+          </div>
+        )}
       </form>
       </div>
     </div>
@@ -1079,7 +1044,7 @@ function ResourceGroupSelector({
 }: {
 
   resourceGroups: AzureResourceGroup[]
-  onSelected: (selected: string[], includeCosts: boolean) => void
+  onSelected: (selected: string[]) => void
   onBack: () => void
   onRefresh: () => void
   loading: boolean
@@ -1090,7 +1055,6 @@ function ResourceGroupSelector({
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [includeCosts, setIncludeCosts] = useState(false)
   const [exportingRg, setExportingRg] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
 
@@ -1372,38 +1336,12 @@ function ResourceGroupSelector({
         })}
       </div>
 
-      {/* Include Costs Checkbox */}
-      {/* Include Costs Checkbox */}
-      <div className="card bg-gradient-to-r from-indigo-50 to-indigo-50 dark:from-indigo-900/20 dark:to-indigo-900/20 border-indigo-100 dark:border-indigo-500/30 transition-all hover:shadow-md">
-        <label className="flex items-center space-x-3 cursor-pointer group">
-          <div className="relative flex items-center justify-center">
-            <input
-              type="checkbox"
-              checked={includeCosts}
-              onChange={(e) => setIncludeCosts(e.target.checked)}
-              className="peer w-5 h-5 text-purple-600 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500 transition-all cursor-pointer"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-lg">
-              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <span className="text-base font-medium text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-              Include cost analysis for selected resource groups
-            </span>
-          </div>
-        </label>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 ml-11">
-          This will fetch cost data from Azure Cost Management API (may take a few moments)
-        </p>
-      </div>
-
       <div className="flex justify-end space-x-4">
         <button onClick={onBack} className="btn-secondary">
           Cancel
         </button>
         <button
-          onClick={() => onSelected(selected, includeCosts)}
+          onClick={() => onSelected(selected)}
           disabled={selected.length === 0 || loading}
           className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
         >
@@ -1426,8 +1364,7 @@ function NamespaceSelector({
   clusterNamespaces,
   onSelected,
   onBack,
-  loading,
-  includeCosts
+  loading
 }: {
   clusterNamespaces: Array<{ 
     cluster_name: string
@@ -1442,10 +1379,9 @@ function NamespaceSelector({
       for_azure_app_service?: string[]
     }
   }>
-  onSelected: (selected: string[], includeCosts: boolean) => void
+  onSelected: (selected: string[]) => void
   onBack: () => void
   loading: boolean
-  includeCosts: boolean
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -1581,7 +1517,7 @@ function NamespaceSelector({
               Back
             </button>
             <button
-              onClick={() => onSelected(selected, includeCosts)}
+              onClick={() => onSelected(selected)}
               disabled={selected.length === 0 || loading}
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
@@ -1610,10 +1546,6 @@ function ServiceAnalysis({
   error,
   onBack,
   onRefresh,
-  costs,
-  costsLoading,
-  includeCosts,
-  onOpenLogAnalyzer,
   selectedResourceGroups,
   subscriptionId,
   onUpdateAnalysisResult
@@ -1625,17 +1557,6 @@ function ServiceAnalysis({
   error: string | null
   onBack: () => void
   onRefresh: () => void
-  costs: Record<string, {
-    total_cost: number
-    projections?: {
-      full_month: number
-      annual: number
-    }
-    error?: string
-  }>
-  costsLoading: boolean
-  includeCosts: boolean
-  onOpenLogAnalyzer: (resourceGroup: string) => void
   selectedResourceGroups: string[]
   subscriptionId: string
   onUpdateAnalysisResult: (updatedResult: AnalysisResult) => void
@@ -1751,9 +1672,11 @@ function ServiceAnalysis({
                 onClick={async () => {
                   try {
                     const exportData = await apiService.exportResourceGroups(subscriptionId, selectedResourceGroups)
-                    if (exportData.data && exportData.data.data && exportData.data.data.length > 0) {
-                      const successfulExports = exportData.data.data.filter((item: any) => item.status === 'success' && item.template)
-                      const failedExports = exportData.data.data.filter((item: any) => item.status === 'error')
+                    const templates = exportData?.data ?? exportData
+                    const exportList = Array.isArray(templates) ? templates : (templates?.data ?? [])
+                    if (exportList.length > 0) {
+                      const successfulExports = exportList.filter((item: any) => item.status === 'success' && item.template)
+                      const failedExports = exportList.filter((item: any) => item.status === 'error')
 
                       if (failedExports.length > 0) {
                         const failedRGs = failedExports.map((item: any) => item.resource_group).join(', ')
@@ -1850,24 +1773,6 @@ function ServiceAnalysis({
                 <Download className="w-4 h-4" />
                 <span>Export ARM</span>
               </button>
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    // Open log analyzer with first resource group, or show dropdown if multiple
-                    if (selectedResourceGroups.length === 1) {
-                      onOpenLogAnalyzer(selectedResourceGroups[0])
-                    } else {
-                      // For multiple RGs, open with the first one (user can change in modal)
-                      onOpenLogAnalyzer(selectedResourceGroups[0])
-                    }
-                  }}
-                  className="btn-secondary flex items-center space-x-2"
-                  title="Analyze logs for Temenos components in this resource group"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Log Analyzer</span>
-                </button>
-              </div>
             </>
           )}
           <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">
@@ -1902,7 +1807,7 @@ function ServiceAnalysis({
       )}
 
       {/* Summary Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-3 ${includeCosts ? 'lg:grid-cols-4' : ''} gap-6`}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <div className="flex items-center space-x-3">
             <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -1930,107 +1835,6 @@ function ServiceAnalysis({
             </div>
           </div>
         </div>
-        {includeCosts && (
-          <div className="card bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-200/50 dark:border-yellow-500/20">
-            <div className="flex items-center space-x-3">
-              <DollarSign className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
-              <div className="flex-1">
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">Total Cost</p>
-                {(() => {
-                  // Ensure all selected resource groups are accounted for in aggregation
-                  const allRGs = selectedResourceGroups || []
-                  const costEntries = allRGs.map(rgName => {
-                    // Get cost data for this RG, or create a default entry if not found (no error - just no data yet)
-                    return costs[rgName] || {
-                      resource_group: rgName,
-                      total_cost: 0,
-                      services: {},
-                      error: null,  // No error - just no data available yet (might still be loading or no costs)
-                      note: costsLoading ? 'Loading...' : 'No cost data available yet'
-                    }
-                  })
-
-                  // Only count actual errors (non-null, non-empty error strings), not "no data" cases
-                  const hasErrors = costEntries.some(c => {
-                    const hasError = c.error && typeof c.error === 'string' && c.error.trim().length > 0
-                    return hasError && !costsLoading
-                  })
-                  // Calculate total cost - only include valid costs (no errors or still loading)
-                  const totalCost = costEntries.reduce((sum, cost) => {
-                    // Skip costs with actual errors (but only if not loading, as loading state might have temporary errors)
-                    const hasError = cost.error && typeof cost.error === 'string' && cost.error.trim().length > 0
-                    if (hasError && !costsLoading) return sum
-                    // Ensure total_cost is a valid number
-                    const costValue = typeof cost.total_cost === 'number' ? cost.total_cost : 0
-                    return sum + costValue
-                  }, 0)
-
-                  const hasProjections = costEntries.some(c => {
-                    const hasError = c.error && typeof c.error === 'string' && c.error.trim().length > 0
-                    return c.projections && !hasError && !costsLoading
-                  })
-                  const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
-                    // Skip costs with actual errors or missing projections
-                    const hasError = cost.error && typeof cost.error === 'string' && cost.error.trim().length > 0
-                    if (hasError && !costsLoading) return sum
-                    if (!cost.projections) return sum
-                    // Ensure full_month is a valid number
-                    const projectionValue = typeof cost.projections.full_month === 'number' ? cost.projections.full_month : 0
-                    return sum + projectionValue
-                  }, 0) : null
-
-                  // Only count actual errors (non-null, non-empty strings)
-                  const errorCount = costEntries.filter(c => {
-                    const hasError = c.error && typeof c.error === 'string' && c.error.trim().length > 0
-                    return hasError && !costsLoading
-                  }).length
-                  const successCount = costEntries.length - errorCount
-
-                  if (hasErrors && costEntries.length > 0 && !costsLoading) {
-                    return (
-                      <>
-                        <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
-                        {errorCount > 0 && (
-                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                            {errorCount} of {costEntries.length} RG{costEntries.length !== 1 ? 's' : ''} failed to load
-                          </p>
-                        )}
-                        {successCount > 0 && (
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                            Aggregated from {successCount} resource group{successCount !== 1 ? 's' : ''}
-                          </p>
-                        )}
-                      </>
-                    )
-                  }
-
-                  return (
-                    <>
-                      <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
-                      {monthlyProjection !== null && monthlyProjection > 0 && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
-                      )}
-                      {costEntries.length > 1 && !costsLoading && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                          Aggregated from {costEntries.length} resource group{costEntries.length !== 1 ? 's' : ''}
-                        </p>
-                      )}
-                      {costsLoading && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 flex items-center space-x-1">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Loading costs for {allRGs.length} resource group{allRGs.length !== 1 ? 's' : ''}...</span>
-                        </p>
-                      )}
-                      {!costsLoading && costEntries.length === 0 && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">No cost data available</p>
-                      )}
-                    </>
-                  )
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Horizontal Panel Layout: Main Content + Sidebar */}
@@ -2612,6 +2416,7 @@ function ComponentDetailPanel({
   const hasStrictDocumentation = componentInfo?.architecturalOverview?.includes('## 1. Purpose & Scope') ?? false
   const hasRelatedServices = Array.isArray(componentInfo?.relatedServices) && componentInfo.relatedServices.length > 0
   const hasRelationships = Array.isArray(componentInfo?.relationships) && componentInfo.relationships.length > 0
+  const briefEntry = componentInfo?.componentName ? getBriefForComponent(componentInfo.componentName) : null
 
 
   if (!componentInfo) {
@@ -2852,8 +2657,8 @@ function ComponentDetailPanel({
           (componentInfo?.functionalOverview && componentInfo.functionalOverview.trim().length > 0) ||
           (Array.isArray(componentInfo?.capabilities) && componentInfo.capabilities.length > 0)) ? (
           <StructuredRAGDisplay
-            architecturalOverview={componentInfo.architecturalOverview || ''}
-            functionalOverview={componentInfo.functionalOverview || ''}
+            architecturalOverview={componentInfo.architecturalOverview || (componentInfo as any).architectural_overview || ''}
+            functionalOverview={componentInfo.functionalOverview || (componentInfo as any).functional_overview || ''}
             capabilities={componentInfo.capabilities || []}
             componentName={componentInfo.componentName}
             componentType={componentInfo.componentType}
@@ -2872,6 +2677,17 @@ function ComponentDetailPanel({
               </p>
             )}
           </div>
+        )}
+
+        {briefEntry && (
+          <details className="group bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4 border border-cyan-200 dark:border-cyan-700">
+            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+              Technical Brief ({briefEntry.name})
+            </summary>
+            <div className="mt-4 rounded-lg overflow-hidden">
+              <BriefPage rawText={briefEntry.rawText} name={briefEntry.name} className="min-h-0 rounded-lg" />
+            </div>
+          </details>
         )}
 
         {hasStrictDocumentation && componentInfo.architecturalOverview && (

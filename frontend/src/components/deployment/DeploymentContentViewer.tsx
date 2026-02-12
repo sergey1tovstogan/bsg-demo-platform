@@ -16,14 +16,230 @@ import {
   HardDrive,
   Globe,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Zap,
+  TrendingUp,
+  ArrowRight,
+  X,
+  Code2,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 
+// Azure & AWS official brand colors
+const AZURE_BLUE = '#0078D4'
+const AWS_ORANGE = '#FF9900'
+
+/** Composable Banking Modules – Platform Overview content per module */
+const COMPOSABLE_MODULES: Array<{
+  id: string
+  title: string
+  description: string
+  platformOverview: string
+  icon: typeof Box
+  iconBg: string
+  platformOverviewDetail?: {
+    intro: string
+    productName?: string
+    features: Array<{ title: string; description: string; icon: typeof Layers }>
+    targetMarkets: string
+    targetMarketsTags: string[]
+  }
+}> = [
+  {
+    id: 'core-banking',
+    title: 'Core Banking',
+    description: 'Complete banking operations platform for deposits, loans, and accounting.',
+    platformOverview: 'Temenos Transact provides the core banking engine with embedded, event-driven architecture. It supports deposits, lending, and accounting with real-time processing and cloud-native deployment.',
+    icon: Layers,
+    iconBg: 'bg-blue-500',
+    platformOverviewDetail: {
+      intro: 'Temenos Core Banking, known as **Temenos Transact**, is a foundational software platform for financial institutions. Since 2018, Temenos has shifted towards a modular architecture that enables banks to modernize incrementally.',
+      productName: 'Temenos Transact',
+      features: [
+        { title: 'Modular Architecture', description: 'Market-leading modular platform breaking down core banking capabilities into discrete, reusable modules for gradual modernization.', icon: Layers },
+        { title: 'Flexible Deployment', description: 'Deploy on-premises, private cloud, public cloud (**Azure**, **AWS**), or SaaS with a single code base protecting business logic.', icon: Cloud },
+        { title: 'API-First Design', description: 'All functionalities exposed via RESTful APIs supporting open banking, ecosystem integration, and third-party services.', icon: Code2 },
+        { title: 'Operational Resilience', description: 'Built-in operational resilience with security, compliance, and audit capabilities ensuring regulatory adherence.', icon: Shield },
+      ],
+      targetMarkets: 'Temenos Core Banking serves Tier 1 and Tier 2 banks, wealth managers, and challenger banks worldwide. It supports a comprehensive product range.',
+      targetMarketsTags: ['Deposits', 'Retail Lending', 'Accounts', 'Trade Finance', 'Payments', 'Wealth Management'],
+    },
+  },
+  {
+    id: 'digital-banking',
+    title: 'Digital Banking',
+    description: 'Modern omni-channel customer experiences.',
+    platformOverview: 'Temenos Infinity delivers digital banking across web, mobile, and third-party channels. Pre-integrated with Transact, it enables banks to offer consistent experiences and rapid product rollout.',
+    icon: Globe,
+    iconBg: 'bg-violet-500',
+    platformOverviewDetail: {
+      intro: '**Temenos Infinity** delivers digital banking and omni-channel customer experiences. Pre-integrated with Transact, it enables banks to offer consistent experiences across web, mobile, and third-party channels.',
+      productName: 'Temenos Infinity',
+      features: [
+        { title: 'Omni-Channel', description: 'Unified experience across web, mobile, and third-party channels with a single codebase.', icon: Globe },
+        { title: 'Pre-Integrated', description: 'Seamless integration with Temenos Transact for real-time data and transaction processing.', icon: Layers },
+        { title: 'Rapid Deployment', description: 'Low-code configuration and pre-built components accelerate time to market and product rollout.', icon: Code2 },
+        { title: 'Customer-Centric', description: 'Built for digital-first engagement with personalization and compliance built in.', icon: Shield },
+      ],
+      targetMarkets: 'Temenos Infinity serves retail, corporate, and wealth segments with modern digital experiences.',
+      targetMarketsTags: ['Retail', 'Corporate', 'Mobile', 'Web', 'API', 'Integration'],
+    },
+  },
+  {
+    id: 'payments-hub',
+    title: 'Payments Hub',
+    description: 'Real-time payment processing for all major schemes.',
+    platformOverview: 'Temenos Payments provides a unified hub for real-time and batch payments. It supports major schemes (SEPA, SWIFT, domestic) and ISO 20022, with orchestration and compliance built in.',
+    icon: Zap,
+    iconBg: 'bg-amber-500',
+    platformOverviewDetail: {
+      intro: '**Temenos Payments** provides a unified hub for real-time and batch payments. It supports major schemes (SEPA, SWIFT, domestic) and ISO 20022, with orchestration and compliance built in.',
+      productName: 'Temenos Payments',
+      features: [
+        { title: 'Real-Time', description: 'High-throughput real-time payment processing for instant and domestic schemes.', icon: Zap },
+        { title: 'Multi-Scheme', description: 'Support for SEPA, SWIFT, ISO 20022, and domestic schemes across regions.', icon: Layers },
+        { title: 'Orchestration', description: 'Unified orchestration layer for all payment types and routing logic.', icon: Cloud },
+        { title: 'Compliance', description: 'Built-in AML, sanctions screening, and regulatory reporting for payments.', icon: Shield },
+      ],
+      targetMarkets: 'Temenos Payments serves banks and payment processors globally with real-time and batch capabilities.',
+      targetMarketsTags: ['SEPA', 'SWIFT', 'ISO 20022', 'Real-Time', 'Batch', 'Domestic'],
+    },
+  },
+  {
+    id: 'wealth-investment',
+    title: 'Wealth & Investment',
+    description: 'Wealth management and investment lifecycle on a single platform.',
+    platformOverview: 'Temenos Wealth covers advisory, discretionary, and execution-only services. It unifies portfolio management, order management, and compliance with pre-built integrations to Transact and markets.',
+    icon: TrendingUp,
+    iconBg: 'bg-emerald-500',
+    platformOverviewDetail: {
+      intro: '**Temenos Wealth** covers advisory, discretionary, and execution-only services. It unifies portfolio management, order management, and compliance with pre-built integrations to Transact and markets.',
+      productName: 'Temenos Wealth',
+      features: [
+        { title: 'Wealth Lifecycle', description: 'End-to-end lifecycle from onboarding to portfolio management and reporting.', icon: TrendingUp },
+        { title: 'Order Management', description: 'Order management, execution, and settlement across multiple asset classes.', icon: Layers },
+        { title: 'Compliance', description: 'Built-in suitability, MiFID II, and regulatory reporting for wealth management.', icon: Shield },
+        { title: 'Integration', description: 'Pre-built integrations with Transact and market data providers.', icon: Cloud },
+      ],
+      targetMarkets: 'Temenos Wealth serves private banks, wealth managers, and asset managers globally.',
+      targetMarketsTags: ['Advisory', 'Discretionary', 'Execution', 'Portfolio', 'Reporting', 'Compliance'],
+    },
+  },
+  {
+    id: 'financial-crime',
+    title: 'Financial Crime',
+    description: 'AML, KYC, and fraud prevention integrated into the platform.',
+    platformOverview: 'Temenos Financial Crime Mitigation provides AML, KYC, sanctions screening, and fraud detection. It is pre-integrated with Transact and Infinity to support compliance and risk controls across the bank.',
+    icon: Shield,
+    iconBg: 'bg-rose-500',
+    platformOverviewDetail: {
+      intro: '**Temenos Financial Crime Mitigation** provides AML, KYC, sanctions screening, and fraud detection. Pre-integrated with Transact and Infinity to support compliance across the bank.',
+      productName: 'Temenos Financial Crime Mitigation',
+      features: [
+        { title: 'AML & KYC', description: 'Customer due diligence, AML monitoring, and transaction screening.', icon: Shield },
+        { title: 'Sanctions Screening', description: 'Real-time and batch sanctions screening for payments and transactions.', icon: Zap },
+        { title: 'Fraud Detection', description: 'Real-time fraud detection and prevention across channels.', icon: Layers },
+        { title: 'Integration', description: 'Pre-integrated with Transact and Infinity for unified risk and compliance.', icon: Cloud },
+      ],
+      targetMarkets: 'Temenos Financial Crime Mitigation serves banks and financial institutions globally.',
+      targetMarketsTags: ['AML', 'KYC', 'Sanctions', 'Fraud', 'Screening', 'Compliance'],
+    },
+  },
+]
+
 const CACHE_KEY = 'deployment_rag_content_cache_v2'
 const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp_v2'
+const CACHE_SOURCE_KEY = 'deployment_rag_cache_source_v2' // 'api' | 'static'
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days (1 month)
+const CACHE_DURATION_LOCAL = 365 * 24 * 60 * 60 * 1000 // 1 year for localhost so RAG is not called every time
+
+function isLocalDeployment(): boolean {
+  if (typeof window === 'undefined') return false
+  const hostname = window.location.hostname
+  return hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
+/** Static fallback for local deployments when RAG API is unavailable or token expired */
+const STATIC_FALLBACK_CONTENT: Array<{ order: number; provider: string; category: string; title: string; question: string; answer: string; sources: never[] }> = [
+  { order: 1, provider: 'Azure', category: 'Container Orchestration', title: 'Azure – Container Orchestration', question: '', answer: `### Azure Kubernetes Service (AKS)
+AKS is the primary container orchestration platform for Temenos on Azure. It provides managed Kubernetes for deploying and scaling cloud-native banking applications.
+
+- **Deployment:** Temenos leverages Helm charts for consistent deployment across environments.
+- **Scaling:** Horizontal Pod Autoscaler (HPA) and Cluster Autoscaler enable dynamic scaling based on load.
+- **Load Balancing:** Azure Load Balancer and Ingress controllers distribute traffic to microservices.
+- **Self-healing:** Kubernetes monitors pod health and restarts failed containers automatically.
+
+### Azure Container Apps (ACA)
+ACA offers a lightweight option for simpler workloads with serverless scaling and managed infrastructure.`, sources: [] },
+  { order: 2, provider: 'Azure', category: 'Infrastructure', title: 'Azure – Infrastructure', question: '', answer: `### Compute and Storage
+- **Virtual Machines:** Used for stateful components and specialized workloads.
+- **App Service:** Supports containerized and traditional web application hosting.
+- **Storage Accounts:** Blob, File, and Queue storage for application data and messaging.
+
+### Networking
+- **Virtual Network (VNet):** Isolated network segments for secure connectivity.
+- **Load Balancers:** Traffic distribution across application instances.
+- **Private Endpoints:** Secure access to Azure services without public exposure.
+
+### Automation
+- **ARM Templates and Terraform:** Infrastructure as Code for reproducible deployments.
+- **Helm Charts:** Application packaging and versioned deployments.`, sources: [] },
+  { order: 3, provider: 'Azure', category: 'Databases', title: 'Azure – Databases', question: '', answer: `### Azure SQL Database
+Managed relational database for transactional workloads. Supports high availability, automated backups, and elastic scaling.
+
+### Azure Database for PostgreSQL
+Open-source relational database for applications requiring PostgreSQL compatibility. Supports flexible configurations and extensions.
+
+### Cosmos DB / MongoDB
+NoSQL options for document storage and high-throughput scenarios. Cosmos DB offers global distribution and multiple API options including MongoDB compatibility.`, sources: [] },
+  { order: 4, provider: 'Azure', category: 'Messaging', title: 'Azure – Messaging', question: '', answer: `### Azure Event Hub
+Managed event streaming platform for high-throughput ingestion and real-time event processing. Integrates with Kafka-compatible APIs for event-driven architectures.
+
+### Apache ActiveMQ
+Message broker for traditional messaging patterns, request-reply, and pub/sub. Suitable for enterprise integration scenarios.
+
+### Event-Driven Integration
+Event-driven architectures enable loose coupling between Temenos microservices and real-time data flow across the banking platform.`, sources: [] },
+  { order: 5, provider: 'AWS', category: 'Container Orchestration', title: 'AWS – Container Orchestration', question: '', answer: `### Amazon EKS (Elastic Kubernetes Service)
+Managed Kubernetes for running Temenos workloads on AWS. Full Kubernetes API compatibility with integrated IAM, VPC, and monitoring.
+
+- **Deployment:** Helm charts and Kubernetes manifests for consistent deployments.
+- **Scaling:** Cluster Autoscaler and HPA for automatic scaling.
+- **Networking:** AWS Load Balancer Controller and VPC CNI for networking.
+
+### Amazon ECS
+Container orchestration with optional Fargate for serverless containers. Simpler operational model for teams preferring AWS-native tooling.`, sources: [] },
+  { order: 6, provider: 'AWS', category: 'Infrastructure', title: 'AWS – Infrastructure', question: '', answer: `### Compute
+- **EC2:** Virtual servers for general-purpose and stateful workloads.
+- **Lambda:** Serverless functions for event-driven processing.
+- **ECS/EKS:** Container-based compute for cloud-native applications.
+
+### Networking
+- **VPC:** Isolated network environments with subnets and security groups.
+- **Load Balancers:** Application Load Balancer (ALB) and Network Load Balancer (NLB).
+
+### Automation
+- **CloudFormation and Terraform:** Infrastructure as Code for AWS resources.
+- **Helm Charts:** Consistent application deployment across Kubernetes clusters.`, sources: [] },
+  { order: 7, provider: 'AWS', category: 'Databases', title: 'AWS – Databases', question: '', answer: `### Amazon RDS
+Managed relational databases (PostgreSQL, MySQL, Oracle, SQL Server). Automated backups, patching, and multi-AZ deployments for high availability.
+
+### Amazon DocumentDB
+MongoDB-compatible document database for flexible schema and document storage needs.
+
+### PostgreSQL Options
+RDS PostgreSQL and Aurora PostgreSQL provide scalable relational database options with different performance and cost profiles.`, sources: [] },
+  { order: 8, provider: 'AWS', category: 'Messaging', title: 'AWS – Messaging', question: '', answer: `### Amazon Kinesis
+Streaming data platform for real-time data ingestion and processing. Kinesis Data Streams and Data Firehose support event-driven architectures.
+
+### Apache ActiveMQ
+Message broker for traditional messaging. Amazon MQ provides managed ActiveMQ for enterprise messaging.
+
+### SQS and SNS
+- **SQS:** Message queue for decoupled, asynchronous processing.
+- **SNS:** Pub/sub messaging for fan-out and event notifications.`, sources: [] },
+]
 
 // Icon mapping for Azure services and categories
 const SERVICE_ICONS: { [key: string]: any } = {
@@ -70,12 +286,12 @@ const SERVICE_ICONS: { [key: string]: any } = {
   'Infrastructure': Server,
 }
 
-// Category icons and colors
+// Category icons and colors – neutral slate banner, no purple/indigo
 const CATEGORY_STYLES: { [key: string]: { icon: any, gradient: string, bgColor: string } } = {
   'Architecture Overview': {
     icon: Layers,
-    gradient: 'from-indigo-600 to-blue-700',
-    bgColor: 'bg-indigo-50 dark:bg-indigo-900/20'
+    gradient: 'from-slate-600 to-slate-700',
+    bgColor: 'bg-slate-100 dark:bg-slate-800/90'
   },
 }
 
@@ -251,14 +467,15 @@ export function DeploymentContentViewer() {
   const [ragLoading, setRagLoading] = useState(true)
   const [ragError, setRagError] = useState<string | null>(null)
   const [isFromCache, setIsFromCache] = useState(false)
+  const [isStaticFallback, setIsStaticFallback] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null) // 'Azure' or 'AWS'
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null) // Category like 'Databases', 'Infrastructure', etc.
-
+  const [selectedModuleDetail, setSelectedModuleDetail] = useState<string | null>(null) // Composable module ID for View Details modal
   // Fixed category order for sub-cards (same for Azure and AWS)
   const CATEGORY_ORDER = ['Container Orchestration', 'Infrastructure', 'Databases', 'Messaging']
 
   useEffect(() => {
-    // Check cache immediately on mount
+    // Check cache immediately on mount so we avoid RAG API call when possible (especially on local)
     const cached = loadCachedContent()
     if (cached) {
       // Use items that have provider + category (new format), or legacy Architecture Overview
@@ -269,7 +486,9 @@ export function DeploymentContentViewer() {
         setRagContent(sorted)
         setRagLoading(false)
         setIsFromCache(true)
-        console.log('Loaded RAG content from cache')
+        const source = getCachedContentSource()
+        setIsStaticFallback(source === 'static')
+        console.log('Loaded RAG content from cache' + (source === 'static' ? ' (static fallback)' : ''))
       } else {
         loadRAGContent()
       }
@@ -278,13 +497,14 @@ export function DeploymentContentViewer() {
     }
   }, [])
 
-  const loadCachedContent = () => {
+  const loadCachedContent = (): any => {
     try {
       const cached = localStorage.getItem(CACHE_KEY)
       const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY)
       if (cached && timestamp) {
         const age = Date.now() - parseInt(timestamp, 10)
-        if (age < CACHE_DURATION) {
+        const maxAge = isLocalDeployment() ? CACHE_DURATION_LOCAL : CACHE_DURATION
+        if (age < maxAge) {
           return JSON.parse(cached)
         }
       }
@@ -294,10 +514,19 @@ export function DeploymentContentViewer() {
     return null
   }
 
-  const saveCachedContent = (content: any) => {
+  const getCachedContentSource = (): 'api' | 'static' | null => {
+    try {
+      const source = localStorage.getItem(CACHE_SOURCE_KEY)
+      if (source === 'api' || source === 'static') return source
+    } catch (_) {}
+    return null
+  }
+
+  const saveCachedContent = (content: any, source: 'api' | 'static' = 'api') => {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(content))
       localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
+      localStorage.setItem(CACHE_SOURCE_KEY, source)
     } catch (err) {
       console.warn('Failed to save cached content:', err)
     }
@@ -442,6 +671,7 @@ export function DeploymentContentViewer() {
         setRagContent(ragResults)
         saveCachedContent(ragResults)
         setIsFromCache(false)
+        setIsStaticFallback(false)
         setRagError(null)
         console.log('Loaded RAG content from API and cached')
         if (errors.length > 0) {
@@ -451,10 +681,17 @@ export function DeploymentContentViewer() {
         if (forceRefresh && cachedContent && Array.isArray(cachedContent) && cachedContent.length > 0) {
           setRagContent(cachedContent)
           setIsFromCache(true)
+          setIsStaticFallback(false)
           setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
           console.warn('Refresh failed, restored cached content', errors)
         } else {
-          setRagError(`No content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
+          // Fallback to static content for local deployments (RAG unavailable, token expired, or network error)
+          setRagContent(STATIC_FALLBACK_CONTENT)
+          setRagError(null)
+          setIsFromCache(true)
+          setIsStaticFallback(true)
+          saveCachedContent(STATIC_FALLBACK_CONTENT, 'static')
+          console.log('RAG API unavailable. Using static fallback and caching so next load skips API.')
         }
       }
     } catch (err: any) {
@@ -465,17 +702,20 @@ export function DeploymentContentViewer() {
         'Failed to load RAG information'
 
       // If refresh failed, try to restore cached content
-      if (forceRefresh) {
-        const cachedContent = loadCachedContent()
-        if (cachedContent && Array.isArray(cachedContent) && cachedContent.length > 0) {
-          setRagContent(cachedContent)
-          setIsFromCache(true)
-          setRagError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
-        } else {
-          setRagError(errorMsg)
-        }
-      } else {
-        setRagError(errorMsg)
+      const cachedContent = loadCachedContent()
+      if (forceRefresh && cachedContent && Array.isArray(cachedContent) && cachedContent.length > 0) {
+        setRagContent(cachedContent)
+        setIsFromCache(true)
+        setIsStaticFallback(false)
+        setRagError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
+      } else if (!cachedContent || !Array.isArray(cachedContent) || cachedContent.length === 0) {
+        // Fallback to static content for local deployments; persist so next load uses cache
+        setRagContent(STATIC_FALLBACK_CONTENT)
+        setRagError(null)
+        setIsFromCache(true)
+        setIsStaticFallback(true)
+        saveCachedContent(STATIC_FALLBACK_CONTENT, 'static')
+        console.log('RAG API error. Using static fallback and caching for local deployment.', errorMsg)
       }
     } finally {
       setRagLoading(false)
@@ -505,6 +745,138 @@ export function DeploymentContentViewer() {
 
   return (
     <div className="space-y-6">
+      {/* Composable Banking Modules – Platform Overview */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="p-6 md:p-8">
+          <p className="text-xs font-semibold uppercase tracking-widest text-blue-400 dark:text-sky-400 mb-2">
+            Functional Architecture
+          </p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <span className="text-gray-900 dark:text-white">Composable </span>
+            <span style={{ color: AZURE_BLUE }}>Banking </span>
+            <span className="bg-gradient-to-r from-blue-400 via-violet-500 to-purple-600 dark:from-blue-300 dark:via-violet-400 dark:to-purple-500 bg-clip-text text-transparent">
+              Modules
+            </span>
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mb-8">
+            Temenos offers a range of pre-integrated business modules that allow banks to build, test, and deploy new financial products at speed.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {COMPOSABLE_MODULES.map((mod) => {
+              const Icon = mod.icon
+              return (
+                <div
+                  key={mod.id}
+                  className="rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 p-6 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200"
+                >
+                  <div className={`${mod.iconBg} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{mod.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{mod.description}</p>
+                  <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Platform Overview</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4">{mod.platformOverview}</p>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSelectedModuleDetail(mod.id) }}
+                      className="inline-flex items-center gap-1 text-sm font-medium text-[#283054] dark:text-blue-400 hover:underline"
+                    >
+                      View Details
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* View Details Modal – Platform Overview */}
+      {selectedModuleDetail && (() => {
+        const mod = COMPOSABLE_MODULES.find((m) => m.id === selectedModuleDetail)
+        if (!mod?.platformOverviewDetail) return null
+        const detail = mod.platformOverviewDetail
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setSelectedModuleDetail(null)}
+          >
+            <div
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600 p-6 flex items-center justify-between z-10">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{mod.title} – Platform Overview</h3>
+                <button
+                  type="button"
+                  onClick={() => setSelectedModuleDetail(null)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                </button>
+              </div>
+              <div className="p-6 space-y-8">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      strong: ({ ...props }) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
+                    }}
+                  >
+                    {detail.intro}
+                  </ReactMarkdown>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {detail.features.map((f, i) => {
+                    const FIcon = f.icon
+                    return (
+                      <div
+                        key={i}
+                        className="rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 p-6"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                            <FIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-900 dark:text-white mb-2">{f.title}</h4>
+                            <div className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-p:first:mt-0 prose-p:last:mb-0">
+                              <ReactMarkdown
+                                components={{
+                                  strong: ({ ...props }) => <strong className="font-semibold" {...props} />,
+                                }}
+                              >
+                                {f.description}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Target Markets</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{detail.targetMarkets}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {detail.targetMarketsTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* RAG Content - Temenos Cloud Architecture */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="mb-6 flex items-center justify-between">
@@ -515,8 +887,10 @@ export function DeploymentContentViewer() {
                 Temenos Cloud Architecture Models
               </h2>
               <p className="text-lg text-gray-700 dark:text-gray-300">
-                Information from Temenos RAG Knowledge Base
-                {isFromCache && (
+                {isStaticFallback
+                  ? 'Static content for local deployment. Configure RAG token in Settings for live updates.'
+                  : 'Information from Temenos RAG Knowledge Base'}
+                {isFromCache && !isStaticFallback && (
                   <span className="ml-2 text-sm text-green-600 dark:text-green-700 font-medium">
                     (Cached - 30 day expiry)
                   </span>
@@ -603,25 +977,25 @@ export function DeploymentContentViewer() {
                                 : parseContentByCategories(azureItem?.answer || '')
                               
                               return (
-                                <div className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/40 dark:to-cyan-900/40 border-blue-500 dark:border-blue-400 ring-2 ring-blue-400'
-                                    : 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-300 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500'
-                                }`}
-                                onClick={() => {
+                                <div
+                                  className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 cursor-pointer ${
+                                    isSelected ? 'bg-slate-50 dark:bg-slate-800/90' : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
+                                  }`}
+                                  style={isSelected ? { borderColor: AZURE_BLUE } : undefined}
+                                  onClick={() => {
                                   setSelectedProvider(isSelected ? null : 'Azure')
                                   setSelectedCategory(null)
                                 }}>
-                                  {/* Provider Header */}
-                                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-blue-200 dark:border-blue-700">
+                                  {/* Provider Header – Azure official #0078D4 */}
+                                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 dark:border-slate-600">
                                     <div className="flex items-center space-x-3">
-                                      <div className="p-3 rounded-lg shadow-md bg-gradient-to-br from-blue-600 to-cyan-700">
+                                      <div className="p-3 rounded-lg shadow-md flex items-center justify-center" style={{ backgroundColor: AZURE_BLUE }}>
                                         <Cloud className="w-6 h-6 text-white" />
                                       </div>
-                                      <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100">Azure</h3>
+                                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Azure</h3>
                                     </div>
                                     {categoryKeys.length > 0 && (
-                                      <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                                      <div className="text-sm text-slate-600 dark:text-slate-400 font-medium">
                                         {categoryKeys.length} categories
                                       </div>
                                     )}
@@ -639,8 +1013,8 @@ export function DeploymentContentViewer() {
                                             <div
                                               className={`rounded-lg p-3 border transition-all cursor-pointer ${
                                                 isCatSelected
-                                                  ? 'bg-white dark:bg-gray-800 border-blue-400 dark:border-blue-500 shadow-md'
-                                                  : 'bg-white/60 dark:bg-gray-800/60 border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600'
+                                                  ? 'bg-white dark:bg-gray-800 border-slate-400 dark:border-slate-500 shadow-md'
+                                                  : 'bg-white/60 dark:bg-gray-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                                               }`}
                                               onClick={(e) => {
                                                 e.stopPropagation()
@@ -664,17 +1038,17 @@ export function DeploymentContentViewer() {
                                             
                                             {/* Category content */}
                                             {isCatSelected && categories[catName] && (
-                                              <div className="mt-3 p-4 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700">
+                                              <div className="mt-3 p-4 bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-slate-600">
                                                 <div className="prose prose-sm dark:prose-invert max-w-none">
                                                   <ReactMarkdown
                                                     components={{
-                                                      h1: ({ ...props }) => <h1 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-3" {...props} />,
+                                                      h1: ({ ...props }) => <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-3" {...props} />,
                                                       h2: ({ ...props }) => <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-4 mb-2 pb-2 border-b" {...props} />,
                                                       h3: ({ children, ...props }: any) => {
                                                         const ServiceIcon = getServiceIcon(typeof children === 'string' ? children : children?.toString() || '')
                                                         return (
                                                           <div className="flex items-center space-x-2 mt-3 mb-2">
-                                                            <ServiceIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                            <ServiceIcon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                                                             <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200 m-0" {...props}>{children}</h3>
                                                           </div>
                                                         )
@@ -695,7 +1069,7 @@ export function DeploymentContentViewer() {
                                       })}
                                     </div>
                                   ) : (
-                                    <div className="flex items-center justify-between text-sm text-blue-700 dark:text-blue-300 mt-2">
+                                    <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 mt-2">
                                       <span>Click to view Azure architecture details</span>
                                       <ChevronRight className="w-4 h-4" />
                                     </div>
@@ -715,25 +1089,26 @@ export function DeploymentContentViewer() {
                                 : parseContentByCategories(awsItem?.answer || '')
                               
                               return (
-                                <div className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40 border-orange-500 dark:border-orange-400 ring-2 ring-orange-400'
-                                    : 'bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-300 dark:border-orange-700 hover:border-orange-400 dark:hover:border-orange-500'
-                                }`}
-                                onClick={() => {
-                                  setSelectedProvider(isSelected ? null : 'AWS')
-                                  setSelectedCategory(null)
-                                }}>
-                                  {/* Provider Header */}
-                                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-orange-200 dark:border-orange-700">
+                                <div
+                                  className={`rounded-xl p-5 border-2 shadow-lg transition-all duration-300 cursor-pointer ${
+                                    isSelected ? 'bg-slate-50 dark:bg-slate-800/90' : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
+                                  }`}
+                                  style={isSelected ? { borderColor: AWS_ORANGE } : undefined}
+                                  onClick={() => {
+                                    setSelectedProvider(isSelected ? null : 'AWS')
+                                    setSelectedCategory(null)
+                                  }}
+                                >
+                                  {/* Provider Header – AWS official #FF9900 */}
+                                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 dark:border-slate-600">
                                     <div className="flex items-center space-x-3">
-                                      <div className="p-3 rounded-lg shadow-md bg-gradient-to-br from-orange-600 to-amber-700">
+                                      <div className="p-3 rounded-lg shadow-md flex items-center justify-center" style={{ backgroundColor: AWS_ORANGE }}>
                                         <Globe className="w-6 h-6 text-white" />
                                       </div>
-                                      <h3 className="text-xl font-bold text-orange-900 dark:text-orange-100">AWS</h3>
+                                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">AWS</h3>
                                     </div>
                                     {categoryKeys.length > 0 && (
-                                      <div className="text-sm text-orange-700 dark:text-orange-300 font-medium">
+                                      <div className="text-sm text-slate-600 dark:text-slate-400 font-medium">
                                         {categoryKeys.length} categories
                                       </div>
                                     )}
@@ -751,8 +1126,8 @@ export function DeploymentContentViewer() {
                                             <div
                                               className={`rounded-lg p-3 border transition-all cursor-pointer ${
                                                 isCatSelected
-                                                  ? 'bg-white dark:bg-gray-800 border-orange-400 dark:border-orange-500 shadow-md'
-                                                  : 'bg-white/60 dark:bg-gray-800/60 border-orange-200 dark:border-orange-800 hover:border-orange-300 dark:hover:border-orange-600'
+                                                  ? 'bg-white dark:bg-gray-800 border-slate-400 dark:border-slate-500 shadow-md'
+                                                  : 'bg-white/60 dark:bg-gray-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                                               }`}
                                               onClick={(e) => {
                                                 e.stopPropagation()
@@ -776,17 +1151,17 @@ export function DeploymentContentViewer() {
                                             
                                             {/* Category content */}
                                             {isCatSelected && categories[catName] && (
-                                              <div className="mt-3 p-4 bg-white dark:bg-gray-800 rounded-lg border border-orange-200 dark:border-orange-700">
+                                              <div className="mt-3 p-4 bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-slate-600">
                                                 <div className="prose prose-sm dark:prose-invert max-w-none">
                                                   <ReactMarkdown
                                                     components={{
-                                                      h1: ({ ...props }) => <h1 className="text-xl font-bold text-orange-900 dark:text-orange-100 mb-3" {...props} />,
+                                                      h1: ({ ...props }) => <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-3" {...props} />,
                                                       h2: ({ ...props }) => <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-4 mb-2 pb-2 border-b" {...props} />,
                                                       h3: ({ children, ...props }: any) => {
                                                         const ServiceIcon = getServiceIcon(typeof children === 'string' ? children : children?.toString() || '')
                                                         return (
                                                           <div className="flex items-center space-x-2 mt-3 mb-2">
-                                                            <ServiceIcon className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                                                            <ServiceIcon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                                                             <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200 m-0" {...props}>{children}</h3>
                                                           </div>
                                                         )
@@ -807,7 +1182,7 @@ export function DeploymentContentViewer() {
                                       })}
                                     </div>
                                   ) : (
-                                    <div className="flex items-center justify-between text-sm text-orange-700 dark:text-orange-300 mt-2">
+                                    <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 mt-2">
                                       <span>Click to view AWS architecture details</span>
                                       <ChevronRight className="w-4 h-4" />
                                     </div>

@@ -45,7 +45,7 @@ export function ModernAuthentication() {
     }
 
     return (
-        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800 pb-32">
+        <div className="w-full min-h-[700px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-hidden shadow-2xl border-2 border-slate-200 dark:border-slate-700 dark:border-slate-800">
             {/* Background Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
                 style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
@@ -71,7 +71,7 @@ export function ModernAuthentication() {
             </div>
 
             {/* Main Content Container */}
-            <div className="relative w-full h-full p-8 pt-20">
+            <div className="relative w-full h-full p-8 pt-20 pb-24">
                 {/* Text Sections */}
                 <div className="grid grid-cols-2 gap-8 mb-6">
                     {/* Bank Staff Authentication */}
@@ -101,13 +101,9 @@ export function ModernAuthentication() {
                     </div>
                 </div>
 
-                {/* Diagram Container */}
-                <div className="relative w-full h-[672px] bg-white/50 dark:bg-slate-800/30 rounded-2xl border-2 border-slate-200 dark:border-slate-700 p-6 overflow-visible">
-                    <div
-                        className="w-full h-full"
-                        style={{ transform: 'scale(1.2)', transformOrigin: 'top left', marginLeft: '-50px', marginTop: '-100px' }}
-                    >
-                        <svg viewBox="0 0 1430 630" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                {/* Diagram Container - diagram fully contained within frame */}
+                <div className="relative w-full h-[420px] bg-gradient-to-br from-slate-100 to-slate-200/80 dark:from-slate-800/60 dark:to-slate-900/60 rounded-2xl border-2 border-slate-300 dark:border-slate-600 p-6 overflow-hidden shadow-inner">
+                    <svg viewBox="0 0 1280 420" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
                         {/* Arrow marker definition */}
                         <defs>
                             <marker id="arrowhead-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
@@ -241,7 +237,6 @@ export function ModernAuthentication() {
                         <line x1="950" y1="325" x2="850" y2="270" stroke="#ef4444" strokeWidth="2.5" fill="none" markerEnd="url(#arrowhead-red)" />
                         <text x="900" y="330" textAnchor="middle" className="text-xs fill-slate-900 dark:fill-slate-100">Identity & Attributes</text>
                     </svg>
-                    </div>
                 </div>
             </div>
 

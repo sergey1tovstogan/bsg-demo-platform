@@ -30,12 +30,12 @@ export const ModernSegregation: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100%-120px)] relative z-10">
                 {/* Column 1: Cloud Subscription */}
-                <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-amber-500/50 transition-all duration-300 flex flex-col">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-4 py-1 rounded-full text-sm font-bold border border-amber-200 dark:border-amber-800 whitespace-nowrap">
+                <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl pt-12 px-6 pb-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-amber-500/50 transition-all duration-300 flex flex-col">
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-4 py-1 rounded-full text-sm font-bold border border-amber-200 dark:border-amber-800 whitespace-nowrap z-10">
                         Cloud Subscription
                     </div>
 
-                    <div className="flex justify-center mt-6 mb-6">
+                    <div className="flex justify-center mt-2 mb-6">
                         <div className="p-4 bg-amber-100 dark:bg-amber-900/30 rounded-full group-hover:scale-110 transition-transform duration-300">
                             <Cloud className="w-12 h-12 text-amber-600 dark:text-amber-400" />
                         </div>
@@ -45,7 +45,7 @@ export const ModernSegregation: React.FC = () => {
                         Different cloud subscriptions within the Temenos Cloud EA are used to segregate data effectively.
                     </p>
 
-                    <div className="space-y-3 mt-auto" style={{ transform: 'translateY(-200px)' }}>
+                    <div className="space-y-3 mt-auto">
                         <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 dark:text-slate-200">
                             <div className="flex items-start gap-3">
                                 <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -62,12 +62,12 @@ export const ModernSegregation: React.FC = () => {
                 </div>
 
                 {/* Column 2: Network */}
-                <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-cyan-500/50 transition-all duration-300 flex flex-col">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyan-100 dark:bg-cyan-800 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 px-4 py-1 rounded-full text-sm font-bold border border-cyan-200 dark:border-cyan-800">
+                <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl pt-12 px-6 pb-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-cyan-500/50 transition-all duration-300 flex flex-col">
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-cyan-100 dark:bg-cyan-800 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 px-4 py-1 rounded-full text-sm font-bold border border-cyan-200 dark:border-cyan-800 z-10">
                         Network
                     </div>
 
-                    <div className="flex justify-center mt-6 mb-6">
+                    <div className="flex justify-center mt-2 mb-6">
                         <div className="p-4 bg-cyan-100 dark:bg-cyan-800 dark:bg-cyan-900/30 rounded-full group-hover:scale-110 transition-transform duration-300">
                             <Network className="w-12 h-12 text-cyan-600 dark:text-cyan-400" />
                         </div>
@@ -77,7 +77,7 @@ export const ModernSegregation: React.FC = () => {
                         Virtual networks and subnets segregate data with NSG defining access controls between subnets.
                     </p>
 
-                    <div className="space-y-3 mt-auto" style={{ transform: 'translateY(-200px)' }}>
+                    <div className="space-y-3 mt-auto">
                         <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 dark:text-slate-200">
                             <div className="flex items-start gap-3">
                                 <Globe className="w-5 h-5 text-cyan-500 shrink-0 mt-0.5" />
@@ -100,12 +100,12 @@ export const ModernSegregation: React.FC = () => {
                 </div>
 
                 {/* Column 3: Database */}
-                <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-emerald-500/50 transition-all duration-300 flex flex-col">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-4 py-1 rounded-full text-sm font-bold border border-emerald-200 dark:border-emerald-800">
+                <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl pt-12 px-6 pb-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-emerald-500/50 transition-all duration-300 flex flex-col">
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-4 py-1 rounded-full text-sm font-bold border border-emerald-200 dark:border-emerald-800 z-10">
                         Database
                     </div>
 
-                    <div className="flex justify-center mt-6 mb-6">
+                    <div className="flex justify-center mt-2 mb-6">
                         <div className="p-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-full group-hover:scale-110 transition-transform duration-300">
                             <Database className="w-12 h-12 text-emerald-600 dark:text-emerald-400" />
                         </div>
@@ -115,7 +115,7 @@ export const ModernSegregation: React.FC = () => {
                         Database segregation ensures data is stored in isolated environments based on requirements.
                     </p>
 
-                    <div className="space-y-3 mt-auto" style={{ transform: 'translateY(-200px)' }}>
+                    <div className="space-y-3 mt-auto">
                         <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 dark:text-slate-200">
                             <div className="flex items-start gap-3">
                                 <Database className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />

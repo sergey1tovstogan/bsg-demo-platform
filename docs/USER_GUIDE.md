@@ -10,7 +10,7 @@ For architecture, Azure services, and technical details, see **[PROJECT_DOCUMENT
 
 **Cloud (production):**
 
-- **Frontend**: `https://kind-beach-01c0a990f.3.azurestaticapps.net`
+- **Frontend**: `https://demo-platform.bsg.temenos.com`
 - Open the URL in a browser. No login required for basic use.
 
 **Local development:**
@@ -21,8 +21,8 @@ For architecture, Azure services, and technical details, see **[PROJECT_DOCUMENT
 
 Start locally with:
 
-- Windows: `scripts\restart-all.bat`
-- Or run frontend (`npm run dev` in `frontend/`) and backend (`uvicorn app.main:app --host 0.0.0.0 --port 8000` in `backend/`) separately.
+- Windows: `scripts\start-all.bat`
+- Or run frontend (`npm run dev` in `frontend/`) and backend (`uvicorn app.main:app --host 0.0.0.0 --port 8000` in `backend/`) separately. See `docs/CUSTOM_DOMAIN.md` for production URL.
 
 ---
 
@@ -106,9 +106,9 @@ This component demonstrates **event‑driven data flow** with a transaction simu
 
 ## 5. Deployment Component
 
-- **Deployment Analyzer**: Connect to **Azure** (choose subscription), select **resource groups**, and optionally run **cost analysis**.
-- The platform discovers **Temenos-related resources** and can show cost estimates.
-- **Azure permissions** (e.g. Reader, Cost Management Reader) are required.
+- **Deployment Analyzer**: Connect to **Azure** (choose subscription), select **resource groups**, and analyze Temenos components.
+- **Export ARM**: Export selected resource groups as ARM template JSON for Infrastructure as Code.
+- **Azure permissions** (e.g. Reader) are required.
 
 ---
 

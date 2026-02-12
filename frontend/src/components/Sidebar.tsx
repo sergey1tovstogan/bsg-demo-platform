@@ -29,6 +29,8 @@ interface SidebarProps {
   onHomeClick?: () => void
   onSettingsClick?: () => void
   onCollapseRef?: (collapseFn: () => void) => void
+  /** Optional top offset when used below a top nav (e.g. "3.5rem") */
+  topOffset?: string
 }
 
 interface ComponentCard {
@@ -83,8 +85,8 @@ const components: ComponentCard[] = [
   },
   {
     id: 'design-time',
-    name: 'Design',
-    description: 'Principles & Patterns',
+    name: 'DevOps',
+    description: 'CI/CD & Automation',
     icon: Palette,
     color: 'text-indigo-500',
     gradient: 'from-indigo-500 to-blue-400',
@@ -120,7 +122,8 @@ export function Sidebar({
   onComponentChange,
   onHomeClick,
   onSettingsClick,
-  onCollapseRef
+  onCollapseRef,
+  topOffset
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(true) // Start collapsed
   const [lastInteractionTime, setLastInteractionTime] = useState(Date.now())
@@ -176,6 +179,7 @@ export function Sidebar({
         "bg-slate-900/95 backdrop-blur-xl border-r border-white/10 shadow-2xl",
         isExpanded ? "w-72" : "w-20"
       )}
+      style={topOffset ? { top: topOffset, height: `calc(100vh - ${topOffset})` } : undefined}
       onClick={handleInteraction}
     >
       {/* Toggle Button */}
@@ -202,8 +206,7 @@ export function Sidebar({
           </div>
           {isExpanded && (
             <div className="flex flex-col overflow-hidden whitespace-nowrap">
-              <span className="text-white font-bold text-lg tracking-tight">BSG Demo</span>
-              <span className="text-slate-400 text-xs font-medium">Platform</span>
+              <span className="text-white font-bold text-lg tracking-tight">BSG Demo Platform</span>
             </div>
           )}
         </div>

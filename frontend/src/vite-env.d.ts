@@ -29,3 +29,9 @@ declare module '*.webp' {
   const value: string
   export default value
 }
+
+declare module 'rehype-sanitize' {
+  import type { Plugin } from 'unified'
+  const rehypeSanitize: Plugin
+  export default rehypeSanitize
+}

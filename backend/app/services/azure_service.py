@@ -88,22 +88,25 @@ class AzureService:
             subscription_id: Azure subscription ID
         """
         self.subscription_id = subscription_id
+        # Azure App Service sets WEBSITE_SITE_NAME; Container Apps run on K8s (KUBERNETES_SERVICE_HOST)
         self.is_azure_app_service = os.getenv("WEBSITE_SITE_NAME") is not None
+        self.is_azure_container_app = os.getenv("KUBERNETES_SERVICE_HOST") is not None  # Container Apps = K8s
         
         try:
-            # For Azure App Service, use DefaultAzureCredential (Managed Identity)
-            # For local development, try Azure CLI first, then DefaultAzureCredential
-            if self.is_azure_app_service:
-                # In Azure App Service, use Managed Identity via DefaultAzureCredential
+            # In Azure (App Service or Container Apps): use DefaultAzureCredential (Managed Identity or SP env vars).
+            # Do NOT try Azure CLI inside the container - there is no 'az' installed and the user does not run az login.
+            if self.is_azure_app_service or self.is_azure_container_app:
                 credential = DefaultAzureCredential()
-                logger.info("Using DefaultAzureCredential (Azure App Service - Managed Identity)")
+                logger.info(
+                    "Using DefaultAzureCredential (Azure %s - Managed Identity or Service Principal)",
+                    "Container App" if self.is_azure_container_app else "App Service",
+                )
             else:
-                # Local development: try Azure CLI first, then DefaultAzureCredential
+                # Local development only: try Azure CLI first, then DefaultAzureCredential
                 try:
                     credential = AzureCliCredential()
                     logger.info("Using Azure CLI credential (local development)")
                 except Exception:
-                    # Fall back to DefaultAzureCredential if Azure CLI credential fails
                     credential = DefaultAzureCredential()
                     logger.info("Using DefaultAzureCredential (tries multiple credential sources)")
 
@@ -117,7 +120,7 @@ class AzureService:
             error_type = type(e).__name__
             
             # Provide environment-specific error messages
-            if self.is_azure_app_service:
+            if self.is_azure_app_service or self.is_azure_container_app:
                 # Azure App Service specific error messages
                 if "CredentialUnavailableError" in error_type or "credential" in error_msg.lower():
                     raise RuntimeError(
@@ -212,6 +215,14 @@ class AzureService:
                 status_code = e.status_code
             
             if status_code == 401:
+                err_lower = error_msg.lower()
+                if "expired" in err_lower or "refresh token" in err_lower:
+                    raise RuntimeError(
+                        "Azure credential may have expired (401). "
+                        "If using Service Principal: renew the client secret in Azure Portal (App registration → Certificates & secrets). "
+                        "If using Managed Identity: ensure it still has Reader role on the subscription. "
+                        "Then restart the backend."
+                    )
                 raise RuntimeError(
                     "Azure authentication failed (401 Unauthorized). Please ensure:\n"
                     "1. Azure CLI is installed: https://aka.ms/installazurecliwindows\n"
@@ -236,18 +247,22 @@ class AzureService:
                     "3. The subscription is active (not disabled)"
                 )
             
+            # Check for expired credential (SP secret or token) so admins can renew proactively
+            err_lower = error_msg.lower()
+            if "expired" in err_lower or "refresh token" in err_lower or ("token" in err_lower and "invalid" in err_lower):
+                raise RuntimeError(
+                    "Azure credential may have expired. "
+                    "If using Service Principal: renew the client secret in Azure Portal (App registration → Certificates & secrets). "
+                    "If using Managed Identity: ensure it still has Reader role on the subscription. Then restart the backend."
+                )
             # Check error message for common issues
-            if "credential" in error_msg.lower() or "authentication" in error_msg.lower() or "unauthorized" in error_msg.lower():
-                if self.is_azure_app_service:
+            if "credential" in err_lower or "authentication" in err_lower or "unauthorized" in err_lower:
+                if self.is_azure_app_service or self.is_azure_container_app:
                     raise RuntimeError(
-                        "Azure authentication failed in Azure App Service. Please ensure:\n"
-                        "1. Managed Identity is enabled for the App Service\n"
-                        "2. The Managed Identity has 'Reader' role on the subscription\n"
-                        "3. OR configure Service Principal credentials via App Settings:\n"
-                        "   - AZURE_CLIENT_ID\n"
-                        "   - AZURE_CLIENT_SECRET\n"
-                        "   - AZURE_TENANT_ID\n"
-                        "4. Verify subscription ID is correct"
+                        "Azure authentication failed in Azure (App Service / Container App). Please ensure:\n"
+                        "1. Managed Identity is enabled for the app and has 'Reader' role on the subscription\n"
+                        "2. OR configure Service Principal via environment variables: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID\n"
+                        "3. Verify subscription ID is correct"
                     )
                 else:
                     raise RuntimeError(

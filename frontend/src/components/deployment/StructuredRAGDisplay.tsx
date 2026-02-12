@@ -634,17 +634,46 @@ export function StructuredRAGDisplay({
     return unique
   }
 
-  // Parse the content into structured sections
+  // Parse 12-factor format: ## 1. Purpose & Scope, ## 2. Architectural Role, ... ## 12. Explicit Non-Goals / Out-of-Scope
+  const parse12FactorSections = (text: string): Array<{ title: string; content: string }> => {
+    const sections: Array<{ title: string; content: string }> = []
+    if (!text || text.trim().length < 10) return sections
+
+    const lowerText = text.toLowerCase().trim()
+    if (lowerText.startsWith('information not available') || lowerText.startsWith('i cannot provide')) {
+      return sections
+    }
+
+    // Must contain 12-factor format indicator
+    if (!text.includes('## 1.') && !text.includes('##1.')) return sections
+
+    // Split by ## N. SectionName pattern (lenient: allow ##1. or ## 1. with optional space)
+    const headerPattern = /^##\s*(\d+\.\s*[^\n]+)\s*$/gm
+    const matches = [...text.matchAll(headerPattern)]
+    if (matches.length === 0) return sections
+
+    for (let i = 0; i < matches.length; i++) {
+      const title = matches[i][1].trim()
+      const startIdx = matches[i].index! + matches[i][0].length
+      const endIdx = i + 1 < matches.length ? matches[i + 1].index! : text.length
+      let content = text.slice(startIdx, endIdx).trim()
+      content = content.replace(/^#+\s*/gm, '').trim()
+      if (content.length > 0) {
+        sections.push({ title, content })
+      }
+    }
+    return sections
+  }
+
+  const twelveFactorSections = parse12FactorSections(architecturalOverview)
+  const has12FactorFormat = twelveFactorSections.length > 0
+
   const archSections = parseArchitecturalOverview(architecturalOverview)
   const funcSections = parseFunctionalOverview(functionalOverview)
   const parsedCapabilities = parseCapabilities(capabilities)
   const runtimeDeployment = service?.runtimeDeployment || null
 
-
   const hasArchitectureSections = archSections.sections.length > 0
-  const hasLifecycle = archSections.lifecycle.length > 0
-  const hasComponents = archSections.components.length > 0
-  const hasDeployment = archSections.deployment.length > 0
   const hasFunctionalSections = funcSections.sections.length > 0
   const hasCapabilitiesTable = parsedCapabilities.length > 0
   const hasNonGoals = archSections.nonGoals.length > 0
@@ -693,6 +722,35 @@ export function StructuredRAGDisplay({
     </div>
   )
 
+  // Render 12-factor section content (markdown-like bullets to HTML)
+  // Exclude "Out of scope" lines from Purpose & Scope per user request
+  const render12FactorContent = (content: string) => {
+    const lines = content.split('\n').filter(l => l.trim())
+    return (
+      <div className="space-y-2">
+        {lines.map((line, idx) => {
+          const trimmed = line.trim()
+          if (!trimmed) return null
+          const textContent = (trimmed.startsWith('- ') || trimmed.startsWith('* ')) ? trimmed.replace(/^[-*]\s*/, '').trim() : trimmed
+          if (/^Out of scope:/i.test(textContent)) return null
+          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            return (
+              <div key={idx} className="flex gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <span className="text-gray-500 dark:text-gray-400">•</span>
+                <span>{textContent}</span>
+              </div>
+            )
+          }
+          return (
+            <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+              {trimmed}
+            </p>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
       {/* Quick facts */}
@@ -710,7 +768,15 @@ export function StructuredRAGDisplay({
           <div>
             <div className="font-semibold text-gray-900 dark:text-white">Logical Role</div>
             <div className="text-gray-700 dark:text-gray-300">
-              {archSections.executiveSummary.substring(0, 120) || 'Core banking microservice'}
+              {has12FactorFormat && twelveFactorSections[0]
+                ? (() => {
+                    const first = twelveFactorSections[0].content
+                    const line = first.split('\n').find(l => l.trim().startsWith('- Responsibility:'))
+                    if (line) return line.replace(/^-\s*Responsibility:\s*/i, '').trim().substring(0, 120)
+                    const fallback = first.split('\n')[0]?.replace(/^-\s*/, '').trim()
+                    return (fallback || 'Core banking microservice').substring(0, 120)
+                  })()
+                : archSections.executiveSummary.substring(0, 120) || 'Core banking microservice'}
             </div>
           </div>
           <div>
@@ -720,143 +786,95 @@ export function StructuredRAGDisplay({
         </div>
       </div>
 
-      <details open className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
-        <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-          Executive Summary
-        </summary>
-        <div className="mt-3">
-          {archSections.executiveSummary ? (
-            <div className="space-y-3">
-              {archSections.executiveSummary
-                .split(/[.!?]+/)
-                .filter((s: string) => s.trim().length > 10)
-                .map((sentence: string, idx: number) => (
-                  <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {sentence.trim() + (sentence.trim().match(/[.!?]$/) ? '' : '.')}
-                  </p>
-                ))}
+      {/* 12-factor expandable sections */}
+      {has12FactorFormat ? (
+        twelveFactorSections.map((section, idx) => (
+          <details
+            key={idx}
+            open={idx === 0}
+            className="group bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700"
+          >
+            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg px-5 py-4 list-none flex items-center gap-2">
+              <span className="group-open:rotate-90 transition-transform text-gray-500 dark:text-gray-400">▶</span>
+              {section.title}
+            </summary>
+            <div className="px-5 pb-5 pl-9">
+              {render12FactorContent(section.content)}
             </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">Information not available for this component.</p>
-          )}
-        </div>
-      </details>
-
-      <details className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
-        <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-          Architecture & Design
-        </summary>
-        <div className="mt-4 space-y-6">
-          {hasArchitectureSections ? (
-            archSections.sections.map((section: any, idx: number) => (
-              <div key={idx} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                {section.heading && (
-                  <h6 className="font-semibold text-gray-900 dark:text-white mb-3">{section.heading}</h6>
-                )}
-                {(() => {
-                  const paragraphs = section.paragraphs || []
-                  if (section.table) return renderTable(section.table)
-                  const hasParagraphTables = paragraphs.some((para: string) => !!parseMarkdownTable(para))
-                  if (hasParagraphTables) {
-                    return paragraphs.map((para: string, pIdx: number) => {
-                      const tableData = parseMarkdownTable(para)
-                      return tableData ? (
-                        <div key={pIdx}>{renderTable(tableData)}</div>
-                      ) : (
-                        <p key={pIdx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                          {para}
-                        </p>
-                      )
-                    })
-                  }
-                  return renderParagraphs(paragraphs)
-                })()}
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">Architectural details not available.</p>
-          )}
-
-          {hasLifecycle && (
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <h6 className="font-semibold text-gray-900 dark:text-white mb-3">Event Lifecycle</h6>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                {archSections.lifecycle.map((step: string, idx: number) => (
-                  <li key={idx}>{step}</li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          {hasComponents && (
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <h6 className="font-semibold text-gray-900 dark:text-white mb-3">Components & Responsibilities</h6>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-slate-700/40">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Component</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Responsibility</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {archSections.components.map((item: any, idx: number) => (
-                      <tr key={idx}>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{item.name}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{item.responsibility}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{item.notes || '-'}</td>
-                      </tr>
+          </details>
+        ))
+      ) : (
+        <>
+          <details open className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
+            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+              Executive Summary
+            </summary>
+            <div className="mt-3">
+              {archSections.executiveSummary ? (
+                <div className="space-y-3">
+                  {archSections.executiveSummary
+                    .split(/[.!?]+/)
+                    .filter((s: string) => s.trim().length > 10)
+                    .map((sentence: string, idx: number) => (
+                      <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                        {sentence.trim() + (sentence.trim().match(/[.!?]$/) ? '' : '.')}
+                      </p>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {hasDeployment && (
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <h6 className="font-semibold text-gray-900 dark:text-white mb-3">Deployment Snapshot</h6>
-              <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                {archSections.deployment.map((item: string, idx: number) => (
-                  <li key={idx}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </details>
-
-      <details className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
-        <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-          Functional Capabilities
-        </summary>
-        <div className="mt-4 space-y-6">
-          {hasFunctionalSections && (
-            <div className="space-y-4">
-              {funcSections.sections.map((section: any, idx: number) => (
-                <div key={idx} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                  {section.heading && (
-                    <h6 className="font-semibold text-gray-900 dark:text-white mb-3">{section.heading}</h6>
-                  )}
-                  {renderParagraphs(section.paragraphs || [])}
                 </div>
-              ))}
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">Information not available for this component.</p>
+              )}
             </div>
-          )}
+          </details>
 
-          {hasCapabilitiesTable ? (
-            renderTable({
-              headers: ['Capability', 'Description'],
-              rows: parsedCapabilities.slice(0, 20).map((cap: any) => [cap.name, cap.description || '-'])
-            })
-          ) : !hasFunctionalSections ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">Functional capabilities not available.</p>
-          ) : null}
-        </div>
-      </details>
+          <details className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
+            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+              Architecture & Design
+            </summary>
+            <div className="mt-4 space-y-6">
+              {hasArchitectureSections ? (
+                archSections.sections.map((section: any, sIdx: number) => (
+                  <div key={sIdx} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                    {section.heading && (
+                      <h6 className="font-semibold text-gray-900 dark:text-white mb-3">{section.heading}</h6>
+                    )}
+                    {section.table ? renderTable(section.table) : renderParagraphs(section.paragraphs || [])}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">Architectural details not available.</p>
+              )}
+            </div>
+          </details>
 
-      {hasNonGoals && (
+          <details className="group bg-white dark:bg-slate-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
+            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
+              Functional Capabilities
+            </summary>
+            <div className="mt-4 space-y-6">
+              {hasCapabilitiesTable ? (
+                renderTable({
+                  headers: ['Capability', 'Description'],
+                  rows: parsedCapabilities.slice(0, 20).map((cap: any) => [cap.name, cap.description || '-'])
+                })
+              ) : hasFunctionalSections ? (
+                <div className="space-y-4">
+                  {funcSections.sections.map((section: any, idx: number) => (
+                    <div key={idx} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                      {section.heading && <h6 className="font-semibold text-gray-900 dark:text-white mb-3">{section.heading}</h6>}
+                      {renderParagraphs(section.paragraphs || [])}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">Functional capabilities not available.</p>
+              )}
+            </div>
+          </details>
+        </>
+      )}
+
+      {hasNonGoals && !has12FactorFormat && (
         <details className="group bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-5 border border-yellow-200 dark:border-yellow-800">
           <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
             Explicit Non-Goals

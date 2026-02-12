@@ -194,8 +194,10 @@ class Settings(BaseSettings):
             "http://localhost:3000",
             "http://localhost:3000",
             "http://localhost:5173",
-            # Azure Static Web Apps (specific domain - regex pattern handles all *.azurestaticapps.net)
+            # Azure Static Web Apps (regex pattern handles all *.azurestaticapps.net)
             "https://kind-beach-01c0a990f.3.azurestaticapps.net",
+            # Custom domain
+            "https://demo-platform.bsg.temenos.com",
             # Azure App Service (for testing backend directly - regex pattern handles all *.azurewebsites.net)
             "https://bsg-demo-platform-app.azurewebsites.net",
         ]

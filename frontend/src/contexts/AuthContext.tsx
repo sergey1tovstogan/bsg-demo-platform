@@ -56,7 +56,8 @@ const getApiBaseUrl = (): string => {
   if (viteEnv && viteEnv.VITE_API_URL) {
     return viteEnv.VITE_API_URL as string
   }
-  if (typeof window !== 'undefined' && window.location.hostname.includes('azurestaticapps.net')) {
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+  if (hostname.includes('azurestaticapps.net') || hostname.includes('demo-platform.bsg.temenos.com')) {
     return 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1'
   }
   return '/api/v1'
@@ -128,17 +129,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
-  // Setup auto-refresh (every 14 minutes)
+  // Setup auto-refresh (every 14 minutes) - skip for mock tokens (no backend refresh)
   const setupAutoRefresh = useCallback(() => {
+    const refreshVal = localStorage.getItem(REFRESH_TOKEN_KEY)
+    if (refreshVal?.startsWith('mock_')) {
+      // Mock auth: tokens never expire, no need to call backend refresh
+      return () => {}
+    }
     const interval = setInterval(() => {
       refreshToken().catch((error) => {
         console.error('Auto-refresh failed:', error)
-        // If refresh fails, logout user
         logout()
       })
     }, 14 * 60 * 1000) // 14 minutes
-
     return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshToken, logout defined later
   }, [])
 
   // Login function with mocked authentication
@@ -154,8 +159,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!emailFromPassword && !emailFromUsername) {
         throw new Error('Invalid credentials')
       }
-      // Use Temenos email from Password field (primary); fallback to Username field
-      const userEmail = emailFromPassword ? credentials.password : (credentials.email?.trim() || '')
+      // Prefer Username for identity - user typically types their email there. Password field is often
+      // autofilled with another user's credentials (e.g. scomsa) from browser/password manager.
+      const userEmail = emailFromUsername ? (credentials.email?.trim() || '') : credentials.password
       const localPart = userEmail.split('@')[0] || ''
       const displayName = (localPart.split('.')[0] || localPart).trim()
 
@@ -208,20 +214,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Refresh token function
   const refreshToken = useCallback(async () => {
+    const refreshTokenValue = localStorage.getItem(REFRESH_TOKEN_KEY)
+    if (!refreshTokenValue) {
+      throw new Error('No refresh token available')
+    }
+    // Mock tokens: no backend call needed, stay logged in
+    if (refreshTokenValue.startsWith('mock_')) {
+      return
+    }
     try {
-      const refreshTokenValue = localStorage.getItem(REFRESH_TOKEN_KEY)
-      if (!refreshTokenValue) {
-        throw new Error('No refresh token available')
-      }
-
       const response = await authClient.post<{ access_token: string }>('/auth/refresh', {
         refresh_token: refreshTokenValue,
       })
-
       const { access_token } = response.data
       localStorage.setItem(ACCESS_TOKEN_KEY, access_token)
     } catch (error: any) {
-      // If refresh fails, logout
       clearAuth()
       throw error
     }
