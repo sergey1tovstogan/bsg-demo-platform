@@ -3,6 +3,7 @@ import type { ComponentType } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Cpu,
+  Database,
   Puzzle,
   GitBranch,
   Plug,
@@ -27,8 +28,8 @@ export const TECHNOLOGY_PILLARS: Array<{
   platformPath: string
 }> = [
   {
-    id: 'architecture',
-    title: 'Architecture',
+    id: 'functional-architecture',
+    title: 'Functional Architecture',
     icon: Cpu,
     color: 'from-blue-500 to-cyan-500',
     glow: 'shadow-blue-500/40',
@@ -40,6 +41,21 @@ export const TECHNOLOGY_PILLARS: Array<{
     ],
     techs: ['Azure', 'AWS', 'OpenShift', 'GCP'],
     platformPath: '/platform/deployment',
+  },
+  {
+    id: 'data-architecture',
+    title: 'Data Architecture',
+    icon: Database,
+    color: 'from-sky-500 to-blue-600',
+    glow: 'shadow-sky-500/40',
+    tagline: 'Event-driven data flow, streaming, and analytics',
+    bullets: [
+      'Real-time event streaming and data flow',
+      'Transaction simulator and live event monitoring',
+      'Data Hub, ODS, SDS integration patterns',
+    ],
+    techs: ['Kafka', 'Event Hubs', 'Azure SQL'],
+    platformPath: '/platform/data-architecture',
   },
   {
     id: 'extensibility',
