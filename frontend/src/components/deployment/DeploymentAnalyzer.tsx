@@ -729,7 +729,6 @@ export function DeploymentAnalyzer() {
           onRefresh={() => analyzeServices(services)}
           selectedResourceGroups={selectedResourceGroups}
           subscriptionId={subscriptionId}
-          subscriptionId={subscriptionId}
           onUpdateAnalysisResult={(updatedResult: AnalysisResult) => {
             setAnalysisResults((prev: AnalysisResult[]) =>
               prev.map((r: AnalysisResult) =>

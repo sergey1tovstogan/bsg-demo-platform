@@ -19,8 +19,6 @@ import {
   ChevronDown,
   Zap,
   TrendingUp,
-  ArrowRight,
-  X,
   Code2,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -286,9 +284,55 @@ const SERVICE_ICONS: { [key: string]: any } = {
   'Infrastructure': Server,
 }
 
+/** Architecture Principles - Temenos Banking Cloud (from developer-portal) */
+const ARCHITECTURE_PRINCIPLES: Array<{
+  id: string
+  title: string
+  description: string
+  icon: typeof Cloud
+}> = [
+  {
+    id: 'cloud-native',
+    title: 'Cloud-Native Platform',
+    description: 'Containerization with Kubernetes orchestration enables efficient deployment, scaling, and management across public and private clouds. Supports AWS EKS, Azure AKS, and OpenShift for high availability.',
+    icon: Cloud,
+  },
+  {
+    id: 'microservices',
+    title: 'Microservices Design',
+    description: 'Independent, loosely coupled services enhance scalability, fault isolation, and maintainability. Event-driven communication through Kafka enables efficient data synchronization and responsiveness.',
+    icon: Box,
+  },
+  {
+    id: 'api-first',
+    title: 'API-First Approach',
+    description: 'Extensive ecosystem of over 700 open APIs facilitates seamless integration. Published API catalog and developer portal empower rapid innovation and customization.',
+    icon: Code2,
+  },
+  {
+    id: 'event-driven',
+    title: 'Event-Driven Communication',
+    description: 'Kafka-based event streaming enables real-time data synchronization and dynamic banking services. Optimized for payment execution and fast data access patterns.',
+    icon: Zap,
+  },
+  {
+    id: 'containerization',
+    title: 'Containerization',
+    description: 'Applications packaged as containers ensure portability and consistent runtime environments. Helm charts streamline building and deployment across environments.',
+    icon: Container,
+  },
+  {
+    id: 'observability',
+    title: 'Observability',
+    description: 'Industry-standard instrumentation with pre-configured dashboards provide comprehensive monitoring and operational insights across all services and components.',
+    icon: Activity,
+  },
+]
+
 // Category icons and colors – neutral slate banner, no purple/indigo
+const CLOUD_ARCH_DISPLAY = 'Cloud Architecture Options'
 const CATEGORY_STYLES: { [key: string]: { icon: any, gradient: string, bgColor: string } } = {
-  'Architecture Overview': {
+  [CLOUD_ARCH_DISPLAY]: {
     icon: Layers,
     gradient: 'from-slate-600 to-slate-700',
     bgColor: 'bg-slate-100 dark:bg-slate-800/90'
@@ -764,28 +808,94 @@ export function DeploymentContentViewer() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {COMPOSABLE_MODULES.map((mod) => {
               const Icon = mod.icon
+              const isExpanded = selectedModuleDetail === mod.id
+              const hasDetail = !!mod.platformOverviewDetail
               return (
                 <div
                   key={mod.id}
-                  className="rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 p-6 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200"
+                  onClick={() => setSelectedModuleDetail(isExpanded ? null : mod.id)}
+                  className={`group rounded-xl border transition-all duration-200 text-left w-full cursor-pointer overflow-hidden bg-gray-50 dark:bg-gray-800/80 ${
+                    isExpanded
+                      ? 'border-[#283054] dark:border-blue-500 shadow-lg shadow-blue-500/10 dark:shadow-blue-500/20'
+                      : 'border-gray-200 dark:border-gray-600 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-500'
+                  }`}
                 >
-                  <div className={`${mod.iconBg} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className="p-6">
+                    <div className={`${mod.iconBg} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
+                      <Icon className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{mod.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{mod.description}</p>
+                    <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Platform Overview</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4">{mod.platformOverview}</p>
+                      <span className="inline-flex items-center gap-1 text-sm font-medium text-[#283054] dark:text-blue-400 group-hover:underline">
+                        {hasDetail ? (isExpanded ? 'Collapse' : 'View Details') : '—'}
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                        />
+                      </span>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{mod.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{mod.description}</p>
-                  <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Platform Overview</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4">{mod.platformOverview}</p>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setSelectedModuleDetail(mod.id) }}
-                      className="inline-flex items-center gap-1 text-sm font-medium text-[#283054] dark:text-blue-400 hover:underline"
+                  {isExpanded && hasDetail && mod.platformOverviewDetail && (
+                    <div
+                      className="border-t border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50 p-6 space-y-6"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      View Details
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown
+                          components={{
+                            strong: ({ ...props }) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
+                          }}
+                        >
+                          {mod.platformOverviewDetail.intro}
+                        </ReactMarkdown>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {mod.platformOverviewDetail.features.map((f, i) => {
+                          const FIcon = f.icon
+                          return (
+                            <div
+                              key={i}
+                              className="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-4"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                                  <FIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-gray-900 dark:text-white mb-1 text-sm">{f.title}</h4>
+                                  <div className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-p:first:mt-0 prose-p:last:mb-0">
+                                    <ReactMarkdown
+                                      components={{
+                                        strong: ({ ...props }) => <strong className="font-semibold" {...props} />,
+                                      }}
+                                    >
+                                      {f.description}
+                                    </ReactMarkdown>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Target Markets</h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">{mod.platformOverviewDetail.targetMarkets}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {mod.platformOverviewDetail.targetMarketsTags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-medium"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -793,89 +903,43 @@ export function DeploymentContentViewer() {
         </div>
       </div>
 
-      {/* View Details Modal – Platform Overview */}
-      {selectedModuleDetail && (() => {
-        const mod = COMPOSABLE_MODULES.find((m) => m.id === selectedModuleDetail)
-        if (!mod?.platformOverviewDetail) return null
-        const detail = mod.platformOverviewDetail
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={() => setSelectedModuleDetail(null)}
-          >
-            <div
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600 p-6 flex items-center justify-between z-10">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{mod.title} – Platform Overview</h3>
-                <button
-                  type="button"
-                  onClick={() => setSelectedModuleDetail(null)}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  aria-label="Close"
+      {/* Architecture Principles */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="p-6 md:p-8">
+          <p className="text-xs font-semibold uppercase tracking-widest text-blue-400 dark:text-sky-400 mb-2">
+            Temenos Banking Cloud
+          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Architecture Principles
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mb-8">
+            Temenos Banking Cloud combines modern architectural principles to deliver a flexible, scalable, and secure banking platform.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ARCHITECTURE_PRINCIPLES.map((principle) => {
+              const Icon = principle.icon
+              return (
+                <div
+                  key={principle.id}
+                  className="rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 p-6"
                 >
-                  <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-                </button>
-              </div>
-              <div className="p-6 space-y-8">
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown
-                    components={{
-                      strong: ({ ...props }) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
-                    }}
-                  >
-                    {detail.intro}
-                  </ReactMarkdown>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {detail.features.map((f, i) => {
-                    const FIcon = f.icon
-                    return (
-                      <div
-                        key={i}
-                        className="rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 p-6"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                            <FIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-gray-900 dark:text-white mb-2">{f.title}</h4>
-                            <div className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-p:first:mt-0 prose-p:last:mb-0">
-                              <ReactMarkdown
-                                components={{
-                                  strong: ({ ...props }) => <strong className="font-semibold" {...props} />,
-                                }}
-                              >
-                                {f.description}
-                              </ReactMarkdown>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div>
-                  <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Target Markets</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{detail.targetMarkets}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {detail.targetMarketsTags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-6 h-6 text-[#283054] dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 dark:text-white mb-2">{principle.title}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {principle.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              )
+            })}
           </div>
-        )
-      })()}
+        </div>
+      </div>
 
       {/* RAG Content - Temenos Cloud Architecture */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6">
@@ -886,16 +950,16 @@ export function DeploymentContentViewer() {
               <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">
                 Temenos Cloud Architecture Models
               </h2>
-              <p className="text-lg text-gray-700 dark:text-gray-300">
-                {isStaticFallback
-                  ? 'Static content for local deployment. Configure RAG token in Settings for live updates.'
-                  : 'Information from Temenos RAG Knowledge Base'}
-                {isFromCache && !isStaticFallback && (
-                  <span className="ml-2 text-sm text-green-600 dark:text-green-700 font-medium">
-                    (Cached - 30 day expiry)
-                  </span>
-                )}
-              </p>
+              {!isStaticFallback && (
+                <p className="text-lg text-gray-700 dark:text-gray-300">
+                  Information from Temenos RAG Knowledge Base
+                  {isFromCache && (
+                    <span className="ml-2 text-sm text-green-600 dark:text-green-700 font-medium">
+                      (Cached - 30 day expiry)
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
           <button
@@ -927,7 +991,7 @@ export function DeploymentContentViewer() {
               const hasNewFormat = ragContent.some((item: any) => item.provider)
               const architectureItems = hasNewFormat ? ragContent : ragContent.filter((item: any) => item.category === 'Architecture Overview')
               if (architectureItems.length === 0) return null
-              const grouped: { [key: string]: any[] } = { 'Architecture Overview': architectureItems }
+              const grouped: { [key: string]: any[] } = { [CLOUD_ARCH_DISPLAY]: architectureItems }
 
               return Object.entries(grouped).map(([category, items]) => {
                 const categoryStyle = CATEGORY_STYLES[category] || {
@@ -950,14 +1014,14 @@ export function DeploymentContentViewer() {
                             {category}
                           </h2>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            {category === 'Architecture Overview' && 'Cloud infrastructure and service architecture'}
+                            {category === CLOUD_ARCH_DISPLAY && 'Cloud infrastructure and service architecture'}
                           </p>
                         </div>
                       </div>
                     </div>
                     
-                    {/* Special handling for Architecture Overview - hierarchical Azure/AWS cards with sub-categories */}
-                    {category === 'Architecture Overview' ? (
+                    {/* Special handling for Cloud Architecture Options - hierarchical Azure/AWS cards with sub-categories */}
+                    {category === CLOUD_ARCH_DISPLAY ? (
                       (() => {
                         const hasProviderBased = items.some((i: any) => i.provider)
                         const azureItems = hasProviderBased ? items.filter((i: any) => i.provider === 'Azure') : []

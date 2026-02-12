@@ -716,7 +716,7 @@ export function DataArchitectureContent() {
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 1</div>
-              <div className="text-xs mt-1 opacity-90">Event Driven: Business Events (only)</div>
+              <div className="text-sm mt-1 font-medium">Event Driven: Business Events (only)</div>
             </button>
 
             <button
@@ -729,7 +729,7 @@ export function DataArchitectureContent() {
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 2</div>
-              <div className="text-xs mt-1 opacity-90">Event Driven: Data Events</div>
+              <div className="text-sm mt-1 font-medium">Event Driven: Data Events</div>
             </button>
 
             <button
@@ -742,7 +742,7 @@ export function DataArchitectureContent() {
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 3</div>
-              <div className="text-xs mt-1 opacity-90">EOD Process: Flat Files</div>
+              <div className="text-sm mt-1 font-medium">EOD Process: Flat Files</div>
             </button>
           </div>
 
@@ -984,6 +984,11 @@ export function DataArchitectureContent() {
                                  dot.segment === 'pubsub-microservices') ||
                                  (selectedPath === 'path-b') // Grey out all dots when Path 3 is active
 
+              // Label dimensions for pill background (ensure enough width for "Business Event")
+              const labelWidth = Math.max(label.length * 8, 95)
+              const labelHeight = 18
+              const labelY = currentY - 22
+
               return (
                 <g key={dot.id}>
                   {/* Glow effect with smooth transition */}
@@ -1010,17 +1015,30 @@ export function DataArchitectureContent() {
                       transition: 'opacity 0.2s ease-out, filter 0.2s ease-out'
                     }}
                   />
-                  {/* Label */}
+                  {/* Label with pill background for visibility */}
+                  <rect
+                    x={currentX - labelWidth / 2}
+                    y={labelY - labelHeight / 2}
+                    width={labelWidth}
+                    height={labelHeight}
+                    rx="9"
+                    fill="white"
+                    stroke={dotColor}
+                    strokeWidth="2"
+                    opacity={isDotGreyed ? 0.3 : 1}
+                    style={{ filter: isDotGreyed ? 'grayscale(100%)' : 'none' }}
+                  />
                   <text
                     x={currentX}
-                    y={currentY - 15}
-                    fill="#1F2937"
-                    fontSize="11"
-                    fontWeight="600"
+                    y={labelY}
+                    fill={dotColor}
+                    fontSize="12"
+                    fontWeight="700"
                     textAnchor="middle"
+                    dominantBaseline="central"
                     opacity={isDotGreyed ? 0.3 : 1}
                     style={{
-                      textShadow: '0 0 3px white, 0 0 3px white'
+                      filter: isDotGreyed ? 'grayscale(100%)' : 'none'
                     }}
                   >
                     {label}
