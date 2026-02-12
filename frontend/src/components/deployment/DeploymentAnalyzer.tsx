@@ -6,10 +6,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, RefreshCw, ExternalLink, FileText, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, RefreshCw, ExternalLink, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
-import { LogAnalyzer } from './LogAnalyzer'
 import { StructuredRAGDisplay } from './StructuredRAGDisplay'
 import { BriefPage } from './brief'
 import { getBriefForComponent } from './brief/briefRegistry'
@@ -111,8 +110,6 @@ export function DeploymentAnalyzer() {
   const [error, setError] = useState<string | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState<{ current: number; total: number; message: string } | null>(null)
   const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
-  const [logAnalyzerOpen, setLogAnalyzerOpen] = useState(false)
-  const [selectedResourceGroupForLogs, setSelectedResourceGroupForLogs] = useState<string | null>(null)
   const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
   const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
   const [azureHealth, setAzureHealth] = useState<{ status: string; message?: string | null } | null>(null)
@@ -730,11 +727,8 @@ export function DeploymentAnalyzer() {
           error={error}
           onBack={handleBack}
           onRefresh={() => analyzeServices(services)}
-          onOpenLogAnalyzer={(resourceGroup: string) => {
-            setSelectedResourceGroupForLogs(resourceGroup)
-            setLogAnalyzerOpen(true)
-          }}
           selectedResourceGroups={selectedResourceGroups}
+          subscriptionId={subscriptionId}
           subscriptionId={subscriptionId}
           onUpdateAnalysisResult={(updatedResult: AnalysisResult) => {
             setAnalysisResults((prev: AnalysisResult[]) =>
@@ -746,16 +740,6 @@ export function DeploymentAnalyzer() {
         />
       )}
 
-      {/* Log Analyzer Modal */}
-      <LogAnalyzer
-        isOpen={logAnalyzerOpen}
-        onClose={() => {
-          setLogAnalyzerOpen(false)
-          setSelectedResourceGroupForLogs(null)
-        }}
-        resourceGroup={selectedResourceGroupForLogs || undefined}
-        subscriptionId={subscriptionId}
-      />
     </div>
   )
 }
@@ -1562,7 +1546,6 @@ function ServiceAnalysis({
   error,
   onBack,
   onRefresh,
-  onOpenLogAnalyzer,
   selectedResourceGroups,
   subscriptionId,
   onUpdateAnalysisResult
@@ -1574,7 +1557,6 @@ function ServiceAnalysis({
   error: string | null
   onBack: () => void
   onRefresh: () => void
-  onOpenLogAnalyzer: (resourceGroup: string) => void
   selectedResourceGroups: string[]
   subscriptionId: string
   onUpdateAnalysisResult: (updatedResult: AnalysisResult) => void
@@ -1690,9 +1672,11 @@ function ServiceAnalysis({
                 onClick={async () => {
                   try {
                     const exportData = await apiService.exportResourceGroups(subscriptionId, selectedResourceGroups)
-                    if (exportData.data && exportData.data.data && exportData.data.data.length > 0) {
-                      const successfulExports = exportData.data.data.filter((item: any) => item.status === 'success' && item.template)
-                      const failedExports = exportData.data.data.filter((item: any) => item.status === 'error')
+                    const templates = exportData?.data ?? exportData
+                    const exportList = Array.isArray(templates) ? templates : (templates?.data ?? [])
+                    if (exportList.length > 0) {
+                      const successfulExports = exportList.filter((item: any) => item.status === 'success' && item.template)
+                      const failedExports = exportList.filter((item: any) => item.status === 'error')
 
                       if (failedExports.length > 0) {
                         const failedRGs = failedExports.map((item: any) => item.resource_group).join(', ')
@@ -1789,24 +1773,6 @@ function ServiceAnalysis({
                 <Download className="w-4 h-4" />
                 <span>Export ARM</span>
               </button>
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    // Open log analyzer with first resource group, or show dropdown if multiple
-                    if (selectedResourceGroups.length === 1) {
-                      onOpenLogAnalyzer(selectedResourceGroups[0])
-                    } else {
-                      // For multiple RGs, open with the first one (user can change in modal)
-                      onOpenLogAnalyzer(selectedResourceGroups[0])
-                    }
-                  }}
-                  className="btn-secondary flex items-center space-x-2"
-                  title="Analyze logs for Temenos components in this resource group"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Log Analyzer</span>
-                </button>
-              </div>
             </>
           )}
           <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">

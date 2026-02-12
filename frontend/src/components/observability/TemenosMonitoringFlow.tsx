@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Play, Pause, RotateCcw } from 'lucide-react'
+import { Play, Pause, RotateCcw, Server, Radio, Route, BarChart3, FileSearch, LayoutDashboard, type LucideIcon } from 'lucide-react'
 
 interface DataFlowDot {
   id: string
@@ -12,8 +12,10 @@ interface DataFlowDot {
 interface Box {
   id: string
   label: string
-  logo?: string
-  color?: string
+  icon: LucideIcon
+  bgColor: string
+  iconColor: string
+  iconBgColor: string
   position: { x: number; y: number; width: number; height: number }
   subLabels?: string[]
 }
@@ -23,7 +25,6 @@ interface Arrow {
   from: string
   to: string
   points: string
-  label?: string
   color: string
 }
 
@@ -32,73 +33,80 @@ export function TemenosMonitoringFlow() {
   const [activeDataFlows, setActiveDataFlows] = useState<DataFlowDot[]>([])
   const spawningIntervalRef = useRef<number | null>(null)
 
-  // Define boxes
+  // Define boxes with modern Lucide icons and distinct colors
   const boxes: Box[] = [
     {
       id: 'temenos',
       label: 'Temenos Solution',
-      color: '#283275',
+      icon: Server,
+      bgColor: '#1E3A5F',
+      iconColor: '#60A5FA',
+      iconBgColor: 'rgba(96,165,250,0.2)',
       position: { x: 40, y: 260, width: 200, height: 140 }
     },
     {
       id: 'otel',
       label: 'OpenTelemetry Collector',
-      logo: '/images/logos/opentelemetry.svg',
+      icon: Radio,
+      bgColor: '#EFF6FF',
+      iconColor: '#3B82F6',
+      iconBgColor: '#DBEAFE',
       position: { x: 320, y: 260, width: 200, height: 140 }
     },
     {
       id: 'jaeger',
       label: 'Jaeger',
-      logo: '/images/logos/jaeger.svg',
+      icon: Route,
+      bgColor: '#FFFBEB',
+      iconColor: '#D97706',
+      iconBgColor: '#FEF3C7',
       position: { x: 320, y: 40, width: 200, height: 140 }
     },
     {
       id: 'prometheus',
       label: 'Prometheus',
-      logo: '/images/logos/prometheus.svg',
+      icon: BarChart3,
+      bgColor: '#FEF2F2',
+      iconColor: '#DC2626',
+      iconBgColor: '#FEE2E2',
       position: { x: 620, y: 100, width: 180, height: 120 }
     },
     {
       id: 'elasticsearch',
       label: 'Elasticsearch',
-      logo: '/images/logos/elasticsearch.svg',
+      icon: FileSearch,
+      bgColor: '#ECFDF5',
+      iconColor: '#059669',
+      iconBgColor: '#D1FAE5',
       position: { x: 620, y: 360, width: 180, height: 120 }
     },
     {
       id: 'grafana',
       label: 'Grafana',
-      logo: '/images/logos/grafana.svg',
+      icon: LayoutDashboard,
+      bgColor: '#FFF7ED',
+      iconColor: '#EA580C',
+      iconBgColor: '#FFEDD5',
       position: { x: 900, y: 240, width: 180, height: 140 },
       subLabels: ['Metrics Dashboards', 'Log Dashboards']
     }
   ]
 
-  // Define arrows with SVG paths
+  // Define arrows (no labels - clean minimal look)
   const arrows: Arrow[] = [
-    // Temenos to OTEL
-    { id: 'temenos-otel', from: 'temenos', to: 'otel', points: 'M 240 330 L 320 330', label: 'Telemetry', color: '#3B82F6' },
-
-    // OTEL to Jaeger (upward)
-    { id: 'otel-jaeger', from: 'otel', to: 'jaeger', points: 'M 420 260 L 420 180', label: '', color: '#F59E0B' },
-
-    // OTEL fork to Prometheus (right-up)
-    { id: 'otel-prometheus', from: 'otel', to: 'prometheus', points: 'M 520 290 L 620 160', label: '', color: '#EF4444' },
-
-    // OTEL fork to Elasticsearch (right-down)
-    { id: 'otel-elasticsearch', from: 'otel', to: 'elasticsearch', points: 'M 520 370 L 620 420', label: '', color: '#10B981' },
-
-    // Prometheus to Grafana
-    { id: 'prometheus-grafana', from: 'prometheus', to: 'grafana', points: 'M 800 160 L 900 280', label: '', color: '#EF4444' },
-
-    // Elasticsearch to Grafana
-    { id: 'elasticsearch-grafana', from: 'elasticsearch', to: 'grafana', points: 'M 800 420 L 900 340', label: '', color: '#10B981' }
+    { id: 'temenos-otel', from: 'temenos', to: 'otel', points: 'M 240 330 L 320 330', color: '#3B82F6' },
+    { id: 'otel-jaeger', from: 'otel', to: 'jaeger', points: 'M 420 260 L 420 180', color: '#F59E0B' },
+    { id: 'otel-prometheus', from: 'otel', to: 'prometheus', points: 'M 520 290 L 620 160', color: '#EF4444' },
+    { id: 'otel-elasticsearch', from: 'otel', to: 'elasticsearch', points: 'M 520 370 L 620 420', color: '#10B981' },
+    { id: 'prometheus-grafana', from: 'prometheus', to: 'grafana', points: 'M 800 160 L 900 280', color: '#EF4444' },
+    { id: 'elasticsearch-grafana', from: 'elasticsearch', to: 'grafana', points: 'M 800 420 L 900 340', color: '#10B981' }
   ]
 
-  // Dot configurations
+  // Dot configurations (color only - no labels)
   const dotTypes = {
-    metrics: { color: '#EF4444', label: 'Metrics' },
-    logs: { color: '#10B981', label: 'Logs' },
-    traces: { color: '#F59E0B', label: 'Traces' }
+    metrics: { color: '#EF4444' },
+    logs: { color: '#10B981' },
+    traces: { color: '#F59E0B' }
   }
 
   // Cleanup intervals on unmount
@@ -255,7 +263,7 @@ export function TemenosMonitoringFlow() {
       <div className="flex justify-center gap-4 mb-8">
         <button
           onClick={handlePlayPause}
-          className="flex items-center gap-2 px-6 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-medium transition-colors"
+          className="flex items-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
         >
           {isPlaying ? (
             <>
@@ -271,7 +279,7 @@ export function TemenosMonitoringFlow() {
         </button>
         <button
           onClick={handleReset}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+          className="flex items-center gap-2 px-6 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
         >
           <RotateCcw className="w-5 h-5" />
           Reset
@@ -279,23 +287,29 @@ export function TemenosMonitoringFlow() {
       </div>
 
       {/* Legend */}
-      <div className="flex justify-center gap-6 mb-8">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-red-500"></div>
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Metrics</span>
+      <div className="flex justify-center gap-8 mb-8">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+          <div className="w-4 h-4 rounded-full bg-red-500 shadow-sm"></div>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Metrics</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-green-500"></div>
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Logs</span>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+          <div className="w-4 h-4 rounded-full bg-emerald-500 shadow-sm"></div>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Logs</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-orange-500"></div>
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Traces</span>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+          <div className="w-4 h-4 rounded-full bg-amber-500 shadow-sm"></div>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Traces</span>
         </div>
       </div>
 
-      {/* Diagram Container */}
-      <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-8 shadow-sm">
+      {/* Diagram Container - gradient background that complements the icon colors */}
+      <div
+        className="rounded-xl p-8 shadow-xl border border-slate-600/50"
+        style={{
+          background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 35%, #1e3a5f 70%, #0f172a 100%)',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)'
+        }}
+      >
         <div className="relative" style={{ width: '1120px', height: '540px', margin: '0 auto', maxWidth: '100%' }}>
           {/* SVG Layer for arrows and dots */}
           <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }}>
@@ -347,7 +361,7 @@ export function TemenosMonitoringFlow() {
               </marker>
             </defs>
 
-            {/* Render arrows */}
+            {/* Render arrows - no labels */}
             {arrows.map(arrow => {
               let markerId = 'arrowhead-blue'
               if (arrow.color === '#EF4444') markerId = 'arrowhead-red'
@@ -364,17 +378,6 @@ export function TemenosMonitoringFlow() {
                     strokeDasharray="5,5"
                     markerEnd={`url(#${markerId})`}
                   />
-                  {arrow.label && (
-                    <text
-                      x={parseFloat(arrow.points.split(' ')[1]) + 40}
-                      y={parseFloat(arrow.points.split(' ')[2]) - 10}
-                      fill={arrow.color}
-                      fontSize="14"
-                      fontWeight="600"
-                    >
-                      {arrow.label}
-                    </text>
-                  )}
                 </g>
               )
             })}
@@ -416,78 +419,63 @@ export function TemenosMonitoringFlow() {
                     fill={dotConfig.color}
                     opacity="0.3"
                   />
-                  {/* Main dot */}
+                  {/* Main dot - no label */}
                   <circle
                     cx={currentX}
                     cy={currentY}
                     r="6"
                     fill={dotConfig.color}
                   />
-                  {/* Label */}
-                  <text
-                    x={currentX}
-                    y={currentY - 15}
-                    fill="#1F2937"
-                    fontSize="11"
-                    fontWeight="600"
-                    textAnchor="middle"
-                    style={{ textShadow: '0 0 3px white' }}
-                  >
-                    {dotConfig.label}
-                  </text>
                 </g>
               )
             })}
           </svg>
 
           {/* Render boxes */}
-          {boxes.map(box => (
-            <div
-              key={box.id}
-              className="absolute flex flex-col items-center justify-center rounded-lg shadow-lg border-2 transition-transform hover:scale-105"
-              style={{
-                left: `${box.position.x}px`,
-                top: `${box.position.y}px`,
-                width: `${box.position.width}px`,
-                height: `${box.position.height}px`,
-                backgroundColor: box.color || '#FFFFFF',
-                borderColor: box.color || '#E5E7EB',
-                zIndex: 2
-              }}
-            >
-              {box.logo ? (
-                <div className="flex flex-col items-center gap-2 p-4">
-                  <img
-                    src={box.logo}
-                    alt={box.label}
-                    className="w-16 h-16 object-contain"
-                    onError={(e) => {
-                      // Fallback if logo doesn't load
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                  <span className="text-sm font-bold text-slate-800 text-center">
+          {boxes.map(box => {
+            const Icon = box.icon
+            const isDark = box.id === 'temenos'
+            return (
+              <div
+                key={box.id}
+                className="absolute flex flex-col items-center justify-center rounded-xl shadow-lg border-2 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl box-border overflow-hidden"
+                style={{
+                  left: `${box.position.x}px`,
+                  top: `${box.position.y}px`,
+                  width: `${box.position.width}px`,
+                  height: `${box.position.height}px`,
+                  backgroundColor: box.bgColor,
+                  borderColor: isDark ? 'rgba(96,165,250,0.2)' : 'rgba(0,0,0,0.06)',
+                  boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.06)',
+                  zIndex: 2
+                }}
+              >
+                <div className="flex flex-col items-center justify-center gap-2 p-3 w-full h-full min-h-0">
+                  <div
+                    className="flex items-center justify-center shrink-0 rounded-xl"
+                    style={{ backgroundColor: box.iconBgColor, padding: '12px' }}
+                  >
+                    <Icon className="w-12 h-12 shrink-0" style={{ color: box.iconColor }} strokeWidth={1.5} />
+                  </div>
+                  <span
+                    className="font-bold tracking-tight leading-tight text-center break-words"
+                    style={{ fontSize: '0.95rem', color: isDark ? '#fff' : '#1e293b' }}
+                  >
                     {box.label}
                   </span>
                   {box.subLabels && (
-                    <div className="flex flex-col items-center gap-1 mt-2">
+                    <div className="flex flex-col items-center gap-0.5 mt-0.5">
                       {box.subLabels.map((subLabel, idx) => (
-                        <span key={idx} className="text-xs text-slate-600 font-medium">
+                        <span key={idx} className="text-xs font-semibold text-center" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
                           {subLabel}
                         </span>
                       ))}
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="p-4 text-center">
-                  <span className="text-lg font-bold text-white">
-                    {box.label}
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
+              </div>
+            )
+          })}
         </div>
       </div>
 

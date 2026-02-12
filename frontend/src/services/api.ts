@@ -70,21 +70,28 @@ const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
   return configLoadPromise
 }
 
-// Determine API base URL at runtime
-// Priority: 1. On Azure SWA use direct backend URL (POST works), 2. Runtime config, 3. Default relative path
-const getApiBaseUrl = async (): Promise<string> => {
-  // When on Azure SWA or custom domain, call backend directly so POST/PUT/DELETE work (SWA does not proxy them)
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
-  if (hostname.includes('azurestaticapps.net') || hostname.includes('demo-platform.bsg.temenos.com')) {
-    const directUrl = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1'
-    console.log('[API] Production host detected, using direct backend URL:', directUrl)
-    return directUrl
-  }
+const PRODUCTION_BACKEND_URL = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1'
 
+// Determine API base URL at runtime
+// Priority: 1. Azure SWA/custom domain → direct backend, 2. localhost → production backend (BSG Guru full RAG), 3. Runtime config, 4. Default relative path
+const getApiBaseUrl = async (): Promise<string> => {
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+  // When on Azure SWA or custom domain, call backend directly so POST/PUT/DELETE work (SWA does not proxy them)
+  if (hostname.includes('azurestaticapps.net') || hostname.includes('demo-platform.bsg.temenos.com')) {
+    console.log('[API] Production host detected, using direct backend URL:', PRODUCTION_BACKEND_URL)
+    return PRODUCTION_BACKEND_URL
+  }
   const config = await loadRuntimeConfig()
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
+  // Absolute URL in config always wins
   if (config.apiUrl && (config.apiUrl.startsWith('http://') || config.apiUrl.startsWith('https://'))) {
     console.log('[API] Using runtime config API URL:', config.apiUrl)
     return config.apiUrl
+  }
+  // On localhost: ignore relative config (e.g. /api/v1) and use production backend so BSG Guru RAG works
+  if (isLocal) {
+    console.log('[API] Local deployment: using production backend for full RAG and API support:', PRODUCTION_BACKEND_URL)
+    return PRODUCTION_BACKEND_URL
   }
   if (config.apiUrl) {
     console.log('[API] Using runtime config relative API URL:', config.apiUrl)
@@ -664,45 +671,6 @@ class ApiService {
 
   async getDeploymentContent() {
     const response = await this.client.get<ApiResponse<any>>('/components/deployment/content')
-    return response.data
-  }
-
-  async analyzeCloudLogs(params: {
-    platform: 'aks' | 'aca'
-    component_name: string
-    environment: string
-    log_snippet: string
-    symptoms?: string
-    recent_changes?: string
-    resource_group?: string
-    subscription_id?: string
-  }) {
-    const response = await this.client.post<ApiResponse<{
-      summary: string
-      classification: {
-        platform: 'aks' | 'aca'
-        layer: string[]
-        severity: 'Info' | 'Warning' | 'Major' | 'Critical'
-        category: string
-      }
-      root_causes: Array<{
-        hypothesis: string
-        log_evidence: string
-      }>
-      recommended_actions: {
-        checks: string[]
-        commands: {
-          aks?: string[]
-          aca?: string[]
-        }
-        configuration_fixes: string[]
-      }
-      impact_assessment: string
-      insufficient_info?: {
-        message: string
-        follow_up_questions: string[]
-      }
-    }>>('/deployment/cloud-logs/analyze', params)
     return response.data
   }
 

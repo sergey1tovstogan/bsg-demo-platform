@@ -1,5 +1,10 @@
 # BSG Demo Platform - Complete Project Documentation
 
+## Related Documentation
+
+- [Deployment Guide](./DEPLOYMENT.md) — How to deploy and run locally
+- [User Guide](./USER_GUIDE.md) — How to use the platform
+
 ## Table of Contents
 1. [Project Overview](#project-overview)
 2. [Architecture](#architecture)

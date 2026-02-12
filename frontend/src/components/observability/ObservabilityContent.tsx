@@ -657,7 +657,8 @@ export function ObservabilityContent() {
     )
   }
 
-  if (error) {
+  // Only show error when we have no content at all (cache and static fallback both failed)
+  if (error && Object.keys(content).length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px] p-8">
         <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-6 rounded-r-lg max-w-md">
