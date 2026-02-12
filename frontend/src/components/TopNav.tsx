@@ -41,6 +41,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
   const { isAuthenticated, user, logout, hasRole } = useAuth()
   const [platformOpen, setPlatformOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<Set<ComponentId>>(loadSelectedCategories)
 
   useEffect(() => {
@@ -58,6 +59,9 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
   const isDark = theme === 'dark'
 
   const displayName = (() => {
+    if (user?.profile?.first_name && user?.profile?.last_name) {
+      return `${user.profile.first_name} ${user.profile.last_name}`
+    }
     if (user?.profile?.first_name) return user.profile.first_name
     const local = user?.email?.split('@')[0]
     if (local) {
@@ -66,6 +70,21 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
     }
     if (user?.username) return user.username.charAt(0).toUpperCase() + user.username.slice(1).toLowerCase()
     return null
+  })()
+
+  const userInitials = (() => {
+    if (user?.profile?.first_name && user?.profile?.last_name) {
+      return `${user.profile.first_name[0]}${user.profile.last_name[0]}`.toUpperCase()
+    }
+    if (user?.profile?.first_name) return user.profile.first_name.slice(0, 2).toUpperCase()
+    const local = user?.email?.split('@')[0]
+    if (local) {
+      const parts = local.split('.')
+      if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+      return local.slice(0, 2).toUpperCase()
+    }
+    if (user?.username) return user.username.slice(0, 2).toUpperCase()
+    return 'U'
   })()
 
   const handleModuleSelect = (id: ComponentId) => {
@@ -140,28 +159,55 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           {onThemeChange && (
-            <div className="flex items-center">
-              <ThemeToggle theme={theme} onThemeChange={onThemeChange} className="shrink-0" />
-            </div>
-          )}
-          <button
-            onClick={onSettingsClick}
-            title="Settings (API token, categories)"
-            className={`p-2 rounded-lg transition-colors ${isDark ? 'text-slate-400 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-          {isAuthenticated ? (
             <>
-              <span className="text-sm text-slate-500 hidden sm:inline">{displayName ? `Welcome ${displayName}` : user?.email}</span>
-              <button
-                onClick={() => { logout(); navigate('/login') }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'text-slate-400 hover:bg-white/10' : 'text-slate-600 hover:bg-slate-100'}`}
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out
-              </button>
+              <div className="flex items-center">
+                <ThemeToggle theme={theme} onThemeChange={onThemeChange} className="shrink-0" />
+              </div>
+              {isAuthenticated && (
+                <div className={`w-px h-6 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`} />
+              )}
             </>
+          )}
+          {isAuthenticated ? (
+            <div className="relative flex items-center">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`}
+              >
+                <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
+                  <span className="text-white font-semibold text-sm">{userInitials}</span>
+                </div>
+                <span className={`text-sm font-medium hidden sm:inline ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {displayName || user?.email || 'User'}
+                </span>
+                <ChevronDown className={`w-4 h-4 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'} transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {userMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                  <div className={`absolute right-0 top-full mt-1 w-64 py-2 rounded-lg shadow-xl z-50 ${isDark ? 'bg-slate-800 border border-white/10' : 'bg-white border border-slate-200'}`}>
+                    <div className={`px-4 py-3 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{displayName || 'User'}</p>
+                      {user?.email && <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{user.email}</p>}
+                    </div>
+                    <button
+                      onClick={() => { onSettingsClick(); setUserMenuOpen(false) }}
+                      className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition-colors ${isDark ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-slate-100 text-slate-700'}`}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings & Keys
+                    </button>
+                    <button
+                      onClick={() => { logout(); navigate('/login'); setUserMenuOpen(false) }}
+                      className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition-colors ${isDark ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-slate-100 text-slate-700'}`}
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
             <button onClick={() => navigate('/login')} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-white/10">
               Sign In

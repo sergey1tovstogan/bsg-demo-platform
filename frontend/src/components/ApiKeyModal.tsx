@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Save, Key, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { X, Save, Key, Loader2, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import axios from 'axios'
 
 interface ApiKeyModalProps {
@@ -10,6 +10,7 @@ interface ApiKeyModalProps {
 
 export function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProps) {
   const [apiKey, setApiKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -156,18 +157,32 @@ export function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProps) {
 
             <div className="relative">
               <input
-                type="text"
+                type={showKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Enter your API key..."
                 autoFocus
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
-              {loading && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+                {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                </div>
-              )}
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowKey((prev) => !prev)}
+                    className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                    title={showKey ? 'Hide API key' : 'Show API key'}
+                    aria-label={showKey ? 'Hide API key' : 'Show API key'}
+                  >
+                    {showKey ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

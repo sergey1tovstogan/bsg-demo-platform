@@ -16,6 +16,12 @@ import { getBriefForComponent } from './brief/briefRegistry'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
+function isLocalDeployment(): boolean {
+  if (typeof window === 'undefined') return false
+  const h = window.location.hostname
+  return h === 'localhost' || h === '127.0.0.1'
+}
+
 interface AzureResourceGroup {
   id: string
   name: string
@@ -56,6 +62,30 @@ interface AnalysisResult {
   error?: string
 }
 
+/** Sample data for demo mode when backend is unavailable (local deployment) */
+const DEMO_RESOURCE_GROUPS: AzureResourceGroup[] = [
+  { id: 'rg-1', name: 'rg-temenos-prod', location: 'East US' },
+  { id: 'rg-2', name: 'rg-temenos-staging', location: 'East US' },
+]
+
+const DEMO_SERVICES: AzureResource[] = [
+  { id: 'svc-1', name: 'aks-temenos-cluster', type: 'Microsoft.ContainerService/managedClusters', location: 'East US', resourceGroup: 'rg-temenos-prod', description: 'Azure Kubernetes Service' },
+  { id: 'svc-2', name: 'sql-temenos-db', type: 'Microsoft.Sql/servers', location: 'East US', resourceGroup: 'rg-temenos-prod', description: 'Azure SQL Database' },
+  { id: 'svc-3', name: 'evthub-temenos-events', type: 'Microsoft.EventHub/namespaces', location: 'East US', resourceGroup: 'rg-temenos-prod', description: 'Azure Event Hubs' },
+]
+
+const DEMO_ANALYSIS_RESULTS: AnalysisResult[] = DEMO_SERVICES.map((s) => ({
+  service: s,
+  componentInfo: {
+    componentName: s.name.includes('aks') ? 'Kubernetes Cluster' : s.name.includes('sql') ? 'Database' : 'Event Hub',
+    componentType: 'Azure Service',
+    architecturalOverview: 'Sample component for demo mode. Run the backend to analyze real Azure deployments.',
+    functionalOverview: 'In demo mode, component details are simulated. Connect to your Azure subscription with the backend running for full analysis.',
+    capabilities: ['Demo mode', 'Local deployment'],
+    relatedServices: [],
+  },
+}))
+
 export function DeploymentAnalyzer() {
   const [currentStep, setCurrentStep] = useState<Step>('subscription')
   const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
@@ -87,6 +117,7 @@ export function DeploymentAnalyzer() {
   const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
   const [azureHealth, setAzureHealth] = useState<{ status: string; message?: string | null } | null>(null)
   const [lastPreloadedSubId, setLastPreloadedSubId] = useState<string | null>(null)
+  const [useDemoMode, setUseDemoMode] = useState(false)
 
   const RG_CACHE_KEY = 'bsg_azure_rg_cache'
   const RG_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
@@ -180,6 +211,7 @@ export function DeploymentAnalyzer() {
   }
 
   const handleRefreshResourceGroups = async () => {
+    if (useDemoMode) return
     if (subscriptionId) {
       await loadResourceGroups(subscriptionId, true)
     }
@@ -404,6 +436,16 @@ export function DeploymentAnalyzer() {
       setError(null)
       setAnalysisResults([]) // Clear previous results
       setSelectedResourceGroups(selected)
+
+      if (useDemoMode) {
+        setServices(DEMO_SERVICES)
+        setAnalysisResults(DEMO_ANALYSIS_RESULTS)
+        setCurrentStep('analysis')
+        setLoading(false)
+        setAnalysisProgress(null)
+        return
+      }
+
       setAnalysisProgress({ current: 0, total: 2, message: 'Fetching Azure resources...' })
 
       // Get Azure resources first
@@ -626,6 +668,7 @@ export function DeploymentAnalyzer() {
       setClusterNamespaces([])
     } else if (currentStep === 'resourceGroups') {
       setCurrentStep('subscription')
+      setUseDemoMode(false)
       // Keep resourceGroups for instant Connect when returning with same subscription
     }
   }
@@ -645,6 +688,13 @@ export function DeploymentAnalyzer() {
           loading={loading}
           error={error}
           defaultSubscriptionId={subscriptionId}
+          onTryDemoMode={isLocalDeployment() ? () => {
+            setUseDemoMode(true)
+            setSubscriptionId('demo-subscription')
+            setResourceGroups(DEMO_RESOURCE_GROUPS)
+            setError(null)
+            setCurrentStep('resourceGroups')
+          } : undefined}
         />
       )}
 
@@ -715,12 +765,14 @@ function SubscriptionInput({
   onSubmit,
   loading,
   error,
-  defaultSubscriptionId
+  defaultSubscriptionId,
+  onTryDemoMode
 }: {
   onSubmit: (subId: string) => void
   loading: boolean
   error: string | null
   defaultSubscriptionId?: string
+  onTryDemoMode?: () => void
 }) {
   // Get last used subscription ID from localStorage, or use default
   const getInitialSubscriptionId = () => {
@@ -850,6 +902,20 @@ function SubscriptionInput({
             <span>Connect to Azure</span>
           )}
         </button>
+
+        {onTryDemoMode && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Backend unavailable?</p>
+            <button
+              type="button"
+              onClick={onTryDemoMode}
+              disabled={loading}
+              className="w-full px-6 py-2.5 border-2 border-blue-500 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
+            >
+              <span>Try demo mode</span>
+            </button>
+          </div>
+        )}
       </form>
       </div>
     </div>

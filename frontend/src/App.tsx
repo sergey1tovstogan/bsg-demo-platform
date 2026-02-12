@@ -8,6 +8,7 @@ import { ComingSoonModal } from './components/ComingSoonModal'
 import { BSGGuruFloating } from './components/BSGGuruFloating'
 import { LandingPage } from './pages/LandingPage'
 import { ComponentPage } from './pages/ComponentPage'
+import { ContentBackProvider } from './contexts/ContentBackContext'
 import { LoginPage } from './pages/LoginPage'
 import { UserManagement } from './pages/UserManagement'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
@@ -88,9 +89,11 @@ function Dashboard({ theme, onThemeChange }: DashboardProps) {
         <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 overflow-y-auto custom-scrollbar">
           <div className="max-w-7xl mx-auto w-full">
             {componentId ? (
-              <div className="animate-fade-in">
-                <ComponentPage componentId={componentId} onOpenSettings={() => setSettingsOpen(true)} />
-              </div>
+              <ContentBackProvider>
+                <div className="animate-fade-in">
+                  <ComponentPage componentId={componentId} onOpenSettings={() => setSettingsOpen(true)} />
+                </div>
+              </ContentBackProvider>
             ) : (
               <Navigate to="/" replace />
             )}

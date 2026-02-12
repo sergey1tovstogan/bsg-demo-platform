@@ -8,7 +8,15 @@ import type { ComponentId } from '../../types'
 
 const CACHE_KEY = 'data_architecture_chatbot_questions_cache_v2'
 const CACHE_TIMESTAMP_KEY = 'data_architecture_chatbot_questions_cache_timestamp_v2'
+const CACHE_SOURCE_KEY = 'data_architecture_chatbot_questions_cache_source_v2'
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days
+const CACHE_DURATION_LOCAL = 365 * 24 * 60 * 60 * 1000 // 1 year on localhost
+
+function isLocalDeployment(): boolean {
+  if (typeof window === 'undefined') return false
+  const hostname = window.location.hostname
+  return hostname === 'localhost' || hostname === '127.0.0.1'
+}
 
 interface SourceItem {
   title?: string
@@ -24,6 +32,62 @@ interface QuestionItem {
   sources?: SourceItem[]
 }
 
+/** Static fallback for local deployments when RAG API is unavailable */
+const STATIC_FALLBACK_QUESTIONS: QuestionItem[] = [
+  { order: 1, category: 'Data Flow Patterns', title: 'Data Flow Paths Overview', question: 'Explain the three data flow paths...', answer: `### EOD Path
+End-of-Day batch processing for bulk data synchronization and reconciliation. Suitable for non-real-time reporting and regulatory batch updates.
+
+### Event-Driven Path
+Real-time event streaming for immediate processing. Used for transaction notifications, real-time dashboards, and event-sourced architectures.
+
+### Batch Processing Path
+Scheduled batch jobs for data aggregation, ETL, and historical reporting. Complements event-driven flows for analytics and data warehousing.`, sources: [] },
+  { order: 2, category: 'Integration Strategies', title: 'Event-Driven vs EOD Processing', question: 'Compare event-driven...', answer: `### Event-Driven
+- Lower latency, near real-time
+- Better for user-facing features and alerts
+- Higher infrastructure complexity
+- Suited for event streaming (Kafka, Event Hub)
+
+### EOD Processing
+- Predictable batch windows
+- Simpler operational model
+- Higher latency (hours)
+- Suited for reconciliation and bulk updates`, sources: [] },
+  { order: 3, category: 'Data Storage', title: 'Data Hub and Analytics Integration', question: 'Describe Data Hub...', answer: `### ODS (Operational Data Store)
+Staging area for near-real-time operational data from core systems.
+
+### SDS (Staging Data Store)
+Intermediate storage for ETL processing and data transformation before analytics.
+
+### ADS (Analytics Data Store)
+Purpose-built for reporting, dashboards, and analytical queries.`, sources: [] },
+  { order: 4, category: 'Infrastructure', title: 'Pub/Sub and ETL Roles', question: 'Explain Pub/Sub...', answer: `### Pub/Sub (Kafka)
+- Event streaming and real-time data movement
+- Decouples producers from consumers
+- Supports event replay and multiple consumers
+
+### ETL
+- Batch data movement and transformation
+- Data quality and cleansing
+- Load into data warehouse and analytics stores`, sources: [] },
+  { order: 5, category: 'Analytics Strategy', title: 'Data Warehouse Strategy', question: 'What is the strategy...', answer: `### Data Hub
+Central ingestion and distribution layer for operational and analytical data.
+
+### Data Warehouse
+Structured repository for historical analytics and reporting. Fed by ETL from Data Hub and core systems.
+
+### Analytics
+BI tools, dashboards, and ML models consume from the data warehouse and real-time streams.`, sources: [] },
+  { order: 6, category: 'Data Governance', title: 'Data Quality and Governance', question: 'How does Temenos ensure...', answer: `### Data Validation
+Schema validation, referential integrity, and business rule checks at ingestion.
+
+### Cleansing
+Standardization, deduplication, and enrichment pipelines.
+
+### Compliance
+Audit trails, lineage tracking, and retention policies aligned with regulatory requirements.`, sources: [] },
+]
+
 interface ChatbotWithQuestionsProps {
   componentId: ComponentId
 }
@@ -33,31 +97,33 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFromCache, setIsFromCache] = useState(false)
+  const [isStaticFallback, setIsStaticFallback] = useState(false)
 
   useEffect(() => {
-    // Check cache immediately on mount
+    // Check cache immediately on mount so we avoid RAG API when possible (especially on local)
     const cached = loadCachedContent()
-    if (cached) {
+    if (cached && cached.length > 0) {
       const sorted = [...cached].sort((a, b) => (a.order || 0) - (b.order || 0))
       setRagContent(sorted)
       setLoading(false)
       setIsFromCache(true)
-      console.log('Loaded RAG question cards from cache')
+      const source = getCachedContentSource()
+      setIsStaticFallback(source === 'static')
+      console.log('Loaded Data Architecture question cards from cache')
     } else {
       loadRAGContent()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadCachedContent = () => {
+  const loadCachedContent = (): QuestionItem[] | null => {
     try {
       const cached = localStorage.getItem(CACHE_KEY)
       const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY)
       if (cached && timestamp) {
         const age = Date.now() - parseInt(timestamp, 10)
-        if (age < CACHE_DURATION) {
-          return JSON.parse(cached)
-        }
+        const maxAge = isLocalDeployment() ? CACHE_DURATION_LOCAL : CACHE_DURATION
+        if (age < maxAge) return JSON.parse(cached) as QuestionItem[]
       }
     } catch (err) {
       console.warn('Failed to load cached question cards:', err)
@@ -65,10 +131,19 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
     return null
   }
 
-  const saveCachedContent = (content: QuestionItem[]) => {
+  const getCachedContentSource = (): 'api' | 'static' | null => {
+    try {
+      const source = localStorage.getItem(CACHE_SOURCE_KEY)
+      if (source === 'api' || source === 'static') return source
+    } catch (_) {}
+    return null
+  }
+
+  const saveCachedContent = (content: QuestionItem[], source: 'api' | 'static' = 'api') => {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(content))
       localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
+      localStorage.setItem(CACHE_SOURCE_KEY, source)
     } catch (err) {
       console.warn('Failed to save cached question cards:', err)
     }
@@ -190,6 +265,7 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
         setRagContent(ragResults)
         saveCachedContent(ragResults)
         setIsFromCache(false)
+        setIsStaticFallback(false)
         setError(null)
         console.log('Loaded RAG question cards from API and cached')
 
@@ -201,9 +277,16 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
         if (forceRefresh && cachedContent) {
           setRagContent(cachedContent)
           setIsFromCache(true)
+          setIsStaticFallback(false)
           setError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
         } else {
-          setError(`No content retrieved from RAG API. ${errors.length > 0 ? errors.join('; ') : 'All queries failed.'}`)
+          // Fallback to static content for local deployments; persist so next load uses cache
+          setRagContent(STATIC_FALLBACK_QUESTIONS)
+          setIsFromCache(true)
+          setIsStaticFallback(true)
+          setError(null)
+          saveCachedContent(STATIC_FALLBACK_QUESTIONS, 'static')
+          console.log('RAG API unavailable. Using static fallback and caching for Data Architecture.')
         }
       }
     } catch (err: unknown) {
@@ -211,17 +294,19 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
       const error = err as { message?: string; response?: { data?: { detail?: { error?: string }; error?: string } } }
       const errorMsg = error.response?.data?.detail?.error || error.response?.data?.error || error.message || 'Failed to load RAG information'
 
-      if (forceRefresh) {
-        const cachedContent = loadCachedContent()
-        if (cachedContent) {
-          setRagContent(cachedContent)
-          setIsFromCache(true)
-          setError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
-        } else {
-          setError(errorMsg)
-        }
-      } else {
-        setError(errorMsg)
+      const cachedContent = loadCachedContent()
+      if (forceRefresh && cachedContent) {
+        setRagContent(cachedContent)
+        setIsFromCache(true)
+        setIsStaticFallback(false)
+        setError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
+      } else if (!cachedContent) {
+        setRagContent(STATIC_FALLBACK_QUESTIONS)
+        setIsFromCache(true)
+        setIsStaticFallback(true)
+        setError(null)
+        saveCachedContent(STATIC_FALLBACK_QUESTIONS, 'static')
+        console.log('RAG API error. Using static fallback and caching for Data Architecture.', errorMsg)
       }
     } finally {
       setLoading(false)
@@ -240,8 +325,10 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
                 Pre-Built Questions
               </h2>
               <p className="text-lg text-gray-700 dark:text-gray-300">
-                Click any card to see the answer from our Knowledge Base
-                {isFromCache && (
+                {isStaticFallback
+                  ? 'Static content for local deployment. Configure RAG token in Settings for live updates.'
+                  : 'Click any card to see the answer from our Knowledge Base'}
+                {isFromCache && !isStaticFallback && (
                   <span className="ml-2 text-sm text-green-600 dark:text-green-400 font-medium">
                     (Cached - 30 day expiry)
                   </span>

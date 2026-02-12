@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BookOpen, Video, Play, ChevronLeft } from 'lucide-react'
+import { useContentBack } from '../contexts/ContentBackContext'
 import { ContentViewer } from '../components/ContentViewer'
 import { DemoFrame } from '../components/DemoFrame'
 import { TemplateCardWrapper } from '../components/template-renderer/TemplateCardWrapper'
@@ -84,17 +85,27 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
     );
   }
 
+  const contentBack = useContentBack()
+
   return (
     <div className="space-y-6">
-      {/* Tab Navigation - modern pill-style tabs */}
-      <div className="inline-flex p-1 rounded-xl bg-slate-200/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/80 dark:border-slate-700/80">
+      {/* Tab Navigation - modern pill-style tabs with optional Back button */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="inline-flex p-1 rounded-xl bg-slate-200/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/80 dark:border-slate-700/80">
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
+          const handleTabClick = () => {
+            if (tab.id === 'content' && componentId === 'security' && contentBack?.showBack && contentBack.onBack) {
+              contentBack.onBack()
+            } else {
+              setActiveTab(tab.id)
+            }
+          }
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={handleTabClick}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isActive
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200/50 dark:ring-slate-600/50'
@@ -106,6 +117,16 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
             </button>
           )
         })}
+        </div>
+        {contentBack?.showBack && contentBack.onBack && (
+          <button
+            onClick={contentBack.onBack}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300/80 dark:hover:bg-slate-600/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}

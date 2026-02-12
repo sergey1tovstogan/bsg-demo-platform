@@ -3,6 +3,36 @@ import { Send, Loader2, Bot, User, AlertTriangle } from 'lucide-react'
 import { apiService } from '../services/api'
 import type { ComponentId, ChatMessage } from '../types'
 
+function isLocalDeployment(): boolean {
+  if (typeof window === 'undefined') return false
+  const h = window.location.hostname
+  return h === 'localhost' || h === '127.0.0.1'
+}
+
+/** Static fallback responses for local deployment when backend is unavailable */
+function getStaticFallbackResponse(question: string): string {
+  const q = question.toLowerCase().trim()
+  if (q.includes('architecture') || q.includes('cloud') || q.includes('azure') || q.includes('aws')) {
+    return 'Temenos offers cloud-native, event-driven architecture deployable on Azure, AWS, OpenShift, and GCP. The platform supports modular banking, microservices, and Infrastructure as Code (ARM, Terraform, Helm). For detailed architecture content, visit the Deployment section.'
+  }
+  if (q.includes('security') || q.includes('auth') || q.includes('authentication')) {
+    return 'Temenos security covers identity verification, SSO, role-based access control, and data protection at rest and in transit. The platform is certified for ISO, CSA, and SOC standards. Explore the Security section for detailed content.'
+  }
+  if (q.includes('observability') || q.includes('monitoring') || q.includes('grafana')) {
+    return 'Temenos supports industry-standard instrumentation (OpenTelemetry, Prometheus, Grafana) and pre-configured dashboards for technology operations. For the full observability stack, see the Observability section.'
+  }
+  if (q.includes('integration') || q.includes('api') || q.includes('event')) {
+    return 'Temenos provides extensible APIs, events, and real-time data streaming. OpenAPI, Swagger, Kafka, and Event Hubs are supported. See the Integration section for more.'
+  }
+  if (q.includes('devops') || q.includes('cicd') || q.includes('deploy')) {
+    return 'Temenos offers automated testing, CI/CD, and continuous update/upgrade. Jenkins, GitLab, Git, and Bitbucket are commonly used. See the DevOps section for details.'
+  }
+  if (q.includes('extensibility') || q.includes('config') || q.includes('workbench')) {
+    return 'Temenos offers breadth and depth configurable functionality with a graphical low-code configuration tool (Temenos Workbench). Banks and partners can extend the platform.'
+  }
+  return 'In local deployment mode, BSG Guru uses static responses. For full RAG-powered answers, start the backend server and refresh the page. Meanwhile, try asking about: Architecture, Security, Observability, Integration, DevOps, or Extensibility.'
+}
+
 interface ChatbotProps {
   componentId: ComponentId
   embedded?: boolean
@@ -17,6 +47,7 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
   const [initializing, setInitializing] = useState(true)
   const [chatError, setChatError] = useState<string | null>(null)
   const [ragTokenWarning, setRagTokenWarning] = useState<string | null>(null)
+  const [isLocalFallbackMode, setIsLocalFallbackMode] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sessionIdRef = useRef<string | null>(null)
 
@@ -136,13 +167,20 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
           recoveryActions = ['Refresh the page to retry', 'Check backend and API configuration']
         }
       }
-      if (recoveryActions.length === 0) {
-        recoveryActions = ['Refresh the page to retry', 'Configure RAG token in Settings if you see a warning above', 'Ensure the backend is running']
+      // On local deployment, use static fallback instead of showing error
+      if (isLocalDeployment()) {
+        setIsLocalFallbackMode(true)
+        setChatError(null)
+        console.log('[Chatbot] Local deployment: using static fallback (backend unavailable)')
+      } else {
+        if (recoveryActions.length === 0) {
+          recoveryActions = ['Refresh the page to retry', 'Configure RAG token in Settings if you see a warning above', 'Ensure the backend is running']
+        }
+        const fullMessage = recoveryActions.length > 0
+          ? `${errorMessage}\n\nWhat you can do:\n${recoveryActions.map((a, i) => `${i + 1}. ${a}`).join('\n')}`
+          : errorMessage
+        setChatError(fullMessage)
       }
-      const fullMessage = recoveryActions.length > 0
-        ? `${errorMessage}\n\nWhat you can do:\n${recoveryActions.map((a, i) => `${i + 1}. ${a}`).join('\n')}`
-        : errorMessage
-      setChatError(fullMessage)
     } finally {
       setInitializing(false)
     }
@@ -164,11 +202,11 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
   // (Avoid infinite loop: when init fails we set chatError and initializing=false; without the !chatError
   // check we would call initializeSession() again immediately, fail again, repeat.)
   useEffect(() => {
-    if (!sessionId && !initializing && !chatError) {
+    if (!sessionId && !initializing && !chatError && !isLocalFallbackMode) {
       console.log('[Chatbot] Session ID is null, reinitializing...')
       initializeSession()
     }
-  }, [sessionId, initializing, chatError, initializeSession])
+  }, [sessionId, initializing, chatError, isLocalFallbackMode, initializeSession])
 
   useEffect(() => {
     scrollToBottom()
@@ -179,7 +217,8 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
   }
 
   const sendMessage = async () => {
-    if (!input.trim() || !sessionId || loading) return
+    const canSend = sessionId || isLocalFallbackMode
+    if (!input.trim() || !canSend || loading) return
 
     const userMessage: ChatMessage = {
       message_id: `temp-${Date.now()}`,
@@ -194,9 +233,23 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
     setLoading(true)
     setChatError(null)
 
+    // Local fallback: use static responses when backend is unavailable
+    if (isLocalFallbackMode && !sessionId) {
+      const staticResponse = getStaticFallbackResponse(messageToSend)
+      const assistantMessage: ChatMessage = {
+        message_id: `static-${Date.now()}`,
+        role: 'assistant',
+        content: staticResponse,
+        timestamp: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, assistantMessage])
+      setLoading(false)
+      return
+    }
+
     try {
       console.log(`[Chatbot] Sending message to session ${sessionId}:`, messageToSend)
-      const response = await apiService.sendChatMessage(componentId, sessionId, messageToSend)
+      const response = await apiService.sendChatMessage(componentId, sessionId!, messageToSend)
       console.log(`[Chatbot] Message response:`, response)
       
       // Backend returns {"status": "success", "data": {...message...}}
@@ -267,11 +320,11 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
             onKeyPress={handleKeyPress}
             placeholder="Ask about Temenos Technology Pillars (Architecture, Extensibility, Integration, etc.)..."
             className="input-field flex-1"
-            disabled={loading || !sessionId}
+            disabled={loading || (!sessionId && !isLocalFallbackMode)}
           />
           <button
             onClick={sendMessage}
-            disabled={!input.trim() || loading || !sessionId}
+            disabled={!input.trim() || loading || (!sessionId && !isLocalFallbackMode)}
             className="btn-primary flex items-center space-x-2 px-6"
           >
             {loading ? (
@@ -295,10 +348,26 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
         )}
       </div>
 
-      {ragTokenWarning && (
+      {ragTokenWarning && !isLocalFallbackMode && (
         <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-800 dark:text-yellow-200 text-sm flex items-start space-x-2">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <span>{ragTokenWarning}</span>
+        </div>
+      )}
+      {isLocalFallbackMode && (
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-blue-800 dark:text-blue-200 text-sm flex items-start space-x-2">
+          <Bot className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Offline mode for local deployment</p>
+            <p className="text-xs mt-1 opacity-90">Static responses provided. Start the backend and refresh for full RAG-powered answers.</p>
+            <button
+              type="button"
+              onClick={() => { setIsLocalFallbackMode(false); setChatError(null); initializeSession() }}
+              className="mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              Retry connection
+            </button>
+          </div>
         </div>
       )}
       {chatError && (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
     Fingerprint, // Modern Auth
     ShieldCheck, // Modern Authorization
@@ -9,10 +9,10 @@ import {
     CloudCog, // Modern SaaS
     Activity, // Modern Logs/BCP
     Scale, // Modern Compliance
-    X,
     type LucideIcon,
     ChevronRight
 } from 'lucide-react'
+import { useContentBack } from '../contexts/ContentBackContext'
 import { ModernSecurityArchitecture } from './ModernSecurityArchitecture'
 import { ModernAuthorization } from './ModernAuthorization'
 import { ModernPrivacyEncryption } from './ModernPrivacyEncryption'
@@ -4150,6 +4150,35 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         setShowDetailedExplanation(false)
     }
 
+    const contentBack = useContentBack()
+    const getBackHandler = useCallback(() => {
+        if (showExate) return () => setShowExate(false)
+        if (showProtectAssets) return () => setShowProtectAssets(false)
+        if (showSaaSPAM) return () => setShowSaaSPAM(false)
+        if (showSaaSDataAccessControl) return () => setShowSaaSDataAccessControl(false)
+        if (showSaaSDefenceDepth) return () => setShowSaaSDefenceDepth(false)
+        if (showTemenosSaaSWAF) return () => setShowTemenosSaaSWAF(false)
+        if (showTemenosSaaSAntiDDoS) return () => setShowTemenosSaaSAntiDDoS(false)
+        if (showNetworkSecurityServices) return () => setShowNetworkSecurityServices(false)
+        if (showSecurityEventFeed) return () => setShowSecurityEventFeed(false)
+        if (showTrustCenter) return () => { setShowTrustCenter(false); setShowCompliancePosition(true) }
+        if (showCompliancePosition) return () => setShowCompliancePosition(false)
+        if (showRiskManagement) return () => { setShowRiskManagement(false); setShowTrustCenter(true) }
+        if (showSecurityPolicy) return () => { setShowSecurityPolicy(false); setShowRiskManagement(true) }
+        if (showProtectionEmbedded) return () => { setShowProtectionEmbedded(false); setShowSecurityPolicy(true) }
+        if (showDetailedExplanation) return handleBackToArchitecture
+        if (showUserManagement) return () => setShowUserManagement(false)
+        if (showSaaSComplianceOverview) return () => setShowSaaSComplianceOverview(false)
+        if (selectedCard !== null) return handleBack
+        return null
+    }, [showExate, showProtectAssets, showSaaSPAM, showSaaSDataAccessControl, showSaaSDefenceDepth, showTemenosSaaSWAF, showTemenosSaaSAntiDDoS, showNetworkSecurityServices, showSecurityEventFeed, showTrustCenter, showCompliancePosition, showRiskManagement, showSecurityPolicy, showProtectionEmbedded, showDetailedExplanation, showUserManagement, showSaaSComplianceOverview, selectedCard])
+    useEffect(() => {
+        if (contentBack) {
+            const handler = getBackHandler()
+            contentBack.setBackState(!!handler, handler)
+        }
+    }, [contentBack, getBackHandler])
+
     // Listen for postMessage from iframe
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -4228,15 +4257,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showExate) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowExate(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={eXateHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4251,15 +4271,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         // Show ModernPrivacyEncryption by default
         return (
             <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                </div>
                 <ModernPrivacyEncryption />
             </div>
         )
@@ -4269,15 +4280,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
     if (selectedCard === 4) {
         return (
             <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                </div>
                 <ModernSegregation />
             </div>
         )
@@ -4289,15 +4291,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showProtectAssets) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowProtectAssets(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={ProtectAssetsHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4313,15 +4306,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showSaaSPAM) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowSaaSPAM(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={SaaSPAMHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4337,15 +4321,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showSaaSDataAccessControl) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowSaaSDataAccessControl(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={SaaSDataAccessControlHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4360,15 +4335,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         // Show SaaSAccessData by default
         return (
             <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                </div>
                 <ModernAccessManagement />
             </div>
         )
@@ -4380,15 +4346,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showSaaSDefenceDepth) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowSaaSDefenceDepth(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={SaaSDefenceDepthHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4403,15 +4360,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         // Show PlatformManagement by default
         return (
             <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                </div>
                 <ModernPlatformManagement />
             </div>
         )
@@ -4423,15 +4371,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showTemenosSaaSWAF) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowTemenosSaaSWAF(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={WAFHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4447,15 +4386,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showTemenosSaaSAntiDDoS) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowTemenosSaaSAntiDDoS(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={DDoSHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4471,15 +4401,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showNetworkSecurityServices) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowNetworkSecurityServices(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={NetworkHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4495,15 +4416,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showSecurityEventFeed) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowSecurityEventFeed(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={SecurityEventFeedHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4518,15 +4430,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         // Show ProductSecurityUniform by default
         return (
             <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                </div>
                 <ModernSaaSSecurity />
             </div>
         )
@@ -4536,15 +4439,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
     if (selectedCard === 8) {
         return (
             <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                </div>
                 <ModernObservability />
             </div>
         )
@@ -4556,18 +4450,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showTrustCenter) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => {
-                                setShowTrustCenter(false)
-                                setShowCompliancePosition(true)
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={TrustCenterHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4583,15 +4465,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showCompliancePosition) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowCompliancePosition(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={CompliancePositionHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4607,18 +4480,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showSecurityPolicy) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => {
-                                setShowSecurityPolicy(false)
-                                setShowRiskManagement(true)
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={SecurityPolicyHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4634,18 +4495,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showProtectionEmbedded) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => {
-                                setShowProtectionEmbedded(false)
-                                setShowSecurityPolicy(true)
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={ProtectionEmbeddedHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4661,18 +4510,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showRiskManagement) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => {
-                                setShowRiskManagement(false)
-                                setShowTrustCenter(true)
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={RiskManagementHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4688,15 +4525,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showSaaSComplianceOverview) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowSaaSComplianceOverview(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={SaaSComplianceOverviewHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4711,15 +4539,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         // Show design page by default
         return (
             <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                </div>
                 <ModernCompliance />
             </div>
         )
@@ -4731,15 +4550,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showUserManagement) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={() => setShowUserManagement(false)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={UserManagementHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4754,15 +4564,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         // Show ModernAuthorization by default
         return (
             <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                </div>
                 <ModernAuthorization />
             </div>
         )
@@ -4774,15 +4575,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         if (showDetailedExplanation) {
             return (
                 <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                    <div className="absolute top-4 right-4 z-50">
-                        <button
-                            onClick={handleBackToArchitecture}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                        >
-                            <X className="w-5 h-5" />
-                            <span>Back</span>
-                        </button>
-                    </div>
                     <iframe
                         srcDoc={TemenosAuthenticationHTML}
                         className="w-full h-full border-0 rounded-lg"
@@ -4797,15 +4589,6 @@ export function SecurityContentViewer({ initialSelectedCard }: SecurityContentVi
         // Show SecurityArchitecture by default
         return (
             <div className="card" style={{ height: 'calc(100vh - 200px)', position: 'relative', padding: 0 }}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#283054] text-white rounded-lg hover:bg-[#1e2440] transition-colors shadow-lg"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                </div>
                 <ModernSecurityArchitecture />
             </div>
         )

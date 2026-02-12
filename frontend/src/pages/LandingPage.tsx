@@ -214,16 +214,17 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
                 <ChevronRight className="w-6 h-6" />
               </button>
 
+              {/* Fixed-size frame: same dimensions for all categories to avoid jumps on transition */}
               <div
                 role="button"
                 tabIndex={0}
                 onClick={handlePillarClick}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillarClick() } }}
-                className={`group w-full rounded-3xl border p-8 md:p-12 lg:p-16 min-h-[320px] flex flex-col justify-center transition-all duration-500 cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${isDark ? 'bg-white/[0.04] border-white/15 backdrop-blur-md hover:bg-white/[0.07]' : 'bg-white border-slate-200 shadow-xl hover:shadow-2xl'}`}
+                className={`group w-full rounded-3xl border p-8 md:p-12 lg:p-16 h-[400px] flex flex-col justify-center transition-[transform,box-shadow] duration-500 cursor-pointer hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${isDark ? 'bg-white/[0.04] border-white/15 backdrop-blur-md hover:bg-white/[0.07]' : 'bg-white border-slate-200 shadow-xl hover:shadow-2xl'}`}
                 aria-label={`Go to ${pillar.title} - ${pillar.tagline}`}
               >
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-                  <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center h-full min-h-0">
+                  <div className="min-h-0 flex flex-col justify-center overflow-y-auto">
                     <div className={`text-xs font-semibold uppercase tracking-widest mb-4 ${isDark ? 'text-white/70' : 'text-slate-500'}`}>{pillar.title}</div>
                     <h2 className={`text-2xl md:text-3xl lg:text-4xl font-bold mb-6 leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{pillar.tagline}</h2>
                     <ul className="space-y-3 mb-6">
@@ -242,8 +243,8 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
                       ))}
                     </div>
                   </div>
-                  <div className="hidden lg:flex justify-center items-center">
-                    <div className={`w-40 h-40 lg:w-48 lg:h-48 rounded-3xl bg-gradient-to-br ${pillar.color} flex items-center justify-center shadow-2xl opacity-90 group-hover:scale-105 transition-transform`}>
+                  <div className="hidden lg:flex justify-center items-center flex-shrink-0">
+                    <div className={`w-40 h-40 lg:w-48 lg:h-48 rounded-3xl bg-gradient-to-br ${pillar.color} flex items-center justify-center shadow-2xl opacity-90 group-hover:scale-105 transition-transform duration-300`}>
                       <Icon className="w-20 h-20 lg:w-24 lg:h-24 text-white/95" />
                     </div>
                   </div>

@@ -121,9 +121,11 @@ function PrivacyEncryptionView({ activeTooltip, setActiveTooltip, tooltips }: Pr
                     className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-purple-500/50 transition-all duration-300 cursor-help"
                     onMouseEnter={() => setActiveTooltip('transit')}
                     onMouseLeave={() => setActiveTooltip(null)}
+                    title="Hover for additional information"
                 >
-                    <div className="absolute -top-3 left-6 bg-purple-100 dark:bg-purple-800 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-1 rounded-full text-sm font-bold border border-purple-200 dark:border-purple-800">
+                    <div className="absolute -top-3 left-6 bg-purple-100 dark:bg-purple-800 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-1 rounded-full text-sm font-bold border border-purple-200 dark:border-purple-800 flex items-center gap-2">
                         Data in Transit
+                        <Info className="w-3.5 h-3.5 opacity-70" />
                     </div>
 
                     <div className="flex flex-col h-full mt-4">
@@ -159,9 +161,11 @@ function PrivacyEncryptionView({ activeTooltip, setActiveTooltip, tooltips }: Pr
                     className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-blue-500/50 transition-all duration-300 cursor-help"
                     onMouseEnter={() => setActiveTooltip('rest')}
                     onMouseLeave={() => setActiveTooltip(null)}
+                    title="Hover for additional information"
                 >
-                    <div className="absolute -top-3 left-6 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-1 rounded-full text-sm font-bold border border-blue-200 dark:border-blue-800">
+                    <div className="absolute -top-3 left-6 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-1 rounded-full text-sm font-bold border border-blue-200 dark:border-blue-800 flex items-center gap-2">
                         Data at Rest
+                        <Info className="w-3.5 h-3.5 opacity-70" />
                     </div>
 
                     <div className="flex flex-col h-full mt-4">
