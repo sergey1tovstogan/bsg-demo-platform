@@ -508,8 +508,6 @@ export function DeploymentContentViewer() {
   const [ragContent, setRagContent] = useState<any>(null)
   const [ragLoading, setRagLoading] = useState(true)
   const [ragError, setRagError] = useState<string | null>(null)
-  const [isFromCache, setIsFromCache] = useState(false)
-  const [isStaticFallback, setIsStaticFallback] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null) // 'Azure' or 'AWS'
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null) // Category like 'Databases', 'Infrastructure', etc.
   const [selectedModuleDetail, setSelectedModuleDetail] = useState<string | null>(null) // Composable module ID for View Details
@@ -528,9 +526,7 @@ export function DeploymentContentViewer() {
         const sorted = [...usable].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
         setRagContent(sorted)
         setRagLoading(false)
-        setIsFromCache(true)
         const source = getCachedContentSource()
-        setIsStaticFallback(source === 'static')
         console.log('Loaded RAG content from cache' + (source === 'static' ? ' (static fallback)' : ''))
       } else {
         loadRAGContent()
@@ -583,7 +579,6 @@ export function DeploymentContentViewer() {
         if (cached) {
           setRagContent(cached)
           setRagLoading(false)
-          setIsFromCache(true)
           console.log('Loaded RAG content from cache (30 day expiry)')
           return
         }
@@ -591,11 +586,6 @@ export function DeploymentContentViewer() {
 
       // Store cached content before refresh in case refresh fails
       const cachedContent = forceRefresh ? loadCachedContent() : null
-
-      // Clear cache flag when forcing refresh
-      if (forceRefresh) {
-        setIsFromCache(false)
-      }
 
       setRagLoading(true)
       setRagError(null)
@@ -713,8 +703,6 @@ export function DeploymentContentViewer() {
         ragResults.sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
         setRagContent(ragResults)
         saveCachedContent(ragResults)
-        setIsFromCache(false)
-        setIsStaticFallback(false)
         setRagError(null)
         console.log('Loaded RAG content from API and cached')
         if (errors.length > 0) {
@@ -723,16 +711,12 @@ export function DeploymentContentViewer() {
       } else {
         if (forceRefresh && cachedContent && Array.isArray(cachedContent) && cachedContent.length > 0) {
           setRagContent(cachedContent)
-          setIsFromCache(true)
-          setIsStaticFallback(false)
           setRagError(`Failed to refresh content. Showing cached data. Errors: ${errors.join('; ')}`)
           console.warn('Refresh failed, restored cached content', errors)
         } else {
           // Fallback to static content for local deployments (RAG unavailable, token expired, or network error)
           setRagContent(STATIC_FALLBACK_CONTENT)
           setRagError(null)
-          setIsFromCache(true)
-          setIsStaticFallback(true)
           saveCachedContent(STATIC_FALLBACK_CONTENT, 'static')
           console.log('RAG API unavailable. Using static fallback and caching so next load skips API.')
         }
@@ -748,15 +732,11 @@ export function DeploymentContentViewer() {
       const cachedContent = loadCachedContent()
       if (forceRefresh && cachedContent && Array.isArray(cachedContent) && cachedContent.length > 0) {
         setRagContent(cachedContent)
-        setIsFromCache(true)
-        setIsStaticFallback(false)
         setRagError(`Failed to refresh content. Showing cached data. Error: ${errorMsg}`)
       } else if (!cachedContent || !Array.isArray(cachedContent) || cachedContent.length === 0) {
         // Fallback to static content for local deployments; persist so next load uses cache
         setRagContent(STATIC_FALLBACK_CONTENT)
         setRagError(null)
-        setIsFromCache(true)
-        setIsStaticFallback(true)
         saveCachedContent(STATIC_FALLBACK_CONTENT, 'static')
         console.log('RAG API error. Using static fallback and caching for local deployment.', errorMsg)
       }

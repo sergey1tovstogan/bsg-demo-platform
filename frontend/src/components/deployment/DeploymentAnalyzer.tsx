@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, RefreshCw, ExternalLink, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
 import { apiService } from '../../services/api'
 import { StructuredRAGDisplay } from './StructuredRAGDisplay'
 import { BriefPage } from './brief'
@@ -2290,7 +2289,6 @@ function ComponentDetailPanel({
     (hasMeaningfulText(componentInfo?.architecturalOverview) ||
      hasMeaningfulText(componentInfo?.functionalOverview))
 
-  const hasStrictDocumentation = componentInfo?.architecturalOverview?.includes('## 1. Purpose & Scope') ?? false
   const hasRelatedServices = Array.isArray(componentInfo?.relatedServices) && componentInfo.relatedServices.length > 0
   const hasRelationships = Array.isArray(componentInfo?.relationships) && componentInfo.relationships.length > 0
   const briefEntry = componentInfo?.componentName ? getBriefForComponent(componentInfo.componentName) : null
@@ -2563,39 +2561,6 @@ function ComponentDetailPanel({
             </summary>
             <div className="mt-4 rounded-lg overflow-hidden">
               <BriefPage rawText={briefEntry.rawText} name={briefEntry.name} className="min-h-0 rounded-lg" />
-            </div>
-          </details>
-        )}
-
-        {hasStrictDocumentation && componentInfo.architecturalOverview && (
-          <details className="group bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-              Full Documentation (RAG)
-            </summary>
-            <div className="mt-4 prose prose-lg dark:prose-invert max-w-none">
-              <ReactMarkdown
-                components={{
-                  h1: ({ ...props }) => <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-6 mb-4 pb-2 border-b border-gray-300 dark:border-gray-600" {...props} />,
-                  h2: ({ ...props }) => <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-8 mb-4 pt-4 border-t border-gray-200 dark:border-gray-700 first:border-t-0 first:pt-0" {...props} />,
-                  h3: ({ ...props }) => <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-6 mb-3" {...props} />,
-                  h4: ({ ...props }) => <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mt-4 mb-2" {...props} />,
-                  ul: ({ ...props }) => <ul className="list-none space-y-2 mb-4 text-gray-700 dark:text-gray-300 ml-4" {...props} />,
-                  ol: ({ ...props }) => <ol className="list-decimal list-outside ml-6 space-y-2 mb-4 text-gray-700 dark:text-gray-300" {...props} />,
-                  li: ({ children, ...props }: any) => (
-                    <li className="flex items-start space-x-3 leading-relaxed" {...props}>
-                      <div className="mt-2 flex-shrink-0">
-                        <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-700 mt-1.5"></div>
-                      </div>
-                      <span className="flex-1">{children}</span>
-                    </li>
-                  ),
-                  p: ({ ...props }) => <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300" {...props} />,
-                  strong: ({ ...props }) => <strong className="font-bold text-gray-900 dark:text-white" {...props} />,
-                  code: ({ ...props }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-indigo-600 dark:text-indigo-400" {...props} />
-                }}
-              >
-                {componentInfo.architecturalOverview}
-              </ReactMarkdown>
             </div>
           </details>
         )}
