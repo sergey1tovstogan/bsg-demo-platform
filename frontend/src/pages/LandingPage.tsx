@@ -29,7 +29,7 @@ export const TECHNOLOGY_PILLARS: Array<{
 }> = [
   {
     id: 'functional-architecture',
-    title: 'Functional Architecture',
+    title: 'Architecture',
     icon: Cpu,
     color: 'from-blue-500 to-cyan-500',
     glow: 'shadow-blue-500/40',
@@ -40,7 +40,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Gen AI, Agentic AI, AI Platform (vision)',
     ],
     techs: ['Azure', 'AWS', 'OpenShift', 'GCP'],
-    platformPath: '/platform/deployment',
+    platformPath: '/platform/architecture',
   },
   {
     id: 'integration',
@@ -128,7 +128,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Continuous update and annual upgrade',
     ],
     techs: ['Jenkins', 'GitLab', 'Git', 'Bitbucket'],
-    platformPath: '/platform/design-time',
+    platformPath: '/platform/devops',
   },
 ]
 

@@ -377,7 +377,7 @@ export function LayoutShowcaseContent() {
           </div>
           <div className="text-center space-y-2">
             <div className="bg-[#6366F1] h-16 rounded-lg shadow-md"></div>
-            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Design Time</p>
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">DevOps</p>
             <p className="text-xs font-mono text-slate-500">#6366F1</p>
           </div>
         </div>

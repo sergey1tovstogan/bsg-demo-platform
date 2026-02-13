@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Sun, Moon, Check, Key, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import type { ComponentId } from '../types'
-import { Network, Database, Cloud, Shield, Palette } from 'lucide-react'
+import { Network, Database, Cloud, Shield, GitBranch } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { apiService } from '../services/api'
 
@@ -12,16 +12,17 @@ interface CategoryOption {
 }
 
 const CATEGORIES: CategoryOption[] = [
+  { id: 'architecture', name: 'Architecture', icon: Cloud },
   { id: 'integration', name: 'Integration, APIs & Events', icon: Network },
   { id: 'data-architecture', name: 'Data Architecture', icon: Database },
-  { id: 'deployment', name: 'Deployment & Cloud', icon: Cloud },
   { id: 'security', name: 'Security', icon: Shield },
   { id: 'observability', name: 'Observability', icon: Eye },
-  { id: 'design-time', name: 'DevOps', icon: Palette },
+  { id: 'devops', name: 'DevOps', icon: GitBranch },
 ]
 
 const STORAGE_KEY = 'bsg_selected_categories'
 const RAG_TOKEN_STORAGE_KEY = 'bsg_rag_jwt_token'
+const SANDBOX_API_KEY_STORAGE_KEY = 'temenos_api_key'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -38,15 +39,24 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
   const [ragTokenStatus, setRagTokenStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [ragTokenMessage, setRagTokenMessage] = useState('')
   const [jwtInfo, setJwtInfo] = useState<any>(null)
+  const [sandboxApiKey, setSandboxApiKey] = useState('')
+  const [showSandboxKey, setShowSandboxKey] = useState(false)
+  const [sandboxKeyLoading, setSandboxKeyLoading] = useState(false)
+  const [sandboxKeyStatus, setSandboxKeyStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [sandboxKeyMessage, setSandboxKeyMessage] = useState('')
 
-  // Load selected categories and RAG token from localStorage on mount
+  // Load selected categories, RAG token, and sandbox API key from localStorage on mount
   useEffect(() => {
     if (isOpen) {
       try {
         const stored = localStorage.getItem(STORAGE_KEY)
         if (stored) {
-          const parsed = JSON.parse(stored) as ComponentId[]
-          setSelectedCategories(new Set(parsed))
+          const parsed = JSON.parse(stored) as string[]
+          const migrated = parsed.map(id => id === 'deployment' ? 'architecture' : id)
+          if (migrated.some((id, i) => id !== parsed[i])) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+          }
+          setSelectedCategories(new Set(migrated as ComponentId[]))
         } else {
           // Default: all categories selected
           setSelectedCategories(new Set(CATEGORIES.map(c => c.id)))
@@ -70,8 +80,55 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
       
       // Load JWT info from backend
       loadJWTInfo()
+
+      // Load sandbox API key
+      loadSandboxApiKey()
     }
   }, [isOpen])
+
+  const loadSandboxApiKey = async () => {
+    try {
+      const stored = localStorage.getItem(SANDBOX_API_KEY_STORAGE_KEY)
+      if (stored) {
+        setSandboxApiKey(stored)
+        return
+      }
+      const response = await apiService.getUserApiKey()
+      const data = response?.data as { has_key?: boolean; api_key?: string } | undefined
+      if (data?.has_key && data?.api_key) {
+        setSandboxApiKey(data.api_key)
+        localStorage.setItem(SANDBOX_API_KEY_STORAGE_KEY, data.api_key)
+      }
+    } catch {
+      // Silently fail - use localStorage only
+    }
+  }
+
+  const handleSandboxKeySave = async () => {
+    if (!sandboxApiKey.trim()) {
+      setSandboxKeyStatus('error')
+      setSandboxKeyMessage('API key cannot be empty')
+      return
+    }
+    setSandboxKeyLoading(true)
+    setSandboxKeyStatus('idle')
+    setSandboxKeyMessage('')
+    try {
+      localStorage.setItem(SANDBOX_API_KEY_STORAGE_KEY, sandboxApiKey.trim())
+      await apiService.saveUserApiKey(sandboxApiKey.trim())
+      setSandboxKeyStatus('success')
+      setSandboxKeyMessage('Sandbox API key saved successfully')
+      setTimeout(() => {
+        setSandboxKeyStatus('idle')
+        setSandboxKeyMessage('')
+      }, 3000)
+    } catch (error: any) {
+      setSandboxKeyStatus('error')
+      setSandboxKeyMessage(error.response?.data?.detail?.error || error.message || 'Failed to save API key')
+    } finally {
+      setSandboxKeyLoading(false)
+    }
+  }
   
   const loadJWTInfo = async () => {
     try {
@@ -345,6 +402,72 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
                 <>
                   <Key className="w-4 h-4" />
                   <span>Update RAG Token</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Sandbox API Key */}
+          <div>
+            <label className="block text-sm font-medium text-[#2D3748] dark:text-gray-300 mb-2">
+              Sandbox API Key
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Enter your Temenos Developer Portal API key for the Useful APIs demo (Integration section). This key is used to authenticate API requests to the Temenos sandbox.
+            </p>
+            <div className="relative">
+              <input
+                type={showSandboxKey ? 'text' : 'password'}
+                value={sandboxApiKey}
+                onChange={(e) => setSandboxApiKey(e.target.value)}
+                placeholder="Enter your sandbox API key..."
+                className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                disabled={sandboxKeyLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowSandboxKey(!showSandboxKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                disabled={sandboxKeyLoading}
+                title={showSandboxKey ? 'Hide key' : 'Show key'}
+              >
+                {showSandboxKey ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+            {sandboxKeyMessage && (
+              <div className={`mt-2 p-2 rounded-lg text-xs flex items-center space-x-2 ${
+                sandboxKeyStatus === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200'
+                  : sandboxKeyStatus === 'error'
+                  ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+                  : ''
+              }`}>
+                {sandboxKeyStatus === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4" />
+                ) : sandboxKeyStatus === 'error' ? (
+                  <AlertCircle className="w-4 h-4" />
+                ) : null}
+                <span>{sandboxKeyMessage}</span>
+              </div>
+            )}
+            <button
+              onClick={handleSandboxKeySave}
+              disabled={sandboxKeyLoading || !sandboxApiKey.trim()}
+              className="mt-3 w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-colors"
+            >
+              {sandboxKeyLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Key className="w-4 h-4" />
+                  <span>Save Sandbox Key</span>
                 </>
               )}
             </button>

@@ -8,7 +8,7 @@ import {
   Cloud,
   Shield,
   Eye,
-  Palette,
+  GitBranch,
   Layout,
   Grid,
   PenTool,
@@ -44,6 +44,14 @@ interface ComponentCard {
 
 const components: ComponentCard[] = [
   {
+    id: 'architecture',
+    name: 'Architecture',
+    description: 'Cloud & Modules',
+    icon: Cloud,
+    color: 'text-violet-500',
+    gradient: 'from-violet-500 to-purple-400',
+  },
+  {
     id: 'integration',
     name: 'Integration',
     description: 'APIs & Events',
@@ -58,14 +66,6 @@ const components: ComponentCard[] = [
     icon: Database,
     color: 'text-emerald-500',
     gradient: 'from-emerald-500 to-teal-400',
-  },
-  {
-    id: 'deployment',
-    name: 'Deployment',
-    description: 'Cloud & DevOps',
-    icon: Cloud,
-    color: 'text-violet-500',
-    gradient: 'from-violet-500 to-purple-400',
   },
   {
     id: 'security',
@@ -84,10 +84,10 @@ const components: ComponentCard[] = [
     gradient: 'from-amber-500 to-orange-400',
   },
   {
-    id: 'design-time',
+    id: 'devops',
     name: 'DevOps',
     description: 'CI/CD & Automation',
-    icon: Palette,
+    icon: GitBranch,
     color: 'text-indigo-500',
     gradient: 'from-indigo-500 to-blue-400',
   },

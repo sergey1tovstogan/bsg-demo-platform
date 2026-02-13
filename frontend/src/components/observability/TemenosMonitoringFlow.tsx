@@ -48,45 +48,45 @@ export function TemenosMonitoringFlow() {
       id: 'otel',
       label: 'OpenTelemetry Collector',
       icon: Radio,
-      bgColor: '#EFF6FF',
-      iconColor: '#3B82F6',
-      iconBgColor: '#DBEAFE',
+      bgColor: 'rgba(30, 58, 95, 0.85)',
+      iconColor: '#60A5FA',
+      iconBgColor: 'rgba(96,165,250,0.25)',
       position: { x: 320, y: 260, width: 200, height: 140 }
     },
     {
       id: 'jaeger',
       label: 'Jaeger',
       icon: Route,
-      bgColor: '#FFFBEB',
-      iconColor: '#D97706',
-      iconBgColor: '#FEF3C7',
+      bgColor: 'rgba(120, 53, 15, 0.9)',
+      iconColor: '#FCD34D',
+      iconBgColor: 'rgba(251, 191, 36, 0.25)',
       position: { x: 320, y: 40, width: 200, height: 140 }
     },
     {
       id: 'prometheus',
       label: 'Prometheus',
       icon: BarChart3,
-      bgColor: '#FEF2F2',
-      iconColor: '#DC2626',
-      iconBgColor: '#FEE2E2',
+      bgColor: 'rgba(127, 29, 29, 0.9)',
+      iconColor: '#FCA5A5',
+      iconBgColor: 'rgba(248, 113, 113, 0.2)',
       position: { x: 620, y: 100, width: 180, height: 120 }
     },
     {
       id: 'elasticsearch',
       label: 'Elasticsearch',
       icon: FileSearch,
-      bgColor: '#ECFDF5',
-      iconColor: '#059669',
-      iconBgColor: '#D1FAE5',
+      bgColor: 'rgba(6, 78, 59, 0.9)',
+      iconColor: '#6EE7B7',
+      iconBgColor: 'rgba(52, 211, 153, 0.2)',
       position: { x: 620, y: 360, width: 180, height: 120 }
     },
     {
       id: 'grafana',
       label: 'Grafana',
       icon: LayoutDashboard,
-      bgColor: '#FFF7ED',
-      iconColor: '#EA580C',
-      iconBgColor: '#FFEDD5',
+      bgColor: 'rgba(124, 45, 18, 0.9)',
+      iconColor: '#FDBA74',
+      iconBgColor: 'rgba(251, 146, 60, 0.2)',
       position: { x: 900, y: 240, width: 180, height: 140 },
       subLabels: ['Metrics Dashboards', 'Log Dashboards']
     }
@@ -434,7 +434,6 @@ export function TemenosMonitoringFlow() {
           {/* Render boxes */}
           {boxes.map(box => {
             const Icon = box.icon
-            const isDark = box.id === 'temenos'
             return (
               <div
                 key={box.id}
@@ -445,8 +444,8 @@ export function TemenosMonitoringFlow() {
                   width: `${box.position.width}px`,
                   height: `${box.position.height}px`,
                   backgroundColor: box.bgColor,
-                  borderColor: isDark ? 'rgba(96,165,250,0.2)' : 'rgba(0,0,0,0.06)',
-                  boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.06)',
+                  borderColor: 'rgba(255,255,255,0.12)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
                   zIndex: 2
                 }}
               >
@@ -459,14 +458,14 @@ export function TemenosMonitoringFlow() {
                   </div>
                   <span
                     className="font-bold tracking-tight leading-tight text-center break-words"
-                    style={{ fontSize: '0.95rem', color: isDark ? '#fff' : '#1e293b' }}
+                    style={{ fontSize: '0.95rem', color: '#f1f5f9' }}
                   >
                     {box.label}
                   </span>
                   {box.subLabels && (
                     <div className="flex flex-col items-center gap-0.5 mt-0.5">
                       {box.subLabels.map((subLabel, idx) => (
-                        <span key={idx} className="text-xs font-semibold text-center" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
+                        <span key={idx} className="text-xs font-semibold text-center" style={{ color: '#94a3b8' }}>
                           {subLabel}
                         </span>
                       ))}

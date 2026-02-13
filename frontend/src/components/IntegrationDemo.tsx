@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Play, Loader2, AlertCircle, CheckCircle, Key, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react'
+import { Play, Loader2, AlertCircle, CheckCircle, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react'
 import { apiService } from '../services/api'
-import { ApiKeyModal } from './ApiKeyModal'
 
 interface ApiResult {
   status?: number
@@ -70,7 +69,6 @@ export function IntegrationDemo() {
   const [customerResult, setCustomerResult] = useState<ApiResult>({ loading: false })
   const [accountsResult, setAccountsResult] = useState<ApiResult>({ loading: false })
   const [balance, setBalance] = useState<BalanceInfo>({ loading: false })
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false)
   const [getResultCollapsed, setGetResultCollapsed] = useState(false)
   const [postResultCollapsed, setPostResultCollapsed] = useState(false)
   const [portfolioResultCollapsed, setPortfolioResultCollapsed] = useState(false)
@@ -314,23 +312,13 @@ export function IntegrationDemo() {
 
   return (
     <div className="space-y-6">
-      {/* Page Title and API Key Management */}
-      <div className="flex items-center justify-between">
+      {/* Page Title - Sandbox API key is configured in Settings */}
+      <div>
         <h2 className="text-xl font-bold text-[#283054] dark:text-white">Useful APIs</h2>
-        <button
-          onClick={() => setShowApiKeyModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
-        >
-          <Key className="w-4 h-4" />
-          <span>MyAPIKey</span>
-        </button>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Configure your sandbox API key in <strong>Settings</strong> to execute API requests.
+        </p>
       </div>
-
-      {/* API Key Modal */}
-      <ApiKeyModal
-        isOpen={showApiKeyModal}
-        onClose={() => setShowApiKeyModal(false)}
-      />
 
       {/* POST Request - Payment Orders */}
       <div className="card bg-purple-50 dark:bg-purple-950/30 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
