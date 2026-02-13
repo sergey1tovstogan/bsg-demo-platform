@@ -914,18 +914,29 @@ export function DataArchitectureContent() {
                     style={isGreyed ? { filter: 'grayscale(100%)' } : {}}
                     className={pathClassName}
                   />
-                  {arrow.label && (
-                    <text
-                      x={parseFloat(arrow.points.split(' ')[1])}
-                      y={parseFloat(arrow.points.split(' ')[2]) - 10}
-                      fill={arrow.color || '#3B82F6'}
-                      fontSize="12"
-                      fontWeight="600"
-                      opacity={isGreyed ? 0.3 : 1}
-                    >
-                      {arrow.label}
-                    </text>
-                  )}
+                  {arrow.label && (() => {
+                    const parts = arrow.points.split(' ')
+                    const startX = parseFloat(parts[1])
+                    const startY = parseFloat(parts[2])
+                    const endX = parseFloat(parts[4])
+                    const endY = parseFloat(parts[5])
+                    const midX = (startX + endX) / 2
+                    const midY = (startY + endY) / 2
+                    return (
+                      <text
+                        x={midX}
+                        y={midY - 10}
+                        fill={arrow.color || '#3B82F6'}
+                        fontSize="12"
+                        fontWeight="600"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        opacity={isGreyed ? 0.3 : 1}
+                      >
+                        {arrow.label}
+                      </text>
+                    )
+                  })()}
                 </g>
               )
             })}
@@ -1149,7 +1160,7 @@ export function DataArchitectureContent() {
                       ) : (
                         <Database className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-1" />
                       )}
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 text-center px-1">{component.label}</span>
+                      <span className="block w-full text-xs font-semibold text-slate-700 dark:text-slate-200 text-center px-1">{component.label}</span>
                     </div>
                   ) : (
                     <img
@@ -1178,8 +1189,8 @@ export function DataArchitectureContent() {
 
                   {/* Roadmap Badge for future features */}
                   {(component.id === 'spark_process' || component.id === 'azure_sql') && isVisible && (
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                      <div className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-lg border-2 border-yellow-600">
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none flex flex-col items-center justify-center">
+                      <div className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-lg border-2 border-yellow-600 text-center">
                         ROADMAP
                       </div>
                     </div>
