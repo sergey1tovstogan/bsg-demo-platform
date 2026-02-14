@@ -99,9 +99,9 @@ card:
 - `integration` - Integration and API content
 - `security` - Security and compliance
 - `data-architecture` - Data modeling, databases
-- `deployment` - Infrastructure, DevOps
+- `architecture` - Architecture, Infrastructure, DevOps
 - `observability` - Monitoring, logging
-- `design-time` - Development patterns
+- `devops` - DevOps, CI/CD, development patterns
 - Custom categories as needed
 
 **Used for:**

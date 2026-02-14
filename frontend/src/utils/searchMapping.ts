@@ -66,8 +66,8 @@ const searchMappings: Array<{
     result: { componentId: 'data-architecture' }
   },
   {
-    keywords: ['deployment', 'cloud', 'deployment & cloud', 'deployment and cloud', 'azure', 'kubernetes', 'aks'],
-    result: { componentId: 'deployment' }
+    keywords: ['architecture', 'deployment', 'cloud', 'deployment & cloud', 'deployment and cloud', 'azure', 'kubernetes', 'aks', 'functional architecture'],
+    result: { componentId: 'architecture' }
   },
   {
     keywords: ['security', 'application security', 'vulnerability'],
@@ -78,8 +78,12 @@ const searchMappings: Array<{
     result: { componentId: 'observability' }
   },
   {
-    keywords: ['design time', 'design-time', 'design principles', 'architecture patterns', 'software design'],
-    result: { componentId: 'design-time' }
+    keywords: ['devops', 'design time', 'design-time', 'design principles', 'architecture patterns', 'software design'],
+    result: { componentId: 'devops' }
+  },
+  {
+    keywords: ['temenos components', 'active components', 'future components', 'temenos active', 'temenos future', 'components roadmap'],
+    result: { componentId: 'temenos-components' }
   }
 ]
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Network, Database, Cloud, Shield, Eye, Palette, Settings, Layout } from 'lucide-react'
+import { Network, Database, Cloud, Shield, Eye, GitBranch, Settings, Layout } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ComponentId } from '../types'
 import { useAuth } from '../contexts/AuthContext'
@@ -22,13 +22,22 @@ interface HomePageProps {
 
 const ALL_COMPONENTS: ComponentCard[] = [
   {
+    id: 'architecture',
+    name: 'Architecture',
+    description: 'Container orchestration and cloud deployments',
+    icon: Cloud,
+    color: 'text-violet-500',
+    gradient: 'from-violet-500/20 to-purple-400/20',
+    delay: 'animation-delay-0',
+  },
+  {
     id: 'integration',
     name: 'Integration, APIs & Events',
     description: 'Enterprise integration patterns and API design',
     icon: Network,
     color: 'text-blue-500',
     gradient: 'from-blue-500/20 to-cyan-400/20',
-    delay: 'animation-delay-0',
+    delay: 'animation-delay-100',
   },
   {
     id: 'data-architecture',
@@ -37,15 +46,6 @@ const ALL_COMPONENTS: ComponentCard[] = [
     icon: Database,
     color: 'text-emerald-500',
     gradient: 'from-emerald-500/20 to-teal-400/20',
-    delay: 'animation-delay-100',
-  },
-  {
-    id: 'deployment',
-    name: 'Deployment & Cloud',
-    description: 'Container orchestration and cloud deployments',
-    icon: Cloud,
-    color: 'text-violet-500',
-    gradient: 'from-violet-500/20 to-purple-400/20',
     delay: 'animation-delay-200',
   },
   {
@@ -67,10 +67,10 @@ const ALL_COMPONENTS: ComponentCard[] = [
     delay: 'animation-delay-400',
   },
   {
-    id: 'design-time',
+    id: 'devops',
     name: 'DevOps',
     description: 'CI/CD, automation, and continuous delivery',
-    icon: Palette,
+    icon: GitBranch,
     color: 'text-indigo-500',
     gradient: 'from-indigo-500/20 to-blue-400/20',
     delay: 'animation-delay-500',
@@ -106,8 +106,12 @@ export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: Home
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
-        const parsed = JSON.parse(stored) as ComponentId[]
-        setSelectedCategories(new Set(parsed))
+        const parsed = JSON.parse(stored) as string[]
+        const migrated = parsed.map(id => id === 'deployment' ? 'architecture' : id)
+        if (migrated.some((id, i) => id !== parsed[i])) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+        }
+        setSelectedCategories(new Set(migrated as ComponentId[]))
       } else {
         // Default: show all categories
         setSelectedCategories(new Set(ALL_COMPONENTS.map(c => c.id)))

@@ -15,8 +15,8 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import type { ComponentId } from './types'
 
 const VALID_COMPONENT_IDS: ComponentId[] = [
-  'integration', 'data-architecture', 'deployment', 'security',
-  'observability', 'design-time', 'layout-showcase', 'gallery', 'editor'
+  'integration', 'data-architecture', 'architecture', 'security',
+  'observability', 'devops', 'temenos-components', 'layout-showcase', 'gallery', 'editor'
 ]
 
 function isValidComponentId(id: string | undefined): id is ComponentId {
@@ -198,6 +198,10 @@ function App() {
 
         {/* Redirect /platform to home */}
         <Route path="/platform" element={<Navigate to="/" replace />} />
+
+        {/* Redirect legacy paths */}
+        <Route path="/platform/design-time" element={<Navigate to="/platform/devops" replace />} />
+        <Route path="/platform/deployment" element={<Navigate to="/platform/architecture" replace />} />
 
         {/* Platform module - at /platform/:componentId */}
         <Route

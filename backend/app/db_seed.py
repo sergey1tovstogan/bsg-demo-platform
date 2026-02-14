@@ -44,9 +44,9 @@ async def seed_database():
                 "status": "active"
             },
             {
-                "component_id": "deployment",
-                "name": "Deployment",
-                "description": "Deployment strategies and infrastructure",
+                "component_id": "architecture",
+                "name": "Architecture",
+                "description": "Architecture, deployment strategies and infrastructure",
                 "status": "active"
             },
             {
@@ -62,9 +62,9 @@ async def seed_database():
                 "status": "active"
             },
             {
-                "component_id": "design-time",
-                "name": "Design Time",
-                "description": "Design-time tools and development experience",
+                "component_id": "devops",
+                "name": "DevOps",
+                "description": "DevOps, CI/CD, and development experience",
                 "status": "active"
             },
         ]

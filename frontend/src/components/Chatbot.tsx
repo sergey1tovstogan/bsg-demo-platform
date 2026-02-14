@@ -299,19 +299,17 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
     }
   }
 
-  // RAG chatbot for all components
-  if (initializing) {
-    return (
-      <div className="card flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#283054]" />
-      </div>
-    )
-  }
-
+  // Always show full UI instantly; session init runs in background
   return (
     <div className={`flex flex-col overflow-hidden ${embedded ? 'h-full min-h-0 p-4' : 'card h-[600px]'}`}>
       {/* Input at the top */}
-      <div className="mb-4 pb-4 border-b border-gray-200">
+      <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-600">
+        {initializing && (
+          <div className="mb-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+            <span>Connecting in background...</span>
+          </div>
+        )}
         <div className="flex items-center space-x-2">
           <input
             type="text"

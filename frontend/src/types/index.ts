@@ -23,10 +23,11 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 export type ComponentId =
   | 'integration'
   | 'data-architecture'
-  | 'deployment'
+  | 'architecture'
   | 'security'
   | 'observability'
-  | 'design-time'
+  | 'devops'
+  | 'temenos-components'
   | 'layout-showcase'
   | 'gallery'
   | 'editor'

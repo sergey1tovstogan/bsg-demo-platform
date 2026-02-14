@@ -324,16 +324,16 @@ export function ChatbotWithQuestions({ componentId }: ChatbotWithQuestionsProps)
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
                 Pre-Built Questions
               </h2>
-              <p className="text-lg text-gray-700 dark:text-gray-300">
-                {isStaticFallback
-                  ? 'Static content for local deployment. Configure RAG token in Settings for live updates.'
-                  : 'Click any card to see the answer from our Knowledge Base'}
-                {isFromCache && !isStaticFallback && (
-                  <span className="ml-2 text-sm text-green-600 dark:text-green-400 font-medium">
-                    (Cached - 30 day expiry)
-                  </span>
-                )}
-              </p>
+              {!isStaticFallback && (
+                <p className="text-lg text-gray-700 dark:text-gray-300">
+                  Click any card to see the answer from our Knowledge Base
+                  {isFromCache && (
+                    <span className="ml-2 text-sm text-green-600 dark:text-green-400 font-medium">
+                      (Cached - 30 day expiry)
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
           <button

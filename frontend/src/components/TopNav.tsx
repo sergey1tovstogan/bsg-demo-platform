@@ -6,12 +6,12 @@ import { ThemeToggle } from './ThemeToggle'
 import type { ComponentId } from '../types'
 
 const PLATFORM_MODULES: Array<{ id: ComponentId; name: string }> = [
+  { id: 'architecture', name: 'Architecture' },
   { id: 'integration', name: 'Integration, APIs & Events' },
   { id: 'data-architecture', name: 'Data Architecture' },
-  { id: 'deployment', name: 'Deployment & Cloud' },
   { id: 'security', name: 'Security' },
   { id: 'observability', name: 'Observability' },
-  { id: 'design-time', name: 'DevOps' },
+  { id: 'devops', name: 'DevOps' },
 ]
 
 const CATEGORIES_STORAGE_KEY = 'bsg_selected_categories'
@@ -20,8 +20,12 @@ function loadSelectedCategories(): Set<ComponentId> {
   try {
     const stored = localStorage.getItem(CATEGORIES_STORAGE_KEY)
     if (stored) {
-      const parsed = JSON.parse(stored) as ComponentId[]
-      return new Set(parsed)
+      const parsed = JSON.parse(stored) as string[]
+      const migrated = parsed.map(id => id === 'deployment' ? 'architecture' : id)
+      if (migrated.some((id, i) => id !== parsed[i])) {
+        localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(migrated))
+      }
+      return new Set(migrated as ComponentId[])
     }
   } catch {
     /* ignore */
@@ -155,6 +159,12 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
             >
               Temenos Ecosystem
             </a>
+            <button
+              onClick={() => navigate('/platform/temenos-components')}
+              className={`text-sm font-medium ${location.pathname === '/platform/temenos-components' ? 'text-blue-500' : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              Temenos Components
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -241,6 +251,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
               })}
             </div>
             <a href="https://developer.bsg.temenos.com/" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="block w-full text-left py-2">Temenos Ecosystem</a>
+            <button onClick={() => { navigate('/platform/temenos-components'); setMobileMenuOpen(false) }} className="block w-full text-left py-2">Temenos Components</button>
           </div>
         </div>
       )}

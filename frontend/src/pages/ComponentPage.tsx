@@ -12,6 +12,7 @@ import { DesignTimeContentViewer } from '../components/design-time/DesignTimeCon
 import { LayoutShowcaseContent } from '../components/layout-showcase/LayoutShowcaseContent'
 import { CardGallery } from '../components/gallery/CardGallery'
 import { VisualEditor } from '../components/editor/VisualEditor'
+import { TemenosComponentsContent } from '../components/temenos-components/TemenosComponentsContent'
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
@@ -24,9 +25,9 @@ interface ComponentPageProps {
 type Tab = 'content' | 'video' | 'demo'
 
 export function ComponentPage({ componentId, initialSelectedCard, initialTab, onOpenSettings }: ComponentPageProps) {
-  const tabs = componentId === 'layout-showcase' || componentId === 'security' || componentId === 'design-time'
+  const tabs = componentId === 'layout-showcase' || componentId === 'security' || componentId === 'devops'
     ? [{ id: 'content' as Tab, label: 'Content', icon: BookOpen }]
-    : componentId === 'deployment' || componentId === 'data-architecture'
+    : componentId === 'architecture' || componentId === 'data-architecture'
       ? [
           { id: 'content' as Tab, label: 'Content', icon: BookOpen },
           { id: 'demo' as Tab, label: 'Demo', icon: Play },
@@ -85,14 +86,25 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
     );
   }
 
+  // === Temenos Components View ===
+  if (componentId === 'temenos-components') {
+    return <TemenosComponentsContent />;
+  }
+
   const contentBack = useContentBack()
+
+  // Hide Content tab on main Security page (card grid); show it on subpages for back navigation
+  const showSecurityContentTab = componentId !== 'security' || (contentBack?.showBack ?? false)
+  const visibleTabs = componentId === 'security' && !showSecurityContentTab ? [] : tabs
 
   return (
     <div className="space-y-6">
-      {/* Tab Navigation - modern pill-style tabs with optional Back button */}
+      {/* Tab Navigation - modern pill-style tabs with optional Back button. Hidden on main Security page. */}
+      {(visibleTabs.length > 0 || (contentBack?.showBack && contentBack?.onBack)) && (
       <div className="flex items-center justify-between gap-4 flex-wrap">
+        {visibleTabs.length > 0 && (
         <div className="inline-flex p-1 rounded-xl bg-slate-200/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/80 dark:border-slate-700/80">
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
           const handleTabClick = () => {
@@ -118,6 +130,7 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
           )
         })}
         </div>
+        )}
         {contentBack?.showBack && contentBack.onBack && (
           <button
             onClick={contentBack.onBack}
@@ -128,6 +141,7 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
           </button>
         )}
       </div>
+      )}
 
       {/* Tab Content */}
       <div className="min-h-[400px]">
@@ -136,25 +150,25 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
             <LayoutShowcaseContent />
           ) : componentId === 'observability' ? (
             <ObservabilityContent />
-          ) : componentId === 'deployment' ? (
+          ) : componentId === 'architecture' ? (
             <DeploymentContentViewer />
           ) : componentId === 'data-architecture' ? (
             <DataArchitectureContent />
-          ) : componentId === 'design-time' ? (
+          ) : componentId === 'devops' ? (
             <DesignTimeContentViewer onOpenSettings={onOpenSettings} />
           ) : (
             <ContentViewer componentId={componentId} initialSelectedCard={initialSelectedCard} />
           )
         )}
         {activeTab === 'video' && (
-          componentId === 'deployment' ? (
+          componentId === 'architecture' ? (
             <DeploymentAnalyzer />
           ) : (
             <DemoFrame componentId={componentId} view="video" />
           )
         )}
         {activeTab === 'demo' && (
-          componentId === 'deployment' ? (
+          componentId === 'architecture' ? (
             <DeploymentAnalyzer />
           ) : (
             <DemoFrame componentId={componentId} view="demo" />

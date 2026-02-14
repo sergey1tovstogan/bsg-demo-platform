@@ -15,7 +15,7 @@ card:
   name: "Card Display Name"  # Required. Shown in the main menu
 
   # === BUSINESS CATEGORY ===
-  category: "category-name"  # Required. Business domain: integration, security, data-architecture, deployment, observability, design-time, etc.
+  category: "category-name"  # Required. Business domain: integration, security, data-architecture, architecture, observability, devops, etc.
 
   # === VISUAL STYLING ===
   color_theme: "theme-name"  # Required. Visual theme: blue, emerald, violet, red, amber, indigo, cyan, pink, green, orange
@@ -85,9 +85,9 @@ card:
    - `integration` - For integration and API-related content
    - `security` - For security and compliance content
    - `data-architecture` - For data modeling and architecture
-   - `deployment` - For deployment and infrastructure
+   - `architecture` - For architecture and infrastructure
    - `observability` - For monitoring and observability
-   - `design-time` - For design patterns and development
+   - `devops` - For DevOps, CI/CD, and development
    - Or create your own business category
 
 4. Select a `color_theme` for visual identity (see UNIFIED_LAYOUT_SPECIFICATION.md for all options):

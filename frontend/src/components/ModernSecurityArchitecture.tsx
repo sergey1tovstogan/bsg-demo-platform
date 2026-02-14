@@ -112,23 +112,30 @@ export function ModernSecurityArchitecture() {
                 <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md px-4 py-2 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700">
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 dark:text-slate-200 flex items-center gap-2">
                         <Info className="w-4 h-4 text-blue-500" />
-                        Hover elements for details
+                        Click elements for details
                     </p>
                 </div>
             </div>
 
             {/* Main Content Container */}
             <div className="relative w-full h-full p-8 pt-[100px]">
+                {/* Backdrop to close tooltip when clicking outside (only when tooltip is open) */}
+                {activeTooltip && (
+                    <div
+                        className="absolute inset-0 z-40 cursor-default"
+                        onClick={() => setActiveTooltip(null)}
+                        aria-hidden
+                    />
+                )}
 
                 {/* Layout Grid - Original 3-column structure */}
-                <div className="w-full h-full grid grid-cols-12 gap-4 relative z-10 items-start">
+                <div className="w-full h-full grid grid-cols-12 gap-4 relative z-50 items-start">
 
                     {/* Column 1: TLS Entry Points (Left) */}
                     <div className="col-span-4 flex items-start">
                         <div
-                            className="w-full h-[70%] bg-gradient-to-br from-blue-900 to-blue-950 dark:from-blue-950 dark:to-slate-950 rounded-2xl p-4 flex flex-col items-center justify-between border-2 border-blue-700/50 shadow-xl cursor-help transition-all duration-300 hover:border-blue-500"
-                            onMouseEnter={() => setActiveTooltip('tls-entry')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 w-full h-[70%] bg-gradient-to-br from-blue-900 to-blue-950 dark:from-blue-950 dark:to-slate-950 rounded-2xl p-4 flex flex-col items-center justify-between border-2 border-blue-700/50 shadow-xl cursor-pointer transition-all duration-300 hover:border-blue-500"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'tls-entry' ? null : 'tls-entry') }}
                         >
                             <div className="text-white font-bold text-center py-2">TLS 1.2<br />Entry<br />Points</div>
 
@@ -154,9 +161,8 @@ export function ModernSecurityArchitecture() {
                                 <div className="grid grid-cols-2 gap-4 h-[110px]">
                                     {/* Authentication */}
                                     <div
-                                        className="bg-gradient-to-br from-blue-500/10 to-blue-600/20 dark:from-blue-500/20 dark:to-blue-600/30 rounded-xl border-2 border-blue-500/30 p-4 hover:border-blue-500/50 transition-all duration-300 cursor-help group h-full flex flex-col"
-                                        onMouseEnter={() => setActiveTooltip('authentication-box')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-blue-500/10 to-blue-600/20 dark:from-blue-500/20 dark:to-blue-600/30 rounded-xl border-2 border-blue-500/30 p-4 hover:border-blue-500/50 transition-all duration-300 cursor-pointer group h-full flex flex-col"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'authentication-box' ? null : 'authentication-box') }}
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -171,9 +177,8 @@ export function ModernSecurityArchitecture() {
 
                                     {/* Authorization */}
                                     <div
-                                        className="bg-gradient-to-br from-teal-500/10 to-teal-600/20 dark:from-teal-500/20 dark:to-teal-600/30 rounded-xl border-2 border-teal-500/30 p-4 hover:border-teal-500/50 transition-all duration-300 cursor-help group h-full flex flex-col"
-                                        onMouseEnter={() => setActiveTooltip('authorization-box')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-teal-500/10 to-teal-600/20 dark:from-teal-500/20 dark:to-teal-600/30 rounded-xl border-2 border-teal-500/30 p-4 hover:border-teal-500/50 transition-all duration-300 cursor-pointer group h-full flex flex-col"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'authorization-box' ? null : 'authorization-box') }}
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <UserCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
@@ -190,9 +195,8 @@ export function ModernSecurityArchitecture() {
                                 <div className="grid grid-cols-2 gap-4 h-[110px]">
                                     {/* Audit */}
                                     <div
-                                        className="bg-gradient-to-br from-indigo-500/10 to-indigo-600/20 dark:from-indigo-500/20 dark:to-indigo-600/30 rounded-xl border-2 border-indigo-500/30 p-4 hover:border-indigo-500/50 transition-all duration-300 cursor-help group h-full flex flex-col"
-                                        onMouseEnter={() => setActiveTooltip('audit-box')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-indigo-500/10 to-indigo-600/20 dark:from-indigo-500/20 dark:to-indigo-600/30 rounded-xl border-2 border-indigo-500/30 p-4 hover:border-indigo-500/50 transition-all duration-300 cursor-pointer group h-full flex flex-col"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'audit-box' ? null : 'audit-box') }}
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -203,9 +207,8 @@ export function ModernSecurityArchitecture() {
 
                                     {/* Externalized Auth */}
                                     <div
-                                        className="bg-gradient-to-br from-sky-500/10 to-sky-600/20 dark:from-sky-500/20 dark:to-sky-600/30 rounded-xl border-2 border-sky-500/30 p-4 hover:border-sky-500/50 transition-all duration-300 cursor-help group h-full flex flex-col"
-                                        onMouseEnter={() => setActiveTooltip('externalized-auth')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-sky-500/10 to-sky-600/20 dark:from-sky-500/20 dark:to-sky-600/30 rounded-xl border-2 border-sky-500/30 p-4 hover:border-sky-500/50 transition-all duration-300 cursor-pointer group h-full flex flex-col"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'externalized-auth' ? null : 'externalized-auth') }}
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <Globe className="w-5 h-5 text-sky-600 dark:text-sky-400" />
@@ -219,9 +222,8 @@ export function ModernSecurityArchitecture() {
                                 <div className="grid grid-cols-1 gap-4 h-[110px]">
                                     {/* Database */}
                                     <div
-                                        className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-help group h-full flex items-center justify-between"
-                                        onMouseEnter={() => setActiveTooltip('data-encryption')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-pointer group h-full flex items-center justify-between"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'data-encryption' ? null : 'data-encryption') }}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
@@ -242,9 +244,8 @@ export function ModernSecurityArchitecture() {
                                 {/* Row 4: Temenos Vault */}
                                 <div className="grid grid-cols-1 gap-4 h-[110px]">
                                     <div
-                                        className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-help group h-full flex items-center justify-between"
-                                        onMouseEnter={() => setActiveTooltip('temenos-vault')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-pointer group h-full flex items-center justify-between"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'temenos-vault' ? null : 'temenos-vault') }}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
@@ -269,9 +270,8 @@ export function ModernSecurityArchitecture() {
                     <div className="col-span-4 flex flex-col gap-3">
                         {/* Bank IAM */}
                         <div
-                            className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
-                            onMouseEnter={() => setActiveTooltip('bank-iam')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-pointer hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'bank-iam' ? null : 'bank-iam') }}
                         >
                             <div className="flex items-center gap-3 mb-1">
                                 <Server className="w-5 h-5" />
@@ -282,9 +282,8 @@ export function ModernSecurityArchitecture() {
 
                         {/* Secrets Management */}
                         <div
-                            className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                            onMouseEnter={() => setActiveTooltip('secrets-management')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-pointer hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'secrets-management' ? null : 'secrets-management') }}
                         >
                             <div className="flex items-center gap-3">
                                 <Key className="w-5 h-5" />
@@ -294,9 +293,8 @@ export function ModernSecurityArchitecture() {
 
                         {/* Key Management */}
                         <div
-                            className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                            onMouseEnter={() => setActiveTooltip('key-management')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-pointer hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'key-management' ? null : 'key-management') }}
                         >
                             <div className="flex items-center gap-3">
                                 <FileKey className="w-5 h-5" />
@@ -306,9 +304,8 @@ export function ModernSecurityArchitecture() {
 
                         {/* Certificate Management */}
                         <div
-                            className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                            onMouseEnter={() => setActiveTooltip('certificate-management')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-pointer hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'certificate-management' ? null : 'certificate-management') }}
                         >
                             <div className="flex items-center gap-3">
                                 <FileText className="w-5 h-5" />

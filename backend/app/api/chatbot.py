@@ -139,11 +139,11 @@ async def send_chat_message(
             raise HTTPException(status_code=404, detail="Session not found")
         
         # For deployment component, use RAG API directly
-        if component_id == "deployment":
+        if component_id == "architecture":
             try:
                 temenos_service = TemenosService()
             except Exception as e:
-                logger.error(f"Failed to initialize TemenosService for deployment: {e}", exc_info=True)
+                logger.error(f"Failed to initialize TemenosService for architecture: {e}", exc_info=True)
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to initialize RAG service: {str(e)}. Please check RAG API configuration in Settings."
@@ -170,7 +170,7 @@ async def send_chat_message(
             # - SecurityFramework (maps to "Security" in UI)
             # - PlatformFrameworkMea (for platform-related queries)
             rag_model_id_value = "ModularBanking, TechnologyOverview, SecurityFramework"
-            logger.info(f"💬 Deployment component - Using RAG model IDs: {rag_model_id_value}")
+            logger.info(f"💬 Architecture component - Using RAG model IDs: {rag_model_id_value}")
             try:
                 result = await temenos_service.query_rag(
                     question=message,
@@ -180,7 +180,7 @@ async def send_chat_message(
                 )
             except RuntimeError as rag_error:
                 error_msg = str(rag_error)
-                logger.error(f"RAG API error for deployment: {error_msg}", exc_info=True)
+                logger.error(f"RAG API error for architecture: {error_msg}", exc_info=True)
                 if "token" in error_msg.lower() or "not configured" in error_msg.lower() or "401" in error_msg or "unauthorized" in error_msg.lower():
                     raise HTTPException(
                         status_code=401,
@@ -192,7 +192,7 @@ async def send_chat_message(
                 )
             except Exception as rag_error:
                 error_msg = str(rag_error)
-                logger.error(f"Unexpected RAG API error for deployment: {error_msg}", exc_info=True)
+                logger.error(f"Unexpected RAG API error for architecture: {error_msg}", exc_info=True)
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to query RAG API: {error_msg}. Please check RAG API configuration in Settings."
@@ -391,8 +391,8 @@ async def send_chat_message(
         # RAG model IDs per Swagger: ModularBanking, Payments, TechTAP, TechnologyOverview,
         # DataHub, Analytics, SecurityFramework, ExtensibilityAdvisor, FuncPaymentsHub, etc.
         component_configs = {
-            "deployment": {
-                "context": "This is about Temenos cloud deployment, Azure infrastructure, AWS, and deployment best practices.",
+            "architecture": {
+                "context": "This is about Temenos cloud architecture, Azure infrastructure, AWS, and deployment best practices.",
                 "rag_model_id": "ModularBanking, TechnologyOverview, SecurityFramework"
             },
             "security": {
@@ -419,8 +419,8 @@ async def send_chat_message(
                 "context": "This is about Temenos observability, monitoring, logging, metrics, tracing, and operational insights.",
                 "rag_model_id": "TechnologyOverview, Analytics"
             },
-            "design-time": {
-                "context": "This is about Temenos design-time tools, Workbench, configuration, and development workflow.",
+            "devops": {
+                "context": "This is about Temenos DevOps, design-time tools, Workbench, configuration, CI/CD, and development workflow.",
                 "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
             },
             "api": {
