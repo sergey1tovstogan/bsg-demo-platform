@@ -182,13 +182,14 @@ export const useSimulationState = () => {
   }, [])
 
   /**
-   * Set transaction start time and clear events to show only new events
+   * Set transaction start time (for Event Store polling filter).
+   * Keep existing kafka events so user sees events from all steps in the flow.
    */
   const setTransactionStartTime = useCallback((startTime: number) => {
     setState((prev) => ({
       ...prev,
-      lastTransactionStartTime: startTime,
-      kafkaEvents: [] // Clear events when new transaction starts
+      lastTransactionStartTime: startTime
+      // Do NOT clear kafkaEvents - accumulate events from all flow steps
     }))
   }, [])
 

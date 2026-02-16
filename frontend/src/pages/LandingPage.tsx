@@ -70,7 +70,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Extensible by the bank / partner',
     ],
     techs: ['Temenos Workbench'],
-    platformPath: '/platform/integration',
+    platformPath: '/platform/extensibility',
   },
   {
     id: 'data-architecture',

@@ -8,6 +8,7 @@ import type { ComponentId } from '../types'
 const PLATFORM_MODULES: Array<{ id: ComponentId; name: string }> = [
   { id: 'architecture', name: 'Architecture' },
   { id: 'integration', name: 'Integration, APIs & Events' },
+  { id: 'extensibility', name: 'Extensibility' },
   { id: 'data-architecture', name: 'Data Architecture' },
   { id: 'security', name: 'Security' },
   { id: 'observability', name: 'Observability' },
@@ -22,6 +23,11 @@ function loadSelectedCategories(): Set<ComponentId> {
     if (stored) {
       const parsed = JSON.parse(stored) as string[]
       const migrated = parsed.map(id => id === 'deployment' ? 'architecture' : id)
+      // Ensure extensibility is included for existing users
+      if (!migrated.includes('extensibility')) {
+        migrated.push('extensibility')
+        localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(migrated))
+      }
       if (migrated.some((id, i) => id !== parsed[i])) {
         localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(migrated))
       }

@@ -15,6 +15,7 @@ import {
   LogIn,
   LogOut,
   Users,
+  Puzzle,
   type LucideIcon
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -58,6 +59,14 @@ const components: ComponentCard[] = [
     icon: Network,
     color: 'text-blue-500',
     gradient: 'from-blue-500 to-cyan-400',
+  },
+  {
+    id: 'extensibility',
+    name: 'Extensibility',
+    description: 'Configurable & Extensible',
+    icon: Puzzle,
+    color: 'text-violet-500',
+    gradient: 'from-violet-500 to-purple-400',
   },
   {
     id: 'data-architecture',

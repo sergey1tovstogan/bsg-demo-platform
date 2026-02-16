@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
-import { Package, CheckCircle2, MapPin, Layers, ChevronDown, ChevronRight } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Package, CheckCircle2, MapPin, Layers, ChevronDown, ChevronRight, ArrowLeft, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { temenosComponentsData, type TemenosComponentItem } from './temenosComponentsData'
 
@@ -21,6 +22,18 @@ const ACTIVE_GROUP_ORDER = [
   'Integration - APIs',
   'Event Framework',
 ]
+
+function filterBySearch(items: TemenosComponentItem[], query: string): TemenosComponentItem[] {
+  if (!query.trim()) return items
+  const q = query.trim().toLowerCase()
+  return items.filter(
+    (c) =>
+      c.name.toLowerCase().includes(q) ||
+      c.description.toLowerCase().includes(q) ||
+      (c.group && c.group.toLowerCase().includes(q)) ||
+      c.id.toLowerCase().includes(q)
+  )
+}
 
 function groupByGroup(items: TemenosComponentItem[], groupOrder: string[]) {
   const byGroup = new Map<string, TemenosComponentItem[]>()
@@ -45,14 +58,21 @@ function groupByGroup(items: TemenosComponentItem[], groupOrder: string[]) {
 function ExpandableComponent({
   component,
   variant,
+  defaultExpanded,
 }: {
   component: TemenosComponentItem
   variant: 'active' | 'future'
+  defaultExpanded?: boolean
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(defaultExpanded ?? false)
   const isActive = variant === 'active'
+
+  useEffect(() => {
+    if (defaultExpanded) setExpanded(true)
+  }, [defaultExpanded])
   return (
     <div
+      id={component.id}
       className={`rounded-xl border transition-all duration-200 overflow-hidden ${
         isActive
           ? 'border-emerald-500/20 hover:border-emerald-500/40 dark:border-emerald-500/20 dark:hover:border-emerald-500/40'
@@ -105,14 +125,21 @@ function AccordionGroup({
   items,
   variant,
   defaultOpen,
+  targetComponentId,
 }: {
   group: string
   items: TemenosComponentItem[]
   variant: 'active' | 'future'
   defaultOpen?: boolean
+  targetComponentId?: string | null
 }) {
-  const [open, setOpen] = useState(defaultOpen ?? false)
+  const hasTarget = !!(targetComponentId && items.some((c) => c.id === targetComponentId))
+  const [open, setOpen] = useState((defaultOpen ?? false) || hasTarget)
   const isActive = variant === 'active'
+
+  useEffect(() => {
+    if (hasTarget) setOpen(true)
+  }, [hasTarget])
   return (
     <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden bg-white/50 dark:bg-slate-800/30 backdrop-blur-sm">
       <button
@@ -146,7 +173,12 @@ function AccordionGroup({
           >
             <div className="border-t border-slate-200/80 dark:border-slate-700/80 p-4 space-y-2">
               {items.map((c) => (
-                <ExpandableComponent key={c.id} component={c} variant={variant} />
+                <ExpandableComponent
+                  key={c.id}
+                  component={c}
+                  variant={variant}
+                  defaultExpanded={targetComponentId === c.id}
+                />
               ))}
             </div>
           </motion.div>
@@ -157,14 +189,50 @@ function AccordionGroup({
 }
 
 export function TemenosComponentsContent() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [filter, setFilter] = useState<'all' | 'active' | 'future'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const { active, future } = temenosComponentsData
 
-  const activeByGroup = useMemo(() => groupByGroup(active, ACTIVE_GROUP_ORDER), [active])
-  const futureByGroup = useMemo(() => groupByGroup(future, ['Microservices', 'Modules']), [future])
+  const activeFiltered = useMemo(() => filterBySearch(active, searchQuery), [active, searchQuery])
+  const futureFiltered = useMemo(() => filterBySearch(future, searchQuery), [future, searchQuery])
+
+  const hash = location.hash?.replace(/^#/, '') || ''
+  const fromDeployment = new URLSearchParams(location.search).get('from') === 'deployment'
+  const targetComponentId = hash && (active.some((c) => c.id === hash) || future.some((c) => c.id === hash)) ? hash : null
+
+  useEffect(() => {
+    if (targetComponentId) {
+      // Delay scroll to allow accordion to expand and render the target component
+      const timer = setTimeout(() => {
+        const el = document.getElementById(targetComponentId)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 400)
+      return () => clearTimeout(timer)
+    }
+  }, [targetComponentId])
+
+  const activeByGroup = useMemo(() => groupByGroup(activeFiltered, ACTIVE_GROUP_ORDER), [activeFiltered])
+  const futureByGroup = useMemo(() => groupByGroup(futureFiltered, ['Microservices', 'Modules']), [futureFiltered])
 
   return (
     <div className="space-y-8 pb-8">
+      {/* Back button when coming from Deployment Analysis */}
+      {fromDeployment && (
+        <div className="flex justify-start">
+          <button
+            onClick={() => navigate('/platform/architecture?tab=demo')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300/80 dark:hover:bg-slate-600/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Deployment Analysis</span>
+          </button>
+        </div>
+      )}
+
       {/* Hero */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-br from-slate-50 to-blue-50/50 dark:from-slate-800/80 dark:to-blue-950/30 p-6 md:p-8">
         <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -190,9 +258,20 @@ export function TemenosComponentsContent() {
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex flex-wrap gap-2">
-        {(['all', 'active', 'future'] as const).map((key) => (
+      {/* Search and filter */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+          <input
+            type="search"
+            placeholder="Search microservices by name, description, or group..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(['all', 'active', 'future'] as const).map((key) => (
           <button
             key={key}
             onClick={() => setFilter(key)}
@@ -205,6 +284,7 @@ export function TemenosComponentsContent() {
             {key === 'all' ? 'All' : key === 'active' ? 'Active' : 'Future'}
           </button>
         ))}
+        </div>
       </div>
 
       {/* Active components - accordion groups */}
@@ -213,7 +293,17 @@ export function TemenosComponentsContent() {
           <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             Active Components
+            {searchQuery && (
+              <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
+                ({activeFiltered.length} match{activeFiltered.length !== 1 ? 'es' : ''})
+              </span>
+            )}
           </h2>
+          {activeByGroup.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400 py-4">
+              No microservices match &quot;{searchQuery}&quot;
+            </p>
+          ) : (
           <div className="space-y-3">
             {activeByGroup.map(({ group, items }, idx) => (
               <AccordionGroup
@@ -222,9 +312,11 @@ export function TemenosComponentsContent() {
                 items={items}
                 variant="active"
                 defaultOpen={idx < 2}
+                targetComponentId={targetComponentId}
               />
             ))}
           </div>
+          )}
         </section>
       )}
 
@@ -234,12 +326,30 @@ export function TemenosComponentsContent() {
           <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
             <MapPin className="h-4 w-4 text-amber-500" />
             Future / Roadmap
+            {searchQuery && (
+              <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
+                ({futureFiltered.length} match{futureFiltered.length !== 1 ? 'es' : ''})
+              </span>
+            )}
           </h2>
+          {futureByGroup.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400 py-4">
+              No microservices match &quot;{searchQuery}&quot;
+            </p>
+          ) : (
           <div className="space-y-3">
             {futureByGroup.map(({ group, items }) => (
-              <AccordionGroup key={group} group={group} items={items} variant="future" defaultOpen />
+              <AccordionGroup
+                key={group}
+                group={group}
+                items={items}
+                variant="future"
+                defaultOpen
+                targetComponentId={targetComponentId}
+              />
             ))}
           </div>
+          )}
         </section>
       )}
 

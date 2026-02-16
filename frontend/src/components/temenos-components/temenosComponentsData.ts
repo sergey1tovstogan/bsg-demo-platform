@@ -229,6 +229,13 @@ export const temenosComponentsData: TemenosComponentsData = {
       description: 'Generic Config is an MSF microservice introduced in 2021 that provides centralized configuration management for microservices and applications. It offers APIs for storing, retrieving, and managing configuration parameters including feature flags, runtime settings, and environment-specific values. Generic Config supports configuration versioning, hierarchical configuration inheritance, and dynamic configuration updates without service restarts. The service enables consistent configuration across distributed microservices and supports multi-tenant configurations. It integrates with deployment pipelines for configuration promotion across environments.',
     },
     {
+      id: 'adapter',
+      name: 'Adapter Microservice',
+      introduced: '2021',
+      group: 'Microservices',
+      description: 'Adapter Microservice is an MSF integration component that facilitates protocol and data format transformations between Temenos Transact and external systems. It translates between Temenos internal formats and external protocols (SWIFT, ISO 20022, proprietary APIs). Key consumers include system integrators, banks\' middleware layers, and Temenos Transact components requiring integration with third-party applications or legacy systems. The Adapter handles connectivity, mapping, error handling, and is often colocated with Event Hubs for async patterns. It uses Generic Config for centralized management of adapter configurations.',
+    },
+    {
       id: 'receipts',
       name: 'Receipts',
       introduced: '2021',
@@ -255,6 +262,55 @@ export const temenosComponentsData: TemenosComponentsData = {
       introduced: '2022',
       group: 'Microservices',
       description: 'Virtual Tables is an MSF integration service introduced in 2022 that provides data abstraction between microservices and underlying data sources. It creates virtual data views that aggregate data from Transact core banking, microservice databases, and external systems into unified queryable tables. Virtual Tables supports read-through data access without data replication, enabling real-time data consistency. The service integrates with MDAL (Microservices Data Abstraction Layer) and supports the Transact Explorer and Workbench development tools. It simplifies data access patterns for digital banking applications requiring cross-system data.',
+    },
+    {
+      id: 'notification',
+      name: 'Notification Microservice',
+      introduced: '2021',
+      group: 'Microservices',
+      description: 'Notification Microservice is an MSF component that manages outbound notifications to customers and internal users. It supports multiple channels including SMS, email, push notifications, and in-app messages. The service integrates with the Alerts module and digital channels for delivery of transactional and marketing communications.',
+    },
+    {
+      id: 'audit',
+      name: 'Audit Microservice',
+      introduced: '2021',
+      group: 'Microservices',
+      description: 'Audit Microservice provides centralized audit logging and compliance trail capabilities for Temenos applications. It captures and stores audit events from microservices and core systems for regulatory reporting and forensic analysis.',
+    },
+    {
+      id: 'file-management',
+      name: 'File Management Microservice',
+      introduced: '2021',
+      group: 'Microservices',
+      description: 'File Management Microservice handles document and file storage, retrieval, and lifecycle management for banking operations. It supports document uploads for origination, KYC, and regulatory submissions, integrating with cloud storage and document management systems.',
+    },
+    {
+      id: 'workflow',
+      name: 'Workflow Microservice',
+      introduced: '2021',
+      group: 'Microservices',
+      description: 'Workflow Microservice orchestrates business process workflows across Temenos applications. It manages workflow definitions, task routing, approvals, and state transitions for lending, onboarding, and operational processes.',
+    },
+    {
+      id: 'integration',
+      name: 'Integration Microservice',
+      introduced: '2021',
+      group: 'Microservices',
+      description: 'Integration Microservice provides connectivity and message transformation between Temenos systems and external platforms. It supports protocol translation, routing, and orchestration for enterprise integration patterns.',
+    },
+    {
+      id: 'web-ingress',
+      name: 'Web Ingress Microservice',
+      introduced: '2021',
+      group: 'Microservices',
+      description: 'Web Ingress Microservice provides ingress routing and load balancing for web traffic to Temenos applications. It handles TLS termination, path-based routing, and request distribution across backend services.',
+    },
+    {
+      id: 'ingress',
+      name: 'Ingress Microservice',
+      introduced: '2021',
+      group: 'Microservices',
+      description: 'Ingress Microservice manages inbound traffic routing to Temenos microservices and applications. It provides load balancing, SSL termination, and path-based routing for containerized deployments.',
     },
     // Modular Core (Composable Banking)
     {
@@ -380,4 +436,54 @@ export const temenosComponentsData: TemenosComponentsData = {
       description: 'Unified Ledger is Temenos\'s next-generation enterprise ledger module designed to serve as a single source of truth for all balances, instruments, and movements across the entire bank. It is core and product agnostic, meaning it works across multiple banking systems without dependency on any specific core banking platform. The module enables progressive transformation by allowing banks to modernize incrementally without disrupting existing operations. Key capabilities include back-dated and future-dated cashflow projections, enterprise-level scalability with High Volume Transaction (HVT) support, and compatibility with distributed databases. Unified Ledger supports headless postings through GAI (Generic Accounting Interface), eliminating direct dependency on Transact\'s General Ledger. It is fully integrated with APIs and events for real-time data access and event-driven architectures, positioning it as a foundational component for banks pursuing composable banking strategies.',
     },
   ],
+}
+
+/** Known aliases: Azure/deployment names -> catalog component ID (e.g. Statement Generation = CAMT) */
+const COMPONENT_NAME_ALIASES: Record<string, string> = {
+  'statement generation microservice': 'camt',
+  'statement generation': 'camt',
+  'stmtgen': 'camt',
+  'stmt-gen': 'camt',
+  'party v2 microservice': 'party-master',
+  'party v2': 'party-master',
+  'party microservice': 'party-master',
+  'deposits microservice': 'deposits-accounts',
+  'deposits': 'deposits-accounts',
+  'camt microservice': 'camt',
+  'virtual table microservice': 'virtual-tables',
+  'virtual table': 'virtual-tables',
+  'notification microservice': 'notification',
+  'audit microservice': 'audit',
+  'file management microservice': 'file-management',
+  'workflow microservice': 'workflow',
+  'integration microservice': 'integration',
+  'web ingress microservice': 'web-ingress',
+  'ingress microservice': 'ingress',
+}
+
+/** Map component name from Deployment Analyzer to temenos component ID for linking */
+export function getComponentIdFromName(componentName: string): string | null {
+  if (!componentName || typeof componentName !== 'string') return null
+  const baseName = componentName.replace(/\s*microservice\s*$/i, '').trim()
+  const normalized = baseName.toLowerCase().replace(/\s+/g, '-')
+  const aliasKey = baseName.toLowerCase().trim()
+  if (COMPONENT_NAME_ALIASES[aliasKey]) return COMPONENT_NAME_ALIASES[aliasKey]
+  if (COMPONENT_NAME_ALIASES[normalized]) return COMPONENT_NAME_ALIASES[normalized]
+  const allItems = [...temenosComponentsData.active, ...temenosComponentsData.future]
+  for (const item of allItems) {
+    if (item.id === normalized) return item.id
+    if (item.id.replace(/-/g, '') === normalized.replace(/-/g, '')) return item.id
+    const nameNorm = item.name.toLowerCase().replace(/\s+/g, '-')
+    if (nameNorm === normalized) return item.id
+    if (item.name.toLowerCase().replace(/\s+/g, '') === baseName.toLowerCase().replace(/\s+/g, '')) return item.id
+  }
+  if (allItems.some((c) => c.id === normalized)) return normalized
+  return null
+}
+
+/** Get display name for a component ID (e.g. "event-store" -> "Event Store") */
+export function getComponentDisplayName(componentId: string): string {
+  const allItems = [...temenosComponentsData.active, ...temenosComponentsData.future]
+  const item = allItems.find((c) => c.id === componentId)
+  return item?.name ?? componentId.replace(/-/g, ' ')
 }

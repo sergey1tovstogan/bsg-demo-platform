@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Sun, Moon, Check, Key, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import type { ComponentId } from '../types'
-import { Network, Database, Cloud, Shield, GitBranch } from 'lucide-react'
+import { Network, Database, Cloud, Shield, GitBranch, Puzzle } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { apiService } from '../services/api'
 
@@ -14,6 +14,7 @@ interface CategoryOption {
 const CATEGORIES: CategoryOption[] = [
   { id: 'architecture', name: 'Architecture', icon: Cloud },
   { id: 'integration', name: 'Integration, APIs & Events', icon: Network },
+  { id: 'extensibility', name: 'Extensibility', icon: Puzzle },
   { id: 'data-architecture', name: 'Data Architecture', icon: Database },
   { id: 'security', name: 'Security', icon: Shield },
   { id: 'observability', name: 'Observability', icon: Eye },
