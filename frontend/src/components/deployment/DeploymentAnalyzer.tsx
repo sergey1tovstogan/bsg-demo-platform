@@ -2370,15 +2370,6 @@ function ComponentDetailPanel({
             <span>Open in Azure Portal</span>
           </a>
         )}
-        {componentLinkId && (
-          <Link
-            to={`/platform/temenos-components?from=deployment#${componentLinkId}`}
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            <ExternalLink className="w-4 h-4" />
-            <span>View {getComponentDisplayName(componentLinkId)}</span>
-          </Link>
-        )}
       </div>
 
       {/* Minimal info - direct link to specific component */}
