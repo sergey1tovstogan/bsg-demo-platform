@@ -1,7 +1,7 @@
 // IntegrationContent - Unified Integration page with Event Flow + REST API Catalog
 // Reuses look and feel from /platform/data-architecture (User Journey, API Inspector, Event Stream)
 // without TDH/ODS/SDS. REST APIs use API Inspector but have no Kafka events.
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   RefreshCw,
@@ -28,90 +28,23 @@ import { TRANSACTION_STEPS } from '../data-architecture/config/simulation.config
 import { apiService } from '../../services/api'
 import type { ApiLog, RestApiType } from '../data-architecture/demo/types'
 
-// Editable JSON request body - syncs scroll between syntax-highlighted view and transparent textarea overlay
+// Editable JSON request body - uses visible textarea to avoid cursor/position misalignment
+// (overlay approach caused typed characters to appear in wrong place, e.g. amount "11" ending up in beneficiaryId)
 const RequestBodyEditor: React.FC<{
   value: string
   onChange: (value: string) => void
   placeholder?: string
 }> = ({ value, onChange, placeholder }) => {
-  const jsonRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const handleScroll = () => {
-    if (jsonRef.current && textareaRef.current) {
-      jsonRef.current.scrollTop = textareaRef.current.scrollTop
-      jsonRef.current.scrollLeft = textareaRef.current.scrollLeft
-    }
-  }
-
-  const handleContainerClick = () => {
-    textareaRef.current?.focus()
-  }
-
-  const parsed = (() => {
-    try {
-      return value ? JSON.parse(value) : null
-    } catch {
-      return null
-    }
-  })()
-
   return (
-    <div
-      className="relative cursor-text"
-      onClick={handleContainerClick}
-      role="textbox"
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      spellCheck={false}
+      className="w-full min-h-[140px] max-h-48 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg font-mono text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-transparent"
       aria-label="Request body"
-    >
-      <div
-        ref={jsonRef}
-        className="w-full min-h-[140px] max-h-48 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg overflow-auto bg-white dark:bg-slate-900 pointer-events-none select-none"
-        style={{ font: 'inherit' }}
-      >
-        <JsonView data={parsed} rawText={value || undefined} />
-      </div>
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onScroll={handleScroll}
-        placeholder={placeholder}
-        spellCheck={false}
-        className="absolute inset-0 w-full min-h-[140px] max-h-48 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg font-mono text-xs bg-transparent text-transparent caret-slate-900 dark:caret-white resize-none focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-transparent"
-        style={{ font: 'inherit' }}
-      />
-    </div>
+    />
   )
-}
-
-// JSON Syntax Highlighter for REST API cards
-const JsonView = ({ data, rawText }: { data: unknown; rawText?: string }) => {
-  if (!data) {
-    if (rawText) {
-      return <pre className="text-xs whitespace-pre-wrap font-mono">{rawText}</pre>
-    }
-    return <pre className="text-xs whitespace-pre-wrap text-gray-500">No data</pre>
-  }
-  const formattedJson = JSON.stringify(data, null, 2)
-  const renderToken = (token: string, index: number) => {
-    if (token.match(/^".*":$/)) {
-      return <span key={index} className="text-[#BB6F62] dark:text-[#ff9e8f] font-semibold">{token}</span>
-    } else if (token.match(/^".*"$/)) {
-      return <span key={index} className="text-[#134CA2] dark:text-[#60a5fa]">{token}</span>
-    } else if (token.match(/^-?\d+\.?\d*$/)) {
-      return <span key={index} className="text-[#008456] dark:text-[#4ade80]">{token}</span>
-    } else if (token === 'true' || token === 'false') {
-      return <span key={index} className="text-purple-600 dark:text-purple-400 font-semibold">{token}</span>
-    } else if (token === 'null') {
-      return <span key={index} className="text-gray-500 dark:text-gray-400 font-semibold">{token}</span>
-    } else {
-      return <span key={index} className="dark:text-slate-300">{token}</span>
-    }
-  }
-  const tokens = formattedJson
-    .split(/("(?:\\.|[^"\\])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|[{}[\],:]|\s+)/g)
-    .filter(Boolean)
-  return <pre className="text-xs whitespace-pre-wrap font-mono">{tokens.map((token, index) => renderToken(token, index))}</pre>
 }
 
 // Helper to create ApiLog from REST API response
