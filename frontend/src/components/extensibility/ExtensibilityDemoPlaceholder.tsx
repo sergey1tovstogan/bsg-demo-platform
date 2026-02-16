@@ -1,5 +1,4 @@
 // ExtensibilityDemoPlaceholder - Shown when Demo tab is selected (demo not yet available)
-import React from 'react'
 import { Construction } from 'lucide-react'
 
 export function ExtensibilityDemoPlaceholder() {

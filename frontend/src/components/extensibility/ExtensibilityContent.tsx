@@ -1,6 +1,5 @@
 // ExtensibilityContent - Extensibility Framework page
 // Content based on Extensibility Framework PPT (BSG Internal Oct 2025)
-import React from 'react'
 import { Puzzle, Wrench, Layers, Building2 } from 'lucide-react'
 
 const BULLETS = [

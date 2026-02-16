@@ -1,7 +1,7 @@
 // IntegrationContent - Unified Integration page with Event Flow + REST API Catalog
 // Reuses look and feel from /platform/data-architecture (User Journey, API Inspector, Event Stream)
 // without TDH/ODS/SDS. REST APIs use API Inspector but have no Kafka events.
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   RefreshCw,
@@ -27,6 +27,62 @@ import { KafkaEventStream } from '../data-architecture/demo/KafkaEventStream'
 import { TRANSACTION_STEPS } from '../data-architecture/config/simulation.config'
 import { apiService } from '../../services/api'
 import type { ApiLog, RestApiType } from '../data-architecture/demo/types'
+
+// Editable JSON request body - syncs scroll between syntax-highlighted view and transparent textarea overlay
+const RequestBodyEditor: React.FC<{
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+}> = ({ value, onChange, placeholder }) => {
+  const jsonRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleScroll = () => {
+    if (jsonRef.current && textareaRef.current) {
+      jsonRef.current.scrollTop = textareaRef.current.scrollTop
+      jsonRef.current.scrollLeft = textareaRef.current.scrollLeft
+    }
+  }
+
+  const handleContainerClick = () => {
+    textareaRef.current?.focus()
+  }
+
+  const parsed = (() => {
+    try {
+      return value ? JSON.parse(value) : null
+    } catch {
+      return null
+    }
+  })()
+
+  return (
+    <div
+      className="relative cursor-text"
+      onClick={handleContainerClick}
+      role="textbox"
+      aria-label="Request body"
+    >
+      <div
+        ref={jsonRef}
+        className="w-full min-h-[140px] max-h-48 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg overflow-auto bg-white dark:bg-slate-900 pointer-events-none select-none"
+        style={{ font: 'inherit' }}
+      >
+        <JsonView data={parsed} rawText={value || undefined} />
+      </div>
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onScroll={handleScroll}
+        placeholder={placeholder}
+        spellCheck={false}
+        className="absolute inset-0 w-full min-h-[140px] max-h-48 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg font-mono text-xs bg-transparent text-transparent caret-slate-900 dark:caret-white resize-none focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-transparent"
+        style={{ font: 'inherit' }}
+      />
+    </div>
+  )
+}
 
 // JSON Syntax Highlighter for REST API cards
 const JsonView = ({ data, rawText }: { data: unknown; rawText?: string }) => {
@@ -463,12 +519,10 @@ export function IntegrationContent() {
                       {api.method === 'POST' && api.defaultBody && (
                         <div className="mb-4">
                           <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Request body</label>
-                          <div className="relative">
-                            <div className="w-full h-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg overflow-auto bg-white dark:bg-slate-900 pointer-events-none">
-                              <JsonView data={(() => { try { return JSON.parse(state.body || '{}') } catch { return null } })()} rawText={state.body} />
-                            </div>
-                            <textarea value={state.body || ''} onChange={(e) => setRestApiState((s) => ({ ...s, [api.id]: { ...s[api.id], body: e.target.value } }))} className="absolute top-0 left-0 w-full h-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#003366] bg-transparent text-transparent caret-black dark:caret-white resize-none z-10" spellCheck={false} />
-                          </div>
+                          <RequestBodyEditor
+                            value={state.body || ''}
+                            onChange={(body) => setRestApiState((s) => ({ ...s, [api.id]: { ...s[api.id], body } }))}
+                          />
                         </div>
                       )}
                       {/* Execute button - same look and feel as User Journey StepCard */}
