@@ -23,11 +23,6 @@ function loadSelectedCategories(): Set<ComponentId> {
     if (stored) {
       const parsed = JSON.parse(stored) as string[]
       const migrated = parsed.map(id => id === 'deployment' ? 'architecture' : id)
-      // Ensure extensibility is included for existing users
-      if (!migrated.includes('extensibility')) {
-        migrated.push('extensibility')
-        localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(migrated))
-      }
       if (migrated.some((id, i) => id !== parsed[i])) {
         localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(migrated))
       }
@@ -145,7 +140,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
                           className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                             isSelected
                               ? isDark ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
-                              : isDark ? 'text-slate-500 opacity-60 cursor-not-allowed' : 'text-slate-400 opacity-60 cursor-not-allowed'
+                              : isDark ? 'text-slate-600 opacity-50 cursor-not-allowed' : 'text-slate-400 opacity-50 cursor-not-allowed'
                           }`}
                           disabled={!isSelected}
                         >
@@ -249,7 +244,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
                     key={m.id}
                     onClick={() => handleModuleSelect(m.id)}
                     disabled={!isSelected}
-                    className={`block w-full text-left py-2 text-sm ${!isSelected ? 'opacity-60 text-slate-500 cursor-not-allowed' : ''}`}
+                    className={`block w-full text-left py-2 text-sm ${!isSelected ? 'opacity-50 text-slate-400 cursor-not-allowed' : ''}`}
                   >
                     {m.name}
                   </button>

@@ -468,7 +468,7 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
               ) : (
                 <>
                   <Key className="w-4 h-4" />
-                  <span>Save Sandbox Key</span>
+                  <span>Update MDS Sandbox Token</span>
                 </>
               )}
             </button>
