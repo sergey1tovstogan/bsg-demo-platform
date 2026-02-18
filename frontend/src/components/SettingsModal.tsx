@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Sun, Moon, Check, Key, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle, Cloud, Network, Database, Shield, GitBranch, Puzzle, Wrench } from 'lucide-react'
+import { X, Sun, Moon, Check, Key, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle, Cloud, Network, Database, Shield, GitBranch, Puzzle } from 'lucide-react'
 import type { ComponentId } from '../types'
 import type { LucideIcon } from 'lucide-react'
 import { apiService } from '../services/api'

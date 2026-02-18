@@ -119,24 +119,24 @@ const GetCustomerCard: React.FC<{
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Transaction completed successfully!</span>
           </div>
-          {resultData && (
+          {resultData != null ? (
             <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
               <div className="text-xs text-slate-600 dark:text-slate-400 mb-2 font-semibold">Response Data:</div>
               <pre className="text-xs text-[#003366] dark:text-[#00A3E0] font-mono overflow-x-auto max-h-40 overflow-y-auto w-full">
                 {JSON.stringify(resultData, null, 2)}
               </pre>
             </div>
-          )}
+          ) : null}
         </motion.div>
       )}
-      {showContent && status === 'error' && resultData && (
+      {showContent && status === 'error' && resultData != null ? (
         <div className="p-3 mt-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
           <div className="flex items-start gap-2">
             <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-red-600 dark:text-red-400">{String((resultData as { error?: string })?.error ?? 'Request failed')}</div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -211,24 +211,24 @@ const GetAccountsCard: React.FC<{
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Transaction completed successfully!</span>
           </div>
-          {resultData && (
+          {resultData != null ? (
             <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
               <div className="text-xs text-slate-600 dark:text-slate-400 mb-2 font-semibold">Response Data:</div>
               <pre className="text-xs text-[#003366] dark:text-[#00A3E0] font-mono overflow-x-auto max-h-40 overflow-y-auto w-full">
                 {JSON.stringify(resultData, null, 2)}
               </pre>
             </div>
-          )}
+          ) : null}
         </motion.div>
       )}
-      {showContent && status === 'error' && resultData && (
+      {showContent && status === 'error' && resultData != null ? (
         <div className="p-3 mt-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
           <div className="flex items-start gap-2">
             <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-red-600 dark:text-red-400">{String((resultData as { error?: string })?.error ?? 'Request failed')}</div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

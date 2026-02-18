@@ -54,36 +54,6 @@ interface AnalysisResult {
 }
 
 const DEPLOYMENT_ANALYSIS_STATE_KEY = 'bsg_deployment_analysis_state'
-const STATE_TTL_MS = 60 * 60 * 1000 // 1 hour - don't restore stale state
-
-function loadSavedAnalysisState(): {
-  currentStep: Step
-  subscriptionId: string
-  resourceGroups: AzureResourceGroup[]
-  services: AzureResource[]
-  analysisResults: AnalysisResult[]
-  selectedResourceGroups: string[]
-} | null {
-  try {
-    const raw = sessionStorage.getItem(DEPLOYMENT_ANALYSIS_STATE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as { savedAt: number; data: Record<string, unknown> }
-    if (Date.now() - parsed.savedAt > STATE_TTL_MS) return null
-    const d = parsed.data as Record<string, unknown>
-    const ar = d?.analysisResults
-    if (!Array.isArray(ar) || ar.length === 0) return null
-    return {
-      currentStep: 'analysis',
-      subscriptionId: String(d.subscriptionId ?? ''),
-      resourceGroups: Array.isArray(d.resourceGroups) ? d.resourceGroups as AzureResourceGroup[] : [],
-      services: Array.isArray(d.services) ? d.services as AzureResource[] : [],
-      analysisResults: ar as AnalysisResult[],
-      selectedResourceGroups: Array.isArray(d.selectedResourceGroups) ? d.selectedResourceGroups as string[] : []
-    }
-  } catch {
-    return null
-  }
-}
 
 function saveAnalysisState(
   subscriptionId: string,
@@ -491,6 +461,7 @@ export function DeploymentAnalyzer() {
       setLoading(false)
     }
   }
+  void handleSubscriptionSubmit // Reserved for future subscription input UI
 
   const handleResourceGroupsSelected = async (selected: string[]) => {
     try {
@@ -783,8 +754,8 @@ export function DeploymentAnalyzer() {
   )
 }
 
-// Subscription Input Component
-function SubscriptionInput({
+// Subscription Input Component - exported for potential future use
+export function SubscriptionInput({
   onSubmit,
   loading,
   error,
