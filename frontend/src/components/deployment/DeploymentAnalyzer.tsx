@@ -6,10 +6,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, RefreshCw, ExternalLink, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import { apiService } from '../../services/api'
-import { getComponentIdFromName, getComponentDisplayName } from '../temenos-components/temenosComponentsData'
+import { getComponentIdFromName, getComponentById } from '../temenos-components/temenosComponentsData'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -110,9 +110,14 @@ function clearSavedAnalysisState() {
   }
 }
 
+const DEFAULT_AZURE_SUBSCRIPTION_ID = '58a91cf0-0f39-45fd-a63e-5a9a28c7072b'
+
 export function DeploymentAnalyzer() {
-  const [currentStep, setCurrentStep] = useState<Step>('subscription')
-  const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
+  const navigate = useNavigate()
+  const [currentStep, setCurrentStep] = useState<Step>('resourceGroups')
+  const [subscriptionId, setSubscriptionId] = useState(() =>
+    localStorage.getItem('lastAzureSubscriptionId')?.trim() || DEFAULT_AZURE_SUBSCRIPTION_ID
+  )
 
   // Function to mask subscription ID for display
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
@@ -137,24 +142,20 @@ export function DeploymentAnalyzer() {
   const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
   const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
   const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
-  const [azureHealth, setAzureHealth] = useState<{ status: string; message?: string | null } | null>(null)
+  const [azureHealth, setAzureHealth] = useState<{
+    status: string
+    message?: string | null
+    identityType?: string
+    identityObjectId?: string
+    identityAppId?: string
+  } | null>(null)
   const [lastPreloadedSubId, setLastPreloadedSubId] = useState<string | null>(null)
 
   const RG_CACHE_KEY = 'bsg_azure_rg_cache'
   const RG_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 
-  // Restore saved analysis state when returning from Temenos Components (or other navigation)
-  useEffect(() => {
-    const saved = loadSavedAnalysisState()
-    if (saved) {
-      setCurrentStep('analysis')
-      setSubscriptionId(saved.subscriptionId)
-      setResourceGroups(saved.resourceGroups)
-      setServices(saved.services)
-      setAnalysisResults(saved.analysisResults)
-      setSelectedResourceGroups(saved.selectedResourceGroups)
-    }
-  }, [])
+  // Always start fresh at resource group selection when navigating to Architecture Demo
+  // (Subscription is configured in Settings)
 
   // Persist analysis state when user navigates away (e.g. to Temenos Components)
   useEffect(() => {
@@ -193,43 +194,63 @@ export function DeploymentAnalyzer() {
     }
   }
 
-  // Preload RGs: show cached immediately, then refresh from API in background
+  // When user updates Azure subscription in Settings, reload resource groups
   useEffect(() => {
-    if (currentStep !== 'subscription') return
-    const cachedSubId = localStorage.getItem('lastAzureSubscriptionId')?.trim()
-    if (!cachedSubId) return
+    const handler = () => {
+      const newSub = localStorage.getItem('lastAzureSubscriptionId')?.trim()
+      if (newSub && newSub !== subscriptionId) {
+        setSubscriptionId(newSub)
+        loadResourceGroups(newSub, true)
+      }
+    }
+    window.addEventListener('azureSubscriptionUpdated', handler)
+    return () => window.removeEventListener('azureSubscriptionUpdated', handler)
+  }, [subscriptionId])
+
+  // Load RGs on mount when on resourceGroups step (subscription from Settings/localStorage)
+  useEffect(() => {
+    if (currentStep !== 'resourceGroups' || !subscriptionId) return
+    const subId = subscriptionId.trim()
     let cancelled = false
 
     // 1. Instant: show client-side cached RGs if available
-    const localRgs = getRgCache(cachedSubId)
+    const localRgs = getRgCache(subId)
     if (localRgs && localRgs.length > 0) {
       setResourceGroups(localRgs)
       setResourceGroupsCached(true)
-      setLastPreloadedSubId(cachedSubId)
+      setLastPreloadedSubId(subId)
     }
 
     // 2. Background: fetch from backend (uses server cache when available)
-    apiService.getAzureResourceGroups(cachedSubId, false)
+    apiService.getAzureResourceGroups(subId, false)
       .then((body) => {
         if (cancelled) return
         const rgList = Array.isArray(body?.data) ? body.data : []
         if (rgList.length > 0) {
           setResourceGroups(rgList)
           setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
-          setLastPreloadedSubId(cachedSubId)
-          setRgCache(cachedSubId, rgList)
+          setLastPreloadedSubId(subId)
+          setRgCache(subId, rgList)
         }
       })
-      .catch(() => { /* ignore - will fetch on Connect */ })
+      .catch(() => { /* ignore - user can refresh */ })
     return () => { cancelled = true }
-  }, [currentStep])
+  }, [currentStep, subscriptionId])
 
-  // Proactive Azure health check when on subscription step so demos don't hang if backend identity expired
+  // Proactive Azure health check when on resourceGroups step
   useEffect(() => {
-    if (currentStep !== 'subscription') return
+    if (currentStep !== 'resourceGroups') return
     let cancelled = false
     apiService.getAzureHealth(subscriptionId || undefined)
-      .then((res) => { if (!cancelled) setAzureHealth({ status: res.status, message: res.message ?? undefined }) })
+      .then((res) => {
+        if (!cancelled) setAzureHealth({
+          status: res.status,
+          message: res.message ?? undefined,
+          identityType: res.identity_type,
+          identityObjectId: res.identity_object_id,
+          identityAppId: res.identity_app_id,
+        })
+      })
       .catch(() => { if (!cancelled) setAzureHealth({ status: 'unknown', message: null }) })
     return () => { cancelled = true }
   }, [currentStep, subscriptionId])
@@ -699,31 +720,23 @@ export function DeploymentAnalyzer() {
       setCurrentStep('resourceGroups')
       setClusterNamespaces([])
     } else if (currentStep === 'resourceGroups') {
-      setCurrentStep('subscription')
-      // Keep resourceGroups for instant Connect when returning with same subscription
+      navigate(-1)
     }
   }
 
   return (
     <div className="space-y-6 min-h-[400px]">
-      {currentStep === 'subscription' && azureHealth?.status === 'unavailable' && (
+      {currentStep === 'resourceGroups' && azureHealth?.status === 'unavailable' && (
         <div className="rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4 text-amber-800 dark:text-amber-200">
           <p className="font-medium">Azure connectivity issue</p>
           <p className="text-sm mt-1">{azureHealth.message || 'Backend Azure identity may have expired or lost access to the subscription.'}</p>
-          <p className="text-sm mt-1">Contact your administrator to renew the Service Principal secret or re-grant Managed Identity access, then restart the backend.</p>
+          <p className="text-sm mt-1">Update the Azure subscription in Settings or contact your administrator to renew the Service Principal secret.</p>
         </div>
-      )}
-      {currentStep === 'subscription' && (
-        <SubscriptionInput
-          onSubmit={handleSubscriptionSubmit}
-          loading={loading}
-          error={error}
-          defaultSubscriptionId={subscriptionId}
-        />
       )}
 
       {currentStep === 'resourceGroups' && (
         <ResourceGroupSelector
+          azureHealth={azureHealth}
           resourceGroups={resourceGroups}
           onSelected={handleResourceGroupsSelected}
           onBack={handleBack}
@@ -1043,6 +1056,7 @@ async function handleExportArmTemplate(
 
 // Resource Group Selector Component
 function ResourceGroupSelector({
+  azureHealth,
   resourceGroups,
   onSelected,
   onBack,
@@ -1053,7 +1067,7 @@ function ResourceGroupSelector({
   analysisProgress,
   subscriptionId
 }: {
-
+  azureHealth: { status: string; identityType?: string; identityObjectId?: string; identityAppId?: string; message?: string | null } | null
   resourceGroups: AzureResourceGroup[]
   onSelected: (selected: string[]) => void
   onBack: () => void
@@ -1130,6 +1144,31 @@ function ResourceGroupSelector({
           </button>
         </div>
       </div>
+
+      {azureHealth?.status === 'ok' && (
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-slate-700 dark:text-slate-300">
+          <p className="text-sm font-medium mb-1">Backend identity for IAM role assignment</p>
+          {azureHealth.identityObjectId ? (
+            <>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                Use this Object ID when assigning &quot;Azure Kubernetes Service Cluster User Role&quot; at subscription level.
+              </p>
+              <p className="text-xs font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded break-all">
+                {azureHealth.identityObjectId}
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+              Object ID not available. Call <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">GET /deployment/azure/health</code> to inspect the backend identity.
+            </p>
+          )}
+          {azureHealth.identityType && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              Type: {azureHealth.identityType === 'managed_identity' ? 'Managed Identity' : azureHealth.identityType === 'service_principal' ? 'Service Principal' : azureHealth.identityType}
+            </p>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
@@ -2372,26 +2411,67 @@ function ComponentDetailPanel({
         )}
       </div>
 
-      {/* Minimal info - direct link to specific component */}
+      {/* Inline component info from Temenos Components catalog */}
       {componentLinkId ? (
-        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            View description for{' '}
-            <Link
-              to={`/platform/temenos-components?from=deployment#${componentLinkId}`}
-              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
-            >
-              {getComponentDisplayName(componentLinkId)}
-            </Link>
-          </p>
-        </div>
+        (() => {
+          const catalogComponent = getComponentById(componentLinkId)
+          if (!catalogComponent) {
+            return (
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                <p className="text-sm text-slate-600 dark:text-slate-400 italic">
+                  This component is not yet in the Temenos Components catalog. Azure service details shown above.
+                </p>
+              </div>
+            )
+          }
+          // Split description into paragraphs for readability (~2 sentences per paragraph)
+          const paragraphs = catalogComponent.description
+            .split(/(?<=[.!?])\s+/)
+            .reduce<string[]>((acc, sentence) => {
+              if (acc.length === 0) acc.push('')
+              const last = acc[acc.length - 1]
+              const sentencesInLast = (last.match(/[.!?]/g) || []).length
+              if (sentencesInLast >= 2 && last.trim().length > 0) {
+                acc.push(sentence)
+                  } else {
+                acc[acc.length - 1] = last ? `${last} ${sentence}` : sentence
+              }
+              return acc
+            }, [])
+            .filter(p => p.trim())
+          if (paragraphs.length === 0) paragraphs.push(catalogComponent.description)
+
+          return (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                  Component overview
+                </p>
+                <div className="space-y-3">
+                  {paragraphs.map((para, i) => (
+                    <p key={i} className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                      {para}
+                    </p>
+                  ))}
+          </div>
+            </div>
+              {catalogComponent.group && (
+                <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-200 dark:border-slate-600">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Group: <span className="font-medium text-slate-600 dark:text-slate-300">{catalogComponent.group}</span>
+                  </span>
+              </div>
+            )}
+          </div>
+          )
+        })()
       ) : (
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
           <p className="text-sm text-slate-600 dark:text-slate-400 italic">
             This component is not yet in the Temenos Components catalog. Azure service details shown above.
           </p>
-        </div>
-      )}
+                </div>
+        )}
     </div>
   )
 }

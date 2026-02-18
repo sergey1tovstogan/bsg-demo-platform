@@ -74,8 +74,7 @@ const StatusBadge: React.FC<{ status: 'success' | 'error'; statusCode: number }>
 /**
  * Individual API log entry - Temenos brand styling
  */
-const ApiLogEntry = React.forwardRef<HTMLDivElement, { log: ApiLog }>(({ log }, ref) => {
-  const [isExpanded, setIsExpanded] = useState(true)
+const ApiLogEntry = React.forwardRef<HTMLDivElement, { log: ApiLog; isExpanded: boolean; onToggle: () => void }>(({ log, isExpanded, onToggle }, ref) => {
 
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {
@@ -101,7 +100,7 @@ const ApiLogEntry = React.forwardRef<HTMLDivElement, { log: ApiLog }>(({ log }, 
       {/* Log header */}
       <div
         className="flex items-center justify-between cursor-pointer mb-2"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={onToggle}
       >
         <div className="flex items-center gap-3 flex-1">
           {/* Expand/collapse icon */}
@@ -184,6 +183,29 @@ ApiLogEntry.displayName = 'ApiLogEntry'
  */
 export const ApiInspector: React.FC<ApiInspectorProps> = ({ logs, isLoading, onClear }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(new Set())
+
+  // When a new API is logged: collapse all previous, expand only the latest to save space
+  useEffect(() => {
+    if (logs.length === 0) {
+      setExpandedLogIds(new Set())
+    } else {
+      const latestId = logs[logs.length - 1].id
+      setExpandedLogIds(new Set([latestId]))
+    }
+  }, [logs.length])
+
+  const toggleLog = (logId: string) => {
+    setExpandedLogIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(logId)) {
+        next.delete(logId)
+      } else {
+        next.add(logId)
+      }
+      return next
+    })
+  }
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
@@ -238,7 +260,12 @@ export const ApiInspector: React.FC<ApiInspectorProps> = ({ logs, isLoading, onC
         ) : (
           <AnimatePresence mode="popLayout">
             {logs.map((log) => (
-              <ApiLogEntry key={log.id} log={log} />
+              <ApiLogEntry
+                key={log.id}
+                log={log}
+                isExpanded={expandedLogIds.has(log.id)}
+                onToggle={() => toggleLog(log.id)}
+              />
             ))}
           </AnimatePresence>
         )}

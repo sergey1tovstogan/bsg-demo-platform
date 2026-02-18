@@ -302,49 +302,13 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
   // Always show full UI instantly; session init runs in background
   return (
     <div className={`flex flex-col overflow-hidden ${embedded ? 'h-full min-h-0 p-4' : 'card h-[600px]'}`}>
-      {/* Input at the top */}
-      <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-600">
-        {initializing && (
-          <div className="mb-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-            <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
-            <span>Connecting in background...</span>
-          </div>
-        )}
-        <div className="flex items-center space-x-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask about Temenos Technology Pillars (Architecture, Extensibility, Integration, etc.)..."
-            className="input-field flex-1"
-            disabled={loading || (!sessionId && !isLocalFallbackMode)}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={!input.trim() || loading || (!sessionId && !isLocalFallbackMode)}
-            className="btn-primary flex items-center space-x-2 px-6"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Querying RAG...</span>
-              </>
-            ) : (
-              <>
-                <Send className="w-5 h-5" />
-                <span>Send</span>
-              </>
-            )}
-          </button>
+      {/* Status messages at top */}
+      {initializing && (
+        <div className="mb-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+          <span>Connecting in background...</span>
         </div>
-        {loading && (
-          <div className="mt-3 flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Retrieving information from RAG knowledge base...</span>
-          </div>
-        )}
-      </div>
+      )}
 
       {ragTokenWarning && !isLocalFallbackMode && (
         <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-800 dark:text-yellow-200 text-sm flex items-start space-x-2">
@@ -445,6 +409,44 @@ export function Chatbot({ componentId, embedded = false }: ChatbotProps) {
           </div>
         )}
         <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input at the bottom */}
+      <div className="flex-shrink-0 pt-4 mt-4 border-t border-gray-200 dark:border-gray-600">
+        {loading && (
+          <div className="mb-2 flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Retrieving information from RAG knowledge base...</span>
+          </div>
+        )}
+        <div className="flex items-center space-x-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask about Temenos Technology Pillars (Architecture, Extensibility, Integration, etc.)..."
+            className="input-field flex-1"
+            disabled={loading || (!sessionId && !isLocalFallbackMode)}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() || loading || (!sessionId && !isLocalFallbackMode)}
+            className="btn-primary flex items-center space-x-2 px-6"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Querying RAG...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                <span>Send</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   )

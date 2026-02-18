@@ -569,11 +569,20 @@ class RealApiService implements ITransactionApiService {
       }
 
       // Return real response from Temenos API - no fallbacks or generated data
-      // Holdings API v9.4.0 returns: {header: {id, status, audit}, body: {...}}
+      // Holdings API v9.4.0 returns: {header: {id, aaaId, status, audit}, body: {arrangementActivity: {...}}}
       const responseBody = responseData.body || responseData
+      const arrangementActivity = responseBody?.arrangementActivity || responseBody?.arrangementActivities?.[0]
       
-      // Extract account ID from header (standard Temenos response structure)
-      const accountId = responseData.header?.id || responseBody?.accountId || responseData.accountId || responseData.id
+      // Extract account ID - Temenos uses multiple locations depending on API version
+      const accountId =
+        responseData.header?.id ||
+        responseData.header?.aaaId ||
+        arrangementActivity?.arrangementId ||
+        arrangementActivity?.arrangmentId || // Temenos typo in some versions
+        responseBody?.accountId ||
+        responseBody?.arrangementId ||
+        responseData.accountId ||
+        responseData.id
       
       // Build account data from real response only
       const account: Account = {

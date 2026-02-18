@@ -279,6 +279,9 @@ export interface StepCardProps {
   onExecute: () => void
   resultData?: any
   icon: React.ReactNode
+  /** When provided with onToggle, card content is collapsible */
+  isExpanded?: boolean
+  onToggle?: () => void
 }
 
 /**

@@ -487,3 +487,9 @@ export function getComponentDisplayName(componentId: string): string {
   const item = allItems.find((c) => c.id === componentId)
   return item?.name ?? componentId.replace(/-/g, ' ')
 }
+
+/** Get full component by ID for inline display (e.g. in Deployment Analysis) */
+export function getComponentById(componentId: string): TemenosComponentItem | null {
+  const allItems = [...temenosComponentsData.active, ...temenosComponentsData.future]
+  return allItems.find((c) => c.id === componentId) ?? null
+}

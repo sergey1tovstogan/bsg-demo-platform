@@ -8,7 +8,6 @@ import {
   TrendingUp,
   User,
   CreditCard,
-  Send,
   CheckCircle2,
   Loader2,
   ExternalLink,
@@ -17,14 +16,16 @@ import {
   Power,
   Wrench,
   ChevronDown,
-  ChevronUp
+  ChevronRight,
+  ChevronUp,
+  XCircle
 } from 'lucide-react'
 import { useSimulation } from '../data-architecture/hooks/useSimulation'
 import { useCrossTabSync } from '../data-architecture/hooks/useCrossTabSync'
 import { StepCard } from '../data-architecture/demo/StepCard'
 import { ApiInspector } from '../data-architecture/demo/ApiInspector'
 import { KafkaEventStream } from '../data-architecture/demo/KafkaEventStream'
-import { TRANSACTION_STEPS } from '../data-architecture/config/simulation.config'
+import { TRANSACTION_STEPS, API_CONFIG, API_ENDPOINTS } from '../data-architecture/config/simulation.config'
 import { apiService } from '../../services/api'
 import type { ApiLog, RestApiType } from '../data-architecture/demo/types'
 
@@ -44,6 +45,191 @@ const RequestBodyEditor: React.FC<{
       className="w-full min-h-[140px] max-h-48 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg font-mono text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 resize-none focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-transparent"
       aria-label="Request body"
     />
+  )
+}
+
+// GET Customer - same path as POST Create Customer (/v5.7.0/party/customers) + customerId from Create Customer response
+// GET Accounts - same base URL as Create Customer/Open Account (transactingress), path: /v4.9.0/holdings/accounts/{accountId}/balances
+const GetCustomerCard: React.FC<{
+  customerId: string | undefined
+  onExecute: () => Promise<void>
+  status: 'idle' | 'loading' | 'success' | 'error'
+  resultData?: unknown
+  onClearResult?: () => void
+  isExpanded?: boolean
+  onToggle?: () => void
+}> = ({ customerId, onExecute, status, resultData, isExpanded = true, onToggle }) => {
+  const disabled = !customerId
+  const borderClass = status === 'success'
+    ? 'border-2 border-emerald-500 shadow-lg shadow-emerald-500/20'
+    : status === 'error'
+      ? 'border-2 border-red-500 shadow-lg shadow-red-500/20'
+      : 'border-2 border-slate-200 dark:border-slate-700'
+  const isCollapsible = onToggle !== undefined
+  const showContent = !isCollapsible || isExpanded
+
+  return (
+    <div className={`relative w-full min-w-0 bg-white dark:bg-slate-800 rounded-xl p-5 transition-all duration-300 ${borderClass}`}>
+      <div className="absolute -top-3 -left-3 w-8 h-8 bg-gradient-to-br from-[#003366] to-[#00A3E0] rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
+        2
+      </div>
+      <div
+        className={`flex items-start justify-between ${isCollapsible ? 'cursor-pointer' : ''} ${showContent ? 'mb-4' : ''}`}
+        onClick={isCollapsible ? onToggle : undefined}
+      >
+        <div className="flex items-center gap-3 flex-1">
+          <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+            <User className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2 py-1 text-xs font-bold rounded bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100">GET</span>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Get Customer</h3>
+              {status === 'success' && <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700">Completed</span>}
+              {status === 'error' && <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-700">Failed</span>}
+              {isCollapsible && (isExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />)}
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Retrieve customer details by ID from Create Customer</p>
+            {customerId && <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-mono">Customer ID: {customerId}</p>}
+          </div>
+        </div>
+      </div>
+      {showContent && (status === 'idle' || status === 'error') && (
+        <motion.button
+          whileHover={{ scale: disabled ? 1 : 1.02 }}
+          whileTap={{ scale: disabled ? 1 : 0.98 }}
+          onClick={onExecute}
+          disabled={disabled}
+          className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 ${
+            disabled ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed' : 'bg-[#003366] text-white hover:bg-[#004080] shadow-md hover:shadow-lg hover:shadow-[#003366]/30'
+          }`}
+        >
+          Execute Action
+        </motion.button>
+      )}
+      {showContent && status === 'loading' && (
+        <div className="flex items-center justify-center gap-2 py-2.5">
+          <Loader2 className="w-4 h-4 text-[#003366] dark:text-[#00A3E0] animate-spin" />
+          <span className="text-sm text-[#003366] dark:text-[#00A3E0] font-medium">Executing...</span>
+        </div>
+      )}
+      {showContent && status === 'success' && (
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-3">
+          <div className="flex items-center justify-center gap-2 py-2.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Transaction completed successfully!</span>
+          </div>
+          {resultData && (
+            <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div className="text-xs text-slate-600 dark:text-slate-400 mb-2 font-semibold">Response Data:</div>
+              <pre className="text-xs text-[#003366] dark:text-[#00A3E0] font-mono overflow-x-auto max-h-40 overflow-y-auto w-full">
+                {JSON.stringify(resultData, null, 2)}
+              </pre>
+            </div>
+          )}
+        </motion.div>
+      )}
+      {showContent && status === 'error' && resultData && (
+        <div className="p-3 mt-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+          <div className="flex items-start gap-2">
+            <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-red-600 dark:text-red-400">{String((resultData as { error?: string })?.error ?? 'Request failed')}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// GET Accounts card - placed in Retail Customer Journey, uses accountId from Open Account
+const GetAccountsCard: React.FC<{
+  accountId: string | undefined
+  onExecute: () => Promise<void>
+  status: 'idle' | 'loading' | 'success' | 'error'
+  resultData?: unknown
+  onClearResult?: () => void
+  isExpanded?: boolean
+  onToggle?: () => void
+}> = ({ accountId, onExecute, status, resultData, isExpanded = true, onToggle }) => {
+  const disabled = !accountId
+  const borderClass = status === 'success'
+    ? 'border-2 border-emerald-500 shadow-lg shadow-emerald-500/20'
+    : status === 'error'
+      ? 'border-2 border-red-500 shadow-lg shadow-red-500/20'
+      : 'border-2 border-slate-200 dark:border-slate-700'
+  const isCollapsible = onToggle !== undefined
+  const showContent = !isCollapsible || isExpanded
+
+  return (
+    <div className={`relative w-full min-w-0 bg-white dark:bg-slate-800 rounded-xl p-5 transition-all duration-300 ${borderClass}`}>
+      <div className="absolute -top-3 -left-3 w-8 h-8 bg-gradient-to-br from-[#003366] to-[#00A3E0] rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
+        4
+      </div>
+      <div
+        className={`flex items-start justify-between ${isCollapsible ? 'cursor-pointer' : ''} ${showContent ? 'mb-4' : ''}`}
+        onClick={isCollapsible ? onToggle : undefined}
+      >
+        <div className="flex items-center gap-3 flex-1">
+          <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+            <CreditCard className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2 py-1 text-xs font-bold rounded bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100">GET</span>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Get Accounts</h3>
+              {status === 'success' && <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700">Completed</span>}
+              {status === 'error' && <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-700">Failed</span>}
+              {isCollapsible && (isExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />)}
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Retrieve account balances by ID from Open Account</p>
+            {accountId && <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-mono">Account ID: {accountId}</p>}
+          </div>
+        </div>
+      </div>
+      {showContent && (status === 'idle' || status === 'error') && (
+        <motion.button
+          whileHover={{ scale: disabled ? 1 : 1.02 }}
+          whileTap={{ scale: disabled ? 1 : 0.98 }}
+          onClick={onExecute}
+          disabled={disabled}
+          className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 ${
+            disabled ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed' : 'bg-[#003366] text-white hover:bg-[#004080] shadow-md hover:shadow-lg hover:shadow-[#003366]/30'
+          }`}
+        >
+          Execute Action
+        </motion.button>
+      )}
+      {showContent && status === 'loading' && (
+        <div className="flex items-center justify-center gap-2 py-2.5">
+          <Loader2 className="w-4 h-4 text-[#003366] dark:text-[#00A3E0] animate-spin" />
+          <span className="text-sm text-[#003366] dark:text-[#00A3E0] font-medium">Executing...</span>
+        </div>
+      )}
+      {showContent && status === 'success' && (
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-3">
+          <div className="flex items-center justify-center gap-2 py-2.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Transaction completed successfully!</span>
+          </div>
+          {resultData && (
+            <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div className="text-xs text-slate-600 dark:text-slate-400 mb-2 font-semibold">Response Data:</div>
+              <pre className="text-xs text-[#003366] dark:text-[#00A3E0] font-mono overflow-x-auto max-h-40 overflow-y-auto w-full">
+                {JSON.stringify(resultData, null, 2)}
+              </pre>
+            </div>
+          )}
+        </motion.div>
+      )}
+      {showContent && status === 'error' && resultData && (
+        <div className="p-3 mt-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+          <div className="flex items-start gap-2">
+            <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-red-600 dark:text-red-400">{String((resultData as { error?: string })?.error ?? 'Request failed')}</div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -94,22 +280,6 @@ const REST_APIS = [
     url: 'https://mdsworkbench.temenos.com/irf-provider-container/api/v3.3.0/holdings/cryptoPortfolios/',
     docUrl: undefined,
     defaultBody: { header: {}, body: { referenceCurrency: 'USD', valuationCurrency: 'USD', portfolioName: 'Bank USD Portfolio', investmentProgram: '9', managedAccount: '4', startDate: '2019-08-24', memoAccount: 'Y' } }
-  },
-  {
-    id: 'CUSTOMER' as RestApiType,
-    title: 'Customer',
-    method: 'GET' as const,
-    url: 'https://api.temenos.com/api/v5.7.0/party/customers/',
-    docUrl: 'https://developer.temenos.com/service/customer-management#tag/RETAIL/operation/getCustomer',
-    defaultBody: null
-  },
-  {
-    id: 'ACCOUNTS' as RestApiType,
-    title: 'Accounts',
-    method: 'GET' as const,
-    url: 'https://mdsworkbench.temenos.com/irf-provider-container/api/v4.9.0/holdings/accounts/balances',
-    docUrl: undefined,
-    defaultBody: null
   }
 ]
 
@@ -176,13 +346,19 @@ export function IntegrationContent() {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected' | 'error'>('connecting')
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [kafkaExpanded, setKafkaExpanded] = useState(false)
-  const [userJourneyExpanded, setUserJourneyExpanded] = useState(true)
+  const [retailCustomerJourneyExpanded, setRetailCustomerJourneyExpanded] = useState(true)
   const [variousApiExpanded, setVariousApiExpanded] = useState(true)
   const [eventStreamResetTime, setEventStreamResetTime] = useState(() => Date.now())
+  const [getCustomerStatus, setGetCustomerStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [getCustomerResult, setGetCustomerResult] = useState<unknown>(undefined)
+  const [getAccountsStatus, setGetAccountsStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [getAccountsResult, setGetAccountsResult] = useState<unknown>(undefined)
+  // Which Retail Customer Journey step cards are expanded (1=Create Customer, 2=Get Customer, 3=Open Account, 4=Get Accounts)
+  const [expandedStepIds, setExpandedStepIds] = useState<Set<number>>(() => new Set([1]))
 
   // REST API state per API
-  const [restApiState, setRestApiState] = useState<Record<string, { loading: boolean; body?: string; param?: string; collapsed?: boolean }>>(() =>
-    Object.fromEntries(REST_APIS.map((a) => [a.id, { loading: false, body: a.defaultBody ? JSON.stringify(a.defaultBody, null, 2) : undefined, param: a.id === 'PORTFOLIO' ? '100291-3' : a.id === 'CUSTOMER' ? '100291' : a.id === 'ACCOUNTS' ? 'EUR' : undefined, collapsed: false }]))
+  const [restApiState, setRestApiState] = useState<Record<string, { loading: boolean; body?: string; param?: string; collapsed?: boolean; lastResult?: 'success' | 'error'; lastError?: string }>>(() =>
+    Object.fromEntries(REST_APIS.map((a) => [a.id, { loading: false, body: a.defaultBody ? JSON.stringify(a.defaultBody, null, 2) : undefined, param: a.id === 'PORTFOLIO' ? '100291-3' : undefined, collapsed: false }]))
   )
 
   // Merge logs: Event Flow + REST APIs, sorted by timestamp
@@ -288,10 +464,82 @@ export function IntegrationContent() {
   }
 
   const handleExecuteStep = async (stepNumber: number) => {
+    setVariousApiExpanded(false)
+    setRetailCustomerJourneyExpanded(true)
+    // Collapse previous steps, expand current: step 1 -> expand 1, step 2 (Open Account) -> expand 3
+    const stepId = stepNumber === 1 ? 1 : 3
+    setExpandedStepIds(new Set([stepId]))
     switch (stepNumber) {
       case 1: await simulation.executeCreateCustomer(); break
       case 2: await simulation.executeOpenAccount(); break
-      case 3: await simulation.executeSendPayment(); break
+    }
+  }
+
+  const handleGetCustomer = async () => {
+    const customerId = simulation.state.transactions.customerId
+    if (!customerId) return
+    setExpandedStepIds(new Set([2])) // Collapse Create Customer, expand Get Customer
+    setGetCustomerStatus('loading')
+    setGetCustomerResult(undefined)
+    const url = `${API_CONFIG.REAL_API_BASE_URL}${API_ENDPOINTS.CREATE_CUSTOMER}/${customerId}`
+    const start = Date.now()
+    try {
+      const proxyData = await apiService.proxyRequest(url, 'GET', undefined, 'demo_user')
+      const duration = Date.now() - start
+      const statusCode = (proxyData as { status?: number }).status ?? 200
+      const data = (proxyData as { data?: unknown }).data
+      const log = createRestApiLog('CUSTOMER', url, 'GET', {}, data, statusCode, duration)
+      simulation.addApiLog(log)
+      setGetCustomerStatus('success')
+      setGetCustomerResult(data)
+    } catch (err: unknown) {
+      const duration = Date.now() - start
+      const error = err as { response?: { data?: { detail?: string } }; message?: string }
+      const errorMsg = error.response?.data?.detail || error.message || 'Request failed'
+      const log = createRestApiLog('CUSTOMER', url, 'GET', {}, { error: errorMsg }, 500, duration)
+      simulation.addApiLog(log)
+      setGetCustomerStatus('error')
+      setGetCustomerResult({ error: errorMsg })
+    }
+  }
+
+  const handleGetAccounts = async () => {
+    const accountId = simulation.state.transactions.accountId
+    if (!accountId) return
+    setExpandedStepIds(new Set([4])) // Collapse previous, expand Get Accounts
+    setGetAccountsStatus('loading')
+    setGetAccountsResult(undefined)
+    const url = `${API_CONFIG.REAL_API_BASE_URL}${API_ENDPOINTS.GET_ACCOUNTS_BALANCES}/${accountId}/balances`
+    const start = Date.now()
+    try {
+      const proxyData = await apiService.proxyRequest(url, 'GET', undefined, 'demo_user')
+      const duration = Date.now() - start
+      const statusCode = (proxyData as { status?: number }).status ?? 200
+      const data = (proxyData as { data?: unknown }).data
+      const log = createRestApiLog('ACCOUNTS', url, 'GET', {}, data, statusCode, duration)
+      simulation.addApiLog(log)
+      // Treat 4xx/5xx or HTML error response as failure (proxy returns 200 with error body in some cases)
+      const isErrorResponse = statusCode >= 400 || (typeof data === 'object' && data !== null && 'text' in data &&
+        typeof (data as { text?: string }).text === 'string' &&
+        ((data as { text: string }).text.includes('</html>') || (data as { text: string }).text.toLowerCase().includes('not found')))
+      if (isErrorResponse) {
+        const errorMsg = statusCode >= 400
+          ? `Request failed (${statusCode})`
+          : String((data as { text?: string }).text ?? 'Unknown error')
+        setGetAccountsStatus('error')
+        setGetAccountsResult({ error: errorMsg })
+      } else {
+        setGetAccountsStatus('success')
+        setGetAccountsResult(data)
+      }
+    } catch (err: unknown) {
+      const duration = Date.now() - start
+      const error = err as { response?: { data?: { detail?: string } }; message?: string }
+      const errorMsg = error.response?.data?.detail || error.message || 'Request failed'
+      const log = createRestApiLog('ACCOUNTS', url, 'GET', {}, { error: errorMsg }, 500, duration)
+      simulation.addApiLog(log)
+      setGetAccountsStatus('error')
+      setGetAccountsResult({ error: errorMsg })
     }
   }
 
@@ -299,16 +547,59 @@ export function IntegrationContent() {
     setEventStreamResetTime(Date.now())
     simulation.resetSimulation()
     setKafkaPaused(false)
+    setGetCustomerStatus('idle')
+    setGetCustomerResult(undefined)
+    setGetAccountsStatus('idle')
+    setGetAccountsResult(undefined)
+    setExpandedStepIds(new Set([1]))
+    setRestApiLogs([])
+    setRestApiState((s) => {
+      const next = { ...s }
+      REST_APIS.forEach((a) => {
+        if (next[a.id]) next[a.id] = { ...next[a.id], loading: false, lastResult: undefined, lastError: undefined }
+      })
+      return next
+    })
   }
+
+  // Auto-reset event flow when user enters Integration (prevents errors from stale state)
+  useEffect(() => {
+    setEventStreamResetTime(Date.now())
+    simulation.resetSimulation()
+    setKafkaPaused(false)
+    setGetCustomerStatus('idle')
+    setGetCustomerResult(undefined)
+    setGetAccountsStatus('idle')
+    setGetAccountsResult(undefined)
+    setExpandedStepIds(new Set([1]))
+    setRestApiLogs([])
+    setRestApiState((s) => {
+      const next = { ...s }
+      REST_APIS.forEach((a) => {
+        if (next[a.id]) next[a.id] = { ...next[a.id], loading: false, lastResult: undefined, lastError: undefined }
+      })
+      return next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount when entering Integration
+  }, [])
 
   const executeRestApi = async (api: typeof REST_APIS[0]) => {
     const state = restApiState[api.id] || {}
-    setRestApiState((s) => ({ ...s, [api.id]: { ...s[api.id], loading: true } }))
+    setRetailCustomerJourneyExpanded(false)
+    setVariousApiExpanded(true)
+    setKafkaExpanded(false) // Auto-hide Kafka Event Stream (no events for these APIs)
+    simulation.clearApiLogs()
+    setRestApiState((s) => {
+      const next = { ...s }
+      REST_APIS.forEach((a) => {
+        if (next[a.id]) next[a.id] = { ...next[a.id], lastResult: undefined, lastError: undefined }
+      })
+      next[api.id] = { ...next[api.id], loading: true }
+      return next
+    })
     const start = Date.now()
     let url = api.url
     if (api.id === 'PORTFOLIO' && state.param) url += state.param
-    else if (api.id === 'CUSTOMER' && state.param) url += state.param
-    else if (api.id === 'ACCOUNTS' && state.param) url += `?currencyId=${state.param}`
 
     let requestBody: unknown = undefined
     if (api.method === 'POST' && state.body) {
@@ -326,18 +617,18 @@ export function IntegrationContent() {
       const statusCode = (proxyData as { status?: number }).status ?? 200
       const log = createRestApiLog(api.id, url, api.method, requestBody, (proxyData as { data?: unknown }).data, statusCode, duration)
       setRestApiLogs((prev) => [...prev, log])
+      setRestApiState((s) => ({ ...s, [api.id]: { ...s[api.id], loading: false, lastResult: 'success' } }))
     } catch (err: unknown) {
       const duration = Date.now() - start
       const error = err as { response?: { data?: { detail?: string } }; message?: string }
       const errorMsg = error.response?.data?.detail || error.message || 'Request failed'
       const log = createRestApiLog(api.id, url, api.method, requestBody, { error: errorMsg }, 500, duration)
       setRestApiLogs((prev) => [...prev, log])
-    } finally {
-      setRestApiState((s) => ({ ...s, [api.id]: { ...s[api.id], loading: false } }))
+      setRestApiState((s) => ({ ...s, [api.id]: { ...s[api.id], loading: false, lastResult: 'error', lastError: errorMsg } }))
     }
   }
 
-  const isComplete = simulation.isSimulationComplete()
+  const isComplete = simulation.getCurrentStepStatus('CREATE_CUSTOMER') === 'success' && simulation.getCurrentStepStatus('OPEN_ACCOUNT') === 'success'
 
   // Filter Kafka events to only show those after the last reset (don't display old ones)
   const filteredKafkaEvents = React.useMemo(
@@ -386,37 +677,59 @@ export function IntegrationContent() {
           </motion.div>
         )}
 
-        {/* Main grid: Left = User Journey + Various API Calls, Right = API Inspector (always) + Kafka (expandable) */}
-        <div className="grid lg:grid-cols-[minmax(0,40%)_minmax(0,1fr)] gap-6 pb-8">
-          {/* Left column - scrollable: User Journey and Various API Calls as independent groups */}
-          <div className="space-y-6 w-full overflow-hidden">
-            {/* User Journey - expandable group */}
+        {/* Main split: Left = APIs (scrollable), Right = API Inspector (sticky) - side-by-side from 768px */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(380px,1fr)] gap-6 pb-8 min-h-[520px]">
+          {/* Left column - scrollable: Retail Customer Journey and Various API Calls */}
+          <div className="space-y-6 w-full min-h-0 overflow-y-auto overflow-x-hidden pr-1 custom-scrollbar">
+            {/* Retail Customer Journey - expandable group; auto-collapses when Various API Calls is expanded */}
             <div className="w-full bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
               <button
-                onClick={() => setUserJourneyExpanded(!userJourneyExpanded)}
+                onClick={() => {
+                  setRetailCustomerJourneyExpanded(!retailCustomerJourneyExpanded)
+                  if (!retailCustomerJourneyExpanded) setVariousApiExpanded(false)
+                }}
                 className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
               >
                 <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-[#003366]/10 dark:bg-[#003366]/20 flex items-center justify-center">
                     <TrendingUp className="w-4 h-4 text-[#003366] dark:text-[#00A3E0]" />
                   </div>
-                  User Journey
+                  Retail Customer Journey
                 </h3>
-                {userJourneyExpanded ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
+                {retailCustomerJourneyExpanded ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
               </button>
-              {userJourneyExpanded && (
+              {retailCustomerJourneyExpanded && (
                 <div className="px-5 pb-5 pt-0 space-y-4">
-                  <StepCard stepNumber={1} title={TRANSACTION_STEPS.CREATE_CUSTOMER.title} description={TRANSACTION_STEPS.CREATE_CUSTOMER.description} status={simulation.getCurrentStepStatus('CREATE_CUSTOMER')} disabled={!simulation.isStepAvailable(1)} onExecute={() => handleExecuteStep(1)} resultData={simulation.state.transactions.customerId ? { customerId: simulation.state.transactions.customerId } : undefined} icon={<User className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />} />
-                  <StepCard stepNumber={2} title={TRANSACTION_STEPS.OPEN_ACCOUNT.title} description={TRANSACTION_STEPS.OPEN_ACCOUNT.description} status={simulation.getCurrentStepStatus('OPEN_ACCOUNT')} disabled={!simulation.isStepAvailable(2)} onExecute={() => handleExecuteStep(2)} resultData={simulation.state.transactions.accountId ? { accountId: simulation.state.transactions.accountId } : undefined} icon={<CreditCard className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />} />
-                  <StepCard stepNumber={3} title={TRANSACTION_STEPS.SEND_PAYMENT.title} description={TRANSACTION_STEPS.SEND_PAYMENT.description} status={simulation.getCurrentStepStatus('SEND_PAYMENT')} disabled={!simulation.isStepAvailable(3)} onExecute={() => handleExecuteStep(3)} resultData={simulation.state.transactions.paymentId ? { paymentId: simulation.state.transactions.paymentId } : undefined} icon={<Send className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />} />
+                  <StepCard stepNumber={1} title={TRANSACTION_STEPS.CREATE_CUSTOMER.title} description={TRANSACTION_STEPS.CREATE_CUSTOMER.description} status={simulation.getCurrentStepStatus('CREATE_CUSTOMER')} disabled={!simulation.isStepAvailable(1)} onExecute={() => handleExecuteStep(1)} resultData={simulation.state.transactions.customerId ? { customerId: simulation.state.transactions.customerId } : undefined} icon={<User className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />} isExpanded={expandedStepIds.has(1)} onToggle={() => setExpandedStepIds((prev) => { const next = new Set(prev); if (next.has(1)) next.delete(1); else next.add(1); return next })} />
+                  <GetCustomerCard
+                    customerId={simulation.state.transactions.customerId}
+                    onExecute={handleGetCustomer}
+                    status={getCustomerStatus}
+                    resultData={getCustomerResult}
+                    isExpanded={expandedStepIds.has(2)}
+                    onToggle={() => setExpandedStepIds((prev) => { const next = new Set(prev); if (next.has(2)) next.delete(2); else next.add(2); return next })}
+                  />
+                  <StepCard stepNumber={2} title={TRANSACTION_STEPS.OPEN_ACCOUNT.title} description={TRANSACTION_STEPS.OPEN_ACCOUNT.description} status={simulation.getCurrentStepStatus('OPEN_ACCOUNT')} disabled={!simulation.isStepAvailable(2)} onExecute={() => handleExecuteStep(2)} resultData={simulation.state.transactions.accountId ? { accountId: simulation.state.transactions.accountId } : undefined} icon={<CreditCard className="w-5 h-5 text-[#003366] dark:text-[#00A3E0]" />} isExpanded={expandedStepIds.has(3)} onToggle={() => setExpandedStepIds((prev) => { const next = new Set(prev); if (next.has(3)) next.delete(3); else next.add(3); return next })}
+                  />
+                  <GetAccountsCard
+                    accountId={simulation.state.transactions.accountId}
+                    onExecute={handleGetAccounts}
+                    status={getAccountsStatus}
+                    resultData={getAccountsResult}
+                    isExpanded={expandedStepIds.has(4)}
+                    onToggle={() => setExpandedStepIds((prev) => { const next = new Set(prev); if (next.has(4)) next.delete(4); else next.add(4); return next })}
+                  />
                 </div>
               )}
             </div>
 
-            {/* Various API Calls - expandable group */}
+            {/* Various API Calls - expandable group; auto-collapses when Retail Customer Journey is expanded */}
             <div className="w-full bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
               <button
-                onClick={() => setVariousApiExpanded(!variousApiExpanded)}
+                onClick={() => {
+                  setVariousApiExpanded(!variousApiExpanded)
+                  if (!variousApiExpanded) setRetailCustomerJourneyExpanded(false)
+                }}
                 className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
               >
                 <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -429,13 +742,17 @@ export function IntegrationContent() {
               </button>
               {variousApiExpanded && (
                 <div className="px-5 pb-5 pt-0">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Execute APIs below. Results appear in the API Inspector. No Kafka events for these APIs.</p>
                   <div className="space-y-4">
                 {REST_APIS.map((api) => {
                   const state = restApiState[api.id] || {}
                   const isLoading = state.loading
+                  const borderClass = state.lastResult === 'success'
+                    ? 'border-2 border-emerald-500 shadow-lg shadow-emerald-500/20'
+                    : state.lastResult === 'error'
+                      ? 'border-2 border-red-500 shadow-lg shadow-red-500/20'
+                      : 'border border-slate-200 dark:border-slate-700'
                   return (
-                    <div key={api.id} className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                    <div key={api.id} className={`bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 transition-all duration-300 ${borderClass}`}>
                       <div className="flex items-center gap-2 mb-2">
                         <span className={`px-2 py-1 text-xs font-bold rounded ${api.method === 'POST' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-100' : 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100'}`}>{api.method}</span>
                         <h4 className="text-base font-bold text-slate-900 dark:text-white">{api.title}</h4>
@@ -443,10 +760,10 @@ export function IntegrationContent() {
                           <a href={api.docUrl} target="_blank" rel="noopener noreferrer" className="text-[#00A3E0] hover:text-[#003366] dark:hover:text-[#00A3E0]" title="API docs"><ExternalLink className="w-4 h-4" /></a>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 font-mono truncate">{api.url}{api.id === 'PORTFOLIO' && state.param ? state.param : api.id === 'CUSTOMER' && state.param ? state.param : api.id === 'ACCOUNTS' && state.param ? `?currencyId=${state.param}` : ''}</p>
-                      {(api.id === 'PORTFOLIO' || api.id === 'CUSTOMER' || api.id === 'ACCOUNTS') && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 font-mono truncate">{api.url}{api.id === 'PORTFOLIO' && state.param ? state.param : ''}</p>
+                      {api.id === 'PORTFOLIO' && (
                         <div className="mb-3">
-                          <input type="text" value={state.param || ''} onChange={(e) => setRestApiState((s) => ({ ...s, [api.id]: { ...s[api.id], param: e.target.value } }))} placeholder={api.id === 'PORTFOLIO' ? 'Portfolio ID' : api.id === 'CUSTOMER' ? 'Customer ID' : 'Currency'} className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 dark:text-white w-24" />
+                          <input type="text" value={state.param || ''} onChange={(e) => setRestApiState((s) => ({ ...s, [api.id]: { ...s[api.id], param: e.target.value } }))} placeholder="Portfolio ID" className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 dark:text-white w-24" />
                         </div>
                       )}
                       {api.method === 'POST' && api.defaultBody && (
@@ -458,7 +775,7 @@ export function IntegrationContent() {
                           />
                         </div>
                       )}
-                      {/* Execute button - same look and feel as User Journey StepCard */}
+                      {/* Execute button - same look and feel as Retail Customer Journey StepCard */}
                       {!isLoading ? (
                         <motion.button
                           whileHover={{ scale: 1.02 }}
@@ -474,6 +791,35 @@ export function IntegrationContent() {
                           <span className="text-sm text-[#003366] dark:text-[#00A3E0] font-medium">Executing...</span>
                         </div>
                       )}
+                      {/* Success message - same green box as Retail Customer Journey */}
+                      {state.lastResult === 'success' && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="flex items-center justify-center gap-2 py-2.5 mt-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Transaction completed successfully!</span>
+                        </motion.div>
+                      )}
+                      {/* Error message */}
+                      {state.lastResult === 'error' && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="p-3 mt-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800"
+                        >
+                          <div className="flex items-start gap-2">
+                            <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">Transaction Failed</div>
+                              <div className="text-xs text-red-600 dark:text-red-400">
+                                {state.lastError || 'An unexpected error occurred. Please try again.'}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
                   )
                 })}
@@ -483,9 +829,9 @@ export function IntegrationContent() {
             </div>
           </div>
 
-          {/* Right column - sticky: API Inspector always visible, Kafka Event Stream expandable below */}
-          <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
-            {/* API Inspector - always visible */}
+          {/* Right column - sticky so Inspector stays visible while left scrolls */}
+          <div className="space-y-6 md:sticky md:top-6 md:self-start min-h-0">
+            {/* API Inspector - fixed height for consistent side-by-side view */}
             <div className="h-[420px]">
               <ApiInspector logs={mergedLogs} isLoading={simulation.state.stage !== 'IDLE' && simulation.state.stage !== 'FINISHED'} onClear={handleClearLogs} />
             </div>

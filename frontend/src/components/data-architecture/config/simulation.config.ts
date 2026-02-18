@@ -170,7 +170,8 @@ export const KAFKA_TOPICS = {
 export const API_ENDPOINTS = {
   CREATE_CUSTOMER: '/v5.7.0/party/customers', // Updated to v5.7.0
   OPEN_ACCOUNT: '/v9.4.0/holdings/accounts/currentAccounts', // Using v9.4.0 holdings API for current account opening
-  SEND_PAYMENT: '/v7.0.0/order/paymentOrders/instantPayments' // Updated to v7.0.0 instant payments
+  SEND_PAYMENT: '/v7.0.0/order/paymentOrders/instantPayments', // Updated to v7.0.0 instant payments
+  GET_ACCOUNTS_BALANCES: '/v4.9.0/holdings/accounts' // GET account balances by ID (append /{accountId}/balances)
 } as const
 
 /**

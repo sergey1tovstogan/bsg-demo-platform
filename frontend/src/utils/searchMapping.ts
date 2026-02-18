@@ -62,7 +62,7 @@ const searchMappings: Array<{
     result: { componentId: 'integration' }
   },
   {
-    keywords: ['extensibility', 'extensible', 'extensibility framework', 'workbench', 'low-code', 'configurable'],
+    keywords: ['extensibility', 'extensible', 'extensibility framework', 'low-code', 'configurable', 'workbench', 'temenos workbench'],
     result: { componentId: 'extensibility' }
   },
   {

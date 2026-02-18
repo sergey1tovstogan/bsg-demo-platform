@@ -19,6 +19,7 @@ from app.services.rag_briefing_service import RAGBriefingService
 from app.core.database import get_database
 from app.adapters.rag.factory import update_rag_token, reset_rag_adapter
 import asyncio
+import json
 import time
 import requests
 from datetime import datetime, timedelta
@@ -88,6 +89,80 @@ def get_azure_service(subscription_id: str) -> AzureService:
     return azure_service_cache[subscription_id]
 
 
+def _extract_principal_id(identity: Dict[str, Any]) -> Optional[str]:
+    """Extract principalId from identity block (SystemAssigned or UserAssigned)."""
+    if not identity:
+        return None
+    id_type = identity.get("type") or ""
+    if "SystemAssigned" in id_type:
+        pid = identity.get("principalId")
+        if pid:
+            return pid
+    uai = identity.get("userAssignedIdentities") or {}
+    for _rid, props in uai.items():
+        pid = props.get("principalId") if isinstance(props, dict) else None
+        if pid:
+            return pid
+    return None
+
+
+async def _get_managed_identity_object_id_from_arm(access_token: str, subscription_id: str) -> Optional[str]:
+    """
+    Get Managed Identity Object ID from Azure Resource Manager when JWT lacks oid.
+    Works for Container Apps and App Service.
+    """
+    import os
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+    # Container Apps: list all in subscription, find by CONTAINER_APP_NAME or AZURE_CONTAINER_APP_NAME
+    app_name = os.getenv("CONTAINER_APP_NAME") or os.getenv("AZURE_CONTAINER_APP_NAME")
+    if app_name:
+        url = (
+            f"https://management.azure.com/subscriptions/{subscription_id}"
+            "/providers/Microsoft.App/containerApps?api-version=2023-05-01"
+        )
+        try:
+            loop = asyncio.get_event_loop()
+            resp = await loop.run_in_executor(
+                None,
+                lambda u=url, h=headers: requests.get(u, headers=h, timeout=15),
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                app_name_lower = app_name.lower()
+                for item in data.get("value", []):
+                    if (item.get("name") or "").lower() == app_name_lower:
+                        oid = _extract_principal_id(item.get("identity"))
+                        if oid:
+                            return oid
+                        break
+        except Exception as e:
+            logger.debug("Container Apps ARM lookup failed: %s", e)
+        return None
+
+    # App Service: get site by resource group and name
+    site_name = os.getenv("WEBSITE_SITE_NAME")
+    rg = os.getenv("WEBSITE_RESOURCE_GROUP")
+    if site_name and rg:
+        url = (
+            f"https://management.azure.com/subscriptions/{subscription_id}"
+            f"/resourceGroups/{rg}/providers/Microsoft.Web/sites/{site_name}"
+            "?api-version=2023-01-01"
+        )
+        try:
+            loop = asyncio.get_event_loop()
+            resp = await loop.run_in_executor(
+                None,
+                lambda u=url, h=headers: requests.get(u, headers=h, timeout=15),
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return _extract_principal_id(data.get("identity"))
+        except Exception as e:
+            logger.debug("App Service ARM lookup failed: %s", e)
+    return None
+
+
 async def _check_azure_health(subscription_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Check Azure identity and optional subscription access.
@@ -124,6 +199,31 @@ async def _check_azure_health(subscription_id: Optional[str] = None) -> Dict[str
             return result
         result["status"] = "ok"
         result["message"] = "Azure identity is valid"
+        # Extract Object ID from JWT for IAM role assignment (Assign access to → Select members)
+        try:
+            import base64
+            parts = token.token.split(".")
+            if len(parts) >= 2:
+                payload = parts[1]
+                padding = 4 - len(payload) % 4
+                if padding != 4:
+                    payload += "=" * padding
+                decoded = json.loads(base64.urlsafe_b64decode(payload))
+                result["identity_object_id"] = decoded.get("oid")  # Object ID - use this in IAM
+                result["identity_app_id"] = decoded.get("appid")  # App ID (for Service Principal)
+        except Exception:
+            pass  # Non-critical, omit if decode fails
+
+        # Fallback for Managed Identity: get Object ID from Azure Resource Manager when JWT lacks oid
+        if not result.get("identity_object_id") and result.get("identity_type") == "managed_identity":
+            sub_for_arm = subscription_id or os.getenv("AZURE_SUBSCRIPTION_ID")
+            if sub_for_arm:
+                try:
+                    oid = await _get_managed_identity_object_id_from_arm(token.token, sub_for_arm)
+                    if oid:
+                        result["identity_object_id"] = oid
+                except Exception as e:
+                    logger.debug("Managed Identity ARM fallback failed: %s", e)
     except ClientAuthenticationError as e:
         err_str = getattr(e, "message", None) or str(e)
         msg = err_str.lower()

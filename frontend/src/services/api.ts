@@ -521,6 +521,8 @@ class ApiService {
   async getAzureHealth(subscriptionId?: string): Promise<{
     status: string
     identity_type?: string
+    identity_object_id?: string
+    identity_app_id?: string
     subscription_check?: string
     message?: string | null
   }> {
@@ -528,6 +530,8 @@ class ApiService {
     const response = await this.client.get<{
       status: string
       identity_type?: string
+      identity_object_id?: string
+      identity_app_id?: string
       subscription_check?: string
       message?: string | null
     }>(`/deployment/azure/health${params}`)

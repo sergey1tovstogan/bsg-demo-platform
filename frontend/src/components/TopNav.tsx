@@ -7,7 +7,7 @@ import type { ComponentId } from '../types'
 
 const PLATFORM_MODULES: Array<{ id: ComponentId; name: string }> = [
   { id: 'architecture', name: 'Architecture' },
-  { id: 'integration', name: 'Integration, APIs & Events' },
+  { id: 'integration', name: 'Integration' },
   { id: 'extensibility', name: 'Extensibility' },
   { id: 'data-architecture', name: 'Data Architecture' },
   { id: 'security', name: 'Security' },
@@ -158,7 +158,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
               rel="noopener noreferrer"
               className={`text-sm font-medium ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
             >
-              Temenos Ecosystem
+              API Developer portal
             </a>
             <button
               onClick={() => navigate('/platform/temenos-components')}
@@ -251,7 +251,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
                 )
               })}
             </div>
-            <a href="https://developer.bsg.temenos.com/" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="block w-full text-left py-2">Temenos Ecosystem</a>
+            <a href="https://developer.bsg.temenos.com/" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="block w-full text-left py-2">API Developer portal</a>
             <button onClick={() => { navigate('/platform/temenos-components'); setMobileMenuOpen(false) }} className="block w-full text-left py-2">Temenos Components</button>
           </div>
         </div>

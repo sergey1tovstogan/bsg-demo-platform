@@ -205,6 +205,7 @@ function App() {
         {/* Redirect legacy paths */}
         <Route path="/platform/design-time" element={<Navigate to="/platform/devops" replace />} />
         <Route path="/platform/deployment" element={<Navigate to="/platform/architecture" replace />} />
+        <Route path="/platform/workbench" element={<Navigate to="/platform/extensibility" replace />} />
 
         {/* Platform module - at /platform/:componentId */}
         <Route

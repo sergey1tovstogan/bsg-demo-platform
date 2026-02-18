@@ -1223,16 +1223,22 @@ class AKSService:
                             else:
                                 logger.error(f"✗ Still failed after credential refresh. Return code: {result.returncode}")
                                 logger.error(f"Stderr: {result.stderr[:500] if result.stderr else 'None'}")
+                                namespaces = await self._list_namespaces_via_command_invoke(resource_group, cluster_name)
                                 return namespaces
                         else:
                             logger.warning(f"Failed to refresh credentials: {refresh_result.stderr}")
                             logger.warning("You may need to run manually: az aks get-credentials --resource-group <RG> --name <cluster-name> --overwrite-existing")
+                            namespaces = await self._list_namespaces_via_command_invoke(resource_group, cluster_name)
                             return namespaces
                     except Exception as retry_error:
                         logger.error(f"Error retrying: {retry_error}", exc_info=True)
+                        namespaces = await self._list_namespaces_via_command_invoke(resource_group, cluster_name)
                         return namespaces
                 else:
                     logger.error("Cannot refresh credentials in Azure App Service - Managed Identity must have proper permissions")
+                    # Try az aks command invoke as last resort (works without kubeconfig, if az is available)
+                    if len(namespaces) == 0:
+                        namespaces = await self._list_namespaces_via_command_invoke(resource_group, cluster_name)
                     return namespaces
             
             result_stdout = result.stdout if result.stdout else "{}"
@@ -1241,6 +1247,7 @@ class AKSService:
             if not result_stdout or result_stdout.strip() == "":
                 logger.error(f"kubectl returned empty stdout!")
                 logger.error(f"stderr: {result.stderr if result.stderr else 'None'}")
+                namespaces = await self._list_namespaces_via_command_invoke(resource_group, cluster_name)
                 return namespaces
             
             try:
@@ -1255,6 +1262,7 @@ class AKSService:
                 logger.error(f"Failed to parse namespaces JSON: {e}")
                 logger.error(f"Output (first 500 chars): {result_stdout[:500]}")
                 logger.error(f"Output (last 500 chars): {result_stdout[-500:] if len(result_stdout) > 500 else result_stdout}")
+                namespaces = await self._list_namespaces_via_command_invoke(resource_group, cluster_name)
                 return namespaces
             
             items = namespaces_data.get("items", [])
@@ -1277,13 +1285,77 @@ class AKSService:
                 logger.warning(f"All namespaces: {all_namespaces}")
                 logger.warning(f"This might indicate all namespaces are system namespaces")
             
+            # Fallback: try az aks command invoke when we got empty (wrong cluster, etc.)
+            # This runs kubectl inside the cluster and works when local kubeconfig fails
+            if len(namespaces) == 0:
+                namespaces = await self._list_namespaces_via_command_invoke(resource_group, cluster_name)
+            
             return sorted(namespaces)
             
         except Exception as e:
             logger.error(f"Error listing namespaces for cluster {cluster.name}: {e}", exc_info=True)
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
+            # Last resort: try az aks command invoke (works without kubeconfig)
+            if len(namespaces) == 0:
+                resource_group = cluster.id.split("/")[cluster.id.split("/").index("resourceGroups") + 1] if "resourceGroups" in cluster.id else cluster.resource_group
+                namespaces = await self._list_namespaces_via_command_invoke(resource_group, cluster.name)
             return namespaces
+
+    async def _list_namespaces_via_command_invoke(self, resource_group: str, cluster_name: str) -> List[str]:
+        """
+        List namespaces using 'az aks command invoke' - runs kubectl inside the cluster.
+        Works when kubeconfig/kubectl fails (e.g. wrong context, credential issues).
+        Requires: az CLI, identity with Microsoft.ContainerService/managedClusters/runcommand/action.
+        """
+        import shutil
+        import asyncio
+        namespaces = []
+        az_cmd = shutil.which("az") or shutil.which("az.cmd")
+        if not az_cmd:
+            logger.info("az CLI not found, skipping command invoke fallback")
+            return namespaces
+        cmd = [
+            az_cmd, "aks", "command", "invoke",
+            "--resource-group", resource_group,
+            "--name", cluster_name,
+            "--command", "kubectl get namespaces -o json"
+        ]
+        if self.subscription_id:
+            cmd.extend(["--subscription", self.subscription_id])
+        logger.info(f"Trying az aks command invoke for cluster {cluster_name}: {' '.join(cmd[:6])}...")
+        try:
+            def _run():
+                return subprocess.run(cmd, capture_output=True, text=True, timeout=90, shell=False)
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, _run)
+            if result.returncode != 0:
+                logger.warning(f"az aks command invoke failed: {result.stderr[:300] if result.stderr else 'Unknown'}")
+                return namespaces
+            raw = (result.stdout or "").strip()
+            if not raw:
+                logger.warning("az aks command invoke returned empty output")
+                return namespaces
+            # az aks command invoke may return wrapper with "logs" containing kubectl output, or raw kubectl JSON
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict) and "items" in parsed:
+                    data = parsed  # Direct kubectl JSON
+                else:
+                    kubectl_output = parsed.get("logs") or parsed.get("output") or raw
+                    data = json.loads(kubectl_output) if isinstance(kubectl_output, str) else kubectl_output
+            except (json.JSONDecodeError, AttributeError):
+                data = {}
+            items = data.get("items", []) if isinstance(data, dict) else []
+            system_ns = {"kube-system", "kube-public", "kube-node-lease", "default"}
+            for ns in items:
+                name = ns.get("metadata", {}).get("name", "") if isinstance(ns, dict) else ""
+                if name and name not in system_ns:
+                    namespaces.append(name)
+            logger.info(f"✓ az aks command invoke found {len(namespaces)} namespaces: {namespaces[:10]}{'...' if len(namespaces) > 10 else ''}")
+        except Exception as e:
+            logger.warning(f"az aks command invoke failed: {e}")
+        return namespaces
 
     async def discover_pods_from_resources(
         self,

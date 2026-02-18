@@ -30,11 +30,17 @@ type Tab = 'content' | 'video' | 'demo'
 export function ComponentPage({ componentId, initialSelectedCard, initialTab, onOpenSettings }: ComponentPageProps) {
   const tabs = componentId === 'layout-showcase' || componentId === 'security' || componentId === 'devops'
     ? [{ id: 'content' as Tab, label: 'Content', icon: BookOpen }]
-    : componentId === 'architecture' || componentId === 'data-architecture' || componentId === 'integration' || componentId === 'extensibility'
+    : componentId === 'architecture' || componentId === 'data-architecture' || componentId === 'extensibility'
       ? [
           { id: 'content' as Tab, label: 'Content', icon: BookOpen },
           { id: 'demo' as Tab, label: 'Demo', icon: Play },
         ]
+      : componentId === 'integration'
+        ? [
+            { id: 'content' as Tab, label: 'Content', icon: BookOpen },
+            { id: 'video' as Tab, label: 'Videos', icon: Video },
+            { id: 'demo' as Tab, label: 'Demo', icon: Play },
+          ]
       : [
           { id: 'content' as Tab, label: 'Content', icon: BookOpen },
           { id: 'video' as Tab, label: 'Videos', icon: Video },
@@ -158,7 +164,7 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
           ) : componentId === 'data-architecture' ? (
             <DataArchitectureContent />
           ) : componentId === 'integration' ? (
-            <IntegrationContent />
+            <ContentViewer componentId={componentId} initialSelectedCard={initialSelectedCard} />
           ) : componentId === 'extensibility' ? (
             <ExtensibilityContent />
           ) : componentId === 'devops' ? (

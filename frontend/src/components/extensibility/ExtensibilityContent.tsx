@@ -1,6 +1,7 @@
 // ExtensibilityContent - Extensibility Framework page
 // Content based on Extensibility Framework PPT (BSG Internal Oct 2025)
-import { Puzzle, Wrench, Layers, Building2 } from 'lucide-react'
+// Includes Temenos Workbench as part of Extensibility
+import { Puzzle, Wrench, Layers } from 'lucide-react'
 
 const BULLETS = [
   'Temenos Workbench',
@@ -39,34 +40,38 @@ export function ExtensibilityContent() {
           </div>
         </div>
 
-        {/* Feature Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-            <div className="w-12 h-12 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-4">
-              <Wrench className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+        {/* Temenos Workbench Section */}
+        <div className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl p-8 md:p-12">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+            <div className="flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-violet-500 dark:text-violet-400 mb-2">
+                Extensibility
+              </p>
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">
+                Temenos Workbench
+              </h2>
+              <p className="text-slate-600 dark:text-slate-300 mb-6">
+                Graphical low-code configuration tool for extending and customizing Temenos banking functionality.
+                Workbench enables banks and partners to configure breadth and depth of capabilities without deep coding.
+              </p>
             </div>
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Low-Code Configuration</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Graphical tools for configuring and extending functionality without deep coding.
-            </p>
+            <div className="flex-shrink-0">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-xl shadow-violet-500/20">
+                <Wrench className="w-12 h-12 md:w-16 md:h-16 text-white" />
+              </div>
+            </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-            <div className="w-12 h-12 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-4">
-              <Layers className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+          {/* Breadth & Depth - single feature inside Workbench frame */}
+          <div className="mt-8">
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+              <div className="w-12 h-12 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-4">
+                <Layers className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+              </div>
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Breadth & Depth</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Configure across the full breadth of capabilities with depth where you need it.
+              </p>
             </div>
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Breadth & Depth</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Configure across the full breadth of capabilities with depth where you need it.
-            </p>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
-            <div className="w-12 h-12 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-4">
-              <Building2 className="w-6 h-6 text-violet-600 dark:text-violet-400" />
-            </div>
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Bank & Partner Extensible</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Extend and customize by the bank or by partners to meet specific requirements.
-            </p>
           </div>
         </div>
       </div>

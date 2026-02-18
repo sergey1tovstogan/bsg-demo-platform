@@ -465,6 +465,14 @@ export const TemenosTransactionSimulator: React.FC = () => {
     setKafkaPaused(false)
   }
 
+  // Auto-reset event flow when user enters Data Architecture demo (prevents errors from stale state)
+  useEffect(() => {
+    setEventStreamResetTime(Date.now())
+    simulation.resetSimulation()
+    setKafkaPaused(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount when entering Data Architecture
+  }, [])
+
   // Manual reconnect handler
   const handleManualReconnect = async () => {
     setConnectionStatus('connecting')
