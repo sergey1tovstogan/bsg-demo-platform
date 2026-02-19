@@ -152,6 +152,7 @@ const StatsDisplay: React.FC<{ stats: any }> = ({ stats }) => {
 export const TemenosTransactionSimulator: React.FC = () => {
   const simulation = useSimulation()
   const [kafkaPaused, setKafkaPaused] = useState(false)
+  const [eventStreamResetTime, setEventStreamResetTime] = useState(() => Date.now())
   // Always use real mode - mock mode disabled
   const [apiMode] = useState<'mock' | 'real'>('real')
   const { sendTriggers } = useCrossTabSync()
@@ -188,6 +189,12 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
   const stats = simulation.getStats()
   const isComplete = simulation.isSimulationComplete()
+
+  // Filter Kafka events to only show those after the last reset (don't display old ones)
+  const filteredKafkaEvents = React.useMemo(
+    () => simulation.state.kafkaEvents.filter((e) => e.timestamp >= eventStreamResetTime),
+    [simulation.state.kafkaEvents, eventStreamResetTime]
+  )
 
   // Send animation triggers to DataArchitectureContent when they are added
   useEffect(() => {
@@ -453,9 +460,18 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
   // Handle reset
   const handleReset = () => {
+    setEventStreamResetTime(Date.now())
     simulation.resetSimulation()
     setKafkaPaused(false)
   }
+
+  // Auto-reset event flow when user enters Data Architecture demo (prevents errors from stale state)
+  useEffect(() => {
+    setEventStreamResetTime(Date.now())
+    simulation.resetSimulation()
+    setKafkaPaused(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount when entering Data Architecture
+  }, [])
 
   // Manual reconnect handler
   const handleManualReconnect = async () => {
@@ -751,7 +767,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
               <div className="mb-2">
                 <EventSourceIndicator
                   mode={apiMode}
-                  eventCount={simulation.state.kafkaEvents.length}
+                  eventCount={filteredKafkaEvents.length}
                   connectionStatus={connectionStatus}
                   eventHubHealth={eventHubHealth || undefined}
                   connectionError={connectionError}
@@ -759,7 +775,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
                 />
               </div>
               <KafkaEventStream
-                events={simulation.state.kafkaEvents}
+                events={filteredKafkaEvents}
                 onClear={simulation.clearKafkaEvents}
                 onPause={() => setKafkaPaused(!kafkaPaused)}
                 isPaused={kafkaPaused}
@@ -770,7 +786,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
         {/* Database Records Tile - Full width below grid */}
         <div className="mt-16">
-          <DatabaseRecordsTile eventCount={simulation.state.kafkaEvents.length} />
+          <DatabaseRecordsTile eventCount={filteredKafkaEvents.length} />
         </div>
 
         {/* Current stage indicator (for debugging) */}

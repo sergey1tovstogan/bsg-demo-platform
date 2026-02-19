@@ -62,6 +62,10 @@ const searchMappings: Array<{
     result: { componentId: 'integration' }
   },
   {
+    keywords: ['extensibility', 'extensible', 'extensibility framework', 'low-code', 'configurable', 'workbench', 'temenos workbench'],
+    result: { componentId: 'extensibility' }
+  },
+  {
     keywords: ['data architecture', 'database', 'data modeling', 'data design'],
     result: { componentId: 'data-architecture' }
   },

@@ -22,6 +22,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 // Component Types
 export type ComponentId =
   | 'integration'
+  | 'extensibility'
   | 'data-architecture'
   | 'architecture'
   | 'security'

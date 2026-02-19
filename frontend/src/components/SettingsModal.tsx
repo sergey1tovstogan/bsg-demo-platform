@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { X, Sun, Moon, Check, Key, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { X, Sun, Moon, Check, Key, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle, Cloud, Network, Database, Shield, GitBranch, Puzzle } from 'lucide-react'
 import type { ComponentId } from '../types'
-import { Network, Database, Cloud, Shield, GitBranch } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { apiService } from '../services/api'
 
@@ -13,7 +12,8 @@ interface CategoryOption {
 
 const CATEGORIES: CategoryOption[] = [
   { id: 'architecture', name: 'Architecture', icon: Cloud },
-  { id: 'integration', name: 'Integration, APIs & Events', icon: Network },
+  { id: 'integration', name: 'Integration', icon: Network },
+  { id: 'extensibility', name: 'Extensibility', icon: Puzzle },
   { id: 'data-architecture', name: 'Data Architecture', icon: Database },
   { id: 'security', name: 'Security', icon: Shield },
   { id: 'observability', name: 'Observability', icon: Eye },
@@ -23,6 +23,7 @@ const CATEGORIES: CategoryOption[] = [
 const STORAGE_KEY = 'bsg_selected_categories'
 const RAG_TOKEN_STORAGE_KEY = 'bsg_rag_jwt_token'
 const SANDBOX_API_KEY_STORAGE_KEY = 'temenos_api_key'
+const AZURE_SUBSCRIPTION_STORAGE_KEY = 'lastAzureSubscriptionId'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -44,8 +45,10 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
   const [sandboxKeyLoading, setSandboxKeyLoading] = useState(false)
   const [sandboxKeyStatus, setSandboxKeyStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [sandboxKeyMessage, setSandboxKeyMessage] = useState('')
+  const [azureSubscriptionId, setAzureSubscriptionId] = useState('')
+  const [showAzureSubscription, setShowAzureSubscription] = useState(false)
 
-  // Load selected categories, RAG token, and sandbox API key from localStorage on mount
+  // Load selected categories, RAG token, sandbox API key, and Azure subscription from localStorage on mount
   useEffect(() => {
     if (isOpen) {
       try {
@@ -83,6 +86,10 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
 
       // Load sandbox API key
       loadSandboxApiKey()
+
+      // Load Azure subscription ID (same key as DeploymentAnalyzer uses)
+      const storedSub = localStorage.getItem(AZURE_SUBSCRIPTION_STORAGE_KEY)?.trim()
+      setAzureSubscriptionId(storedSub || '')
     }
   }, [isOpen])
 
@@ -407,6 +414,52 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
             </button>
           </div>
 
+          {/* Azure Subscription ID */}
+          <div>
+            <label className="block text-sm font-medium text-[#2D3748] dark:text-gray-300 mb-2">
+              Azure Subscription ID
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Used for the Architecture Demo (Deployment Analysis). Configure here to connect to a different Azure subscription or cloud. Find your subscription ID in Azure Portal under Subscriptions.
+            </p>
+            <div className="relative">
+              <input
+                type={showAzureSubscription ? 'text' : 'password'}
+                value={azureSubscriptionId}
+                onChange={(e) => setAzureSubscriptionId(e.target.value)}
+                placeholder="Enter Azure subscription ID..."
+                className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowAzureSubscription(!showAzureSubscription)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                title={showAzureSubscription ? 'Hide subscription ID' : 'Show subscription ID'}
+              >
+                {showAzureSubscription ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                const trimmed = azureSubscriptionId.trim()
+                if (trimmed) {
+                  localStorage.setItem(AZURE_SUBSCRIPTION_STORAGE_KEY, trimmed)
+                } else {
+                  localStorage.removeItem(AZURE_SUBSCRIPTION_STORAGE_KEY)
+                }
+                window.dispatchEvent(new Event('azureSubscriptionUpdated'))
+              }}
+              className="mt-3 w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 flex items-center justify-center space-x-2 transition-colors"
+            >
+              <Cloud className="w-4 h-4" />
+              <span>Save Azure Subscription</span>
+            </button>
+          </div>
+
           {/* Sandbox API Key */}
           <div>
             <label className="block text-sm font-medium text-[#2D3748] dark:text-gray-300 mb-2">
@@ -467,7 +520,7 @@ export function SettingsModal({ isOpen, onClose, currentTheme, onThemeChange }: 
               ) : (
                 <>
                   <Key className="w-4 h-4" />
-                  <span>Save Sandbox Key</span>
+                  <span>Update MDS Sandbox Token</span>
                 </>
               )}
             </button>

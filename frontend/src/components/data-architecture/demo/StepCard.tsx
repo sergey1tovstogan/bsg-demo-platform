@@ -1,7 +1,7 @@
 // StepCard - Transaction step UI component with status indicators
 import React from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, XCircle, Loader2, Circle } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Circle, ChevronDown, ChevronRight } from 'lucide-react'
 import type { StepCardProps } from './types'
 
 /**
@@ -90,7 +90,9 @@ export const StepCard: React.FC<StepCardProps> = ({
   disabled,
   onExecute,
   resultData,
-  icon
+  icon,
+  isExpanded = true,
+  onToggle
 }) => {
   // Determine card border color based on status - Temenos brand colors
   const getBorderColor = () => {
@@ -108,6 +110,9 @@ export const StepCard: React.FC<StepCardProps> = ({
 
   // Determine if execute button should be shown
   const showExecuteButton = status === 'idle' || status === 'error'
+
+  const isCollapsible = onToggle !== undefined
+  const showContent = !isCollapsible || isExpanded
 
   return (
     <motion.div
@@ -127,8 +132,11 @@ export const StepCard: React.FC<StepCardProps> = ({
         {stepNumber}
       </div>
 
-      {/* Header section */}
-      <div className="flex items-start justify-between mb-4">
+      {/* Header section - clickable when collapsible */}
+      <div
+        className={`flex items-start justify-between ${isCollapsible ? 'cursor-pointer' : ''} ${showContent ? 'mb-4' : ''}`}
+        onClick={isCollapsible ? onToggle : undefined}
+      >
         <div className="flex items-center gap-3 flex-1">
           {/* Icon */}
           <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
@@ -145,12 +153,16 @@ export const StepCard: React.FC<StepCardProps> = ({
           </div>
         </div>
 
-        {/* Status icon */}
-        <div className="ml-4">
+        {/* Status icon and expand/collapse chevron */}
+        <div className="ml-4 flex items-center gap-2">
+          {isCollapsible && (isExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />)}
           <StatusIcon status={status} />
         </div>
       </div>
 
+      {/* Collapsible content */}
+      {showContent && (
+      <>
       {/* Action button - Temenos primary button style */}
       {showExecuteButton && (
         <motion.button
@@ -223,6 +235,8 @@ export const StepCard: React.FC<StepCardProps> = ({
           animate={{ width: '100%' }}
           transition={{ duration: 2, ease: 'linear' }}
         />
+      )}
+      </>
       )}
     </motion.div>
   )

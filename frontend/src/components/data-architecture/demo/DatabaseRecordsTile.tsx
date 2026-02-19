@@ -177,6 +177,9 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
   }, [eventCount, loadRecords])
 
   const isConnected = connectionStatus?.status === 'connected'
+  const isLocalDeployment = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  const isOdbcNotConfigured = (connectionStatus?.error || error || '').includes('IM002') || (connectionStatus?.error || error || '').includes('ODBC') || (connectionStatus?.error || error || '').includes('Data source name not found')
+  const showLocalDeploymentMessage = isLocalDeployment && isOdbcNotConfigured
 
   return (
     <div className="w-full bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col shadow-sm">
@@ -205,6 +208,8 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
                 className={`w-2 h-2 rounded-full ${
                   isConnected
                     ? 'bg-emerald-500'
+                    : showLocalDeploymentMessage
+                    ? 'bg-amber-500'
                     : connectionStatus?.status === 'failed'
                     ? 'bg-red-500'
                     : connectionStatus?.status === 'connecting' || connectionStatus?.status === 'checking'
@@ -213,9 +218,11 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
                 }`}
               />
               <span className="text-xs text-slate-700 dark:text-slate-300 capitalize font-medium">
-                {connectionStatus?.status === 'connected' 
-                  ? 'Connected' 
-                  : connectionStatus?.status || 'checking...'}
+                {connectionStatus?.status === 'connected'
+                  ? 'Connected'
+                  : showLocalDeploymentMessage
+                    ? 'Not configured'
+                    : connectionStatus?.status || 'checking...'}
               </span>
             </div>
 
@@ -250,11 +257,17 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
             <p className="text-sm font-medium">Loading database records...</p>
           </div>
         ) : error ? (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <div className={`p-4 flex items-start gap-3 rounded-lg border ${showLocalDeploymentMessage ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
+            <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${showLocalDeploymentMessage ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`} />
             <div>
-              <p className="font-semibold text-red-800 dark:text-red-400">Error Loading Records</p>
-              <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+              <p className={`font-semibold mt-0 ${showLocalDeploymentMessage ? 'text-amber-800 dark:text-amber-400' : 'text-red-800 dark:text-red-400'}`}>
+                {showLocalDeploymentMessage ? 'Database not configured for local deployment' : 'Error Loading Records'}
+              </p>
+              <p className={`text-sm mt-1 ${showLocalDeploymentMessage ? 'text-amber-700 dark:text-amber-300' : 'text-red-700 dark:text-red-300'}`}>
+                {showLocalDeploymentMessage
+                  ? 'TDH (ODS/SDS) requires an Azure SQL connection and ODBC drivers. This is typically configured in the Azure-deployed environment. The rest of the demo (User Journey, Kafka Event Stream) works locally.'
+                  : error}
+              </p>
             </div>
           </div>
         ) : records && records.data.length > 0 ? (

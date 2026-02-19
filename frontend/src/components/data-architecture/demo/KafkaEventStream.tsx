@@ -139,7 +139,7 @@ const PayloadPreview: React.FC<{ payload: any; isFirst?: boolean }> = ({ payload
 /**
  * Individual Kafka event entry - improved accessibility and contrast
  */
-const KafkaEventEntry: React.FC<{ event: KafkaEvent; index: number }> = ({ event, index }) => {
+const KafkaEventEntry: React.FC<{ event: KafkaEvent; index: number; hideCategoryBadge?: boolean }> = ({ event, index, hideCategoryBadge = false }) => {
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {
       hour12: false,
@@ -196,7 +196,7 @@ const KafkaEventEntry: React.FC<{ event: KafkaEvent; index: number }> = ({ event
         {/* Business context (if available) */}
         {businessContext && (
           <div className="mt-3">
-            <EventBusinessContext context={businessContext} />
+            <EventBusinessContext context={businessContext} hideCategoryBadge={hideCategoryBadge} />
           </div>
         )}
 
@@ -353,7 +353,7 @@ export const KafkaEventStream: React.FC<KafkaEventStreamProps> = ({
                 <EventTransactionGroup
                   key={group.id}
                   group={group}
-                  renderEvent={(event: any, index: number) => <KafkaEventEntry key={event.id} event={event} index={index} />}
+                  renderEvent={(event: any, index: number) => <KafkaEventEntry key={event.id} event={event} index={index} hideCategoryBadge />}
                 />
               ))}
             </AnimatePresence>

@@ -6,11 +6,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, RefreshCw, ExternalLink, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
 import { apiService } from '../../services/api'
-import { StructuredRAGDisplay } from './StructuredRAGDisplay'
-import { BriefPage } from './brief'
-import { getBriefForComponent } from './brief/briefRegistry'
+import { getComponentIdFromName, getComponentById } from '../temenos-components/temenosComponentsData'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -54,9 +53,41 @@ interface AnalysisResult {
   error?: string
 }
 
+const DEPLOYMENT_ANALYSIS_STATE_KEY = 'bsg_deployment_analysis_state'
+
+function saveAnalysisState(
+  subscriptionId: string,
+  resourceGroups: AzureResourceGroup[],
+  services: AzureResource[],
+  analysisResults: AnalysisResult[],
+  selectedResourceGroups: string[]
+) {
+  try {
+    sessionStorage.setItem(DEPLOYMENT_ANALYSIS_STATE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      data: { subscriptionId, resourceGroups, services, analysisResults, selectedResourceGroups }
+    }))
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearSavedAnalysisState() {
+  try {
+    sessionStorage.removeItem(DEPLOYMENT_ANALYSIS_STATE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+const DEFAULT_AZURE_SUBSCRIPTION_ID = '58a91cf0-0f39-45fd-a63e-5a9a28c7072b'
+
 export function DeploymentAnalyzer() {
-  const [currentStep, setCurrentStep] = useState<Step>('subscription')
-  const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
+  const navigate = useNavigate()
+  const [currentStep, setCurrentStep] = useState<Step>('resourceGroups')
+  const [subscriptionId, setSubscriptionId] = useState(() =>
+    localStorage.getItem('lastAzureSubscriptionId')?.trim() || DEFAULT_AZURE_SUBSCRIPTION_ID
+  )
 
   // Function to mask subscription ID for display
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
@@ -81,11 +112,28 @@ export function DeploymentAnalyzer() {
   const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
   const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
   const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
-  const [azureHealth, setAzureHealth] = useState<{ status: string; message?: string | null } | null>(null)
+  const [azureHealth, setAzureHealth] = useState<{
+    status: string
+    message?: string | null
+    identityType?: string
+    identityObjectId?: string
+    identityAppId?: string
+  } | null>(null)
   const [lastPreloadedSubId, setLastPreloadedSubId] = useState<string | null>(null)
 
   const RG_CACHE_KEY = 'bsg_azure_rg_cache'
   const RG_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+  // Always start fresh at resource group selection when navigating to Architecture Demo
+  // (Subscription is configured in Settings)
+
+  // Persist analysis state when user navigates away (e.g. to Temenos Components)
+  useEffect(() => {
+    if (currentStep !== 'analysis' || analysisResults.length === 0) return
+    return () => {
+      saveAnalysisState(subscriptionId, resourceGroups, services, analysisResults, selectedResourceGroups)
+    }
+  }, [currentStep, analysisResults.length, subscriptionId, resourceGroups, services, analysisResults, selectedResourceGroups])
 
   const getRgCache = (subId: string): AzureResourceGroup[] | null => {
     try {
@@ -116,43 +164,63 @@ export function DeploymentAnalyzer() {
     }
   }
 
-  // Preload RGs: show cached immediately, then refresh from API in background
+  // When user updates Azure subscription in Settings, reload resource groups
   useEffect(() => {
-    if (currentStep !== 'subscription') return
-    const cachedSubId = localStorage.getItem('lastAzureSubscriptionId')?.trim()
-    if (!cachedSubId) return
+    const handler = () => {
+      const newSub = localStorage.getItem('lastAzureSubscriptionId')?.trim()
+      if (newSub && newSub !== subscriptionId) {
+        setSubscriptionId(newSub)
+        loadResourceGroups(newSub, true)
+      }
+    }
+    window.addEventListener('azureSubscriptionUpdated', handler)
+    return () => window.removeEventListener('azureSubscriptionUpdated', handler)
+  }, [subscriptionId])
+
+  // Load RGs on mount when on resourceGroups step (subscription from Settings/localStorage)
+  useEffect(() => {
+    if (currentStep !== 'resourceGroups' || !subscriptionId) return
+    const subId = subscriptionId.trim()
     let cancelled = false
 
     // 1. Instant: show client-side cached RGs if available
-    const localRgs = getRgCache(cachedSubId)
+    const localRgs = getRgCache(subId)
     if (localRgs && localRgs.length > 0) {
       setResourceGroups(localRgs)
       setResourceGroupsCached(true)
-      setLastPreloadedSubId(cachedSubId)
+      setLastPreloadedSubId(subId)
     }
 
     // 2. Background: fetch from backend (uses server cache when available)
-    apiService.getAzureResourceGroups(cachedSubId, false)
+    apiService.getAzureResourceGroups(subId, false)
       .then((body) => {
         if (cancelled) return
         const rgList = Array.isArray(body?.data) ? body.data : []
         if (rgList.length > 0) {
           setResourceGroups(rgList)
           setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
-          setLastPreloadedSubId(cachedSubId)
-          setRgCache(cachedSubId, rgList)
+          setLastPreloadedSubId(subId)
+          setRgCache(subId, rgList)
         }
       })
-      .catch(() => { /* ignore - will fetch on Connect */ })
+      .catch(() => { /* ignore - user can refresh */ })
     return () => { cancelled = true }
-  }, [currentStep])
+  }, [currentStep, subscriptionId])
 
-  // Proactive Azure health check when on subscription step so demos don't hang if backend identity expired
+  // Proactive Azure health check when on resourceGroups step
   useEffect(() => {
-    if (currentStep !== 'subscription') return
+    if (currentStep !== 'resourceGroups') return
     let cancelled = false
     apiService.getAzureHealth(subscriptionId || undefined)
-      .then((res) => { if (!cancelled) setAzureHealth({ status: res.status, message: res.message ?? undefined }) })
+      .then((res) => {
+        if (!cancelled) setAzureHealth({
+          status: res.status,
+          message: res.message ?? undefined,
+          identityType: res.identity_type,
+          identityObjectId: res.identity_object_id,
+          identityAppId: res.identity_app_id,
+        })
+      })
       .catch(() => { if (!cancelled) setAzureHealth({ status: 'unknown', message: null }) })
     return () => { cancelled = true }
   }, [currentStep, subscriptionId])
@@ -393,6 +461,7 @@ export function DeploymentAnalyzer() {
       setLoading(false)
     }
   }
+  void handleSubscriptionSubmit // Reserved for future subscription input UI
 
   const handleResourceGroupsSelected = async (selected: string[]) => {
     try {
@@ -613,7 +682,7 @@ export function DeploymentAnalyzer() {
 
   const handleBack = () => {
     if (currentStep === 'analysis') {
-      // Always go back to resource groups selection from analysis
+      clearSavedAnalysisState()
       setCurrentStep('resourceGroups')
       setAnalysisResults([])
       setServices([])
@@ -622,31 +691,23 @@ export function DeploymentAnalyzer() {
       setCurrentStep('resourceGroups')
       setClusterNamespaces([])
     } else if (currentStep === 'resourceGroups') {
-      setCurrentStep('subscription')
-      // Keep resourceGroups for instant Connect when returning with same subscription
+      navigate(-1)
     }
   }
 
   return (
     <div className="space-y-6 min-h-[400px]">
-      {currentStep === 'subscription' && azureHealth?.status === 'unavailable' && (
+      {currentStep === 'resourceGroups' && azureHealth?.status === 'unavailable' && (
         <div className="rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4 text-amber-800 dark:text-amber-200">
           <p className="font-medium">Azure connectivity issue</p>
           <p className="text-sm mt-1">{azureHealth.message || 'Backend Azure identity may have expired or lost access to the subscription.'}</p>
-          <p className="text-sm mt-1">Contact your administrator to renew the Service Principal secret or re-grant Managed Identity access, then restart the backend.</p>
+          <p className="text-sm mt-1">Update the Azure subscription in Settings or contact your administrator to renew the Service Principal secret.</p>
         </div>
-      )}
-      {currentStep === 'subscription' && (
-        <SubscriptionInput
-          onSubmit={handleSubscriptionSubmit}
-          loading={loading}
-          error={error}
-          defaultSubscriptionId={subscriptionId}
-        />
       )}
 
       {currentStep === 'resourceGroups' && (
         <ResourceGroupSelector
+          azureHealth={azureHealth}
           resourceGroups={resourceGroups}
           onSelected={handleResourceGroupsSelected}
           onBack={handleBack}
@@ -693,8 +754,8 @@ export function DeploymentAnalyzer() {
   )
 }
 
-// Subscription Input Component
-function SubscriptionInput({
+// Subscription Input Component - exported for potential future use
+export function SubscriptionInput({
   onSubmit,
   loading,
   error,
@@ -966,6 +1027,7 @@ async function handleExportArmTemplate(
 
 // Resource Group Selector Component
 function ResourceGroupSelector({
+  azureHealth,
   resourceGroups,
   onSelected,
   onBack,
@@ -976,7 +1038,7 @@ function ResourceGroupSelector({
   analysisProgress,
   subscriptionId
 }: {
-
+  azureHealth: { status: string; identityType?: string; identityObjectId?: string; identityAppId?: string; message?: string | null } | null
   resourceGroups: AzureResourceGroup[]
   onSelected: (selected: string[]) => void
   onBack: () => void
@@ -1053,6 +1115,31 @@ function ResourceGroupSelector({
           </button>
         </div>
       </div>
+
+      {azureHealth?.status === 'ok' && (
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-slate-700 dark:text-slate-300">
+          <p className="text-sm font-medium mb-1">Backend identity for IAM role assignment</p>
+          {azureHealth.identityObjectId ? (
+            <>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                Use this Object ID when assigning &quot;Azure Kubernetes Service Cluster User Role&quot; at subscription level.
+              </p>
+              <p className="text-xs font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded break-all">
+                {azureHealth.identityObjectId}
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+              Object ID not available. Call <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">GET /deployment/azure/health</code> to inspect the backend identity.
+            </p>
+          )}
+          {azureHealth.identityType && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              Type: {azureHealth.identityType === 'managed_identity' ? 'Managed Identity' : azureHealth.identityType === 'service_principal' ? 'Service Principal' : azureHealth.identityType}
+            </p>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
@@ -2236,7 +2323,7 @@ function formatInlineText(text: string): JSX.Element | string | null {
 // Component Detail Panel - Horizontal layout with all information visible
 function ComponentDetailPanel({
   result,
-  onRefresh
+  onRefresh: _onRefresh
 }: {
   result: AnalysisResult
   onRefresh?: (updatedResult: AnalysisResult) => void
@@ -2251,48 +2338,7 @@ function ComponentDetailPanel({
 
 }) {
   const { service, componentInfo } = result
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  // Debug logging
-  useEffect(() => {
-    if (componentInfo) {
-      console.log('Component Info:', componentInfo)
-      console.log('Architectural Overview:', componentInfo.architecturalOverview)
-      console.log('Functional Overview:', componentInfo.functionalOverview)
-      console.log('Capabilities:', componentInfo.capabilities)
-      console.log('Related Services:', componentInfo.relatedServices)
-    }
-  }, [componentInfo])
-
-  const hasMeaningfulText = (value?: string) => {
-    if (!value) return false
-    const trimmed = value.trim()
-    if (!trimmed) return false
-    // More lenient check - only exclude obvious error messages
-    const lowerTrimmed = trimmed.toLowerCase()
-    return !lowerTrimmed.includes('information not available') && 
-           !lowerTrimmed.includes('i cannot provide') &&
-           !lowerTrimmed.includes('no information available') &&
-           trimmed.length > 10 // Minimum length to be considered meaningful
-  }
-
-  const hasCapabilities = Array.isArray(componentInfo?.capabilities)
-    ? componentInfo.capabilities.some((cap) => typeof cap === 'string' && cap.trim().length > 0)
-    : false
-
-  // More lenient check - if componentInfo exists, try to display it even if text seems empty
-  // The RAG API might return data in different formats
-  const hasAnyRagContent =
-    (componentInfo?.architecturalOverview && componentInfo.architecturalOverview.trim().length > 0) ||
-    (componentInfo?.functionalOverview && componentInfo.functionalOverview.trim().length > 0) ||
-    hasCapabilities ||
-    (hasMeaningfulText(componentInfo?.architecturalOverview) ||
-     hasMeaningfulText(componentInfo?.functionalOverview))
-
-  const hasRelatedServices = Array.isArray(componentInfo?.relatedServices) && componentInfo.relatedServices.length > 0
-  const hasRelationships = Array.isArray(componentInfo?.relationships) && componentInfo.relationships.length > 0
-  const briefEntry = componentInfo?.componentName ? getBriefForComponent(componentInfo.componentName) : null
-
+  const componentLinkId = componentInfo?.componentName ? getComponentIdFromName(componentInfo.componentName) : null
 
   if (!componentInfo) {
     return (
@@ -2334,276 +2380,69 @@ function ComponentDetailPanel({
             <span>Open in Azure Portal</span>
           </a>
         )}
-        <button
-          onClick={async () => {
-            if (isRefreshing) return // Prevent multiple clicks
-
-            try {
-              setIsRefreshing(true)
-              console.log('[Refresh] Starting refresh for component:', componentInfo.componentName)
-              console.log('[Refresh] Service object:', service)
-              console.log('[Refresh] Service name:', service.name)
-              console.log('[Refresh] Service type:', service.type)
-              console.log('[Refresh] Service ID:', service.id)
-              console.log('[Refresh] Service properties:', service.properties)
-              console.log('[Refresh] Calling analyzeAzureServices with forceRefresh=true')
-
-              // Ensure service is in the correct format for the API
-              const servicePayload = {
-                id: service.id,
-                name: service.name,
-                type: service.type,
-                location: service.location,
-                resourceGroup: service.resourceGroup,
-                properties: service.properties || {},
-                tags: service.tags || {}
-              }
-
-              console.log('[Refresh] Service payload:', servicePayload)
-
-              const response = await apiService.analyzeAzureServices(
-                [servicePayload],
-                undefined,
-                undefined,
-                true // forceRefresh
-              )
-
-              console.log('[Refresh] Full response:', JSON.stringify(response, null, 2))
-              console.log('[Refresh] Response structure:', {
-                hasData: !!response.data,
-                dataType: typeof response.data,
-                hasDataData: !!response.data?.data,
-                dataDataType: typeof response.data?.data,
-                isDataArray: Array.isArray(response.data),
-                isDataDataArray: Array.isArray(response.data?.data),
-                dataKeys: response.data ? Object.keys(response.data) : []
-              })
-
-              // Handle different response structures
-              let resultsArray: any[] = []
-
-              // Standard structure: response.data.data is an array
-              if (response.data?.data && Array.isArray(response.data.data)) {
-                resultsArray = response.data.data
-                console.log('[Refresh] Using response.data.data (standard structure)')
-              }
-              // Fallback: response.data is the array directly
-              else if (Array.isArray(response.data)) {
-                resultsArray = response.data
-                console.log('[Refresh] Using response.data (fallback structure)')
-              }
-              // Fallback: response is the array directly
-              else if (Array.isArray(response)) {
-                resultsArray = response
-                console.log('[Refresh] Using response directly (fallback structure)')
-              }
-              // Check if response has a different structure
-              else if (response.data && typeof response.data === 'object') {
-                console.warn('[Refresh] Unexpected response structure:', response.data)
-                // Try to find any array in the response
-                for (const key in response.data) {
-                  if (Array.isArray((response.data as any)[key])) {
-                    resultsArray = (response.data as any)[key]
-                    console.log(`[Refresh] Found array in response.data.${key}`)
-                    break
-                  }
-                }
-              }
-
-              console.log('[Refresh] Results array:', resultsArray)
-              console.log('[Refresh] Results array length:', resultsArray.length)
-
-              if (resultsArray.length === 0) {
-                console.error('[Refresh] No results found in response. Full response structure:', {
-                  responseType: typeof response,
-                  responseKeys: Object.keys(response || {}),
-                  dataType: typeof response.data,
-                  dataKeys: response.data ? Object.keys(response.data) : []
-                })
-              }
-              
-              if (resultsArray.length > 0) {
-                const firstResult = resultsArray[0]
-                console.log('[Refresh] First result:', firstResult)
-                console.log('[Refresh] First result keys:', Object.keys(firstResult || {}))
-                
-                const newComponentInfo = firstResult?.componentInfo || firstResult?.component_info
-                console.log('[Refresh] New component info:', newComponentInfo)
-                console.log('[Refresh] Component info keys:', newComponentInfo ? Object.keys(newComponentInfo) : 'No component info')
-                
-                if (newComponentInfo) {
-                  // Check if architectural overview has content (even if not strict format)
-                  const hasContent = newComponentInfo.architecturalOverview || newComponentInfo.architectural_overview
-                  const architecturalOverview = newComponentInfo.architecturalOverview || newComponentInfo.architectural_overview || ''
-                  const functionalOverview = newComponentInfo.functionalOverview || newComponentInfo.functional_overview || ''
-                  const capabilities = newComponentInfo.capabilities || []
-                  
-                  console.log('[Refresh] Has content:', !!hasContent)
-                  console.log('[Refresh] Architectural overview length:', architecturalOverview?.length || 0)
-                  console.log('[Refresh] Functional overview length:', functionalOverview?.length || 0)
-                  console.log('[Refresh] Capabilities count:', capabilities?.length || 0)
-                  
-                  // Normalize component info to match expected structure
-                  const normalizedComponentInfo: ComponentInfo = {
-                    componentName: newComponentInfo.componentName || newComponentInfo.component_name || componentInfo?.componentName || '',
-                    componentType: newComponentInfo.componentType || newComponentInfo.component_type || componentInfo?.componentType || '',
-                    architecturalOverview: architecturalOverview,
-                    functionalOverview: functionalOverview,
-                    capabilities: capabilities,
-                    relatedServices: newComponentInfo.relatedServices || newComponentInfo.related_services || [],
-                    dataSource: newComponentInfo.dataSource || newComponentInfo.data_source,
-                    relationships: newComponentInfo.relationships || []
-                  }
-                  
-                  console.log('[Refresh] Normalized component info:', normalizedComponentInfo)
-                  
-                  // Create updated result with new component info
-                  const updatedResult: AnalysisResult = {
-                    ...result,
-                    componentInfo: normalizedComponentInfo
-                  }
-                  console.log('[Refresh] Updated result:', updatedResult)
-                  
-                  // Update parent state via callback
-                  if (onRefresh) {
-                    console.log('[Refresh] Calling onRefresh callback')
-                    onRefresh(updatedResult)
-                    console.log('[Refresh] Refresh callback completed successfully')
-                  } else {
-                    console.warn('[Refresh] No onRefresh callback provided')
-                  }
-              } else {
-                console.warn('[Refresh] No componentInfo in response. First result:', firstResult)
-                if (firstResult?.error) {
-                  console.error('[Refresh] Component refresh error:', firstResult.error)
-                  alert(`Failed to refresh component information: ${firstResult.error}`)
-                } else {
-                  console.warn('[Refresh] No component information returned. Possible causes: RAG API not configured, service not identified, or backend error.')
-                  alert('No component information returned. Please check that the RAG API is configured and the service is identified correctly.')
-                }
-              }
-            } else {
-              console.warn('[Refresh] Empty results array. Full response:', response)
-              alert('No results returned from refresh. Please check backend logs for details.')
-            }
-            } catch (error: any) {
-              console.error('[Refresh] Failed to refresh component info:', error)
-              console.error('[Refresh] Error details:', {
-                message: error?.message,
-                response: error?.response?.data,
-                status: error?.response?.status,
-                url: error?.config?.url
-              })
-
-              let errorMessage = 'Failed to refresh component information.'
-              if (error?.response?.data?.detail) {
-                const detail = error.response.data.detail
-                if (typeof detail === 'string') {
-                  errorMessage += `\n\nError: ${detail}`
-                } else if (detail.error) {
-                  errorMessage += `\n\nError: ${detail.error}`
-                } else {
-                  errorMessage += `\n\nError: ${JSON.stringify(detail)}`
-                }
-              } else if (error?.message) {
-                errorMessage += `\n\nError: ${error.message}`
-              }
-
-              errorMessage += '\n\nCheck browser console and backend logs for more details.'
-              alert(errorMessage)
-            } finally {
-              setIsRefreshing(false)
-            }
-          }}
-          disabled={isRefreshing}
-          className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{isRefreshing ? 'Refreshing...' : 'Refresh Info'}</span>
-        </button>
       </div>
 
-
-      {/* Documentation & Context */}
-      <div className="space-y-6">
-        {/* Always try to display componentInfo if it exists, even if text seems empty */}
-        {/* The RAG API might return data in different formats that our checks don't catch */}
-        {(hasAnyRagContent || (componentInfo?.architecturalOverview && componentInfo.architecturalOverview.trim().length > 0) || 
-          (componentInfo?.functionalOverview && componentInfo.functionalOverview.trim().length > 0) ||
-          (Array.isArray(componentInfo?.capabilities) && componentInfo.capabilities.length > 0)) ? (
-          <StructuredRAGDisplay
-            architecturalOverview={componentInfo.architecturalOverview || (componentInfo as any).architectural_overview || ''}
-            functionalOverview={componentInfo.functionalOverview || (componentInfo as any).functional_overview || ''}
-            capabilities={componentInfo.capabilities || []}
-            componentName={componentInfo.componentName}
-            componentType={componentInfo.componentType}
-            service={service}
-          />
-        ) : (
-          <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 dark:text-white mb-2 text-lg">Documentation</h5>
-            <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-              No structured documentation is available for this component yet. Use "Refresh Info" to pull content from the RAG API.
-            </p>
-            {componentInfo && (
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                Debug: ComponentInfo exists but content appears empty. Architectural Overview length: {componentInfo.architecturalOverview?.length || 0}, 
-                Functional Overview length: {componentInfo.functionalOverview?.length || 0}
-              </p>
-            )}
-          </div>
-        )}
-
-        {briefEntry && (
-          <details className="group bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4 border border-cyan-200 dark:border-cyan-700">
-            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-              Technical Brief ({briefEntry.name})
-            </summary>
-            <div className="mt-4 rounded-lg overflow-hidden">
-              <BriefPage rawText={briefEntry.rawText} name={briefEntry.name} className="min-h-0 rounded-lg" />
-            </div>
-          </details>
-        )}
-
-        <details
-          className="group bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800"
-          open={hasRelatedServices}
-        >
-          <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-            Related Services {hasRelatedServices ? `(${componentInfo.relatedServices.length})` : ''}
-          </summary>
-          <div className="mt-4">
-            {hasRelatedServices ? (
-              <div className="flex flex-wrap gap-2">
-                {componentInfo.relatedServices.map((svc, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
-                    {svc}
-                  </span>
-                ))}
+      {/* Inline component info from Temenos Components catalog */}
+      {componentLinkId ? (
+        (() => {
+          const catalogComponent = getComponentById(componentLinkId)
+          if (!catalogComponent) {
+            return (
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                <p className="text-sm text-slate-600 dark:text-slate-400 italic">
+                  This component is not yet in the Temenos Components catalog. Azure service details shown above.
+                </p>
               </div>
-            ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400 italic">No related services listed.</p>
+            )
+          }
+          // Split description into paragraphs for readability (~2 sentences per paragraph)
+          const paragraphs = catalogComponent.description
+            .split(/(?<=[.!?])\s+/)
+            .reduce<string[]>((acc, sentence) => {
+              if (acc.length === 0) acc.push('')
+              const last = acc[acc.length - 1]
+              const sentencesInLast = (last.match(/[.!?]/g) || []).length
+              if (sentencesInLast >= 2 && last.trim().length > 0) {
+                acc.push(sentence)
+                  } else {
+                acc[acc.length - 1] = last ? `${last} ${sentence}` : sentence
+              }
+              return acc
+            }, [])
+            .filter(p => p.trim())
+          if (paragraphs.length === 0) paragraphs.push(catalogComponent.description)
+
+          return (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                  Component overview
+                </p>
+                <div className="space-y-3">
+                  {paragraphs.map((para, i) => (
+                    <p key={i} className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                      {para}
+                    </p>
+                  ))}
+          </div>
+            </div>
+              {catalogComponent.group && (
+                <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-200 dark:border-slate-600">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Group: <span className="font-medium text-slate-600 dark:text-slate-300">{catalogComponent.group}</span>
+                  </span>
+              </div>
             )}
           </div>
-        </details>
-
-        {hasRelationships && (
-          <details className="group bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-200 dark:border-indigo-700" open>
-            <summary className="cursor-pointer select-none font-semibold text-gray-900 dark:text-white text-lg">
-              Component Relationships ({componentInfo.relationships?.length || 0})
-            </summary>
-            <div className="mt-4 space-y-3">
-              {componentInfo.relationships?.map((rel, idx) => (
-                <div key={idx} className="bg-white dark:bg-slate-700 rounded p-3 border border-indigo-200 dark:border-indigo-500/30">
-                  <div className="font-medium text-gray-900 dark:text-white">{rel.targetComponent}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rel.relationshipType}</div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300 mt-2">{rel.description}</div>
+          )
+        })()
+      ) : (
+        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+          <p className="text-sm text-slate-600 dark:text-slate-400 italic">
+            This component is not yet in the Temenos Components catalog. Azure service details shown above.
+          </p>
                 </div>
-              ))}
-            </div>
-          </details>
         )}
-      </div>
     </div>
   )
 }

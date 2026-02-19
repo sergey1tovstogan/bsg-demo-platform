@@ -32,7 +32,7 @@ const ALL_COMPONENTS: ComponentCard[] = [
   },
   {
     id: 'integration',
-    name: 'Integration, APIs & Events',
+    name: 'Integration',
     description: 'Enterprise integration patterns and API design',
     icon: Network,
     color: 'text-blue-500',

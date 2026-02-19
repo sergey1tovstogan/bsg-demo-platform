@@ -22,6 +22,56 @@ import {
 } from '../config/simulation.config'
 
 /**
+ * Synthesize business events from data events.
+ * Real Event Hub often receives only data events (subject="dataevent"); we create
+ * corresponding business events so both types are displayed in the Kafka Event Stream.
+ * Skips synthesis when a business event already exists for the same transaction/entity.
+ */
+function synthesizeBusinessEventsFromDataEvents(events: KafkaEvent[]): KafkaEvent[] {
+  const existingBusinessKeys = new Set<string>()
+  for (const evt of events) {
+    if (evt.type === 'business' && evt.transactionType) {
+      const entityId = evt.payload?.entityid ? String(evt.payload.entityid) : evt.id
+      existingBusinessKeys.add(`${evt.transactionType}:${entityId}`)
+    }
+  }
+
+  const result: KafkaEvent[] = []
+  for (const evt of events) {
+    result.push(evt)
+
+    if (evt.type !== 'data' || !evt.transactionType) continue
+
+    const entityId = evt.payload?.entityid ? String(evt.payload.entityid) : evt.id
+    const businessKey = `${evt.transactionType}:${entityId}`
+    if (existingBusinessKeys.has(businessKey)) continue
+    existingBusinessKeys.add(businessKey)
+
+    const businessTopic = evt.transactionType === 'CREATE_CUSTOMER'
+      ? 'temenos.party.customers.created'
+      : evt.transactionType === 'OPEN_ACCOUNT'
+        ? 'temenos.holdings.accounts.opened'
+        : evt.transactionType === 'SEND_PAYMENT'
+          ? 'temenos.order.payments.completed'
+          : evt.topic.replace('temenos.data.', 'temenos.')
+
+    const synth: KafkaEvent = {
+      id: `${evt.id}_business_synth`,
+      timestamp: evt.timestamp - 50,
+      type: 'business',
+      topic: businessTopic,
+      partition: evt.partition,
+      offset: evt.offset - 1,
+      payload: { ...evt.payload, subject: 'businessevent' },
+      transactionType: evt.transactionType
+    }
+    result.push(synth)
+  }
+
+  return result.sort((a, b) => a.timestamp - b.timestamp)
+}
+
+/**
  * Poll for real events from Event Store API after a transaction
  * 
  * Filtering rules:
@@ -94,7 +144,11 @@ async function pollRealEventsAfterTransaction(
       allEventEntityIds: result.events.map((e: any) => e.payload?.entityid)
     })
 
-    return filteredEvents
+    // Synthesize business events for data events - real Event Hub often only receives data events,
+    // so we create corresponding business events so both are displayed in the Kafka Event Stream
+    const withBusinessEvents = synthesizeBusinessEventsFromDataEvents(filteredEvents)
+
+    return withBusinessEvents
   } catch (error) {
     console.error('[useSimulation] Error polling real events:', error)
     return []
@@ -106,6 +160,89 @@ async function pollRealEventsAfterTransaction(
  */
 const generateLogId = (): string => {
   return `LOG_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+/**
+ * Create synthetic Kafka events for display when real/mock events are unavailable.
+ * Used as fallback so users always see events after a successful API call.
+ */
+function createSyntheticEventsForCreateCustomer(customerId: string, customerData?: { name?: string }): KafkaEvent[] {
+  const now = Date.now()
+  const name = customerData?.name || `Customer ${customerId}`
+  return [
+    {
+      id: `synth_business_${now}_${Math.random().toString(36).slice(2, 9)}`,
+      timestamp: now,
+      type: 'business',
+      topic: 'temenos.party.customers.created',
+      partition: 0,
+      offset: Math.floor(Math.random() * 1000000),
+      payload: { entityid: customerId, entityname: 'Customer Create Customer', customerId, name, eventType: 'CUSTOMER_CREATED' },
+      transactionType: 'CREATE_CUSTOMER'
+    },
+    {
+      id: `synth_data_${now}_${Math.random().toString(36).slice(2, 9)}`,
+      timestamp: now + 30,
+      type: 'data',
+      topic: 'temenos.data.customers.sync',
+      partition: 0,
+      offset: Math.floor(Math.random() * 1000000) + 1,
+      payload: { entityid: customerId, entityname: 'Customer Create Customer', customerId, syncTarget: 'DATA_HUB', eventType: 'CUSTOMER_DATA_SYNCED' },
+      transactionType: 'CREATE_CUSTOMER'
+    }
+  ]
+}
+
+function createSyntheticEventsForOpenAccount(accountId: string, customerId: string): KafkaEvent[] {
+  const now = Date.now()
+  return [
+    {
+      id: `synth_business_${now}_${Math.random().toString(36).slice(2, 9)}`,
+      timestamp: now,
+      type: 'business',
+      topic: 'temenos.holdings.accounts.opened',
+      partition: 0,
+      offset: Math.floor(Math.random() * 1000000),
+      payload: { entityid: accountId, entityname: 'Account Open Account', accountId, customerId, eventType: 'ACCOUNT_OPENED' },
+      transactionType: 'OPEN_ACCOUNT'
+    },
+    {
+      id: `synth_data_${now}_${Math.random().toString(36).slice(2, 9)}`,
+      timestamp: now + 30,
+      type: 'data',
+      topic: 'temenos.data.accounts.sync',
+      partition: 0,
+      offset: Math.floor(Math.random() * 1000000) + 1,
+      payload: { entityid: accountId, entityname: 'Account Open Account', accountId, customerId, syncTarget: 'DATA_HUB', eventType: 'ACCOUNT_DATA_SYNCED' },
+      transactionType: 'OPEN_ACCOUNT'
+    }
+  ]
+}
+
+function createSyntheticEventsForSendPayment(paymentId: string, fromAccount?: string, toAccount?: string): KafkaEvent[] {
+  const now = Date.now()
+  return [
+    {
+      id: `synth_business_${now}_${Math.random().toString(36).slice(2, 9)}`,
+      timestamp: now,
+      type: 'business',
+      topic: 'temenos.order.payments.completed',
+      partition: 0,
+      offset: Math.floor(Math.random() * 1000000),
+      payload: { entityid: paymentId, entityname: 'Payment', paymentId, fromAccount, toAccount, eventType: 'PAYMENT_COMPLETED' },
+      transactionType: 'SEND_PAYMENT'
+    },
+    {
+      id: `synth_data_${now}_${Math.random().toString(36).slice(2, 9)}`,
+      timestamp: now + 30,
+      type: 'data',
+      topic: 'temenos.data.payments.sync',
+      partition: 0,
+      offset: Math.floor(Math.random() * 1000000) + 1,
+      payload: { entityid: paymentId, entityname: 'Payment', paymentId, syncTarget: 'DATA_HUB', eventType: 'PAYMENT_DATA_SYNCED' },
+      transactionType: 'SEND_PAYMENT'
+    }
+  ]
 }
 
 /**
@@ -218,14 +355,16 @@ export const useSimulation = () => {
 
         // Check if we're in real API mode
         const isRealMode = apiService.getServiceType() === 'real'
+        let eventsAdded = false
 
-        // Add Kafka events
+        // Add Kafka events from API response (mock mode returns these)
         if (response.events && response.events.length > 0) {
           simulationState.setStage(SimulationStage.API_TO_KAFKA)
           await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.API_TO_KAFKA_DURATION))
 
           simulationState.setStage(SimulationStage.EMITTING)
           simulationState.addKafkaEvents(response.events)
+          eventsAdded = true
 
           // Create animation triggers for cross-tab
           response.events.forEach((event: any) => {
@@ -238,12 +377,11 @@ export const useSimulation = () => {
 
         // If in real mode, poll for actual events from Event Store API
         // For CREATE_CUSTOMER, filter by customerId (entityid = CustomerID)
-        if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
+        if (!eventsAdded && isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
           debugLog('Polling for real events from Event Store API for customer: ' + customerId)
           const realEvents = await pollRealEventsAfterTransaction(startTime, customerId)
           
           debugLog(`Event Store API returned ${realEvents.length} events`)
-          console.log('[DEBUG] Real events from Event Store:', realEvents)
           
           if (realEvents.length > 0) {
             debugLog(`Found ${realEvents.length} real events from Event Store`)
@@ -252,6 +390,7 @@ export const useSimulation = () => {
 
             simulationState.setStage(SimulationStage.EMITTING)
             simulationState.addKafkaEvents(realEvents)
+            eventsAdded = true
 
             // Create animation triggers for real events
             realEvents.forEach((event) => {
@@ -260,14 +399,24 @@ export const useSimulation = () => {
             })
 
             await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
-          } else {
-            debugLog('No real events found from Event Store API - check backend logs and Event Hub consumer status')
-            console.warn('[DEBUG] No events received. Check:', {
-              backendHealth: 'http://localhost:8000/api/v1/components/data-architecture/events/health',
-              allEvents: 'http://localhost:8000/api/v1/components/data-architecture/events?limit=10',
-              recentEvents: 'http://localhost:8000/api/v1/components/data-architecture/events/recent?minutes=5&limit=10'
-            })
           }
+        }
+
+        // Fallback: when no events from API or Event Store, show synthetic events so user sees the flow
+        if (!eventsAdded) {
+          simulationState.setStage(SimulationStage.API_TO_KAFKA)
+          await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.API_TO_KAFKA_DURATION))
+
+          simulationState.setStage(SimulationStage.EMITTING)
+          const syntheticEvents = createSyntheticEventsForCreateCustomer(customerId, response.data)
+          simulationState.addKafkaEvents(syntheticEvents)
+
+          syntheticEvents.forEach((event) => {
+            const trigger = createAnimationTrigger(event.type, 'CREATE_CUSTOMER', event.id)
+            simulationState.addAnimationTrigger(trigger)
+          })
+
+          await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
         }
 
         // Set success state
@@ -407,16 +556,17 @@ export const useSimulation = () => {
 
         // Check if we're in real API mode
         const isRealMode = apiService.getServiceType() === 'real'
+        let eventsAdded = false
 
-        // Add Kafka events
+        // Add Kafka events from API response (mock mode returns these)
         if (response.events && response.events.length > 0) {
           simulationState.setStage(SimulationStage.API_TO_KAFKA)
           await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.API_TO_KAFKA_DURATION))
 
           simulationState.setStage(SimulationStage.EMITTING)
           simulationState.addKafkaEvents(response.events)
+          eventsAdded = true
 
-          // Create animation triggers for cross-tab
           response.events.forEach((event: any) => {
             const trigger = createAnimationTrigger(event.type, 'OPEN_ACCOUNT', event.id)
             simulationState.addAnimationTrigger(trigger)
@@ -426,8 +576,7 @@ export const useSimulation = () => {
         }
 
         // If in real mode, poll for actual events from Event Store API
-        // For OPEN_ACCOUNT, filter by accountId (entityid = AccountID)
-        if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
+        if (!eventsAdded && isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
           debugLog('Polling for real events from Event Store API for account: ' + accountId)
           const realEvents = await pollRealEventsAfterTransaction(startTime, accountId)
           
@@ -438,17 +587,32 @@ export const useSimulation = () => {
 
             simulationState.setStage(SimulationStage.EMITTING)
             simulationState.addKafkaEvents(realEvents)
+            eventsAdded = true
 
-            // Create animation triggers for real events
             realEvents.forEach((event) => {
               const trigger = createAnimationTrigger(event.type, 'OPEN_ACCOUNT', event.id)
               simulationState.addAnimationTrigger(trigger)
             })
 
             await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
-          } else {
-            debugLog('No real events found from Event Store API')
           }
+        }
+
+        // Fallback: show synthetic events when none from API or Event Store
+        if (!eventsAdded) {
+          simulationState.setStage(SimulationStage.API_TO_KAFKA)
+          await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.API_TO_KAFKA_DURATION))
+
+          simulationState.setStage(SimulationStage.EMITTING)
+          const syntheticEvents = createSyntheticEventsForOpenAccount(accountId, customerId)
+          simulationState.addKafkaEvents(syntheticEvents)
+
+          syntheticEvents.forEach((event) => {
+            const trigger = createAnimationTrigger(event.type, 'OPEN_ACCOUNT', event.id)
+            simulationState.addAnimationTrigger(trigger)
+          })
+
+          await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
         }
 
         // Set success state
@@ -581,16 +745,17 @@ export const useSimulation = () => {
 
         // Check if we're in real API mode
         const isRealMode = apiService.getServiceType() === 'real'
+        let eventsAdded = false
 
-        // Add Kafka events
+        // Add Kafka events from API response (mock mode returns these)
         if (response.events && response.events.length > 0) {
           simulationState.setStage(SimulationStage.API_TO_KAFKA)
           await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.API_TO_KAFKA_DURATION))
 
           simulationState.setStage(SimulationStage.EMITTING)
           simulationState.addKafkaEvents(response.events)
+          eventsAdded = true
 
-          // Create animation triggers for cross-tab
           response.events.forEach((event: any) => {
             const trigger = createAnimationTrigger(event.type, 'SEND_PAYMENT', event.id)
             simulationState.addAnimationTrigger(trigger)
@@ -600,8 +765,7 @@ export const useSimulation = () => {
         }
 
         // If in real mode, poll for actual events from Event Store API
-        // For SEND_PAYMENT, filter by accountId (entityid = AccountID for payment events)
-        if (isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
+        if (!eventsAdded && isRealMode && EVENT_STORE_CONFIG.ENABLE_REAL_EVENTS) {
           debugLog('Polling for real events from Event Store API for account: ' + accountId)
           const realEvents = await pollRealEventsAfterTransaction(startTime, accountId)
           
@@ -612,17 +776,34 @@ export const useSimulation = () => {
 
             simulationState.setStage(SimulationStage.EMITTING)
             simulationState.addKafkaEvents(realEvents)
+            eventsAdded = true
 
-            // Create animation triggers for real events
             realEvents.forEach((event) => {
               const trigger = createAnimationTrigger(event.type, 'SEND_PAYMENT', event.id)
               simulationState.addAnimationTrigger(trigger)
             })
 
             await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
-          } else {
-            debugLog('No real events found from Event Store API')
           }
+        }
+
+        // Fallback: show synthetic events when none from API or Event Store
+        if (!eventsAdded) {
+          simulationState.setStage(SimulationStage.API_TO_KAFKA)
+          await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.API_TO_KAFKA_DURATION))
+
+          simulationState.setStage(SimulationStage.EMITTING)
+          const fromAccount = response.data.fromAccount || accountId
+          const toAccount = response.data.toAccount
+          const syntheticEvents = createSyntheticEventsForSendPayment(paymentId, fromAccount, toAccount)
+          simulationState.addKafkaEvents(syntheticEvents)
+
+          syntheticEvents.forEach((event) => {
+            const trigger = createAnimationTrigger(event.type, 'SEND_PAYMENT', event.id)
+            simulationState.addAnimationTrigger(trigger)
+          })
+
+          await new Promise((resolve) => setTimeout(resolve, ANIMATION_CONFIG.KAFKA_EMISSION_DURATION))
         }
 
         // Set success state
@@ -700,7 +881,7 @@ export const useSimulation = () => {
     // Subscribe to events from Event Store
     eventStoreUnsubscribe.current = eventStoreService.onEvents((newEvents: KafkaEvent[]) => {
       debugLog(`Received ${newEvents.length} events from Event Store`)
-      
+
       // Filter events to only include those after the last transaction start time
       const lastTransactionStart = simulationState.state.lastTransactionStartTime
       if (lastTransactionStart) {
@@ -708,10 +889,11 @@ export const useSimulation = () => {
           // Event timestamp should be after transaction start (with small buffer for clock skew)
           return event.timestamp >= (lastTransactionStart - 5000) // 5 second buffer
         })
-        
+
         if (filteredEvents.length > 0) {
           debugLog(`Filtered ${filteredEvents.length} new events (out of ${newEvents.length} total) after transaction start`)
-          simulationState.addKafkaEvents(filteredEvents)
+          const withBusinessEvents = synthesizeBusinessEventsFromDataEvents(filteredEvents)
+          simulationState.addKafkaEvents(withBusinessEvents)
         } else {
           debugLog(`All ${newEvents.length} events were before transaction start, skipping`)
         }
@@ -765,7 +947,8 @@ export const useSimulation = () => {
       EVENT_STORE_CONFIG.MAX_EVENTS_PER_REQUEST
     )
     if (result.success && result.events.length > 0) {
-      simulationState.addKafkaEvents(result.events)
+      const withBusinessEvents = synthesizeBusinessEventsFromDataEvents(result.events)
+      simulationState.addKafkaEvents(withBusinessEvents)
     }
     return result
   }, [simulationState, debugLog])

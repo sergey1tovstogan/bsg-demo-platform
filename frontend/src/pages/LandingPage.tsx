@@ -70,7 +70,7 @@ export const TECHNOLOGY_PILLARS: Array<{
       'Extensible by the bank / partner',
     ],
     techs: ['Temenos Workbench'],
-    platformPath: '/platform/integration',
+    platformPath: '/platform/extensibility',
   },
   {
     id: 'data-architecture',
@@ -133,6 +133,26 @@ export const TECHNOLOGY_PILLARS: Array<{
 ]
 
 const AUTO_ADVANCE_MS = 5000
+const CATEGORIES_STORAGE_KEY = 'bsg_selected_categories'
+
+/** Map pillar id to settings category id (functional-architecture -> architecture) */
+function pillarToCategoryId(pillarId: string): string {
+  return pillarId === 'functional-architecture' ? 'architecture' : pillarId
+}
+
+function loadSelectedCategories(): Set<string> {
+  try {
+    const stored = localStorage.getItem(CATEGORIES_STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored) as string[]
+      const migrated = parsed.map(id => id === 'deployment' ? 'architecture' : id)
+      return new Set(migrated)
+    }
+  } catch {
+    /* ignore */
+  }
+  return new Set(TECHNOLOGY_PILLARS.map(p => pillarToCategoryId(p.id)))
+}
 
 interface LandingPageProps {
   theme: 'light' | 'dark'
@@ -143,32 +163,47 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
   const navigate = useNavigate()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(loadSelectedCategories)
   const [activePillarIndex, setActivePillarIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const isDark = theme === 'dark'
 
+  const visiblePillars = TECHNOLOGY_PILLARS.filter((p) =>
+    selectedCategories.has(pillarToCategoryId(p.id))
+  )
+
+  useEffect(() => {
+    const handleCategoryUpdate = () => setSelectedCategories(loadSelectedCategories())
+    window.addEventListener('categoriesUpdated', handleCategoryUpdate)
+    return () => window.removeEventListener('categoriesUpdated', handleCategoryUpdate)
+  }, [])
+
+  useEffect(() => {
+    setActivePillarIndex((i) => Math.min(i, Math.max(0, visiblePillars.length - 1)))
+  }, [visiblePillars.length])
+
   const handlePillarClick = () => {
-    const path = TECHNOLOGY_PILLARS[activePillarIndex]?.platformPath
+    const path = visiblePillars[activePillarIndex]?.platformPath
     if (path) navigate(path)
   }
 
   const goNext = useCallback(() => {
-    setActivePillarIndex((i) => (i + 1) % TECHNOLOGY_PILLARS.length)
-  }, [])
+    setActivePillarIndex((i) => (i + 1) % Math.max(1, visiblePillars.length))
+  }, [visiblePillars.length])
 
   const goPrev = useCallback(() => {
-    setActivePillarIndex((i) => (i - 1 + TECHNOLOGY_PILLARS.length) % TECHNOLOGY_PILLARS.length)
-  }, [])
+    setActivePillarIndex((i) => (i - 1 + visiblePillars.length) % Math.max(1, visiblePillars.length))
+  }, [visiblePillars.length])
 
   useEffect(() => setIsVisible(true), [])
   useEffect(() => {
-    if (isPaused) return
+    if (isPaused || visiblePillars.length === 0) return
     const t = setInterval(goNext, AUTO_ADVANCE_MS)
     return () => clearInterval(t)
-  }, [isPaused, goNext])
+  }, [isPaused, goNext, visiblePillars.length])
 
-  const pillar = TECHNOLOGY_PILLARS[activePillarIndex]
-  const Icon = pillar.icon
+  const pillar = visiblePillars[activePillarIndex]
+  const Icon = pillar?.icon
 
   return (
     <div className={`min-h-screen flex flex-col w-full ${isDark ? 'bg-[#0a0e1a] text-white' : 'bg-slate-50 text-slate-900'}`}>
@@ -205,85 +240,109 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
             </p>
           </div>
 
-          {/* Architecture Pillars Carousel - central menu */}
+          {/* Architecture Pillars Carousel - central menu (only visible categories) */}
           <div
             className={`w-full mb-12 lg:mb-16 transition-all duration-500 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
             <div className="relative w-full max-w-6xl mx-auto">
-              <button
-                type="button"
-                onClick={goPrev}
-                aria-label="Previous"
-                className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 border border-white/20' : 'bg-slate-200 hover:bg-slate-300 border border-slate-300'}`}
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <button
-                type="button"
-                onClick={goNext}
-                aria-label="Next"
-                className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 border border-white/20' : 'bg-slate-200 hover:bg-slate-300 border border-slate-300'}`}
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
+              {pillar ? (
+                <>
+                  {visiblePillars.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={goPrev}
+                        aria-label="Previous"
+                        className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 border border-white/20' : 'bg-slate-200 hover:bg-slate-300 border border-slate-300'}`}
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={goNext}
+                        aria-label="Next"
+                        className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${isDark ? 'bg-white/10 hover:bg-white/20 border border-white/20' : 'bg-slate-200 hover:bg-slate-300 border border-slate-300'}`}
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    </>
+                  )}
 
-              {/* Fixed-size frame: same dimensions for all categories to avoid jumps on transition */}
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={handlePillarClick}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillarClick() } }}
-                className={`group w-full rounded-3xl border p-8 md:p-12 lg:p-16 h-[400px] flex flex-col justify-center transition-[transform,box-shadow] duration-500 cursor-pointer hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${isDark ? 'bg-white/[0.04] border-white/15 backdrop-blur-md hover:bg-white/[0.07]' : 'bg-white border-slate-200 shadow-xl hover:shadow-2xl'}`}
-                aria-label={`Go to ${pillar.title} - ${pillar.tagline}`}
-              >
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center h-full min-h-0">
-                  <div className="min-h-0 flex flex-col justify-center overflow-y-auto">
-                    <div className={`text-xs font-semibold uppercase tracking-widest mb-4 ${isDark ? 'text-white/70' : 'text-slate-500'}`}>{pillar.title}</div>
-                    <h2 className={`text-2xl md:text-3xl lg:text-4xl font-bold mb-6 leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{pillar.tagline}</h2>
-                    <ul className="space-y-3 mb-6">
-                      {pillar.bullets.map((b, j) => (
-                        <li key={j} className="flex items-start gap-2">
-                          <span className="text-cyan-400/80 mt-0.5 flex-shrink-0">•</span>
-                          <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{b}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex flex-wrap gap-2">
-                      {pillar.techs.map((t) => (
-                        <span key={t} className={`px-3 py-1.5 rounded-full text-sm ${isDark ? 'bg-white/5 text-slate-400 border border-white/10' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="hidden lg:flex justify-center items-center flex-shrink-0">
-                    <div className={`w-40 h-40 lg:w-48 lg:h-48 rounded-3xl bg-gradient-to-br ${pillar.color} flex items-center justify-center shadow-2xl opacity-90 group-hover:scale-105 transition-transform duration-300`}>
-                      <Icon className="w-20 h-20 lg:w-24 lg:h-24 text-white/95" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pill selector - central menu */}
-              <div className="flex justify-center gap-2 sm:gap-3 mt-6 flex-wrap">
-                {TECHNOLOGY_PILLARS.map((p, i) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setActivePillarIndex(i)}
-                    onMouseEnter={() => setActivePillarIndex(i)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                      activePillarIndex === i
-                        ? isDark ? 'bg-white/20 text-white ring-2 ring-white/40' : 'bg-blue-100 text-blue-700 ring-2 ring-blue-300'
-                        : isDark ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
+                  {/* Fixed-size frame: same dimensions for all categories to avoid jumps on transition */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={handlePillarClick}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillarClick() } }}
+                    className={`group w-full rounded-3xl border p-8 md:p-12 lg:p-16 h-[400px] flex flex-col justify-center transition-[transform,box-shadow] duration-500 cursor-pointer hover:scale-[1.01] active:scale-[0.99] overflow-hidden ${isDark ? 'bg-white/[0.04] border-white/15 backdrop-blur-md hover:bg-white/[0.07]' : 'bg-white border-slate-200 shadow-xl hover:shadow-2xl'}`}
+                    aria-label={`Go to ${pillar.title} - ${pillar.tagline}`}
                   >
-                    {p.title}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center h-full min-h-0">
+                      <div className="min-h-0 flex flex-col justify-center overflow-y-auto">
+                        <div className={`text-xs font-semibold uppercase tracking-widest mb-4 ${isDark ? 'text-white/70' : 'text-slate-500'}`}>{pillar.title}</div>
+                        <h2 className={`text-2xl md:text-3xl lg:text-4xl font-bold mb-6 leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{pillar.tagline}</h2>
+                        <ul className="space-y-3 mb-6">
+                          {pillar.bullets.map((b, j) => (
+                            <li key={j} className="flex items-start gap-2">
+                              <span className="text-cyan-400/80 mt-0.5 flex-shrink-0">•</span>
+                              <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{b}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="flex flex-wrap gap-2">
+                          {pillar.techs.map((t) => (
+                            <span key={t} className={`px-3 py-1.5 rounded-full text-sm ${isDark ? 'bg-white/5 text-slate-400 border border-white/10' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="hidden lg:flex justify-center items-center flex-shrink-0">
+                        <div className={`w-40 h-40 lg:w-48 lg:h-48 rounded-3xl bg-gradient-to-br ${pillar.color} flex items-center justify-center shadow-2xl opacity-90 group-hover:scale-105 transition-transform duration-300`}>
+                          <Icon className="w-20 h-20 lg:w-24 lg:h-24 text-white/95" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pill selector - only visible categories */}
+                  <div className="flex justify-center gap-2 sm:gap-3 mt-6 flex-wrap">
+                    {visiblePillars.map((p, i) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setActivePillarIndex(i)
+                          navigate(p.platformPath)
+                        }}
+                        onMouseEnter={() => setActivePillarIndex(i)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 cursor-pointer ${
+                          activePillarIndex === i
+                            ? isDark ? 'bg-white/20 text-white ring-2 ring-white/40' : 'bg-blue-100 text-blue-700 ring-2 ring-blue-300'
+                            : isDark ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                        aria-label={`Go to ${p.title}`}
+                      >
+                        {p.title}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className={`w-full rounded-3xl border p-8 md:p-12 lg:p-16 h-[400px] flex flex-col items-center justify-center ${isDark ? 'bg-white/[0.04] border-white/15' : 'bg-white border-slate-200'}`}>
+                  <p className={`text-lg ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    No categories selected. Open Settings to choose which categories to display.
+                  </p>
+                  <button
+                    onClick={() => setSettingsOpen(true)}
+                    className={`mt-4 px-6 py-2 rounded-lg font-medium ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}
+                  >
+                    Open Settings
                   </button>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 

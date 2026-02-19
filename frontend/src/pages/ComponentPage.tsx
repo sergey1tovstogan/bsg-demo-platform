@@ -13,6 +13,9 @@ import { LayoutShowcaseContent } from '../components/layout-showcase/LayoutShowc
 import { CardGallery } from '../components/gallery/CardGallery'
 import { VisualEditor } from '../components/editor/VisualEditor'
 import { TemenosComponentsContent } from '../components/temenos-components/TemenosComponentsContent'
+import { IntegrationContent } from '../components/integration/IntegrationContent'
+import { ExtensibilityContent } from '../components/extensibility/ExtensibilityContent'
+import { ExtensibilityDemoPlaceholder } from '../components/extensibility/ExtensibilityDemoPlaceholder'
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
@@ -27,11 +30,17 @@ type Tab = 'content' | 'video' | 'demo'
 export function ComponentPage({ componentId, initialSelectedCard, initialTab, onOpenSettings }: ComponentPageProps) {
   const tabs = componentId === 'layout-showcase' || componentId === 'security' || componentId === 'devops'
     ? [{ id: 'content' as Tab, label: 'Content', icon: BookOpen }]
-    : componentId === 'architecture' || componentId === 'data-architecture'
+    : componentId === 'architecture' || componentId === 'data-architecture' || componentId === 'extensibility'
       ? [
           { id: 'content' as Tab, label: 'Content', icon: BookOpen },
           { id: 'demo' as Tab, label: 'Demo', icon: Play },
         ]
+      : componentId === 'integration'
+        ? [
+            { id: 'content' as Tab, label: 'Content', icon: BookOpen },
+            { id: 'video' as Tab, label: 'Videos', icon: Video },
+            { id: 'demo' as Tab, label: 'Demo', icon: Play },
+          ]
       : [
           { id: 'content' as Tab, label: 'Content', icon: BookOpen },
           { id: 'video' as Tab, label: 'Videos', icon: Video },
@@ -154,6 +163,10 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
             <DeploymentContentViewer />
           ) : componentId === 'data-architecture' ? (
             <DataArchitectureContent />
+          ) : componentId === 'integration' ? (
+            <ContentViewer componentId={componentId} initialSelectedCard={initialSelectedCard} />
+          ) : componentId === 'extensibility' ? (
+            <ExtensibilityContent />
           ) : componentId === 'devops' ? (
             <DesignTimeContentViewer onOpenSettings={onOpenSettings} />
           ) : (
@@ -170,6 +183,10 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
         {activeTab === 'demo' && (
           componentId === 'architecture' ? (
             <DeploymentAnalyzer />
+          ) : componentId === 'integration' ? (
+            <IntegrationContent />
+          ) : componentId === 'extensibility' ? (
+            <ExtensibilityDemoPlaceholder />
           ) : (
             <DemoFrame componentId={componentId} view="demo" />
           )

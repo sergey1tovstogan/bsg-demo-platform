@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { Sidebar } from './components/Sidebar'
 import { TopNav } from './components/TopNav'
@@ -15,7 +15,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import type { ComponentId } from './types'
 
 const VALID_COMPONENT_IDS: ComponentId[] = [
-  'integration', 'data-architecture', 'architecture', 'security',
+  'integration', 'extensibility', 'data-architecture', 'architecture', 'security',
   'observability', 'devops', 'temenos-components', 'layout-showcase', 'gallery', 'editor'
 ]
 
@@ -31,6 +31,9 @@ interface DashboardProps {
 function Dashboard({ theme, onThemeChange }: DashboardProps) {
   const navigate = useNavigate()
   const { componentId: paramId } = useParams<{ componentId: string }>()
+  const [searchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab') as 'content' | 'video' | 'demo' | null
+  const initialTab = tabParam && ['content', 'video', 'demo'].includes(tabParam) ? tabParam : undefined
   const componentId = isValidComponentId(paramId) ? paramId : null
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pendingFeature, setPendingFeature] = useState<string | null>(null)
@@ -91,7 +94,7 @@ function Dashboard({ theme, onThemeChange }: DashboardProps) {
             {componentId ? (
               <ContentBackProvider>
                 <div className="animate-fade-in">
-                  <ComponentPage componentId={componentId} onOpenSettings={() => setSettingsOpen(true)} />
+                  <ComponentPage componentId={componentId} initialTab={initialTab} onOpenSettings={() => setSettingsOpen(true)} />
                 </div>
               </ContentBackProvider>
             ) : (
@@ -202,6 +205,7 @@ function App() {
         {/* Redirect legacy paths */}
         <Route path="/platform/design-time" element={<Navigate to="/platform/devops" replace />} />
         <Route path="/platform/deployment" element={<Navigate to="/platform/architecture" replace />} />
+        <Route path="/platform/workbench" element={<Navigate to="/platform/extensibility" replace />} />
 
         {/* Platform module - at /platform/:componentId */}
         <Route
