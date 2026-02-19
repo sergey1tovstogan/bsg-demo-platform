@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowRight,
     ArrowUp,
@@ -7,14 +8,21 @@ import {
     Info,
     Lock,
     Server,
-    ShieldCheck
+    ShieldCheck,
+    X
 } from 'lucide-react';
 
 type ExateProps = {
     onClose?: () => void;
 };
 
+const diagramTooltip = {
+    title: 'eXate Solution',
+    description: 'Temenos is offering the eXate third-party solution right now as default solution for Client Field Level Encryption, Tokenization and Anonymization. Temenos can offer encryption today via eXate as part of the Temenos Exchange ecosystem (requiring a dedicated discussion and license with eXate company).'
+};
+
 export const Exate: React.FC<ExateProps> = ({ onClose }) => {
+    const [activeTooltip, setActiveTooltip] = useState<boolean>(false);
     return (
         <div className="w-full h-full bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl relative overflow-hidden">
             <div
@@ -47,7 +55,11 @@ export const Exate: React.FC<ExateProps> = ({ onClose }) => {
 
                 <div className="flex flex-col gap-6 h-full overflow-hidden">
                     {/* Diagram & flow */}
-                    <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-6 shadow-inner">
+                    <div
+                        className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-6 shadow-inner cursor-pointer transition-all duration-300 hover:border-purple-500/50"
+                        onClick={() => setActiveTooltip(prev => !prev)}
+                        title="Click for additional information"
+                    >
                         <div className="flex items-center justify-between gap-4 flex-wrap">
                             <div className="basis-1/4 min-w-[140px] max-w-[220px] flex-shrink bg-gradient-to-b from-sky-500 to-sky-600 text-white rounded-xl p-4 shadow-md border border-slate-200/40 dark:border-slate-700/60">
                                 <div className="flex items-center gap-3">
@@ -180,6 +192,52 @@ export const Exate: React.FC<ExateProps> = ({ onClose }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Backdrop to close tooltip when clicking outside */}
+            {activeTooltip && (
+                <div
+                    className="absolute inset-0 z-40 cursor-default"
+                    onClick={() => setActiveTooltip(false)}
+                    aria-hidden
+                />
+            )}
+
+            {/* Tooltip Popup */}
+            <AnimatePresence>
+                {activeTooltip && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="fixed bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-auto"
+                    >
+                        <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
+                                    <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div className="flex-1 text-left">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h4 className="text-xl font-bold text-slate-900 dark:text-white text-left">
+                                            {diagramTooltip.title}
+                                        </h4>
+                                        <button
+                                            onClick={() => setActiveTooltip(false)}
+                                            className="ml-4 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors shrink-0"
+                                            aria-label="Close"
+                                        >
+                                            <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                                        </button>
+                                    </div>
+                                    <p className="text-slate-600 dark:text-slate-300 leading-tight text-left whitespace-pre-line">
+                                        {diagramTooltip.description}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

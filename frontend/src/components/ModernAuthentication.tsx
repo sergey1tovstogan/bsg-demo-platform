@@ -20,17 +20,17 @@ export function ModernAuthentication() {
         'ui-configuration': {
             id: 'ui-configuration',
             title: 'UI Configuration of Users, Roles',
-            description: 'Temenos UI Explorer application redirects a user\'s browser from the application to the Keycloak authentication server where they enter their credentials. This redirection is important because users are completely isolated from applications and applications never see a user\'s credentials.\n\nIdentity token or assertion (for SAML protocol) is cryptographically signed.\n\nThese tokens can have identity information like username, address, email, and other profile data.\n\nTemenos Security Management System (SMS) based on Role Based Access in which the ability to access or perform action is tied to the permission granted. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization. The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.'
+            description: 'Temenos UI Explorer application redirects a user\'s browser from the application to the Keycloak authentication server where they enter their credentials. This redirection is important because users are completely isolated from applications and applications never see a user\'s credentials.\nIdentity token or assertion (for SAML protocol) is cryptographically signed.\nThese tokens can have identity information like username, address, email, and other profile data.\nTemenos Security Management System (SMS) based on Role Based Access in which the ability to access or perform action is tied to the permission granted. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization. The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.'
         },
         'keycloak': {
             id: 'keycloak',
             title: 'Keycloak',
-            description: 'Temenos solutions use Keycloak, an open-source Identity and Access Management (IAM) tool, to manage authentication. Keycloak enables Single Sign-On (SSO) based on federated security, letting users log in once to access multiple applications seamlessly.\n\nKeycloak integrates with the bank\'s existing Identity Provider (IdP), like Entra ID (AD), which manages users and passwords. This integration uses standard protocols such as SAML 2.0 or OpenID Connect. Keycloak acts here as an identity broker, redirecting authentication requests to Banks\' preferred IAM. After successful authentication, Bank\' IAM issues JSON Web Tokens (JWTs) that carry user identity and role information, which the solution uses to enforce authorization based on assigned permissions.'
+            description: 'Temenos solutions use Keycloak, an open-source Identity and Access Management (IAM) tool, to manage authentication. Keycloak enables Single Sign-On (SSO) based on federated security, letting users log in once to access multiple applications seamlessly.\nKeycloak integrates with the bank\'s existing Identity Provider (IdP), like Entra ID (AD), which manages users and passwords. This integration uses standard protocols such as SAML 2.0 or OpenID Connect. Keycloak acts here as an identity broker, redirecting authentication requests to Banks\' preferred IAM. After successful authentication, Bank\' IAM issues JSON Web Tokens (JWTs) that carry user identity and role information, which the solution uses to enforce authorization based on assigned permissions.'
         },
         'authentication-service': {
             id: 'authentication-service',
             title: 'Authentication Service',
-            description: '1. User Identity, authentication externalised and SSO with enterprise IAM e.g.,\n\n2. Entra ID Establish user identity and trust through security token oAuth 2.0 JWT,\n\n3. All products integrate and validate with KeyCloak IaM'
+            description: '1. User Identity, authentication externalised and SSO with enterprise IAM e.g.,\n2. Entra ID Establish user identity and trust through security token oAuth 2.0 JWT,\n3. All products integrate and validate with KeyCloak IaM'
         },
         'temenos-application': {
             id: 'temenos-application',
@@ -266,7 +266,7 @@ export function ModernAuthentication() {
                                             <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                                         </button>
                                     </div>
-                                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-left whitespace-pre-line">
+                                    <p className="text-slate-600 dark:text-slate-300 leading-tight text-left whitespace-pre-line">
                                         {tooltips[activeTooltip].description}
                                     </p>
                                 </div>
