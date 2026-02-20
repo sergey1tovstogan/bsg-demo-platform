@@ -1,4 +1,11 @@
-import { Rocket } from 'lucide-react'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Rocket, Info, X } from 'lucide-react'
+
+const secDevOpsTooltip = {
+  title: 'PSA Security Testing Program',
+  description: 'The PSA team conduct the following activities as part of the security testing program:\n•Security Design Review\n•Software Composition Analysis or Open-source library (OSL) security scanning\n•Secure Code Review\n•Dynamic Analysis & Penetration Testing\n•Security Vulnerability Remediation and communication\n\nTemenos Product Security incorporates continuous security assessment improvement through researching of the latest vulnerabilities and attack trends. Identifying vulnerabilities involves testing target applications using a variety of different methods and tools. The evaluation includes areas such as assessing encryption techniques, hashing mechanisms, session ID randomness and sensitive information storage to ensure that the tested application is effectively protected. All Product releases undergo security assessments covering\n\n•Secure Design Reviews and Threat Modeling\n•Static Application Security Testing (SAST)\n•Software Composition Analysis (SCA)\n•Dynamic Application Security Testing (DAST)\n•Manual Penetration Security Testing\n•Container Security Testing'
+}
 
 interface DesignTimeContentViewerProps {
   onOpenSettings?: () => void
@@ -6,8 +13,10 @@ interface DesignTimeContentViewerProps {
 
 /** DevOps content - static only (Temenos Transact DevOps Framework). RAG Principles & Patterns section removed. */
 export function DesignTimeContentViewer(_props: DesignTimeContentViewerProps = {}) {
+  const [activeTooltip, setActiveTooltip] = useState(false)
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       {/* DevOps Hero - Visual intro with imagery */}
       <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-900">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
@@ -83,13 +92,66 @@ export function DesignTimeContentViewer(_props: DesignTimeContentViewerProps = {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
               </div>
               <div>
-                <h4 className="font-semibold text-slate-900 dark:text-white mb-1">SecDevOps</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Security embedded throughout development lifecycle with continuous compliance.</p>
+                <h4
+                  className="font-semibold text-slate-900 dark:text-white mb-1 cursor-pointer transition-all duration-300 hover:opacity-80 flex items-center gap-2"
+                  onClick={() => setActiveTooltip(prev => !prev)}
+                  title="Click for additional information"
+                >
+                  SecDevOps
+                  <Info className="w-4 h-4 text-emerald-500 opacity-70" />
+                </h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Security embedded throughout development lifecycle with continuous compliance. Under the management of Temenos Head of Product Security, the PSA team is responsible for security assurance across all Temenos Products. Product&apos;s Security is assessed through applying industry standards such as OWASP and SANS. The PSA team works closely with security vendors, consultants, and the wider security research community also, with the objective of ensuring that our security testing programs remain up to date, relevant and comprehensive.</p>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Backdrop to close tooltip when clicking outside */}
+      {activeTooltip && (
+        <div
+          className="fixed inset-0 z-40 cursor-default"
+          onClick={() => setActiveTooltip(false)}
+          aria-hidden
+        />
+      )}
+
+      {/* Tooltip Popup */}
+      <AnimatePresence>
+        {activeTooltip && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="fixed bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-auto"
+          >
+            <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
+                  <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="text-xl font-bold text-slate-900 dark:text-white text-left">
+                      {secDevOpsTooltip.title}
+                    </h4>
+                    <button
+                      onClick={() => setActiveTooltip(false)}
+                      className="ml-4 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors shrink-0"
+                      aria-label="Close"
+                    >
+                      <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                    </button>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 leading-tight text-left whitespace-pre-line">
+                    {secDevOpsTooltip.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Temenos Transact DevOps Framework - Packager focus */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6">
