@@ -119,7 +119,7 @@ function PrivacyEncryptionView({ activeTooltip, setActiveTooltip, tooltips }: Pr
             {/* Backdrop to close tooltip when clicking outside */}
             {activeTooltip && (
                 <div
-                    className="absolute inset-0 z-40 cursor-default"
+                    className="fixed inset-0 z-40 cursor-default"
                     onClick={() => setActiveTooltip(null)}
                     aria-hidden
                 />

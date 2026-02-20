@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 from app.services.temenos_service import TemenosService
 from app.core.logging import get_logger
+from app.utils.prompt_security import SECURITY_CONTEXT_BLOCK, screen_user_message, strip_markdown_headers
 from app.core.database import get_database
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from datetime import datetime, timezone
@@ -121,6 +122,15 @@ async def send_chat_message(
         if not message:
             raise HTTPException(status_code=400, detail="message is required")
 
+        # Application-layer screening: hard-block jailbreaks, script tags, and
+        # base64 blobs before the message ever reaches the RAG API.
+        is_safe, block_reason = screen_user_message(message)
+        if not is_safe:
+            logger.warning(f"🛡️ Blocked unsafe message (component={component_id}): {block_reason}")
+            raise HTTPException(status_code=400, detail=block_reason)
+        # Strip markdown headers to prevent instruction injection via headings.
+        message = strip_markdown_headers(message)
+
         # Load session (DB-first for multi-worker/multi-instance deployments; fallback to in-memory)
         session: Optional[Dict[str, Any]] = None
         session_in_db = False
@@ -161,8 +171,8 @@ async def send_chat_message(
                         context_parts.append(f"Assistant: {msg.get('content', '')[:100]}...")
             
             context_parts.append("This is about Temenos cloud deployment, Azure infrastructure, and deployment best practices.")
-            context = "\n".join(context_parts)
-            
+            context = SECURITY_CONTEXT_BLOCK + "\n\n" + "\n".join(context_parts)
+
             # Query RAG API with deployment and architecture topics
             # Using valid model IDs from RAG API:
             # - ModularBanking (maps to "Modular" in UI)
@@ -272,7 +282,7 @@ async def send_chat_message(
                         context_parts.append(f"Assistant: {msg.get('content', '')[:100]}...")
 
             context_parts.append("This is about Temenos data architecture, data flow patterns, Data Hub, Analytics, and data integration strategies.")
-            context = "\n".join(context_parts)
+            context = SECURITY_CONTEXT_BLOCK + "\n\n" + "\n".join(context_parts)
 
             # Query RAG API with data architecture topics
             # Using valid model IDs from RAG API:
@@ -438,7 +448,7 @@ async def send_chat_message(
             }
         )
         context_parts.append(component_config["context"])
-        context = "\n".join(context_parts)
+        context = SECURITY_CONTEXT_BLOCK + "\n\n" + "\n".join(context_parts)
 
         # Query RAG API with component-specific model IDs
         try:
