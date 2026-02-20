@@ -10,7 +10,8 @@ import {
     HardDrive,
     Network,
     Info,
-    Shield
+    Shield,
+    X
 } from 'lucide-react';
 import { Exate } from './eXate';
 
@@ -26,11 +27,11 @@ export const ModernPrivacyEncryption: React.FC = () => {
     const tooltips = {
         'transit': {
             title: 'Data in Transit',
-            description: 'Data in Transit:\n\nFor data in transit, all communications are secured using modern Transport Layer Security (TLS) protocols, specifically TLS 1.2.\n\nAPI communications are encrypted end-to-end, leveraging partner-supported encryption mechanisms to maintain data security during exchanges. File transfers, including SFTP services, use SSH encryption standards and secure key management practices. Connections to web applications and APIs are exclusively over HTTPS.\n\nSecure Access: Access to interfaces that are not classified as public is subject to additional access controls. Public interfaces have to be protected by Web Application Firewalls (WAF) and Denial of Service (DoS) protection (done for Temenos SaaS.\n\nSecure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilised, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\n\nLogging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorised access attempts and ensuring compliance with security policies.'
+            description: 'Data in Transit:\nFor data in transit, all communications are secured using modern Transport Layer Security (TLS) protocols, specifically TLS 1.2.\nAPI communications are encrypted end-to-end, leveraging partner-supported encryption mechanisms to maintain data security during exchanges. File transfers, including SFTP services, use SSH encryption standards and secure key management practices. Connections to web applications and APIs are exclusively over HTTPS.\nSecure Access: Access to interfaces that are not classified as public is subject to additional access controls. Public interfaces have to be protected by Web Application Firewalls (WAF) and Denial of Service (DoS) protection (done for Temenos SaaS.\nSecure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilised, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\nLogging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorised access attempts and ensuring compliance with security policies.'
         },
         'rest': {
             title: 'Data at Rest',
-            description: 'Data at Rest:\n\nFor data at rest, encryption is applied comprehensively across storage layers.\n\n1. Databases utilise Transparent Data Encryption (TDE) with AES 256-bit encryption algorithms. TDE performs real-time I/O encryption and decryption of the data at the page level. Each page is decrypted when it\'s read into memory and then encrypted before being written to disk.\n\n2. TDE encrypts the entire database, including logs and backups, protecting data on disks and during backups.\n\n3. Storage devices, including disk volumes and containers, benefit from full disk encryption and block-level encryption.'
+            description: 'Data at Rest:\nFor data at rest, encryption is applied comprehensively across storage layers.\n1. Databases utilise Transparent Data Encryption (TDE) with AES 256-bit encryption algorithms. TDE performs real-time I/O encryption and decryption of the data at the page level. Each page is decrypted when it\'s read into memory and then encrypted before being written to disk.\n2. TDE encrypts the entire database, including logs and backups, protecting data on disks and during backups.\n3. Storage devices, including disk volumes and containers, benefit from full disk encryption and block-level encryption.'
         }
     };
 
@@ -115,13 +116,21 @@ function PrivacyEncryptionView({ activeTooltip, setActiveTooltip, tooltips }: Pr
                 </div>
             </div>
 
+            {/* Backdrop to close tooltip when clicking outside */}
+            {activeTooltip && (
+                <div
+                    className="fixed inset-0 z-40 cursor-default"
+                    onClick={() => setActiveTooltip(null)}
+                    aria-hidden
+                />
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100%-140px)] relative z-10">
                 {/* Left Column: Data in Transit */}
                 <div
-                    className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-purple-500/50 transition-all duration-300 cursor-help"
-                    onMouseEnter={() => setActiveTooltip('transit')}
-                    onMouseLeave={() => setActiveTooltip(null)}
-                    title="Hover for additional information"
+                    className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-purple-500/50 transition-all duration-300 cursor-pointer"
+                    onClick={() => setActiveTooltip(activeTooltip === 'transit' ? null : 'transit')}
+                    title="Click for additional information"
                 >
                     <div className="absolute -top-3 left-6 bg-purple-100 dark:bg-purple-800 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-4 py-1 rounded-full text-sm font-bold border border-purple-200 dark:border-purple-800 flex items-center gap-2">
                         Data in Transit
@@ -158,10 +167,9 @@ function PrivacyEncryptionView({ activeTooltip, setActiveTooltip, tooltips }: Pr
 
                 {/* Right Column: Data at Rest */}
                 <div
-                    className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-blue-500/50 transition-all duration-300 cursor-help"
-                    onMouseEnter={() => setActiveTooltip('rest')}
-                    onMouseLeave={() => setActiveTooltip(null)}
-                    title="Hover for additional information"
+                    className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700 dark:border-slate-700 h-full relative group hover:border-blue-500/50 transition-all duration-300 cursor-pointer"
+                    onClick={() => setActiveTooltip(activeTooltip === 'rest' ? null : 'rest')}
+                    title="Click for additional information"
                 >
                     <div className="absolute -top-3 left-6 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-1 rounded-full text-sm font-bold border border-blue-200 dark:border-blue-800 flex items-center gap-2">
                         Data at Rest
@@ -204,7 +212,7 @@ function PrivacyEncryptionView({ activeTooltip, setActiveTooltip, tooltips }: Pr
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-none"
+                        className="fixed bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-auto"
                     >
                         <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-700">
                             <div className="flex items-start gap-4">
@@ -212,10 +220,19 @@ function PrivacyEncryptionView({ activeTooltip, setActiveTooltip, tooltips }: Pr
                                     <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div className="flex-1 text-left">
-                                    <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-left">
-                                        {tooltips[activeTooltip as keyof typeof tooltips].title}
-                                    </h4>
-                                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-left whitespace-pre-line">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h4 className="text-xl font-bold text-slate-900 dark:text-white text-left">
+                                            {tooltips[activeTooltip as keyof typeof tooltips].title}
+                                        </h4>
+                                        <button
+                                            onClick={() => setActiveTooltip(null)}
+                                            className="ml-4 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors shrink-0"
+                                            aria-label="Close"
+                                        >
+                                            <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                                        </button>
+                                    </div>
+                                    <p className="text-slate-600 dark:text-slate-300 leading-tight text-left whitespace-pre-line">
                                         {tooltips[activeTooltip as keyof typeof tooltips].description}
                                     </p>
                                 </div>

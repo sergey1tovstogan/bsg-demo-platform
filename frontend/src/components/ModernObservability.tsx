@@ -350,7 +350,7 @@ const AuditView = () => {
                 <div>
                     <h4 className="font-bold text-blue-900 dark:text-blue-100">Full History Audit Trail</h4>
                     <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">
-                        Core System stores ALL record updates. The History Function allows comparisons between updates (what changed, who changed it, and when).
+                        Core System stores ALL record updates. The History Function allows comparisons between updates (what changed, who changed it, and when). All user activities and system events are logged comprehensively. This audit trail supports compliance requirements and helps in forensic analysis in case of security incidents. Temenos Core Banking distinguishes what is transactional (stored in an &quot;Audit Trail&quot;) from what is linked to data changes (and stored in a &quot;Journal&quot; or &quot;Historical&quot; repository). Of course, since a transaction generally involves a modification of the data, they are both linked by a reference key. Temenos provides a full audit and logging across the entire business and technical landscape which can be utilised to track important security related events. This data can be viewed by users with the appropriate privileges or exported to an external SIEM solution. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.
                     </p>
                 </div>
             </div>

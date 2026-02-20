@@ -11,7 +11,8 @@ import {
     Activity,
     ArrowRight,
     ArrowLeft,
-    Info
+    Info,
+    X
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ModernAuthentication } from './ModernAuthentication'
@@ -55,7 +56,7 @@ export function ModernSecurityArchitecture() {
         'certificate-management': {
             id: 'certificate-management',
             title: 'Certificate Management',
-            description: 'Certificates management (DigiCert used) procedures for Temenos SaaS\n\nTemenos renews the certificates annually for the Temenos cloud hosted environments for clients. During deployment of application, we leverage Temenos managed domain for App deployment and secure it with our SSL certificates for Application endpoint. These certificates are renewed every year.'
+            description: 'Certificates management (DigiCert used) procedures for Temenos SaaS\nTemenos renews the certificates annually for the Temenos cloud hosted environments for clients. During deployment of application, we leverage Temenos managed domain for App deployment and secure it with our SSL certificates for Application endpoint. These certificates are renewed every year.'
         },
         'bank-iam': {
             id: 'bank-iam',
@@ -65,7 +66,7 @@ export function ModernSecurityArchitecture() {
         'authentication-box': {
             id: 'authentication-box',
             title: 'Authentication',
-            description: 'In Temenos solution, authentication is primarily managed through Keycloak, an open-source identity and access management system. The process involves several key steps:\n\n1. Integration with Identity Management: Temenos applications are integrated with the bank\'s Identity and Access Management (IAM) solutions, such as Active Directory. Keycloak acts as an identity broker, redirecting authentication requests to the bank\'s IAM system.\n\n2. User Authentication: When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization.\n\n3. Token Exchange: The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.'
+            description: 'In Temenos solution, authentication is primarily managed through Keycloak, an open-source identity and access management system. The process involves several key steps:\n1. Integration with Identity Management: Temenos applications are integrated with the bank\'s Identity and Access Management (IAM) solutions, such as Active Directory. Keycloak acts as an identity broker, redirecting authentication requests to the bank\'s IAM system.\n2. User Authentication: When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization.\n3. Token Exchange: The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.'
         },
         'authorization-box': {
             id: 'authorization-box',
@@ -75,12 +76,12 @@ export function ModernSecurityArchitecture() {
         'audit-box': {
             id: 'audit-box',
             title: 'Audit',
-            description: 'Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.\n\nAuditing includes: User activity auditing includes details of; Applications accessed, ID of transactions executed, Time connected, No. of operations executed etc. Application activity auditing includes details of; ID of new transactions, Inputter and Authorizer,  Security violation reports store details of unauthorised access attempts including who accessed the system, when and the target application'
+            description: 'Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.\nAuditing includes: User activity auditing includes details of; Applications accessed, ID of transactions executed, Time connected, No. of operations executed etc. Application activity auditing includes details of; ID of new transactions, Inputter and Authorizer,  Security violation reports store details of unauthorised access attempts including who accessed the system, when and the target application'
         },
         'tls-entry': {
             id: 'tls-entry',
             title: 'TLS 1.2 Entry Points',
-            description: 'Within Temenos solution, data in transit security is implemented through a structured approach that includes the following steps:\n\n1. Encryption Protocols: All data transmitted over networks is secured using TLS 1.2, ensuring that data is encrypted during transmission to protect against interception.\n\n2. Secure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilized, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\n\n3. Logging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorized access attempts and ensuring compliance with security policies.'
+            description: 'Within Temenos solution, data in transit security is implemented through a structured approach that includes the following steps:\n1. Encryption Protocols: All data transmitted over networks is secured using TLS 1.2, ensuring that data is encrypted during transmission to protect against interception.\n2. Secure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilized, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\n3. Logging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorized access attempts and ensuring compliance with security policies.'
         }
     }
 
@@ -171,7 +172,7 @@ export function ModernSecurityArchitecture() {
                                         <div className="flex flex-wrap gap-1">
                                             <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">OAuth 2.0</span>
                                             <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">OIDC</span>
-                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">SAML</span>
+                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">SAML 2.0</span>
                                         </div>
                                     </div>
 
@@ -323,7 +324,7 @@ export function ModernSecurityArchitecture() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-none"
+                        className="absolute bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-auto"
                     >
                         <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
                             <div className="flex items-start gap-4">
@@ -331,10 +332,19 @@ export function ModernSecurityArchitecture() {
                                     <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div className="flex-1 text-left">
-                                    <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-left">
-                                        {tooltips[activeTooltip].title}
-                                    </h4>
-                                    <p className="text-slate-600 dark:text-slate-300 dark:text-slate-300 leading-relaxed text-left whitespace-pre-line">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h4 className="text-xl font-bold text-slate-900 dark:text-white text-left">
+                                            {tooltips[activeTooltip].title}
+                                        </h4>
+                                        <button
+                                            onClick={() => setActiveTooltip(null)}
+                                            className="ml-4 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors shrink-0"
+                                            aria-label="Close"
+                                        >
+                                            <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                                        </button>
+                                    </div>
+                                    <p className="text-slate-600 dark:text-slate-300 dark:text-slate-300 leading-tight text-left whitespace-pre-line">
                                         {tooltips[activeTooltip].description}
                                     </p>
                                 </div>
