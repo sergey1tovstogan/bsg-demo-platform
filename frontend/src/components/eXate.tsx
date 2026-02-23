@@ -21,11 +21,6 @@ type ExateProps = {
     onClose?: () => void;
 };
 
-const diagramTooltip = {
-    title: 'eXate Solution',
-    description: 'Temenos is offering the eXate third-party solution right now as default solution for Client Field Level Encryption, Tokenization and Anonymization. Temenos can offer encryption today via eXate as part of the Temenos Exchange ecosystem (requiring a dedicated discussion and license with eXate company).'
-};
-
 export const Exate: React.FC<ExateProps> = ({ onClose }) => {
     const [activeTooltip, setActiveTooltip] = useState<boolean>(false);
     return (
