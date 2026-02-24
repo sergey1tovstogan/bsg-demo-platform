@@ -161,6 +161,23 @@ class DataArchitectureService:
         """
         try:
             health = await self.eventhub_adapter.health_check()
+            
+            # Add configuration status if not running
+            if not health.get("running") and not health.get("connected"):
+                # Check if configuration is available
+                try:
+                    from app.api.settings import get_eventhub_config_from_db
+                    config = await get_eventhub_config_from_db()
+                    if config:
+                        health["config_available"] = True
+                        health["config_source"] = "mongodb" if config.get("connection_string") else "env"
+                    else:
+                        health["config_available"] = False
+                        health["message"] = "EventHub configuration not found. Please configure EVENTHUB_CONNECTION_STRING in MongoDB settings or environment variables."
+                except Exception as e:
+                    logger.debug(f"Could not check config status: {e}")
+                    health["config_available"] = None
+            
             return health
 
         except Exception as e:
@@ -168,8 +185,56 @@ class DataArchitectureService:
             return {
                 "status": "error",
                 "connected": False,
+                "running": False,
                 "error": str(e),
                 "message": f"Health check failed: {str(e)}"
+            }
+
+    async def start_eventhub_adapter(self) -> Dict[str, Any]:
+        """
+        Start or restart the EventHub adapter.
+
+        Returns:
+            Dictionary with success status and message
+
+        Example:
+            {
+                "success": True,
+                "message": "Event Hub adapter started successfully"
+            }
+        """
+        try:
+            # Stop if already running
+            if self.eventhub_adapter._running:
+                logger.info("EventHub adapter is already running, stopping first...")
+                await self.eventhub_adapter.stop()
+
+            # Start the adapter
+            await self.eventhub_adapter.start()
+
+            # Verify it started successfully
+            health = await self.eventhub_adapter.health_check()
+
+            if health.get("running") or health.get("connected"):
+                return {
+                    "success": True,
+                    "message": "Event Hub adapter started successfully",
+                    "status": health.get("status", "healthy")
+                }
+            else:
+                error_msg = health.get("error", "Unknown error")
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "message": f"Failed to start Event Hub adapter: {error_msg}"
+                }
+
+        except Exception as e:
+            logger.error(f"Error starting EventHub adapter: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to start Event Hub adapter: {str(e)}"
             }
 
 

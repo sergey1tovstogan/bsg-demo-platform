@@ -6,6 +6,16 @@
 export type TransactionType = 'CREATE_CUSTOMER' | 'OPEN_ACCOUNT' | 'SEND_PAYMENT'
 
 /**
+ * REST API types for Integration page (no Kafka events)
+ */
+export type RestApiType = 'PAYMENT_ORDERS' | 'SECURITY_TRADES' | 'PORTFOLIO' | 'CUSTOMER' | 'ACCOUNTS'
+
+/**
+ * Combined type for API log entries (Event Flow + REST APIs)
+ */
+export type ApiLogType = TransactionType | RestApiType
+
+/**
  * Status of a transaction step
  */
 export type StepStatus = 'idle' | 'loading' | 'success' | 'error'
@@ -175,7 +185,7 @@ export interface Payment {
 export interface ApiLog {
   id: string
   timestamp: number
-  type: TransactionType
+  type: ApiLogType
   endpoint: string
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   request: any
@@ -234,6 +244,7 @@ export interface SimulationState {
   apiLogs: ApiLog[]
   kafkaEvents: KafkaEvent[]
   animationTriggers: AnimationTrigger[]
+  lastTransactionStartTime?: number // Timestamp when last transaction started - used to filter events
 }
 
 /**
@@ -268,6 +279,9 @@ export interface StepCardProps {
   onExecute: () => void
   resultData?: any
   icon: React.ReactNode
+  /** When provided with onToggle, card content is collapsible */
+  isExpanded?: boolean
+  onToggle?: () => void
 }
 
 /**

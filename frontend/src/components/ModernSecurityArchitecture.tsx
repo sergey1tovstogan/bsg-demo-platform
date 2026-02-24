@@ -11,7 +11,8 @@ import {
     Activity,
     ArrowRight,
     ArrowLeft,
-    Info
+    Info,
+    X
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ModernAuthentication } from './ModernAuthentication'
@@ -55,7 +56,7 @@ export function ModernSecurityArchitecture() {
         'certificate-management': {
             id: 'certificate-management',
             title: 'Certificate Management',
-            description: 'Certificates management (DigiCert used) procedures for Temenos SaaS\n\nTemenos renews the certificates annually for the Temenos cloud hosted environments for clients. During deployment of application, we leverage Temenos managed domain for App deployment and secure it with our SSL certificates for Application endpoint. These certificates are renewed every year.'
+            description: 'Certificates management (DigiCert used) procedures for Temenos SaaS\nTemenos renews the certificates annually for the Temenos cloud hosted environments for clients. During deployment of application, we leverage Temenos managed domain for App deployment and secure it with our SSL certificates for Application endpoint. These certificates are renewed every year.'
         },
         'bank-iam': {
             id: 'bank-iam',
@@ -65,7 +66,7 @@ export function ModernSecurityArchitecture() {
         'authentication-box': {
             id: 'authentication-box',
             title: 'Authentication',
-            description: 'In Temenos solution, authentication is primarily managed through Keycloak, an open-source identity and access management system. The process involves several key steps:\n\n1. Integration with Identity Management: Temenos applications are integrated with the bank\'s Identity and Access Management (IAM) solutions, such as Active Directory. Keycloak acts as an identity broker, redirecting authentication requests to the bank\'s IAM system.\n\n2. User Authentication: When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization.\n\n3. Token Exchange: The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.'
+            description: 'In Temenos solution, authentication is primarily managed through Keycloak, an open-source identity and access management system. The process involves several key steps:\n1. Integration with Identity Management: Temenos applications are integrated with the bank\'s Identity and Access Management (IAM) solutions, such as Active Directory. Keycloak acts as an identity broker, redirecting authentication requests to the bank\'s IAM system.\n2. User Authentication: When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization.\n3. Token Exchange: The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.'
         },
         'authorization-box': {
             id: 'authorization-box',
@@ -75,12 +76,12 @@ export function ModernSecurityArchitecture() {
         'audit-box': {
             id: 'audit-box',
             title: 'Audit',
-            description: 'Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.\n\nAuditing includes: User activity auditing includes details of; Applications accessed, ID of transactions executed, Time connected, No. of operations executed etc. Application activity auditing includes details of; ID of new transactions, Inputter and Authorizer,  Security violation reports store details of unauthorised access attempts including who accessed the system, when and the target application'
+            description: 'Temenos provides a full audit and logging across the entire business and technical landscape which can be utilized to track important security related events. The audit trails are stored as part of each data record and include details of the change made, by whom and when. Optionally it can include a delivery reference and IP address. Auditing is done both for users who use the solution directly or via APIs.\nAuditing includes: User activity auditing includes details of; Applications accessed, ID of transactions executed, Time connected, No. of operations executed etc. Application activity auditing includes details of; ID of new transactions, Inputter and Authorizer,  Security violation reports store details of unauthorised access attempts including who accessed the system, when and the target application'
         },
         'tls-entry': {
             id: 'tls-entry',
             title: 'TLS 1.2 Entry Points',
-            description: 'Within Temenos solution, data in transit security is implemented through a structured approach that includes the following steps:\n\n1. Encryption Protocols: All data transmitted over networks is secured using TLS 1.2, ensuring that data is encrypted during transmission to protect against interception.\n\n2. Secure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilized, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\n\n3. Logging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorized access attempts and ensuring compliance with security policies.'
+            description: 'Within Temenos solution, data in transit security is implemented through a structured approach that includes the following steps:\n1. Encryption Protocols: All data transmitted over networks is secured using TLS 1.2, ensuring that data is encrypted during transmission to protect against interception.\n2. Secure File Transfers: For file transfers, protocols such as SFTP and FTPS are utilized, ensuring that files are encrypted during transit. Additionally, SSH encryption standards are applied for secure connections.\n3. Logging and Monitoring: All data transfers and user actions are logged for auditing purposes. This includes monitoring for unauthorized access attempts and ensuring compliance with security policies.'
         }
     }
 
@@ -112,23 +113,30 @@ export function ModernSecurityArchitecture() {
                 <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md px-4 py-2 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 dark:border-slate-700">
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 dark:text-slate-200 flex items-center gap-2">
                         <Info className="w-4 h-4 text-blue-500" />
-                        Hover elements for details
+                        Click elements for details
                     </p>
                 </div>
             </div>
 
             {/* Main Content Container */}
             <div className="relative w-full h-full p-8 pt-[100px]">
+                {/* Backdrop to close tooltip when clicking outside (only when tooltip is open) */}
+                {activeTooltip && (
+                    <div
+                        className="absolute inset-0 z-40 cursor-default"
+                        onClick={() => setActiveTooltip(null)}
+                        aria-hidden
+                    />
+                )}
 
                 {/* Layout Grid - Original 3-column structure */}
-                <div className="w-full h-full grid grid-cols-12 gap-4 relative z-10 items-start">
+                <div className="w-full h-full grid grid-cols-12 gap-4 relative z-50 items-start">
 
                     {/* Column 1: TLS Entry Points (Left) */}
                     <div className="col-span-4 flex items-start">
                         <div
-                            className="w-full h-[70%] bg-gradient-to-br from-blue-900 to-blue-950 dark:from-blue-950 dark:to-slate-950 rounded-2xl p-4 flex flex-col items-center justify-between border-2 border-blue-700/50 shadow-xl cursor-help transition-all duration-300 hover:border-blue-500"
-                            onMouseEnter={() => setActiveTooltip('tls-entry')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 w-full h-[70%] bg-gradient-to-br from-blue-900 to-blue-950 dark:from-blue-950 dark:to-slate-950 rounded-2xl p-4 flex flex-col items-center justify-between border-2 border-blue-700/50 shadow-xl cursor-pointer transition-all duration-300 hover:border-blue-500"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'tls-entry' ? null : 'tls-entry') }}
                         >
                             <div className="text-white font-bold text-center py-2">TLS 1.2<br />Entry<br />Points</div>
 
@@ -154,9 +162,8 @@ export function ModernSecurityArchitecture() {
                                 <div className="grid grid-cols-2 gap-4 h-[110px]">
                                     {/* Authentication */}
                                     <div
-                                        className="bg-gradient-to-br from-blue-500/10 to-blue-600/20 dark:from-blue-500/20 dark:to-blue-600/30 rounded-xl border-2 border-blue-500/30 p-4 hover:border-blue-500/50 transition-all duration-300 cursor-help group h-full flex flex-col"
-                                        onMouseEnter={() => setActiveTooltip('authentication-box')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-blue-500/10 to-blue-600/20 dark:from-blue-500/20 dark:to-blue-600/30 rounded-xl border-2 border-blue-500/30 p-4 hover:border-blue-500/50 transition-all duration-300 cursor-pointer group h-full flex flex-col"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'authentication-box' ? null : 'authentication-box') }}
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -165,15 +172,14 @@ export function ModernSecurityArchitecture() {
                                         <div className="flex flex-wrap gap-1">
                                             <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">OAuth 2.0</span>
                                             <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">OIDC</span>
-                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">SAML</span>
+                                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded">SAML 2.0</span>
                                         </div>
                                     </div>
 
                                     {/* Authorization */}
                                     <div
-                                        className="bg-gradient-to-br from-teal-500/10 to-teal-600/20 dark:from-teal-500/20 dark:to-teal-600/30 rounded-xl border-2 border-teal-500/30 p-4 hover:border-teal-500/50 transition-all duration-300 cursor-help group h-full flex flex-col"
-                                        onMouseEnter={() => setActiveTooltip('authorization-box')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-teal-500/10 to-teal-600/20 dark:from-teal-500/20 dark:to-teal-600/30 rounded-xl border-2 border-teal-500/30 p-4 hover:border-teal-500/50 transition-all duration-300 cursor-pointer group h-full flex flex-col"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'authorization-box' ? null : 'authorization-box') }}
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <UserCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
@@ -190,9 +196,8 @@ export function ModernSecurityArchitecture() {
                                 <div className="grid grid-cols-2 gap-4 h-[110px]">
                                     {/* Audit */}
                                     <div
-                                        className="bg-gradient-to-br from-indigo-500/10 to-indigo-600/20 dark:from-indigo-500/20 dark:to-indigo-600/30 rounded-xl border-2 border-indigo-500/30 p-4 hover:border-indigo-500/50 transition-all duration-300 cursor-help group h-full flex flex-col"
-                                        onMouseEnter={() => setActiveTooltip('audit-box')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-indigo-500/10 to-indigo-600/20 dark:from-indigo-500/20 dark:to-indigo-600/30 rounded-xl border-2 border-indigo-500/30 p-4 hover:border-indigo-500/50 transition-all duration-300 cursor-pointer group h-full flex flex-col"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'audit-box' ? null : 'audit-box') }}
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -203,9 +208,8 @@ export function ModernSecurityArchitecture() {
 
                                     {/* Externalized Auth */}
                                     <div
-                                        className="bg-gradient-to-br from-sky-500/10 to-sky-600/20 dark:from-sky-500/20 dark:to-sky-600/30 rounded-xl border-2 border-sky-500/30 p-4 hover:border-sky-500/50 transition-all duration-300 cursor-help group h-full flex flex-col"
-                                        onMouseEnter={() => setActiveTooltip('externalized-auth')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-sky-500/10 to-sky-600/20 dark:from-sky-500/20 dark:to-sky-600/30 rounded-xl border-2 border-sky-500/30 p-4 hover:border-sky-500/50 transition-all duration-300 cursor-pointer group h-full flex flex-col"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'externalized-auth' ? null : 'externalized-auth') }}
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             <Globe className="w-5 h-5 text-sky-600 dark:text-sky-400" />
@@ -219,9 +223,8 @@ export function ModernSecurityArchitecture() {
                                 <div className="grid grid-cols-1 gap-4 h-[110px]">
                                     {/* Database */}
                                     <div
-                                        className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-help group h-full flex items-center justify-between"
-                                        onMouseEnter={() => setActiveTooltip('data-encryption')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-pointer group h-full flex items-center justify-between"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'data-encryption' ? null : 'data-encryption') }}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
@@ -242,9 +245,8 @@ export function ModernSecurityArchitecture() {
                                 {/* Row 4: Temenos Vault */}
                                 <div className="grid grid-cols-1 gap-4 h-[110px]">
                                     <div
-                                        className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-help group h-full flex items-center justify-between"
-                                        onMouseEnter={() => setActiveTooltip('temenos-vault')}
-                                        onMouseLeave={() => setActiveTooltip(null)}
+                                        className="relative z-50 bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 dark:from-emerald-500/20 dark:to-emerald-600/30 rounded-xl border-2 border-emerald-500/30 p-4 hover:border-emerald-500/50 transition-all duration-300 cursor-pointer group h-full flex items-center justify-between"
+                                        onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'temenos-vault' ? null : 'temenos-vault') }}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
@@ -269,9 +271,8 @@ export function ModernSecurityArchitecture() {
                     <div className="col-span-4 flex flex-col gap-3">
                         {/* Bank IAM */}
                         <div
-                            className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
-                            onMouseEnter={() => setActiveTooltip('bank-iam')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 bg-gradient-to-br from-purple-600 to-purple-700 text-white p-4 rounded-xl shadow-lg cursor-pointer hover:from-purple-700 hover:to-purple-800 transition-all duration-300 border-2 border-purple-500/30"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'bank-iam' ? null : 'bank-iam') }}
                         >
                             <div className="flex items-center gap-3 mb-1">
                                 <Server className="w-5 h-5" />
@@ -282,9 +283,8 @@ export function ModernSecurityArchitecture() {
 
                         {/* Secrets Management */}
                         <div
-                            className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                            onMouseEnter={() => setActiveTooltip('secrets-management')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-pointer hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'secrets-management' ? null : 'secrets-management') }}
                         >
                             <div className="flex items-center gap-3">
                                 <Key className="w-5 h-5" />
@@ -294,9 +294,8 @@ export function ModernSecurityArchitecture() {
 
                         {/* Key Management */}
                         <div
-                            className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                            onMouseEnter={() => setActiveTooltip('key-management')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-pointer hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'key-management' ? null : 'key-management') }}
                         >
                             <div className="flex items-center gap-3">
                                 <FileKey className="w-5 h-5" />
@@ -306,9 +305,8 @@ export function ModernSecurityArchitecture() {
 
                         {/* Certificate Management */}
                         <div
-                            className="bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-help hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
-                            onMouseEnter={() => setActiveTooltip('certificate-management')}
-                            onMouseLeave={() => setActiveTooltip(null)}
+                            className="relative z-50 bg-gradient-to-br from-violet-500 to-violet-600 text-white p-4 rounded-xl shadow-lg cursor-pointer hover:from-violet-600 hover:to-violet-700 transition-all duration-300 border-2 border-violet-400/30"
+                            onClick={(e) => { e.stopPropagation(); setActiveTooltip(prev => prev === 'certificate-management' ? null : 'certificate-management') }}
                         >
                             <div className="flex items-center gap-3">
                                 <FileText className="w-5 h-5" />
@@ -326,7 +324,7 @@ export function ModernSecurityArchitecture() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-none"
+                        className="absolute bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-auto"
                     >
                         <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
                             <div className="flex items-start gap-4">
@@ -334,10 +332,19 @@ export function ModernSecurityArchitecture() {
                                     <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div className="flex-1 text-left">
-                                    <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-left">
-                                        {tooltips[activeTooltip].title}
-                                    </h4>
-                                    <p className="text-slate-600 dark:text-slate-300 dark:text-slate-300 leading-relaxed text-left whitespace-pre-line">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h4 className="text-xl font-bold text-slate-900 dark:text-white text-left">
+                                            {tooltips[activeTooltip].title}
+                                        </h4>
+                                        <button
+                                            onClick={() => setActiveTooltip(null)}
+                                            className="ml-4 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors shrink-0"
+                                            aria-label="Close"
+                                        >
+                                            <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                                        </button>
+                                    </div>
+                                    <p className="text-slate-600 dark:text-slate-300 dark:text-slate-300 leading-tight text-left whitespace-pre-line">
                                         {tooltips[activeTooltip].description}
                                     </p>
                                 </div>

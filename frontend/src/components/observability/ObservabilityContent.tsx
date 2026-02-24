@@ -15,39 +15,219 @@ interface ContentPage {
 
 type PageName = 'intro' | 'big-picture' | 'pillars' | 'stack' | 'temenos-stack' | 'monitoring-flow'
 
+const OBS_CACHE_KEY = 'observability_content_cache_v1'
+const OBS_CACHE_TIMESTAMP_KEY = 'observability_content_cache_timestamp_v1'
+const OBS_CACHE_SOURCE_KEY = 'observability_content_cache_source_v1'
+const OBS_CACHE_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days
+const OBS_CACHE_DURATION_LOCAL = 365 * 24 * 60 * 60 * 1000 // 1 year on localhost
+
+function isLocalDeployment(): boolean {
+  if (typeof window === 'undefined') return false
+  const hostname = window.location.hostname
+  return hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
+// Static fallback so Observability works on localhost when API/content service is unavailable (same as Azure-deployed)
+const STATIC_OBSERVABILITY_CONTENT: Record<string, ContentPage> = {
+  intro: {
+    content_id: 'obs-intro',
+    title: 'Introduction',
+    type: 'page',
+    order: 1,
+    body: {
+      subtitle: 'Learn the fundamentals of observability and why it matters for modern systems',
+      story: {
+        scenario: 'Imagine: Your application crashes at 3 AM. Users are complaining, but you don\'t know why.',
+        monitoring: 'Monitoring tells you: "Error rate is high." But not why or how to fix it.',
+        observability: 'Observability tells you: "This specific request failed because the database connection timed out after the config change at 2:47 AM."',
+        analogy: 'Monitoring is like a car\'s dashboard warning light. Observability is like having a full diagnostic tool that shows you exactly what\'s wrong and where.'
+      }
+    },
+    metadata: {}
+  },
+  'big-picture': {
+    content_id: 'obs-big-picture',
+    title: 'Big Picture',
+    type: 'page',
+    order: 2,
+    body: {
+      monitoring: {
+        question: 'What does monitoring tell you?',
+        points: ['Metrics and thresholds (e.g. error rate, latency)', 'That something is wrong', 'Limited context – often "what" not "why"']
+      },
+      observability: {
+        question: 'What does observability give you?',
+        points: ['Traces, logs, and metrics in context', 'Ability to ask new questions and debug unknown unknowns', 'Root cause and full request path']
+      },
+      analogy: {
+        heading: 'How they work together',
+        dashboard: 'Monitoring is like a car dashboard: speed, fuel, warning lights. It shows known signals.',
+        toolkit: 'Observability is like a diagnostic tool: you can drill into any request and see exactly what happened and where it failed.'
+      }
+    },
+    metadata: {}
+  },
+  pillars: {
+    content_id: 'obs-pillars',
+    title: 'Core Pillars',
+    type: 'page',
+    order: 3,
+    body: {
+      subtitle: 'Metrics, logs, and traces form the three pillars of observability.',
+      pillars: [
+        { name: 'Metrics', color: 'red', description: 'Numeric measurements over time (e.g. request rate, latency, error rate).', examples: ['Prometheus', 'StatsD', 'Application Insights'], summary: 'Answer "how much" and "how fast".' },
+        { name: 'Logs', color: 'blue', description: 'Discrete events with context (e.g. errors, audit events).', examples: ['ELK', 'Splunk', 'CloudWatch Logs'], summary: 'Answer "what happened" with context.' },
+        { name: 'Traces', color: 'green', description: 'Request flow across services (distributed tracing).', examples: ['Jaeger', 'Zipkin', 'OpenTelemetry'], summary: 'Answer "where" and "how long" across the system.' }
+      ],
+      together: {
+        heading: 'How they work together',
+        steps: ['Metrics alert you that something is off.', 'Logs give you the detailed events and messages.', 'Traces show you the path of a request across services.']
+      }
+    },
+    metadata: {}
+  },
+  stack: {
+    content_id: 'obs-stack',
+    title: 'The Stack',
+    type: 'page',
+    order: 4,
+    body: {
+      subtitle: 'A typical observability stack has three tiers: collection, storage, and visualization.',
+      tiers: [
+        { name: 'Collector', color: 'purple', subheading: 'Instrumentation & collection', items: ['OpenTelemetry', 'Prometheus exporters', 'Fluentd'], examples: ['OTEL SDK', 'node_exporter', 'Fluent Bit'] },
+        { name: 'Storage', color: 'blue', subheading: 'Time-series and log storage', items: ['Prometheus', 'Loki', 'Tempo'], examples: ['Prometheus TSDB', 'Elasticsearch', 'Jaeger storage'] },
+        { name: 'Visualization', color: 'pink', subheading: 'Dashboards and exploration', items: ['Grafana', 'Kibana', 'Azure Monitor'], examples: ['Grafana dashboards', 'Application Insights'] }
+      ],
+      flow: {
+        heading: 'Data flow',
+        steps: ['Applications emit metrics, logs, and traces.', 'Collectors gather and optionally aggregate.', 'Storage stores for querying.', 'Visualization layers let you explore and alert.']
+      }
+    },
+    metadata: {}
+  },
+  'temenos-stack': {
+    content_id: 'obs-temenos-stack',
+    title: 'Temenos Stack',
+    type: 'page',
+    order: 5,
+    body: {
+      subtitle: 'Temenos integrates observability into its cloud-native banking platform.',
+      architecture: {
+        product_container: {
+          name: 'Product container',
+          components: [
+            { name: 'Metrics', library: 'OTEL libraries', progress: 90 },
+            { name: 'Logs', library: 'OTEL libraries', progress: 85 },
+            { name: 'Traces', library: 'OTEL libraries', progress: 88 }
+          ],
+          info: ['OpenTelemetry instrumentation in application code', 'Metrics, logs, and traces emitted in standard formats']
+        },
+        sidecar_container: {
+          name: 'Sidecar container',
+          component: { name: 'OTEL Collector', description: 'Collects and exports telemetry from the product container.' },
+          info: ['Runs alongside the application', 'Configurable pipelines for export']
+        },
+        aggregation: {
+          name: 'Aggregation & visualization',
+          tools: [
+            { name: 'Prometheus', type: 'Metrics', color: 'blue' },
+            { name: 'Grafana', type: 'Dashboards', color: 'orange' },
+            { name: 'Loki', type: 'Logs', color: 'yellow' },
+            { name: 'Tempo/Jaeger', type: 'Traces', color: 'orange-600' }
+          ],
+          info: ['Pre-built dashboards for Temenos workloads', 'Correlation across metrics, logs, and traces']
+        }
+      },
+      features: [
+        { title: 'OpenTelemetry', description: 'Industry-standard instrumentation and export.' },
+        { title: 'Pre-built dashboards', description: 'Grafana dashboards tailored for Temenos components.' },
+        { title: 'Unified view', description: 'Metrics, logs, and traces in one observability story.' }
+      ],
+      flow: {
+        heading: 'Deployment flow',
+        steps: [
+          { color: 'blue', text: 'Application emits telemetry (OTEL).' },
+          { color: 'purple', text: 'Sidecar collector forwards to backend.' },
+          { color: 'green', text: 'Prometheus/Grafana (or customer stack) ingest and visualize.' },
+          { color: 'orange', text: 'Teams monitor and alert on banking workloads.' }
+        ]
+      }
+    },
+    metadata: {}
+  }
+}
+
 export function ObservabilityContent() {
   const [selectedPage, setSelectedPage] = useState<PageName>('intro')
   const [content, setContent] = useState<Record<string, ContentPage>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isStaticFallback, setIsStaticFallback] = useState(false)
 
   useEffect(() => {
     fetchContent()
   }, [])
 
+  const loadObservabilityCache = (): Record<string, ContentPage> | null => {
+    try {
+      const raw = localStorage.getItem(OBS_CACHE_KEY)
+      const timestamp = localStorage.getItem(OBS_CACHE_TIMESTAMP_KEY)
+      if (raw && timestamp) {
+        const age = Date.now() - parseInt(timestamp, 10)
+        const maxAge = isLocalDeployment() ? OBS_CACHE_DURATION_LOCAL : OBS_CACHE_DURATION
+        if (age < maxAge) return JSON.parse(raw) as Record<string, ContentPage>
+      }
+    } catch (_) {}
+    return null
+  }
+
+  const saveObservabilityCache = (content: Record<string, ContentPage>, source: 'api' | 'static') => {
+    try {
+      localStorage.setItem(OBS_CACHE_KEY, JSON.stringify(content))
+      localStorage.setItem(OBS_CACHE_TIMESTAMP_KEY, Date.now().toString())
+      localStorage.setItem(OBS_CACHE_SOURCE_KEY, source)
+    } catch (_) {}
+  }
+
   const fetchContent = async () => {
     try {
       setLoading(true)
       setError(null)
+      setIsStaticFallback(false)
+
+      const cached = loadObservabilityCache()
+      if (cached && Object.keys(cached).length > 0) {
+        setContent(cached)
+        const source = localStorage.getItem(OBS_CACHE_SOURCE_KEY)
+        setIsStaticFallback(source === 'static')
+        setLoading(false)
+        console.log('Observability: loaded from cache')
+        return
+      }
+
       const response = await apiService.getContent('observability')
-      if (response.success) {
+      if (response.success && response.data?.length > 0) {
         const contentMap: Record<string, ContentPage> = {}
-        // Cast the generic Content type to our specific ContentPage structure if needed, 
-        // or just use the response data as is if it matches. 
-        // The API returns Content[], and we map it by ID.
         response.data.forEach((item: Content) => {
-          // Extract page name from content_id (e.g. 'obs-intro' -> 'intro')
           const pageName = item.content_id.replace('obs-', '')
-          // We assume the body structure matches what we need
           contentMap[pageName] = item as unknown as ContentPage
         })
         setContent(contentMap)
+        saveObservabilityCache(contentMap, 'api')
       } else {
-        setError('Failed to load content')
+        setContent(STATIC_OBSERVABILITY_CONTENT)
+        setError(null)
+        setIsStaticFallback(true)
+        saveObservabilityCache(STATIC_OBSERVABILITY_CONTENT, 'static')
+        console.log('Observability: API returned no data. Using static fallback and caching.')
       }
-    } catch (error) {
-      console.error('Error fetching observability content:', error)
-      setError('Failed to load content. Please try again later.')
+    } catch (err) {
+      console.error('Error fetching observability content:', err)
+      setContent(STATIC_OBSERVABILITY_CONTENT)
+      setError(null)
+      setIsStaticFallback(true)
+      saveObservabilityCache(STATIC_OBSERVABILITY_CONTENT, 'static')
+      console.log('Observability: API unavailable. Using static fallback and caching for local.')
     } finally {
       setLoading(false)
     }
@@ -477,7 +657,8 @@ export function ObservabilityContent() {
     )
   }
 
-  if (error) {
+  // Only show error when we have no content at all (cache and static fallback both failed)
+  if (error && Object.keys(content).length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px] p-8">
         <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-6 rounded-r-lg max-w-md">
@@ -521,6 +702,9 @@ export function ObservabilityContent() {
       {/* Navigation - Inside the component */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm">
         <div className="px-6 py-4">
+          {isStaticFallback && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Static content (API unavailable). Same content as on Azure deployment.</p>
+          )}
           <div className="flex flex-col gap-4">
             <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Observability Explained</h2>
             <div className="flex flex-wrap gap-1 overflow-x-auto">

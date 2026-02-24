@@ -1,113 +1,194 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, Video, MessageSquare, Play } from 'lucide-react'
+import { BookOpen, Video, Play, ChevronLeft } from 'lucide-react'
+import { useContentBack } from '../contexts/ContentBackContext'
 import { ContentViewer } from '../components/ContentViewer'
-import { Chatbot } from '../components/Chatbot'
 import { DemoFrame } from '../components/DemoFrame'
+import { TemplateCardWrapper } from '../components/template-renderer/TemplateCardWrapper'
 import { ObservabilityContent } from '../components/observability/ObservabilityContent'
 import { DeploymentAnalyzer } from '../components/deployment/DeploymentAnalyzer'
 import { DeploymentContentViewer } from '../components/deployment/DeploymentContentViewer'
 import { DataArchitectureContent } from '../components/data-architecture/DataArchitectureContent'
-import { ChatbotWithQuestions } from '../components/data-architecture/ChatbotWithQuestions'
 import { DesignTimeContentViewer } from '../components/design-time/DesignTimeContentViewer'
 import { LayoutShowcaseContent } from '../components/layout-showcase/LayoutShowcaseContent'
+import { CardGallery } from '../components/gallery/CardGallery'
+import { VisualEditor } from '../components/editor/VisualEditor'
+import { TemenosComponentsContent } from '../components/temenos-components/TemenosComponentsContent'
+import { IntegrationContent } from '../components/integration/IntegrationContent'
+import { ExtensibilityContent } from '../components/extensibility/ExtensibilityContent'
+import { ExtensibilityDemoPlaceholder } from '../components/extensibility/ExtensibilityDemoPlaceholder'
 import type { ComponentId } from '../types'
 
 interface ComponentPageProps {
   componentId: ComponentId
   initialSelectedCard?: number // For security component sub-sections
-  initialTab?: 'content' | 'video' | 'demo' | 'chatbot' // For specific tabs
+  initialTab?: 'content' | 'video' | 'demo' // For specific tabs
+  onOpenSettings?: () => void
 }
 
-type Tab = 'content' | 'video' | 'demo' | 'chatbot'
+type Tab = 'content' | 'video' | 'demo'
 
-export function ComponentPage({ componentId, initialSelectedCard, initialTab }: ComponentPageProps) {
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'content')
-  
-  // Update activeTab when initialTab prop changes
+export function ComponentPage({ componentId, initialSelectedCard, initialTab, onOpenSettings }: ComponentPageProps) {
+  const tabs = componentId === 'layout-showcase' || componentId === 'security' || componentId === 'devops'
+    ? [{ id: 'content' as Tab, label: 'Content', icon: BookOpen }]
+    : componentId === 'architecture' || componentId === 'data-architecture' || componentId === 'extensibility'
+      ? [
+          { id: 'content' as Tab, label: 'Content', icon: BookOpen },
+          { id: 'demo' as Tab, label: 'Demo', icon: Play },
+        ]
+      : componentId === 'integration'
+        ? [
+            { id: 'content' as Tab, label: 'Content', icon: BookOpen },
+            { id: 'video' as Tab, label: 'Videos', icon: Video },
+            { id: 'demo' as Tab, label: 'Demo', icon: Play },
+          ]
+      : [
+          { id: 'content' as Tab, label: 'Content', icon: BookOpen },
+          { id: 'video' as Tab, label: 'Videos', icon: Video },
+          { id: 'demo' as Tab, label: 'Demo', icon: Play },
+        ]
+  const validInitialTab = initialTab && tabs.some(t => t.id === initialTab) ? initialTab : 'content'
+  const [activeTab, setActiveTab] = useState<Tab>(validInitialTab)
+  // Local state for navigation within gallery
+  const [selectedCardPath, setSelectedCardPath] = useState<string | null>(null);
+
+  // Update activeTab when initialTab prop changes (only if valid for this component)
   useEffect(() => {
-    if (initialTab) {
+    if (initialTab && tabs.some(t => t.id === initialTab)) {
       setActiveTab(initialTab)
     }
-  }, [initialTab])
+  }, [initialTab, componentId])
 
   // For layout-showcase, only show content tab
   // For deployment component, exclude video tab and rename chatbot
-  const tabs = componentId === 'layout-showcase'
-    ? [
-        { id: 'content' as Tab, label: 'Design System', icon: BookOpen },
-      ]
-    : componentId === 'deployment'
-    ? [
-        { id: 'content' as Tab, label: 'Content', icon: BookOpen },
-        { id: 'demo' as Tab, label: 'Demo', icon: Play },
-        { id: 'chatbot' as Tab, label: 'BSG-Guru', icon: MessageSquare },
-      ]
-    : [
-        { id: 'content' as Tab, label: 'Content', icon: BookOpen },
-        { id: 'video' as Tab, label: 'Videos', icon: Video },
-        { id: 'demo' as Tab, label: 'Demo', icon: Play },
-        { id: 'chatbot' as Tab, label: 'Chatbot', icon: MessageSquare },
-      ]
+
+  // === Gallery View ===
+  if (componentId === 'gallery') {
+
+    if (selectedCardPath) {
+      return (
+        <div className="space-y-4">
+          <button
+            onClick={() => setSelectedCardPath(null)}
+            className="flex items-center space-x-2 text-slate-500 hover:text-blue-500 transition-colors px-4"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back to Gallery</span>
+          </button>
+          <TemplateCardWrapper cardPath={selectedCardPath} />
+        </div>
+      );
+    }
+
+    return <CardGallery onSelectCard={setSelectedCardPath} />;
+  }
+
+  // === Visual Editor View ===
+  if (componentId === 'editor') {
+    return (
+      <div className="h-full">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Visual Editor</h1>
+          <p className="text-slate-600 dark:text-slate-400">Create and preview card content in real-time.</p>
+        </div>
+        <VisualEditor />
+      </div>
+    );
+  }
+
+  // === Temenos Components View ===
+  if (componentId === 'temenos-components') {
+    return <TemenosComponentsContent />;
+  }
+
+  const contentBack = useContentBack()
+
+  // Hide Content tab on main Security page (card grid); show it on subpages for back navigation
+  const showSecurityContentTab = componentId !== 'security' || (contentBack?.showBack ?? false)
+  const visibleTabs = componentId === 'security' && !showSecurityContentTab ? [] : tabs
 
   return (
     <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="flex space-x-2 border-b-2 border-gray-300 bg-white dark:bg-gray-800 rounded-t-lg px-2 pt-2">
-        {tabs.map((tab) => {
+      {/* Tab Navigation - modern pill-style tabs with optional Back button. Hidden on main Security page. */}
+      {(visibleTabs.length > 0 || (contentBack?.showBack && contentBack?.onBack)) && (
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        {visibleTabs.length > 0 && (
+        <div className="inline-flex p-1 rounded-xl bg-slate-200/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/80 dark:border-slate-700/80">
+        {visibleTabs.map((tab) => {
           const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          const handleTabClick = () => {
+            if (tab.id === 'content' && componentId === 'security' && contentBack?.showBack && contentBack.onBack) {
+              contentBack.onBack()
+            } else {
+              setActiveTab(tab.id)
+            }
+          }
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-6 py-3 border-b-2 transition-colors rounded-t-lg ${
-                activeTab === tab.id
-                  ? 'border-[#283054] text-[#283054] font-semibold bg-gray-50 dark:bg-gray-700'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-[#283054] hover:bg-gray-50 dark:hover:bg-gray-700'
+              onClick={handleTabClick}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                isActive
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200/50 dark:ring-slate-600/50'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-700/50'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{tab.label}</span>
+              <Icon className="w-4 h-4" strokeWidth={2} />
+              <span>{tab.label}</span>
             </button>
           )
         })}
+        </div>
+        )}
+        {contentBack?.showBack && contentBack.onBack && (
+          <button
+            onClick={contentBack.onBack}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300/80 dark:hover:bg-slate-600/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+        )}
       </div>
+      )}
 
       {/* Tab Content */}
-      <div>
+      <div className="min-h-[400px]">
         {activeTab === 'content' && (
           componentId === 'layout-showcase' ? (
             <LayoutShowcaseContent />
           ) : componentId === 'observability' ? (
             <ObservabilityContent />
-          ) : componentId === 'deployment' ? (
+          ) : componentId === 'architecture' ? (
             <DeploymentContentViewer />
           ) : componentId === 'data-architecture' ? (
             <DataArchitectureContent />
-          ) : componentId === 'design-time' ? (
-            <DesignTimeContentViewer />
+          ) : componentId === 'integration' ? (
+            <ContentViewer componentId={componentId} initialSelectedCard={initialSelectedCard} />
+          ) : componentId === 'extensibility' ? (
+            <ExtensibilityContent />
+          ) : componentId === 'devops' ? (
+            <DesignTimeContentViewer onOpenSettings={onOpenSettings} />
           ) : (
             <ContentViewer componentId={componentId} initialSelectedCard={initialSelectedCard} />
           )
         )}
         {activeTab === 'video' && (
-          componentId === 'deployment' ? (
+          componentId === 'architecture' ? (
             <DeploymentAnalyzer />
           ) : (
             <DemoFrame componentId={componentId} view="video" />
           )
         )}
         {activeTab === 'demo' && (
-          componentId === 'deployment' ? (
+          componentId === 'architecture' ? (
             <DeploymentAnalyzer />
+          ) : componentId === 'integration' ? (
+            <IntegrationContent />
+          ) : componentId === 'extensibility' ? (
+            <ExtensibilityDemoPlaceholder />
           ) : (
             <DemoFrame componentId={componentId} view="demo" />
-          )
-        )}
-        {activeTab === 'chatbot' && (
-          componentId === 'data-architecture' ? (
-            <ChatbotWithQuestions componentId={componentId} />
-          ) : (
-            <Chatbot componentId={componentId} />
           )
         )}
       </div>

@@ -125,13 +125,12 @@ async def get_rag_jwt_token_value() -> Optional[str]:
     try:
         # Try MongoDB first
         try:
-            # Get database connection
-            db_gen = get_database()
-            db = await db_gen.__anext__()
+            # Get database connection (FastAPI dependency is an async function, not a generator)
+            db = await get_database()
             setting = await db.settings.find_one({"key": "rag_jwt_token"})
             if setting and setting.get("value"):
                 return setting["value"]
-        except (StopAsyncIteration, Exception) as e:
+        except Exception as e:
             logger.debug(f"Could not get token from MongoDB: {e}")
 
         # Fallback to in-memory storage
@@ -209,8 +208,9 @@ async def update_eventhub_config(
 
         return {
             "status": "success",
-            "message": "EventHub configuration updated successfully. Restart backend to apply changes.",
-            "restart_required": True
+            "message": "EventHub configuration updated successfully. Use POST /api/v1/components/data-architecture/events/start to start the adapter.",
+            "restart_required": False,
+            "start_endpoint": "/api/v1/components/data-architecture/events/start"
         }
     except HTTPException:
         raise
@@ -276,13 +276,13 @@ async def get_eventhub_config_from_db() -> Optional[dict]:
     try:
         # Try MongoDB first
         try:
-            db_gen = get_database()
-            db = await db_gen.__anext__()
+            # Get database connection (FastAPI dependency is an async function, not a generator)
+            db = await get_database()
             setting = await db.settings.find_one({"key": "eventhub_config"})
             if setting and setting.get("value"):
                 logger.info("Using EventHub configuration from MongoDB")
                 return setting["value"]
-        except (StopAsyncIteration, Exception) as e:
+        except Exception as e:
             logger.debug(f"Could not get EventHub config from MongoDB: {e}")
 
         # Fallback to .env

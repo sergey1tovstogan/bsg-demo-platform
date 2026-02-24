@@ -96,13 +96,22 @@ sections:
   - type: "interactive_diagram"
     image: "/images/system-diagram.png"
     hotspots:
-      - x: 150
-        y: 200
-        radius: 40
+      - x: 30             # X percentage (0-100, left to right)
+        y: 50             # Y percentage (0-100, top to bottom)
+        radius: 50        # Pixels (50-60 recommended)
         click_action:
           type: "show_popup"
           popup_id: "popup-component-a"
         hover_text: "Click to learn more about Component A"
+
+      - x: 70             # Right side hotspot
+        y: 50
+        radius: 50
+        click_action:
+          type: "navigate_to_subpage"
+          target: "detail-page"
+        hover_text: "View component details"
+    # Hotspots are invisible - users discover them by hovering
 
 popups:
   - id: "popup-component-a"

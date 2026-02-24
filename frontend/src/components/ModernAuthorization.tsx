@@ -33,17 +33,22 @@ export function ModernAuthorization() {
         'right-section': {
             id: 'right-section',
             title: 'Hierarchical System Components',
-            description: 'Access rights are defined and managed centrally by Bank\' administrators, allowing precise control over what users can view or do within the system. At the core, user roles determine access permissions, which can be configured to cover multiple levels including:\n\n1. Organization or business unit level (e.g., company or branch level), enabling Bank to restrict access to data and functions relevant only to specific legal entities or subsidiaries.\n\n2. Application or module level, controlling which banking products or services a user can access.\n\n3. Screen and menu levels, allowing fine-grained control over user interface elements and navigation options.\n\n4. Functional level, specifying allowed actions such as input, authorization, viewing, or deletion.\n\n5. Data element or field level, enabling restrictions on specific data fields or values, for example limiting transaction amounts or excluding certain account types'
+            description: 'Access rights are defined and managed centrally by Bank\' administrators, allowing precise control over what users can view or do within the system. At the core, user roles determine access permissions, which can be configured to cover multiple levels including:\n1. Organization or business unit level (e.g., company or branch level), enabling Bank to restrict access to data and functions relevant only to specific legal entities or subsidiaries.\n2. Application or module level, controlling which banking products or services a user can access.\n3. Screen and menu levels, allowing fine-grained control over user interface elements and navigation options.\n4. Functional level, specifying allowed actions such as input, authorization, viewing, or deletion.\n5. Data element or field level, enabling restrictions on specific data fields or values, for example limiting transaction amounts or excluding certain account types'
         },
         'user-box': {
             id: 'user-box',
             title: 'User',
-            description: 'Each user profile contains a unique user identifier, password, language, and conditions.\n\nUser roles and permissions are managed within the solution, with role-based access control (RBAC) ensuring that users access only the data and functions authorized for their specific roles. After successful authentication, user identity and permissions are propagated via tokens, enabling consistent enforcement of access rights across all components and services. This identity propagation supports granular authorization at multiple levels, including company, application, API, screen, and field levels.'
+            description: 'Each user profile contains a unique user identifier, password, language, and conditions.\nUser roles and permissions are managed within the solution, with role-based access control (RBAC) ensuring that users access only the data and functions authorized for their specific roles. After successful authentication, user identity and permissions are propagated via tokens, enabling consistent enforcement of access rights across all components and services. This identity propagation supports granular authorization at multiple levels, including company, application, API, screen, and field levels.'
         },
         'role-box': {
             id: 'role-box',
             title: 'Role',
-            description: 'So, permissions and rights are assigned to roles rather than directly to users.\n\nThus, a single role for the whole group of users who perform the same task.\n\nThis is mapped to the organizational structure so that the users can be assigned with a different role if they physically change their roles in the organization.'
+            description: 'So, permissions and rights are assigned to roles rather than directly to users.\nThus, a single role for the whole group of users who perform the same task.\nThis is mapped to the organizational structure so that the users can be assigned with a different role if they physically change their roles in the organization.'
+        },
+        'left-section-sms': {
+            id: 'left-section-sms',
+            title: 'Temenos SMS Access Control',
+            description: 'Temenos SMS managing the access control, executing the following steps:\n1. Checks each user activity against the profile to determine validity; unacceptable actions are prevented and recorded (User Profile)\n2. Validates each contract against conditions, such as limits and exchange rate tolerance bands, before it is accepted (User Authority)\n3. Make specific data inaccessible to specified users or user groups based on conditions (Data Security)'
         }
     }
 
@@ -140,6 +145,15 @@ function AuthorizationView({
                 <div className="grid grid-cols-2 gap-8 h-full">
                     {/* Left Section: Role-Based Access Model */}
                     <div className="flex flex-col">
+                        <div
+                            className="flex items-center gap-2 mb-4 cursor-pointer transition-all duration-300 hover:opacity-80 group"
+                            onClick={() => setActiveTooltip(activeTooltip === 'left-section-sms' ? null : 'left-section-sms')}
+                        >
+                            <Info className="w-4 h-4 text-blue-500 group-hover:text-blue-600" />
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 dark:text-slate-200">
+                                Temenos SMS Access Control
+                            </span>
+                        </div>
                         <div className="flex gap-8 items-start mt-12">
                             {/* Lists Section */}
                             <div className="flex-1 space-y-6">
@@ -370,7 +384,7 @@ function AuthorizationView({
                                             <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                                         </button>
                                     </div>
-                                    <p className="text-slate-600 dark:text-slate-300 leading-loose text-left whitespace-pre-line">
+                                    <p className="text-slate-600 dark:text-slate-300 leading-tight text-left whitespace-pre-line">
                                         {tooltips[activeTooltip].description}
                                     </p>
                                 </div>

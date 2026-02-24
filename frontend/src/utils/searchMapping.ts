@@ -3,7 +3,7 @@ import type { ComponentId } from '../types'
 export interface SearchResult {
   componentId: ComponentId
   selectedCard?: number // For security component sub-sections
-  tab?: 'content' | 'video' | 'demo' | 'chatbot' // For specific tabs
+  tab?: 'content' | 'video' | 'demo' // For specific tabs (no chatbot - use floating BSG Guru)
 }
 
 // Search term mappings to components and sub-pages
@@ -62,12 +62,16 @@ const searchMappings: Array<{
     result: { componentId: 'integration' }
   },
   {
+    keywords: ['extensibility', 'extensible', 'extensibility framework', 'low-code', 'configurable', 'workbench', 'temenos workbench'],
+    result: { componentId: 'extensibility' }
+  },
+  {
     keywords: ['data architecture', 'database', 'data modeling', 'data design'],
     result: { componentId: 'data-architecture' }
   },
   {
-    keywords: ['deployment', 'cloud', 'deployment & cloud', 'deployment and cloud', 'azure', 'kubernetes', 'aks'],
-    result: { componentId: 'deployment' }
+    keywords: ['architecture', 'deployment', 'cloud', 'deployment & cloud', 'deployment and cloud', 'azure', 'kubernetes', 'aks', 'functional architecture'],
+    result: { componentId: 'architecture' }
   },
   {
     keywords: ['security', 'application security', 'vulnerability'],
@@ -78,8 +82,12 @@ const searchMappings: Array<{
     result: { componentId: 'observability' }
   },
   {
-    keywords: ['design time', 'design-time', 'design principles', 'architecture patterns', 'software design'],
-    result: { componentId: 'design-time' }
+    keywords: ['devops', 'design time', 'design-time', 'design principles', 'architecture patterns', 'software design'],
+    result: { componentId: 'devops' }
+  },
+  {
+    keywords: ['temenos components', 'active components', 'future components', 'temenos active', 'temenos future', 'components roadmap'],
+    result: { componentId: 'temenos-components' }
   }
 ]
 

@@ -4,7 +4,7 @@ This directory contains scripts and configurations for deploying the BSG Demo Pl
 
 ## Current Deployment: Azure Static Web Apps
 
-**Frontend URL**: https://kind-beach-01c0a990f.3.azurestaticapps.net
+**Frontend URL**: https://demo-platform.bsg.temenos.com (custom domain) or https://kind-beach-01c0a990f.3.azurestaticapps.net
 
 **App Details:**
 - **Name**: `bsg-demo-platform-4077`

@@ -188,9 +188,9 @@ async def get_azure_service_description(service_type: str, db: Optional[AsyncIOM
     # Check cache first
     if db is None:
         try:
-            db_gen = get_database()
-            db = await db_gen.__anext__()
-        except (StopAsyncIteration, Exception) as e:
+            # get_database is an async dependency function (not an async generator)
+            db = await get_database()
+        except Exception as e:
             logger.debug(f"Could not get database for service description cache: {e}")
             db = None
     

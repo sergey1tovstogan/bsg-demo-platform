@@ -149,4 +149,7 @@
   .animation-delay-400 {
     animation-delay: 400ms;
   }
+  .animation-delay-1000 {
+    animation-delay: 1000ms;
+  }
 }

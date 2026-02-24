@@ -18,7 +18,8 @@ from app.core.database import init_db, close_db, get_database
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.middleware.rate_limiter import RateLimitMiddleware
-from app.api import health, auth, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events, data_architecture, payments
+from app.middleware.basic_auth_middleware import BasicAuthMiddleware
+from app.api import health, auth, auth_v2, users, auth_cards, database, grafana_proxy, grafana_auth, components, security, integration, deployment, chatbot, cache, events, data_architecture, payments
 from app.api import settings as settings_api
 from app.adapters.eventhub import get_eventhub_adapter
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -45,6 +46,38 @@ async def lifespan(app: FastAPI):
     try:
         await init_db()
         logger.info(f"Database: {settings.DATABASE_NAME}")
+        
+        # Warm up cache: Check for cached component info entries
+        try:
+            from datetime import datetime, timezone
+            db = await get_database()
+            
+            # Count cached component info entries (non-expired)
+            now = datetime.now(timezone.utc)
+            component_info_count = await db.cache.count_documents({
+                "cache_key": {"$regex": "^component_info:"},
+                "$or": [
+                    {"expires_at": {"$exists": False}},
+                    {"expires_at": {"$gt": now}}
+                ]
+            })
+            
+            if component_info_count > 0:
+                logger.info(f"✓ Found {component_info_count} cached component info entries in persistent storage")
+                logger.info("  Component info will be loaded from cache on-demand (no RAG API calls needed)")
+            else:
+                logger.info("  No cached component info found - will use static content or RAG API when needed")
+            # Static microservice info (no RAG) - for Deployment demo
+            try:
+                from app.data.static_microservice_info import STATIC_MICROSERVICE_INFO, DEPLOYMENT_NAME_ALIASES
+                static_count = len([k for k, v in STATIC_MICROSERVICE_INFO.items() if v.get("architectural_overview") or v.get("functional_overview")])
+                logger.info(f"  Static microservice info: {len(STATIC_MICROSERVICE_INFO)} entries, {len(DEPLOYMENT_NAME_ALIASES)} aliases")
+            except Exception as e:
+                logger.warning(f"Failed to load static microservice info: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to check cache status: {e}")
+            # Don't fail startup if cache check fails
+        
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
         logger.warning("Application will start but database-dependent features may not work")
@@ -62,6 +95,27 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to start Event Hub adapter: {e}")
         logger.warning("Application will start but Event Hub features may not work")
+
+    # Proactive Azure identity check so platform does not hang during demos (SP/Managed Identity expired)
+    async def _startup_azure_check():
+        try:
+            from app.api.deployment import _check_azure_health
+            from app.core.config import get_settings
+            s = get_settings()
+            result = await _check_azure_health(s.AZURE_SUBSCRIPTION_ID)
+            if result.get("status") != "ok":
+                logger.warning(
+                    "Azure identity check failed - Deployment demo may not work. %s "
+                    "Ensure Managed Identity or Service Principal (AZURE_CLIENT_ID/SECRET/TENANT_ID) has Reader on the subscription, or renew SP secret if expired.",
+                    result.get("message", "No message"),
+                )
+            else:
+                logger.info("Azure identity check passed - Deployment demo connectivity OK")
+        except Exception as e:
+            logger.warning("Azure startup check failed (non-fatal): %s. Deployment demo may fail until identity is fixed.", e)
+
+    import asyncio
+    asyncio.create_task(_startup_azure_check())
 
     yield
 
@@ -91,15 +145,19 @@ app = FastAPI(
     docs_url="/docs" if not settings.is_production else None,  # Disable in production
     redoc_url="/redoc" if not settings.is_production else None,
     lifespan=lifespan,
-    openapi_url=f"/{settings.API_V1_PREFIX}/openapi.json"
+    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
 )
 
-# Configure CORS - MUST be the outermost middleware to handle preflight OPTIONS requests
+# Add Basic Auth middleware FIRST (outermost) to protect all routes
+# This must be before CORS to protect the entire application
+app.add_middleware(BasicAuthMiddleware)
+
+# Configure CORS - MUST be after Basic Auth but before other middleware
 # Use allow_origin_regex to allow all Azure Static Web Apps and App Service domains
 # This is more flexible than hardcoding specific origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://.*\.azurestaticapps\.net|https://.*\.azurewebsites\.net|http://localhost:\d+|http://127\.0\.0\.1:\d+",
+    allow_origin_regex=r"https://.*\.azurestaticapps\.net|https://.*\.azurewebsites\.net|https://demo-platform\.bsg\.temenos\.com|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
     allow_headers=["*"],
@@ -117,7 +175,10 @@ register_error_handlers(app)
 
 # Include routers (settings.API_V1_PREFIX already has leading slash)
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
-app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
+# app.include_router(auth.router, prefix=settings.API_V1_PREFIX)  # Old auth - disabled for new RBAC system
+app.include_router(auth_v2.router)  # New RBAC authentication (prefix already in router)
+app.include_router(users.router)  # User management (admin only, prefix already in router)
+app.include_router(auth_cards.router, prefix=settings.API_V1_PREFIX)  # Card template authentication
 app.include_router(database.router, prefix=settings.API_V1_PREFIX)
 app.include_router(components.router, prefix=settings.API_V1_PREFIX)
 
@@ -230,8 +291,9 @@ app.include_router(proxy_router, prefix=f"{settings.API_V1_PREFIX}/integration",
 app.include_router(grafana_proxy.router, prefix=settings.API_V1_PREFIX)
 app.include_router(grafana_auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(security.router, prefix=settings.API_V1_PREFIX)
-app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
+# Register chatbot router BEFORE deployment router to avoid potential path conflicts
 app.include_router(chatbot.router, prefix=settings.API_V1_PREFIX)
+app.include_router(deployment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(cache.router, prefix=settings.API_V1_PREFIX)
 app.include_router(settings_api.router, prefix=settings.API_V1_PREFIX)
 app.include_router(payments.router, prefix=settings.API_V1_PREFIX)

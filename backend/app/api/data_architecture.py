@@ -205,6 +205,62 @@ async def check_event_health():
         )
 
 
+@router.post("/events/start")
+async def start_eventhub():
+    """
+    Start or restart the EventHub adapter.
+    
+    This endpoint can be used to manually start the EventHub adapter if it failed
+    to start during application startup or if it was stopped.
+    
+    **Note:** If EventHub configuration is missing, configure it first via:
+    POST /api/v1/settings/eventhub/config
+    
+    **Example Response:**
+    ```json
+    {
+        "success": true,
+        "message": "Event Hub adapter started successfully",
+        "status": "healthy"
+    }
+    ```
+    """
+    try:
+        service = get_data_architecture_service()
+        result = await service.start_eventhub_adapter()
+        
+        if result.get("success"):
+            return result
+        else:
+            error_msg = result.get("error", "Failed to start Event Hub adapter")
+            # Provide helpful guidance if config is missing
+            if "not configured" in error_msg.lower() or "connection_string" in error_msg.lower():
+                error_msg += ". Please configure EventHub via POST /api/v1/settings/eventhub/config first."
+            raise HTTPException(
+                status_code=500,
+                detail=error_msg
+            )
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        # Handle configuration errors with helpful message
+        error_msg = str(e)
+        if "not configured" in error_msg.lower():
+            error_msg += " Use POST /api/v1/settings/eventhub/config to configure it."
+        logger.error(f"Error starting EventHub adapter: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=error_msg
+        )
+    except Exception as e:
+        logger.error(f"Error starting EventHub adapter: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start Event Hub adapter: {str(e)}"
+        )
+
+
 # =============================================================================
 # Demo Endpoints
 # =============================================================================

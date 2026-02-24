@@ -4,17 +4,22 @@ Chatbot API Endpoints
 Provides chatbot endpoints that use RAG API for all components.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 from app.services.temenos_service import TemenosService
 from app.core.logging import get_logger
+from app.utils.prompt_security import SECURITY_CONTEXT_BLOCK, screen_user_message, strip_markdown_headers
+from app.core.database import get_database
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/components/{component_id}/chatbot", tags=["chatbot"])
 logger = get_logger(__name__)
 
 # In-memory session storage (in production, use database)
 chat_sessions: Dict[str, Dict[str, Any]] = {}
+CHAT_SESSIONS_COLLECTION = "chat_sessions"
 
 
 class ChatSessionRequest(BaseModel):
@@ -29,7 +34,11 @@ class ChatMessageRequest(BaseModel):
 
 
 @router.post("/session")
-async def create_chat_session(component_id: str, request: ChatSessionRequest):
+async def create_chat_session(
+    component_id: str,
+    request: ChatSessionRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
     """
     Create a new chat session.
     
@@ -43,14 +52,28 @@ async def create_chat_session(component_id: str, request: ChatSessionRequest):
     try:
         import uuid
         session_id = str(uuid.uuid4())
-        
-        chat_sessions[session_id] = {
+
+        now = datetime.now(timezone.utc).isoformat()
+        session_doc: Dict[str, Any] = {
             "session_id": session_id,
             "component_id": component_id,
             "context": request.context or {},
             "messages": [],
-            "created_at": str(uuid.uuid4())  # Simple timestamp placeholder
+            "created_at": now,
+            "updated_at": now,
         }
+
+        # Persist session for multi-worker/multi-instance deployments.
+        # Falls back to in-memory if DB is unavailable.
+        try:
+            await db[CHAT_SESSIONS_COLLECTION].update_one(
+                {"session_id": session_id},
+                {"$setOnInsert": session_doc},
+                upsert=True,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to persist chat session to DB, using in-memory storage: {e}")
+            chat_sessions[session_id] = session_doc
         
         return {
             "status": "success",
@@ -65,7 +88,11 @@ async def create_chat_session(component_id: str, request: ChatSessionRequest):
 
 
 @router.post("/query")
-async def send_chat_message(component_id: str, request: ChatMessageRequest):
+async def send_chat_message(
+    component_id: str,
+    request: ChatMessageRequest,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
     """
     Send a chat message and get RAG-based response.
 
@@ -78,19 +105,59 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
     Returns:
         Assistant response
     """
+    # Log immediately when endpoint is hit - this should appear if route is matched
+    logger.info(f"💬💬💬 CHATBOT QUERY ENDPOINT HIT - component_id: {component_id}")
+    logger.info(f"💬 Request object type: {type(request)}, has session_id: {hasattr(request, 'session_id')}")
     try:
+        logger.info(f"💬 Chatbot query endpoint called - component_id: {component_id}, session_id: {request.session_id}")
+        logger.info(f"💬 Message: {request.message[:100] if request.message else 'None'}...")
+        logger.info(f"💬 Available sessions: {list(chat_sessions.keys())}")
+        logger.info(f"💬 Request body: session_id={request.session_id}, message length={len(request.message) if request.message else 0}")
+        
         session_id = request.session_id
         message = request.message
+        
+        if not session_id:
+            raise HTTPException(status_code=400, detail="session_id is required")
+        if not message:
+            raise HTTPException(status_code=400, detail="message is required")
 
-        # Get or create session
-        if session_id not in chat_sessions:
+        # Application-layer screening: hard-block jailbreaks, script tags, and
+        # base64 blobs before the message ever reaches the RAG API.
+        is_safe, block_reason = screen_user_message(message)
+        if not is_safe:
+            logger.warning(f"🛡️ Blocked unsafe message (component={component_id}): {block_reason}")
+            raise HTTPException(status_code=400, detail=block_reason)
+        # Strip markdown headers to prevent instruction injection via headings.
+        message = strip_markdown_headers(message)
+
+        # Load session (DB-first for multi-worker/multi-instance deployments; fallback to in-memory)
+        session: Optional[Dict[str, Any]] = None
+        session_in_db = False
+        try:
+            session = await db[CHAT_SESSIONS_COLLECTION].find_one({"session_id": session_id})
+            session_in_db = session is not None
+        except Exception as e:
+            logger.warning(f"Failed to load chat session from DB, falling back to in-memory: {e}")
+            session = None
+
+        if session is None:
+            session = chat_sessions.get(session_id)
+            session_in_db = False
+
+        if session is None:
             raise HTTPException(status_code=404, detail="Session not found")
-
-        session = chat_sessions[session_id]
         
         # For deployment component, use RAG API directly
-        if component_id == "deployment":
-            temenos_service = TemenosService()
+        if component_id == "architecture":
+            try:
+                temenos_service = TemenosService()
+            except Exception as e:
+                logger.error(f"Failed to initialize TemenosService for architecture: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to initialize RAG service: {str(e)}. Please check RAG API configuration in Settings."
+                )
             
             # Build context from conversation history
             context_parts = []
@@ -104,15 +171,42 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
                         context_parts.append(f"Assistant: {msg.get('content', '')[:100]}...")
             
             context_parts.append("This is about Temenos cloud deployment, Azure infrastructure, and deployment best practices.")
-            context = "\n".join(context_parts)
-            
+            context = SECURITY_CONTEXT_BLOCK + "\n\n" + "\n".join(context_parts)
+
             # Query RAG API with deployment and architecture topics
-            result = await temenos_service.query_rag(
-                question=message,
-                region="global",
-                rag_model_id="ModularBanking, TechnologyOverview, Platform",
-                context=context
-            )
+            # Using valid model IDs from RAG API:
+            # - ModularBanking (maps to "Modular" in UI)
+            # - TechnologyOverview (maps to "Technology Overview" in UI)
+            # - SecurityFramework (maps to "Security" in UI)
+            # - PlatformFrameworkMea (for platform-related queries)
+            rag_model_id_value = "ModularBanking, TechnologyOverview, SecurityFramework"
+            logger.info(f"💬 Architecture component - Using RAG model IDs: {rag_model_id_value}")
+            try:
+                result = await temenos_service.query_rag(
+                    question=message,
+                    region="global",
+                    rag_model_id=rag_model_id_value,
+                    context=context
+                )
+            except RuntimeError as rag_error:
+                error_msg = str(rag_error)
+                logger.error(f"RAG API error for architecture: {error_msg}", exc_info=True)
+                if "token" in error_msg.lower() or "not configured" in error_msg.lower() or "401" in error_msg or "unauthorized" in error_msg.lower():
+                    raise HTTPException(
+                        status_code=401,
+                        detail="RAG API token is not configured or has expired. Please configure it in Settings to use BSG Guru."
+                    )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"RAG API error: {error_msg}. Please check RAG API configuration in Settings."
+                )
+            except Exception as rag_error:
+                error_msg = str(rag_error)
+                logger.error(f"Unexpected RAG API error for architecture: {error_msg}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to query RAG API: {error_msg}. Please check RAG API configuration in Settings."
+                )
             
             # Extract answer from response
             # RAG API response format: {"data": {"answer": "...", "sources": [...]}}
@@ -127,23 +221,38 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
             
             # Create assistant message
             import uuid
-            from datetime import datetime
             assistant_message = {
                 "message_id": str(uuid.uuid4()),
                 "role": "assistant",
                 "content": answer,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "sources": sources
             }
             
-            # Add messages to session
-            session["messages"].append({
+            user_message = {
                 "message_id": f"user-{uuid.uuid4()}",
                 "role": "user",
                 "content": message,
-                "timestamp": datetime.utcnow().isoformat()
-            })
-            session["messages"].append(assistant_message)
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+            # Persist messages
+            if session_in_db:
+                try:
+                    await db[CHAT_SESSIONS_COLLECTION].update_one(
+                        {"session_id": session_id},
+                        {
+                            "$push": {"messages": {"$each": [user_message, assistant_message]}},
+                            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+                        },
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to persist chat messages to DB, falling back to in-memory: {e}")
+                    chat_sessions.setdefault(session_id, session).setdefault("messages", []).extend(
+                        [user_message, assistant_message]
+                    )
+            else:
+                session.setdefault("messages", []).extend([user_message, assistant_message])
             
             return {
                 "status": "success",
@@ -152,7 +261,14 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
 
         # For data-architecture component, use RAG API
         elif component_id == "data-architecture":
-            temenos_service = TemenosService()
+            try:
+                temenos_service = TemenosService()
+            except Exception as e:
+                logger.error(f"Failed to initialize TemenosService for data-architecture: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to initialize RAG service: {str(e)}. Please check RAG API configuration in Settings."
+                )
 
             # Build context from conversation history
             context_parts = []
@@ -166,15 +282,39 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
                         context_parts.append(f"Assistant: {msg.get('content', '')[:100]}...")
 
             context_parts.append("This is about Temenos data architecture, data flow patterns, Data Hub, Analytics, and data integration strategies.")
-            context = "\n".join(context_parts)
+            context = SECURITY_CONTEXT_BLOCK + "\n\n" + "\n".join(context_parts)
 
             # Query RAG API with data architecture topics
-            result = await temenos_service.query_rag(
-                question=message,
-                region="global",
-                rag_model_id="DataHub, Analytics, TechnologyOverview",
-                context=context
-            )
+            # Using valid model IDs from RAG API:
+            # - DataHub (maps to "Data Hub" in UI)
+            # - Analytics (maps to "Analytics" in UI)
+            # - TechnologyOverview (maps to "Technology Overview" in UI)
+            try:
+                result = await temenos_service.query_rag(
+                    question=message,
+                    region="global",
+                    rag_model_id="DataHub, Analytics, TechnologyOverview",
+                    context=context
+                )
+            except RuntimeError as rag_error:
+                error_msg = str(rag_error)
+                logger.error(f"RAG API error for data-architecture: {error_msg}", exc_info=True)
+                if "token" in error_msg.lower() or "not configured" in error_msg.lower() or "401" in error_msg or "unauthorized" in error_msg.lower():
+                    raise HTTPException(
+                        status_code=401,
+                        detail="RAG API token is not configured or has expired. Please configure it in Settings to use BSG Guru."
+                    )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"RAG API error: {error_msg}. Please check RAG API configuration in Settings."
+                )
+            except Exception as rag_error:
+                error_msg = str(rag_error)
+                logger.error(f"Unexpected RAG API error for data-architecture: {error_msg}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to query RAG API: {error_msg}. Please check RAG API configuration in Settings."
+                )
 
             # Extract answer from response
             # RAG API response format: {"data": {"answer": "...", "sources": [...]}}
@@ -189,23 +329,38 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
 
             # Create assistant message
             import uuid
-            from datetime import datetime
             assistant_message = {
                 "message_id": str(uuid.uuid4()),
                 "role": "assistant",
                 "content": answer,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "sources": sources
             }
 
-            # Add messages to session
-            session["messages"].append({
+            user_message = {
                 "message_id": f"user-{uuid.uuid4()}",
                 "role": "user",
                 "content": message,
-                "timestamp": datetime.utcnow().isoformat()
-            })
-            session["messages"].append(assistant_message)
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+            # Persist messages
+            if session_in_db:
+                try:
+                    await db[CHAT_SESSIONS_COLLECTION].update_one(
+                        {"session_id": session_id},
+                        {
+                            "$push": {"messages": {"$each": [user_message, assistant_message]}},
+                            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+                        },
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to persist chat messages to DB, falling back to in-memory: {e}")
+                    chat_sessions.setdefault(session_id, session).setdefault("messages", []).extend(
+                        [user_message, assistant_message]
+                    )
+            else:
+                session.setdefault("messages", []).extend([user_message, assistant_message])
 
             return {
                 "status": "success",
@@ -214,7 +369,14 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
 
 
         # Initialize Temenos service for RAG API access
-        temenos_service = TemenosService()
+        try:
+            temenos_service = TemenosService()
+        except Exception as e:
+            logger.error(f"Failed to initialize TemenosService: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to initialize RAG service: {str(e)}. Please check RAG API configuration in Settings."
+            )
 
         # Build context from conversation history
         context_parts = []
@@ -227,31 +389,95 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
                 elif msg.get("role") == "assistant":
                     context_parts.append(f"Assistant: {msg.get('content', '')[:100]}...")
 
-        # Add component-specific context
-        component_contexts = {
-            "deployment": "This is about Temenos cloud deployment, Azure infrastructure, and deployment best practices.",
-            "security": "This is about Temenos security features, authentication, authorization, encryption, and security best practices.",
-            "connectivity": "This is about Temenos connectivity, API integrations, microservices communication, and integration patterns.",
-            "payment": "This is about Temenos payment processing, payment gateway integrations, transaction handling, and payment workflows.",
-            "observability": "This is about Temenos observability, monitoring, logging, metrics, tracing, and operational insights.",
-            "api": "This is about Temenos APIs, API design, endpoints, API management, and API best practices."
+        # Add component-specific context and RAG model IDs
+        # Mapping UI options to valid API model IDs from RAG Swagger:
+        # Generic: TemenosPolicies (Policies), Exchange, InvestorRelations (Temenos Annual Reports)
+        # Technology: TechnologyOverview, digital_model (Digital), TechTAP (TAP), FuncPaymentsHub (Payments Hub),
+        #            DataHub (Data Hub), Analytics, DataSource (Data Source), ModularBanking (Modular),
+        #            SaaSUniformTerms (SaaS), SecurityFramework (Security), ExtensibilityAdvisor (Extensibility)
+        # Functionality: FuncTransactGeneric (Transact Generic), FuncTransactWealth (Transact Wealth),
+        #                funcWealthTAP (TAP Wealth), Payments, FuncFCM (FCM)
+        
+        # RAG model IDs per Swagger: ModularBanking, Payments, TechTAP, TechnologyOverview,
+        # DataHub, Analytics, SecurityFramework, ExtensibilityAdvisor, FuncPaymentsHub, etc.
+        component_configs = {
+            "architecture": {
+                "context": "This is about Temenos cloud architecture, Azure infrastructure, AWS, and deployment best practices.",
+                "rag_model_id": "ModularBanking, TechnologyOverview, SecurityFramework"
+            },
+            "security": {
+                "context": "This is about Temenos security features, authentication, authorization, encryption, and security best practices.",
+                "rag_model_id": "SecurityFramework, TechnologyOverview"
+            },
+            "integration": {
+                "context": "This is about Temenos integration, APIs, connectivity, microservices communication, and integration patterns.",
+                "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
+            },
+            "connectivity": {
+                "context": "This is about Temenos connectivity, API integrations, microservices communication, and integration patterns.",
+                "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
+            },
+            "data-architecture": {
+                "context": "This is about Temenos data architecture, Data Hub, Analytics, ODS/SDS, ETL, and data pipelines.",
+                "rag_model_id": "DataHub, Analytics, TechnologyOverview"
+            },
+            "payment": {
+                "context": "This is about Temenos payment processing, Payments Hub, payment gateway integrations, and payment workflows.",
+                "rag_model_id": "Payments, FuncPaymentsHub, TechnologyOverview"
+            },
+            "observability": {
+                "context": "This is about Temenos observability, monitoring, logging, metrics, tracing, and operational insights.",
+                "rag_model_id": "TechnologyOverview, Analytics"
+            },
+            "devops": {
+                "context": "This is about Temenos DevOps, design-time tools, Workbench, configuration, CI/CD, and development workflow.",
+                "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
+            },
+            "api": {
+                "context": "This is about Temenos APIs, API design, endpoints, API management, and API best practices.",
+                "rag_model_id": "TechnologyOverview, ExtensibilityAdvisor"
+            }
         }
 
-        # Use component-specific context or generic Temenos context
-        component_context = component_contexts.get(
+        # Use component-specific config or generic Temenos context
+        component_config = component_configs.get(
             component_id,
-            f"This is about Temenos {component_id} component, its features, capabilities, and best practices."
+            {
+                "context": f"This is about Temenos {component_id} component, its features, capabilities, and best practices.",
+                "rag_model_id": "TechnologyOverview"
+            }
         )
-        context_parts.append(component_context)
-        context = "\n".join(context_parts)
+        context_parts.append(component_config["context"])
+        context = SECURITY_CONTEXT_BLOCK + "\n\n" + "\n".join(context_parts)
 
-        # Query RAG API with the same model IDs for all components
-        result = await temenos_service.query_rag(
-            question=message,
-            region="global",
-            rag_model_id="TechnologyOverview",
-            context=context
-        )
+        # Query RAG API with component-specific model IDs
+        try:
+            result = await temenos_service.query_rag(
+                question=message,
+                region="global",
+                rag_model_id=component_config["rag_model_id"],
+                context=context
+            )
+        except RuntimeError as rag_error:
+            error_msg = str(rag_error)
+            logger.error(f"RAG API error: {error_msg}", exc_info=True)
+            # Check if it's a token issue
+            if "token" in error_msg.lower() or "not configured" in error_msg.lower() or "401" in error_msg or "unauthorized" in error_msg.lower():
+                raise HTTPException(
+                    status_code=401,
+                    detail="RAG API token is not configured or has expired. Please configure it in Settings to use BSG Guru."
+                )
+            raise HTTPException(
+                status_code=500,
+                detail=f"RAG API error: {error_msg}. Please check RAG API configuration in Settings."
+            )
+        except Exception as rag_error:
+            error_msg = str(rag_error)
+            logger.error(f"Unexpected RAG API error: {error_msg}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to query RAG API: {error_msg}. Please check RAG API configuration in Settings."
+            )
 
         # Extract answer from response
         # RAG API response format: {"data": {"answer": "...", "sources": [...]}}
@@ -266,23 +492,38 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
 
         # Create assistant message
         import uuid
-        from datetime import datetime
         assistant_message = {
             "message_id": str(uuid.uuid4()),
             "role": "assistant",
             "content": answer,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "sources": sources
         }
 
-        # Add messages to session
-        session["messages"].append({
+        user_message = {
             "message_id": f"user-{uuid.uuid4()}",
             "role": "user",
             "content": message,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-        session["messages"].append(assistant_message)
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+        # Persist messages
+        if session_in_db:
+            try:
+                await db[CHAT_SESSIONS_COLLECTION].update_one(
+                    {"session_id": session_id},
+                    {
+                        "$push": {"messages": {"$each": [user_message, assistant_message]}},
+                        "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"Failed to persist chat messages to DB, falling back to in-memory: {e}")
+                chat_sessions.setdefault(session_id, session).setdefault("messages", []).extend(
+                    [user_message, assistant_message]
+                )
+        else:
+            session.setdefault("messages", []).extend([user_message, assistant_message])
 
         return {
             "status": "success",
@@ -290,13 +531,28 @@ async def send_chat_message(component_id: str, request: ChatMessageRequest):
         }
     except HTTPException:
         raise
+    except RuntimeError as e:
+        error_msg = str(e)
+        # Check if it's a token expiration error (check for 401, expired, or token-related errors)
+        if "401" in error_msg or "expired" in error_msg.lower() or "token" in error_msg.lower() or "unauthorized" in error_msg.lower():
+            logger.error(f"🔑 RAG token expired in chatbot query: {error_msg}")
+            raise HTTPException(
+                status_code=401,
+                detail="RAG authentication token has expired. Please update the RAG JWT token via Settings API."
+            )
+        logger.error(f"Error sending chat message: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:
         logger.error(f"Error sending chat message: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/history/{session_id}")
-async def get_chat_history(component_id: str, session_id: str):
+async def get_chat_history(
+    component_id: str,
+    session_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
     """
     Get chat history for a session.
     
@@ -308,10 +564,18 @@ async def get_chat_history(component_id: str, session_id: str):
         Chat history
     """
     try:
-        if session_id not in chat_sessions:
+        session: Optional[Dict[str, Any]] = None
+        try:
+            session = await db[CHAT_SESSIONS_COLLECTION].find_one({"session_id": session_id})
+        except Exception as e:
+            logger.warning(f"Failed to load chat history from DB, falling back to in-memory: {e}")
+            session = None
+
+        if session is None:
+            session = chat_sessions.get(session_id)
+
+        if session is None:
             raise HTTPException(status_code=404, detail="Session not found")
-        
-        session = chat_sessions[session_id]
         
         return {
             "status": "success",
@@ -328,7 +592,11 @@ async def get_chat_history(component_id: str, session_id: str):
 
 
 @router.delete("/session/{session_id}")
-async def delete_chat_session(component_id: str, session_id: str):
+async def delete_chat_session(
+    component_id: str,
+    session_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
     """
     Delete a chat session.
     
@@ -337,6 +605,12 @@ async def delete_chat_session(component_id: str, session_id: str):
         session_id: Session ID
     """
     try:
+        # Remove from persistent storage first (ignore failures)
+        try:
+            await db[CHAT_SESSIONS_COLLECTION].delete_one({"session_id": session_id})
+        except Exception as e:
+            logger.warning(f"Failed to delete chat session from DB, falling back to in-memory: {e}")
+
         if session_id in chat_sessions:
             del chat_sessions[session_id]
         

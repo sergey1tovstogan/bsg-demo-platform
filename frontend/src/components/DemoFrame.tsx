@@ -44,14 +44,14 @@ export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
     if (view === 'video') {
       return (
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center text-gray-400">
-            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-              <Code2 className="w-12 h-12 opacity-30" />
+          <div className="text-center px-8 py-12 rounded-2xl bg-slate-100/50 dark:bg-slate-800/30 border border-slate-200/60 dark:border-slate-700/50">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-200/80 dark:bg-slate-700/50 flex items-center justify-center">
+              <Code2 className="w-8 h-8 text-slate-500 dark:text-slate-400" strokeWidth={1.5} />
             </div>
-            <p className="text-lg font-medium text-gray-500 dark:text-gray-400 mb-2">
-              Coming soon...
+            <p className="text-base font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Coming soon
             </p>
-            <p className="text-sm">
+            <p className="text-sm text-slate-500 dark:text-slate-500">
               Video content will be available here
             </p>
           </div>
@@ -79,14 +79,14 @@ export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
     if (view === 'video') {
       return (
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center text-gray-400">
-            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-              <Code2 className="w-12 h-12 opacity-30" />
+          <div className="text-center px-8 py-12 rounded-2xl bg-slate-100/50 dark:bg-slate-800/30 border border-slate-200/60 dark:border-slate-700/50">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-200/80 dark:bg-slate-700/50 flex items-center justify-center">
+              <Code2 className="w-8 h-8 text-slate-500 dark:text-slate-400" strokeWidth={1.5} />
             </div>
-            <p className="text-lg font-medium text-gray-500 dark:text-gray-400 mb-2">
-              Coming soon...
+            <p className="text-base font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Coming soon
             </p>
-            <p className="text-sm">
+            <p className="text-sm text-slate-500 dark:text-slate-500">
               Video content will be available here
             </p>
           </div>
@@ -103,7 +103,7 @@ export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-slate-500 dark:text-slate-400" strokeWidth={2} />
       </div>
     )
   }
@@ -111,14 +111,14 @@ export function DemoFrame({ componentId, view = 'demo' }: DemoFrameProps) {
   // For all other components, show a generic placeholder depending on view
   return (
     <div className="flex items-center justify-center min-h-[400px]">
-      <div className="text-center text-gray-400">
-        <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-          <Code2 className="w-12 h-12 opacity-30" />
+      <div className="text-center px-8 py-12 rounded-2xl bg-slate-100/50 dark:bg-slate-800/30 border border-slate-200/60 dark:border-slate-700/50">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-200/80 dark:bg-slate-700/50 flex items-center justify-center">
+          <Code2 className="w-8 h-8 text-slate-500 dark:text-slate-400" strokeWidth={1.5} />
         </div>
-        <p className="text-lg font-medium text-gray-500 mb-2">
-          {view === 'video' ? 'Video Coming Soon' : 'Demo Coming Soon'}
+        <p className="text-base font-medium text-slate-600 dark:text-slate-400 mb-1">
+          {view === 'video' ? 'Video coming soon' : 'Demo coming soon'}
         </p>
-        <p className="text-sm">
+        <p className="text-sm text-slate-500 dark:text-slate-500">
           {view === 'video'
             ? 'Demo video content will be available here'
             : 'Demo content will be available here'}

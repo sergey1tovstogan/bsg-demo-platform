@@ -36,8 +36,8 @@ class Settings(BaseSettings):
         description="Database connection string (Azure Cosmos DB MongoDB API)"
     )
     DATABASE_NAME: str = Field(default="bsg_demo", description="Database name")
-    DB_MAX_POOL_SIZE: int = Field(default=50, description="Database connection pool size")
-    DB_MIN_POOL_SIZE: int = Field(default=10, description="Minimum connection pool size")
+    DB_MAX_POOL_SIZE: int = Field(default=20, description="Database connection pool size (reduced from 50 for cost optimization)")
+    DB_MIN_POOL_SIZE: int = Field(default=5, description="Minimum connection pool size (reduced from 10 for cost optimization)")
     DB_CONNECT_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
 
     # MSSQL External Database - TDH (ODS/SDS)
@@ -106,7 +106,7 @@ class Settings(BaseSettings):
     RAG_TYPE: str = Field(default="temenos", description="RAG provider type: temenos, openai, etc.")
     RAG_JWT_TOKEN: Optional[str] = Field(
         default=None,
-        description="JWT token for RAG tool API authentication (tbsg.temenos.com). Optional - can be set via Settings API instead."
+        description="JWT token for RAG tool API authentication (tbsg.temenos.com). Optional - can be set via Settings API or /temenos/update-token endpoint instead."
     )
     RAG_API_URL: str = Field(
         default="https://tbsg.temenos.com",
@@ -192,9 +192,12 @@ class Settings(BaseSettings):
         origins = [
             # Local development
             "http://localhost:3000",
+            "http://localhost:3000",
             "http://localhost:5173",
-            # Azure Static Web Apps (specific domain - regex pattern handles all *.azurestaticapps.net)
+            # Azure Static Web Apps (regex pattern handles all *.azurestaticapps.net)
             "https://kind-beach-01c0a990f.3.azurestaticapps.net",
+            # Custom domain
+            "https://demo-platform.bsg.temenos.com",
             # Azure App Service (for testing backend directly - regex pattern handles all *.azurewebsites.net)
             "https://bsg-demo-platform-app.azurewebsites.net",
         ]

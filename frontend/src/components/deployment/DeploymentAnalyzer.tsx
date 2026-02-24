@@ -5,10 +5,11 @@
  * Provides functionality to connect to Azure, select resource groups, and analyze Temenos components.
  */
 
-import { useState, useEffect } from 'react'
-import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, DollarSign, RefreshCw, ExternalLink, FileText, Download } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Loader2, Cloud, FolderOpen, CheckCircle2, AlertCircle, ArrowLeft, Search, RefreshCw, ExternalLink, Download, Eye, EyeOff, Container, Database, MessageSquare, Server, Network, Shield, Activity, Box, HardDrive, Layers } from 'lucide-react'
 import { apiService } from '../../services/api'
-import { LogAnalyzer } from './LogAnalyzer'
+import { getComponentIdFromName, getComponentById } from '../temenos-components/temenosComponentsData'
 
 type Step = 'subscription' | 'resourceGroups' | 'namespaces' | 'analysis'
 
@@ -52,9 +53,41 @@ interface AnalysisResult {
   error?: string
 }
 
+const DEPLOYMENT_ANALYSIS_STATE_KEY = 'bsg_deployment_analysis_state'
+
+function saveAnalysisState(
+  subscriptionId: string,
+  resourceGroups: AzureResourceGroup[],
+  services: AzureResource[],
+  analysisResults: AnalysisResult[],
+  selectedResourceGroups: string[]
+) {
+  try {
+    sessionStorage.setItem(DEPLOYMENT_ANALYSIS_STATE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      data: { subscriptionId, resourceGroups, services, analysisResults, selectedResourceGroups }
+    }))
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearSavedAnalysisState() {
+  try {
+    sessionStorage.removeItem(DEPLOYMENT_ANALYSIS_STATE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+const DEFAULT_AZURE_SUBSCRIPTION_ID = '58a91cf0-0f39-45fd-a63e-5a9a28c7072b'
+
 export function DeploymentAnalyzer() {
-  const [currentStep, setCurrentStep] = useState<Step>('subscription')
-  const [subscriptionId, setSubscriptionId] = useState('58a91cf0-0f39-45fd-a63e-5a9a28c7072b') // Default subscription ID
+  const navigate = useNavigate()
+  const [currentStep, setCurrentStep] = useState<Step>('resourceGroups')
+  const [subscriptionId, setSubscriptionId] = useState(() =>
+    localStorage.getItem('lastAzureSubscriptionId')?.trim() || DEFAULT_AZURE_SUBSCRIPTION_ID
+  )
 
   // Function to mask subscription ID for display
   const [resourceGroups, setResourceGroups] = useState<AzureResourceGroup[]>([])
@@ -77,28 +110,131 @@ export function DeploymentAnalyzer() {
   const [error, setError] = useState<string | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState<{ current: number; total: number; message: string } | null>(null)
   const [selectedResourceGroups, setSelectedResourceGroups] = useState<string[]>([])
-  const [includeCostsInAnalysis, setIncludeCostsInAnalysis] = useState(false)
-  const [costs, setCosts] = useState<Record<string, {
-    total_cost: number
-    projections?: {
-      full_month: number
-      annual: number
-    }
-    error?: string
-  }>>({})
-  const [costsLoading, setCostsLoading] = useState(false)
-  const [logAnalyzerOpen, setLogAnalyzerOpen] = useState(false)
-  const [selectedResourceGroupForLogs, setSelectedResourceGroupForLogs] = useState<string | null>(null)
   const [resourceGroupsLoading, setResourceGroupsLoading] = useState(false)
   const [resourceGroupsCached, setResourceGroupsCached] = useState(false)
+  const [azureHealth, setAzureHealth] = useState<{
+    status: string
+    message?: string | null
+    identityType?: string
+    identityObjectId?: string
+    identityAppId?: string
+  } | null>(null)
+  const [lastPreloadedSubId, setLastPreloadedSubId] = useState<string | null>(null)
+
+  const RG_CACHE_KEY = 'bsg_azure_rg_cache'
+  const RG_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+  // Always start fresh at resource group selection when navigating to Architecture Demo
+  // (Subscription is configured in Settings)
+
+  // Persist analysis state when user navigates away (e.g. to Temenos Components)
+  useEffect(() => {
+    if (currentStep !== 'analysis' || analysisResults.length === 0) return
+    return () => {
+      saveAnalysisState(subscriptionId, resourceGroups, services, analysisResults, selectedResourceGroups)
+    }
+  }, [currentStep, analysisResults.length, subscriptionId, resourceGroups, services, analysisResults, selectedResourceGroups])
+
+  const getRgCache = (subId: string): AzureResourceGroup[] | null => {
+    try {
+      const raw = localStorage.getItem(`${RG_CACHE_KEY}_${subId}`)
+      if (!raw) return null
+      const { data, cachedAt } = JSON.parse(raw) as { data: AzureResourceGroup[]; cachedAt: number }
+      if (!Array.isArray(data) || data.length === 0) return null
+      if (Date.now() - cachedAt > RG_CACHE_TTL_MS) return null
+      return data
+    } catch {
+      return null
+    }
+  }
+
+  const setRgCache = (subId: string, data: AzureResourceGroup[]) => {
+    try {
+      localStorage.setItem(`${RG_CACHE_KEY}_${subId}`, JSON.stringify({ data, cachedAt: Date.now() }))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const clearRgCache = (subId: string) => {
+    try {
+      localStorage.removeItem(`${RG_CACHE_KEY}_${subId}`)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // When user updates Azure subscription in Settings, reload resource groups
+  useEffect(() => {
+    const handler = () => {
+      const newSub = localStorage.getItem('lastAzureSubscriptionId')?.trim()
+      if (newSub && newSub !== subscriptionId) {
+        setSubscriptionId(newSub)
+        loadResourceGroups(newSub, true)
+      }
+    }
+    window.addEventListener('azureSubscriptionUpdated', handler)
+    return () => window.removeEventListener('azureSubscriptionUpdated', handler)
+  }, [subscriptionId])
+
+  // Load RGs on mount when on resourceGroups step (subscription from Settings/localStorage)
+  useEffect(() => {
+    if (currentStep !== 'resourceGroups' || !subscriptionId) return
+    const subId = subscriptionId.trim()
+    let cancelled = false
+
+    // 1. Instant: show client-side cached RGs if available
+    const localRgs = getRgCache(subId)
+    if (localRgs && localRgs.length > 0) {
+      setResourceGroups(localRgs)
+      setResourceGroupsCached(true)
+      setLastPreloadedSubId(subId)
+    }
+
+    // 2. Background: fetch from backend (uses server cache when available)
+    apiService.getAzureResourceGroups(subId, false)
+      .then((body) => {
+        if (cancelled) return
+        const rgList = Array.isArray(body?.data) ? body.data : []
+        if (rgList.length > 0) {
+          setResourceGroups(rgList)
+          setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
+          setLastPreloadedSubId(subId)
+          setRgCache(subId, rgList)
+        }
+      })
+      .catch(() => { /* ignore - user can refresh */ })
+    return () => { cancelled = true }
+  }, [currentStep, subscriptionId])
+
+  // Proactive Azure health check when on resourceGroups step
+  useEffect(() => {
+    if (currentStep !== 'resourceGroups') return
+    let cancelled = false
+    apiService.getAzureHealth(subscriptionId || undefined)
+      .then((res) => {
+        if (!cancelled) setAzureHealth({
+          status: res.status,
+          message: res.message ?? undefined,
+          identityType: res.identity_type,
+          identityObjectId: res.identity_object_id,
+          identityAppId: res.identity_app_id,
+        })
+      })
+      .catch(() => { if (!cancelled) setAzureHealth({ status: 'unknown', message: null }) })
+    return () => { cancelled = true }
+  }, [currentStep, subscriptionId])
 
   const loadResourceGroups = async (subId: string, refresh: boolean = false) => {
     try {
       setResourceGroupsLoading(true)
       setError(null)
-      const response = await apiService.getAzureResourceGroups(subId, refresh)
-      setResourceGroups(response.data?.data || response.data || [])
-      setResourceGroupsCached(response.data?.cached || false)
+      if (refresh) clearRgCache(subId)
+      const body = await apiService.getAzureResourceGroups(subId, refresh)
+      const rgList = Array.isArray(body?.data) ? body.data : []
+      setResourceGroups(rgList)
+      setResourceGroupsCached((body as { cached?: boolean })?.cached ?? false)
+      if (rgList.length > 0) setRgCache(subId, rgList)
     } catch (err: any) {
       console.error('[DeploymentAnalyzer] Error loading resource groups:', err)
       setError(err.response?.data?.detail?.error || err.message || 'Failed to load resource groups')
@@ -117,16 +253,31 @@ export function DeploymentAnalyzer() {
     try {
       setLoading(true)
       setError(null)
-      // Save subscription ID to localStorage
       localStorage.setItem('lastAzureSubscriptionId', subId)
-      const connectResponse = await apiService.connectAzureSubscription(subId)
-      if (connectResponse.data?.status === 'success' || (connectResponse as any).status === 'success') {
-        setSubscriptionId(subId)
-        await loadResourceGroups(subId, false)
+      setSubscriptionId(subId)
+
+      // Instant: use preloaded RGs (from background fetch) or client-side localStorage cache
+      if (lastPreloadedSubId === subId) {
         setCurrentStep('resourceGroups')
-      } else {
-        setError((connectResponse.data as any)?.error || (connectResponse as any).error || 'Failed to connect to Azure')
+        return
       }
+      const localCached = getRgCache(subId)
+      if (localCached && localCached.length > 0) {
+        setResourceGroups(localCached)
+        setResourceGroupsCached(true)
+        setLastPreloadedSubId(subId)
+        setCurrentStep('resourceGroups')
+        return
+      }
+
+      // No cache: fetch from API (backend may have cache for fast response)
+      const rgBody = await apiService.getAzureResourceGroups(subId, false)
+      const rgList = Array.isArray(rgBody?.data) ? rgBody.data : []
+      setResourceGroups(rgList)
+      setResourceGroupsCached((rgBody as { cached?: boolean })?.cached ?? false)
+      setLastPreloadedSubId(subId)
+      if (rgList.length > 0) setRgCache(subId, rgList)
+      setCurrentStep('resourceGroups')
     } catch (err: any) {
       console.error('[DeploymentAnalyzer] Azure connection error:', {
         error: err,
@@ -136,15 +287,12 @@ export function DeploymentAnalyzer() {
         code: err.code,
         config: err.config
       })
-      // Handle different error formats
+      // Handle different error formats (err may be axios error with err.response.data.detail, or a thrown detail object)
       let errorMessage = 'Failed to connect to Azure'
       let recoverySteps: string[] = []
-
-      // FastAPI returns errors in different formats:
-      // 1. { detail: { error: "...", recoverySteps: [...] } }
-      // 2. { detail: "string error" }
-      // 3. Direct error object
-      const errorDetail = err.response?.data?.detail
+      const responseStatus = err.response?.status
+      const payload = err.response?.data ?? (err && typeof err === 'object' && (err.error || err.errorType) ? err : null)
+      const errorDetail = payload?.detail ?? (payload && (payload.error || payload.errorType) ? payload : null)
 
       if (errorDetail) {
         if (typeof errorDetail === 'string') {
@@ -165,25 +313,63 @@ export function DeploymentAnalyzer() {
             recoverySteps = errorDetail.recoverySteps
           }
         }
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error
-        if (err.response.data.recoverySteps) {
-          recoverySteps = err.response.data.recoverySteps
+      } else if (payload?.error) {
+        errorMessage = payload.error
+        if (Array.isArray(payload.recoverySteps)) {
+          recoverySteps = payload.recoverySteps
         }
       } else if (err.message) {
         errorMessage = err.message
       }
 
       // If we still don't have a good error message, use the status code
-      if (errorMessage === 'Failed to connect to Azure' && err.response?.status) {
-        errorMessage = `Request failed with status code ${err.response.status}`
-        if (err.response.data) {
-          errorMessage += `. ${JSON.stringify(err.response.data)}`
+      if (errorMessage === 'Failed to connect to Azure' && (payload || responseStatus)) {
+        const detail = payload?.detail ?? payload
+        if (detail && typeof detail === 'object' && detail.error) {
+          errorMessage = detail.error
+          if (Array.isArray(detail.recoverySteps) && recoverySteps.length === 0) {
+            recoverySteps = detail.recoverySteps
+          }
+        } else if (typeof detail === 'string') {
+          errorMessage = detail
+        } else if (responseStatus) {
+          errorMessage = `Request failed with status code ${responseStatus}`
         }
       }
 
-      // Check for common Azure authentication errors
-      if (errorMessage.includes('refresh token has expired') || errorMessage.includes('AADSTS70043')) {
+      // 500 with subscription/credential error: backend (Container App) could not access – not a user Azure CLI issue
+      const errorType = payload?.errorType ?? errorDetail?.errorType
+      const isBackendIdentityError = responseStatus === 500 && (
+        errorType === 'subscription' ||
+        errorType === 'credential_expired' ||
+        (errorMessage && /Subscription\s+['\"]?[a-f0-9-]+|subscription.*(?:not found|no access|not have access|active)/i.test(errorMessage)) ||
+        (errorMessage && /credential may have expired|renew.*secret|managed identity/i.test(errorMessage))
+      )
+      if (isBackendIdentityError) {
+        if (errorType === 'credential_expired' && errorMessage && !errorMessage.includes('Azure CLI')) {
+          // Keep backend message for credential expired; use backend recovery steps if present
+          if (Array.isArray(errorDetail?.recoverySteps) && errorDetail.recoverySteps.length > 0) {
+            recoverySteps = errorDetail.recoverySteps
+          } else {
+            recoverySteps = [
+              'If using Service Principal: renew the client secret in Azure Portal (App registration → Certificates & secrets)',
+              'If using Managed Identity: ensure the Container App identity has Reader role on the subscription',
+              'Restart the backend after renewing credentials',
+              'Verify subscription ID is correct and the subscription is active'
+            ]
+          }
+        } else {
+          errorMessage = 'The backend could not access this Azure subscription. The subscription may not exist, may be in another tenant, or the backend\'s Azure identity may not have access.'
+          recoverySteps = [
+            'Verify the subscription ID in Azure Portal (Subscriptions) and that it is active',
+            'Ensure the backend\'s managed identity or service principal has at least Reader access to this subscription',
+            'If the subscription is in a different tenant, configure the backend to use credentials for that tenant',
+            'Contact your administrator to check backend Azure identity and subscription access'
+          ]
+        }
+      }
+      // Check for common Azure authentication errors (user-side only when not a backend subscription error)
+      else if (errorMessage.includes('refresh token has expired') || errorMessage.includes('AADSTS70043')) {
         errorMessage = 'Azure authentication token has expired. Please re-authenticate.'
         recoverySteps = [
           'Open PowerShell or Command Prompt',
@@ -213,6 +399,55 @@ export function DeploymentAnalyzer() {
         ]
       }
 
+      // Always try to extract recovery steps from error detail if not already found
+      if (recoverySteps.length === 0 && errorDetail && typeof errorDetail === 'object') {
+        if (errorDetail.recoverySteps && Array.isArray(errorDetail.recoverySteps)) {
+          recoverySteps = errorDetail.recoverySteps
+        }
+      }
+
+      // 405 Method Not Allowed: API endpoint may not accept POST or proxy misconfiguration
+      if (responseStatus === 405) {
+        errorMessage = 'The server returned Method Not Allowed (405). The deployment API may not be configured to accept POST requests at this URL.'
+        if (recoverySteps.length === 0) {
+          recoverySteps = [
+            'Ensure the backend API is running and reachable at the configured API URL',
+            'If using Azure Static Web Apps or a reverse proxy, ensure POST requests to /api/v1/deployment/azure/connect are forwarded to the backend',
+            'Check browser Network tab: confirm the request is sent as POST and the request URL is correct',
+            'Try running the backend locally and point the frontend to it (e.g. http://localhost:8000) to verify the API works'
+          ]
+        }
+      }
+
+      // For other 500 errors (not subscription/credential), suggest checking backend
+      if (recoverySteps.length === 0 && responseStatus === 500 && !isBackendIdentityError) {
+        errorMessage = errorMessage || 'Azure connection failed on the server. The backend could not complete the request.'
+        recoverySteps = [
+          'Verify the subscription ID is correct and active in Azure Portal',
+          'Check backend logs (e.g. Container App logs) for the exact error',
+          'Ensure the backend\'s Azure identity has Reader (or appropriate) role on the subscription',
+          'Refresh this page and try again; if it persists, contact your administrator'
+        ]
+      }
+
+      // Network or non-2xx with no recovery steps yet: add generic recovery
+      if (recoverySteps.length === 0 && (responseStatus != null && responseStatus >= 400 || err.code === 'ERR_NETWORK' || !err.response)) {
+        if (err.code === 'ERR_NETWORK' || !err.response) {
+          errorMessage = errorMessage || 'Unable to reach the deployment API. The backend may be down or not reachable.'
+          recoverySteps = [
+            'Ensure the backend server is running',
+            'Check the API URL in Settings or config (e.g. /api for same-origin or full backend URL)',
+            'If using CORS, ensure the backend allows the frontend origin'
+          ]
+        } else {
+          errorMessage = errorMessage || `Request failed (${err.response?.status}). See details above.`
+          recoverySteps = [
+            'Check that the backend deployment API is available (GET /azure/resource-groups, POST /azure/connect)',
+            'Retry after a moment; if it persists, check backend logs for errors'
+          ]
+        }
+      }
+
       // Format error message with recovery steps
       if (recoverySteps.length > 0) {
         errorMessage += '\n\nTo fix this:\n' + recoverySteps.map((step, i) => `${i + 1}. ${step}`).join('\n')
@@ -220,29 +455,40 @@ export function DeploymentAnalyzer() {
 
       setError(errorMessage)
       console.error('Azure connection error:', err)
+      console.error('Error detail:', errorDetail)
+      console.error('Recovery steps:', recoverySteps)
     } finally {
       setLoading(false)
     }
   }
+  void handleSubscriptionSubmit // Reserved for future subscription input UI
 
-  const handleResourceGroupsSelected = async (selected: string[], includeCosts: boolean) => {
+  const handleResourceGroupsSelected = async (selected: string[]) => {
     try {
       setLoading(true)
       setError(null)
       setAnalysisResults([]) // Clear previous results
       setSelectedResourceGroups(selected)
-      setIncludeCostsInAnalysis(includeCosts)
-      setCosts({}) // Clear previous costs
+
       setAnalysisProgress({ current: 0, total: 2, message: 'Fetching Azure resources...' })
 
       // Get Azure resources first
       setAnalysisProgress({ current: 1, total: 3, message: 'Loading resources from selected resource groups...' })
       const response = await apiService.getAzureResources(subscriptionId, selected)
       const servicesData = (response.data as any)?.data || response.data || []
-      setServices(Array.isArray(servicesData) ? servicesData : [])
+      const validServices = Array.isArray(servicesData) ? servicesData : []
+      setServices(validServices)
+
+      // Check if we have any services to analyze
+      if (!validServices || validServices.length === 0) {
+        setError('No Azure resources found in the selected resource groups. Please select different resource groups.')
+        setAnalysisProgress(null)
+        setLoading(false)
+        return
+      }
 
       // Check if there are AKS clusters - if so, get namespaces for selection
-      const hasAKS = servicesData.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
+      const hasAKS = validServices.some((s: any) => s.type?.toLowerCase().includes('microsoft.containerservice/managedclusters'))
 
       if (hasAKS) {
         // Get namespaces from AKS clusters - dynamically fetch from actual clusters
@@ -314,10 +560,10 @@ export function DeploymentAnalyzer() {
             url: nsErr.config?.url
           })
           // Continue to analysis without namespace selection
-          setAnalysisProgress(null)
-          setLoading(false)
           setCurrentStep('analysis')
-          analyzeServices(servicesData).catch(err => {
+          setLoading(true) // Ensure loading is true when starting analysis
+          setAnalysisProgress({ current: 0, total: validServices.length, message: 'Starting analysis...' })
+          analyzeServices(validServices).catch(err => {
             console.error('Analysis error:', err)
             setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
             setLoading(false)
@@ -325,10 +571,10 @@ export function DeploymentAnalyzer() {
         }
       } else {
         // No AKS clusters, proceed directly to analysis
-        setAnalysisProgress(null)
-        setLoading(false)
         setCurrentStep('analysis')
-        analyzeServices(servicesData).catch(err => {
+        setLoading(true) // Ensure loading is true when starting analysis
+        setAnalysisProgress({ current: 0, total: validServices.length, message: 'Starting analysis...' })
+        analyzeServices(validServices).catch(err => {
           console.error('Analysis error:', err)
           setError(err.response?.data?.detail?.error || err.message || 'Failed to analyze services')
           setLoading(false)
@@ -342,11 +588,10 @@ export function DeploymentAnalyzer() {
     }
   }
 
-  const handleNamespacesSelected = async (selected: string[], includeCosts: boolean) => {
+  const handleNamespacesSelected = async (selected: string[]) => {
     try {
       setLoading(true)
       setError(null)
-      setIncludeCostsInAnalysis(includeCosts)
 
       // Ensure we have services to analyze
       if (!services || services.length === 0) {
@@ -372,171 +617,6 @@ export function DeploymentAnalyzer() {
       setLoading(true)
       setError(null)
       setAnalysisProgress({ current: 0, total: servicesToAnalyze.length, message: 'Starting analysis...' })
-
-      // Fetch costs if requested (in parallel with analysis)
-      let costsPromise: Promise<void> | null = null
-      if (includeCostsInAnalysis && selectedResourceGroups.length > 0) {
-        setCostsLoading(true)
-        costsPromise = (async () => {
-          try {
-            console.log(`[Costs] Fetching costs for ${selectedResourceGroups.length} resource groups during analysis...`)
-            console.log(`[Costs] Selected resource groups:`, selectedResourceGroups)
-            console.log(`[Costs] Subscription ID:`, subscriptionId)
-            const numRGs = selectedResourceGroups.length
-            const timeoutMs = numRGs > 50 ? 300000 : numRGs > 20 ? 180000 : numRGs === 1 ? 30000 : 60000
-
-            const abortController = new AbortController()
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => {
-                abortController.abort()
-                reject(new Error(`Costs request timed out after ${timeoutMs / 1000} seconds`))
-              }, timeoutMs)
-            })
-
-            const response = await Promise.race([
-              apiService.getResourceGroupCosts(subscriptionId, selectedResourceGroups, undefined, undefined, abortController.signal),
-              timeoutPromise
-            ]) as any
-
-            console.log('[Costs] Response received:', response)
-            console.log('[Costs] Response data:', response?.data)
-            console.log('[Costs] Response data.data:', response?.data?.data)
-
-            if (!abortController.signal.aborted) {
-              // Handle different response structures
-              let costDataArray: any[] = []
-
-              if (response?.data?.data && Array.isArray(response.data.data)) {
-                costDataArray = response.data.data
-              } else if (Array.isArray(response?.data)) {
-                costDataArray = response.data
-              } else if (response?.data) {
-                // Single cost object
-                costDataArray = [response.data]
-              }
-
-              console.log('[Costs] Parsed cost data array:', costDataArray)
-
-              if (costDataArray.length > 0) {
-                const costMap: Record<string, any> = {}
-                // First, add all cost data from the response
-                costDataArray.forEach((costData: any) => {
-                  if (costData?.resource_group) {
-                    costMap[costData.resource_group] = {
-                      resource_group: costData.resource_group,
-                      total_cost: costData.total_cost || 0,
-                      services: costData.services || {},
-                      projections: costData.projections,
-                      error: costData.error
-                    }
-                  }
-                })
-                // Ensure all selected resource groups are in the map
-                // If a RG is missing from the response, add it with zero cost
-                selectedResourceGroups.forEach(rgName => {
-                  if (!costMap[rgName]) {
-                    costMap[rgName] = {
-                      resource_group: rgName,
-                      total_cost: 0,
-                      services: {},
-                      error: 'No cost data returned for this resource group'
-                    }
-                  }
-                })
-                console.log('[Costs] Cost map created:', costMap)
-                setCosts(costMap)
-                setCostsLoading(false)
-                console.log(`[Costs] Successfully loaded costs for ${Object.keys(costMap).length} resource groups (${selectedResourceGroups.length} selected)`)
-              } else {
-                console.warn('[Costs] No cost data in response, setting empty costs')
-                // Set empty costs for all resource groups
-                const costMap: Record<string, any> = {}
-                selectedResourceGroups.forEach(rgName => {
-                  costMap[rgName] = {
-                    resource_group: rgName,
-                    total_cost: 0,
-                    services: {},
-                    error: 'No cost data returned from API'
-                  }
-                })
-                setCosts(costMap)
-                setCostsLoading(false)
-              }
-            } else {
-              setCostsLoading(false)
-            }
-          } catch (err: any) {
-            console.error('[Costs] Error fetching costs during analysis:', err)
-            console.error('[Costs] Error details:', {
-              message: err.message,
-              response: err.response?.data,
-              status: err.response?.status,
-              url: err.config?.url
-            })
-            // Set error state for costs but don't fail the analysis
-            const costMap: Record<string, any> = {}
-
-            // Check if the response contains cost data with errors (partial success)
-            if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
-              // API returned data but some RGs may have errors
-              err.response.data.data.forEach((costData: any) => {
-                if (costData?.resource_group) {
-                  costMap[costData.resource_group] = {
-                    resource_group: costData.resource_group,
-                    total_cost: costData.total_cost || 0,
-                    services: costData.services || {},
-                    projections: costData.projections,
-                    error: costData.error
-                  }
-                }
-              })
-              // Ensure all selected RGs are in the map
-              selectedResourceGroups.forEach(rgName => {
-                if (!costMap[rgName]) {
-                  costMap[rgName] = {
-                    resource_group: rgName,
-                    total_cost: 0,
-                    services: {},
-                    error: 'No cost data returned for this resource group'
-                  }
-                }
-              })
-            } else {
-              // Complete failure - set error for all RGs
-              selectedResourceGroups.forEach(rgName => {
-                let errorMessage = 'Failed to load costs'
-                if (err.response?.data?.detail) {
-                  if (typeof err.response.data.detail === 'string') {
-                    errorMessage = err.response.data.detail
-                  } else if (err.response.data.detail.error) {
-                    errorMessage = err.response.data.detail.error
-                  } else if (err.response.data.detail.recoverySteps) {
-                    // Use first recovery step as hint
-                    errorMessage = `${err.response.data.detail.error || 'Failed to load costs'}. ${err.response.data.detail.recoverySteps[0] || ''}`
-                  }
-                } else if (err.message) {
-                  if (err.message.includes('timeout') || err.message.includes('aborted')) {
-                    errorMessage = `Request timed out. Cost Management API is taking too long to respond.`
-                  } else {
-                    errorMessage = err.message
-                  }
-                }
-                costMap[rgName] = {
-                  resource_group: rgName,
-                  total_cost: 0,
-                  services: {},
-                  error: errorMessage
-                }
-              })
-            }
-            setCosts(costMap)
-            setCostsLoading(false)
-            console.log('[Costs] Set error costs for resource groups:', costMap)
-          }
-        })()
-      } else {
-        setCostsLoading(false)
-      }
 
       // Simulate progress updates
       const progressInterval = setInterval(() => {
@@ -566,15 +646,6 @@ export function DeploymentAnalyzer() {
         console.log('[Analysis] Parsed results:', results)
         setAnalysisResults(Array.isArray(results) ? results : [])
         setAnalysisProgress({ current: servicesToAnalyze.length, total: servicesToAnalyze.length, message: 'Analysis complete!' })
-
-        // Don't wait for costs - let them load in background
-        // Costs will update the UI when they're ready
-        if (costsPromise) {
-          costsPromise.catch(err => {
-            console.error('[Costs] Background cost fetching failed:', err)
-            // Error already handled in the promise
-          })
-        }
       } catch (analysisErr: any) {
         console.error('[Analysis] Analysis failed:', analysisErr)
         throw analysisErr // Re-throw to be caught by outer try-catch
@@ -611,7 +682,7 @@ export function DeploymentAnalyzer() {
 
   const handleBack = () => {
     if (currentStep === 'analysis') {
-      // Always go back to resource groups selection from analysis
+      clearSavedAnalysisState()
       setCurrentStep('resourceGroups')
       setAnalysisResults([])
       setServices([])
@@ -620,24 +691,23 @@ export function DeploymentAnalyzer() {
       setCurrentStep('resourceGroups')
       setClusterNamespaces([])
     } else if (currentStep === 'resourceGroups') {
-      setCurrentStep('subscription')
-      setResourceGroups([])
+      navigate(-1)
     }
   }
 
   return (
-    <div className="space-y-6">
-      {currentStep === 'subscription' && (
-        <SubscriptionInput
-          onSubmit={handleSubscriptionSubmit}
-          loading={loading}
-          error={error}
-          defaultSubscriptionId={subscriptionId}
-        />
+    <div className="space-y-6 min-h-[400px]">
+      {currentStep === 'resourceGroups' && azureHealth?.status === 'unavailable' && (
+        <div className="rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4 text-amber-800 dark:text-amber-200">
+          <p className="font-medium">Azure connectivity issue</p>
+          <p className="text-sm mt-1">{azureHealth.message || 'Backend Azure identity may have expired or lost access to the subscription.'}</p>
+          <p className="text-sm mt-1">Update the Azure subscription in Settings or contact your administrator to renew the Service Principal secret.</p>
+        </div>
       )}
 
       {currentStep === 'resourceGroups' && (
         <ResourceGroupSelector
+          azureHealth={azureHealth}
           resourceGroups={resourceGroups}
           onSelected={handleResourceGroupsSelected}
           onBack={handleBack}
@@ -656,7 +726,6 @@ export function DeploymentAnalyzer() {
           onSelected={handleNamespacesSelected}
           onBack={() => setCurrentStep('resourceGroups')}
           loading={loading}
-          includeCosts={includeCostsInAnalysis}
         />
       )}
 
@@ -669,37 +738,24 @@ export function DeploymentAnalyzer() {
           error={error}
           onBack={handleBack}
           onRefresh={() => analyzeServices(services)}
-          onUpdateAnalysisResults={(updatedResults) => {
-            setAnalysisResults(updatedResults)
-          }}
-          costs={costs}
-          costsLoading={costsLoading}
-          includeCosts={includeCostsInAnalysis}
-          onOpenLogAnalyzer={(resourceGroup: string) => {
-            setSelectedResourceGroupForLogs(resourceGroup)
-            setLogAnalyzerOpen(true)
-          }}
           selectedResourceGroups={selectedResourceGroups}
           subscriptionId={subscriptionId}
+          onUpdateAnalysisResult={(updatedResult: AnalysisResult) => {
+            setAnalysisResults((prev: AnalysisResult[]) =>
+              prev.map((r: AnalysisResult) =>
+                r.service.id === updatedResult.service.id ? updatedResult : r
+              )
+            )
+          }}
         />
       )}
 
-      {/* Log Analyzer Modal */}
-      <LogAnalyzer
-        isOpen={logAnalyzerOpen}
-        onClose={() => {
-          setLogAnalyzerOpen(false)
-          setSelectedResourceGroupForLogs(null)
-        }}
-        resourceGroup={selectedResourceGroupForLogs || undefined}
-        subscriptionId={subscriptionId}
-      />
     </div>
   )
 }
 
-// Subscription Input Component
-function SubscriptionInput({
+// Subscription Input Component - exported for potential future use
+export function SubscriptionInput({
   onSubmit,
   loading,
   error,
@@ -717,19 +773,22 @@ function SubscriptionInput({
   }
 
   const [subscriptionId, setSubscriptionId] = useState(getInitialSubscriptionId())
-  const [isFocused, setIsFocused] = useState(false)
-  const [showMasked, setShowMasked] = useState(true)
+  const [isUsingCachedId, setIsUsingCachedId] = useState(false)
+  const [showSubscriptionId, setShowSubscriptionId] = useState(false)
 
-  // Function to mask subscription ID for display
-  const maskSubscriptionId = (id: string): string => {
-    if (!id || id.length < 12) return id
-    return `${id.substring(0, 8)}...${id.substring(id.length - 4)}`
-  }
+  // Check if we're using cached ID on mount
+  useEffect(() => {
+    const cached = localStorage.getItem('lastAzureSubscriptionId')
+    if (cached && cached === subscriptionId) {
+      setIsUsingCachedId(true)
+    }
+  }, [])
 
   // Save to localStorage when subscription ID changes
   useEffect(() => {
     if (subscriptionId.trim()) {
       localStorage.setItem('lastAzureSubscriptionId', subscriptionId.trim())
+      setIsUsingCachedId(true)
     }
   }, [subscriptionId])
 
@@ -742,20 +801,8 @@ function SubscriptionInput({
     }
   }
 
-  const handleFocus = () => {
-    setIsFocused(true)
-    setShowMasked(false)
-  }
-
-  const handleBlur = () => {
-    setIsFocused(false)
-    if (subscriptionId && subscriptionId.length > 0) {
-      setShowMasked(true)
-    }
-  }
-
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[400px]">
       <div className="card bg-white dark:bg-slate-800 shadow-lg rounded-xl p-6 sm:p-8">
         <div className="flex items-center space-x-3 mb-6">
           <Cloud className="w-8 h-8 text-purple-600 dark:text-purple-400" />
@@ -776,8 +823,8 @@ function SubscriptionInput({
                 {error.includes('\n\nTo fix this:') ? error.split('\n\nTo fix this:')[0] : error}
               </div>
               {error.includes('\n\nTo fix this:') && (
-                <div className="mt-3 pt-3 border-t border-red-200">
-                  <div className="text-sm font-semibold text-red-800 mb-2">📋 Steps to Fix:</div>
+                <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-700">
+                  <div className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">📋 Steps to Fix:</div>
                   <ol className="text-sm text-red-700 dark:text-red-300 space-y-2 list-decimal list-inside">
                     {error.split('\n\nTo fix this:\n')[1]?.split('\n').filter((line: string) => line.trim() && !line.match(/^\d+\.\s*$/)).map((step: string, idx: number) => (
                       <li key={idx} className="ml-2 bg-red-100 dark:bg-red-900/40 px-2 py-1 rounded">
@@ -785,7 +832,7 @@ function SubscriptionInput({
                       </li>
                     ))}
                   </ol>
-                  <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-800 dark:text-blue-200">
+                  <div className="mt-3 p-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded text-xs text-indigo-800 dark:text-indigo-200">
                     <strong>💡 Tip:</strong> After completing these steps, refresh this page and try connecting again.
                   </div>
                 </div>
@@ -799,34 +846,34 @@ function SubscriptionInput({
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Azure Subscription ID
+            {isUsingCachedId && (
+              <span className="ml-2 text-xs text-indigo-600 dark:text-indigo-400 font-normal">
+                (Using cached subscription ID)
+              </span>
+            )}
           </label>
           <div className="relative">
             <input
-              type="text"
-              value={isFocused || !showMasked ? subscriptionId : maskSubscriptionId(subscriptionId)}
+              type={showSubscriptionId ? 'text' : 'password'}
+              value={subscriptionId}
               onChange={(e) => setSubscriptionId(e.target.value)}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-mono text-sm"
+              className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
               disabled={loading}
             />
-            {!isFocused && subscriptionId && subscriptionId.length > 0 && showMasked && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsFocused(true)
-                  setShowMasked(false)
-                  // Focus the input
-                  const input = document.querySelector('input[type="text"]') as HTMLInputElement
-                  input?.focus()
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs"
-                title="Click to reveal full subscription ID"
-              >
-                Show
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowSubscriptionId(!showSubscriptionId)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              disabled={loading}
+              title={showSubscriptionId ? 'Hide subscription ID' : 'Show subscription ID'}
+            >
+              {showSubscriptionId ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
           </div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             You can find your subscription ID in the Azure Portal under Subscriptions.
@@ -836,7 +883,7 @@ function SubscriptionInput({
         <button
           type="submit"
           disabled={loading || !subscriptionId.trim()}
-          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold"
+          className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold"
         >
           {loading ? (
             <>
@@ -847,15 +894,140 @@ function SubscriptionInput({
             <span>Connect to Azure</span>
           )}
         </button>
+
       </form>
       </div>
     </div>
   )
 }
 
+// ARM Template Export Handler
+async function handleExportArmTemplate(
+  subscriptionId: string,
+  resourceGroupName: string,
+  onError: (error: string) => void
+): Promise<boolean> {
+  try {
+    // Add timeout handling
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Export request timed out after 2 minutes')), 120000)
+    })
+    
+    const exportPromise = apiService.exportArmTemplate(subscriptionId, resourceGroupName)
+    const response = await Promise.race([exportPromise, timeoutPromise]) as any
+    
+    console.log('[Export ARM] Response received:', response)
+    console.log('[Export ARM] Response structure:', {
+      hasData: !!response?.data,
+      hasDataData: !!response?.data?.data,
+      hasTemplateJson: !!response?.data?.template_json,
+      hasDataTemplateJson: !!response?.data?.data?.template_json,
+      hasTemplate: !!response?.data?.template,
+      hasDataTemplate: !!response?.data?.data?.template
+    })
+    
+    // Handle different response structures - check multiple possible locations
+    let templateJson: string | null = null
+    let template: any = null
+    
+    // Try response.data.data.template_json (standard API response structure)
+    if (response?.data?.data?.template_json) {
+      templateJson = response.data.data.template_json
+      console.log('[Export ARM] Found template_json in response.data.data.template_json')
+    }
+    // Try response.data.template_json (alternative structure)
+    else if (response?.data?.template_json) {
+      templateJson = response.data.template_json
+      console.log('[Export ARM] Found template_json in response.data.template_json')
+    }
+    // Try response.template_json (direct structure)
+    else if (response?.template_json) {
+      templateJson = response.template_json
+      console.log('[Export ARM] Found template_json in response.template_json')
+    }
+    // Try response.data.data.template (object that needs stringification)
+    else if (response?.data?.data?.template) {
+      template = response.data.data.template
+      console.log('[Export ARM] Found template object in response.data.data.template')
+    }
+    // Try response.data.template (object that needs stringification)
+    else if (response?.data?.template) {
+      template = response.data.template
+      console.log('[Export ARM] Found template object in response.data.template')
+    }
+    // Try response.template (direct object)
+    else if (response?.template) {
+      template = response.template
+      console.log('[Export ARM] Found template object in response.template')
+    }
+    // Try parsing response.data as string
+    else if (typeof response?.data === 'string') {
+      try {
+        const parsed = JSON.parse(response.data)
+        templateJson = parsed.template_json || parsed.template || response.data
+        console.log('[Export ARM] Parsed response.data as JSON string')
+      } catch {
+        templateJson = response.data
+        console.log('[Export ARM] Using response.data as string directly')
+      }
+    }
+    
+    // If we have a template object but no JSON string, stringify it
+    if (!templateJson && template) {
+      try {
+        templateJson = JSON.stringify(template, null, 2)
+        console.log('[Export ARM] Stringified template object')
+      } catch (e) {
+        console.error('[Export ARM] Failed to stringify template:', e)
+        onError(`ARM template export failed: Unable to convert template to JSON: ${e}`)
+        return false
+      }
+    }
+    
+    if (templateJson) {
+      // Ensure templateJson is a string
+      const jsonString = typeof templateJson === 'string' ? templateJson : JSON.stringify(templateJson, null, 2)
+      
+      console.log('[Export ARM] Template JSON length:', jsonString.length)
+      
+      // Create a blob with the ARM template JSON
+      const blob = new Blob([jsonString], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${resourceGroupName}-arm-template.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      console.log('[Export ARM] Successfully downloaded ARM template')
+      return true
+    } else {
+      console.error('[Export ARM] Unexpected response structure:', response)
+      console.error('[Export ARM] Full response:', JSON.stringify(response, null, 2))
+      onError('ARM template export failed: No template data returned. Check console for details.')
+      return false
+    }
+  } catch (error: any) {
+    let errorMsg = 'Failed to export ARM template'
+    if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
+      errorMsg = 'Export request timed out. The resource group may be too large. Please try exporting individual resource groups or contact support.'
+    } else if (error.response?.data?.detail?.error) {
+      errorMsg = error.response.data.detail.error
+    } else if (error.response?.data?.detail) {
+      errorMsg = typeof error.response.data.detail === 'string' ? error.response.data.detail : JSON.stringify(error.response.data.detail)
+    } else if (error.message) {
+      errorMsg = error.message
+    }
+    onError(`ARM template export failed: ${errorMsg}`)
+    return false
+  }
+}
+
 // Resource Group Selector Component
 function ResourceGroupSelector({
-
+  azureHealth,
   resourceGroups,
   onSelected,
   onBack,
@@ -866,9 +1038,9 @@ function ResourceGroupSelector({
   analysisProgress,
   subscriptionId
 }: {
-
+  azureHealth: { status: string; identityType?: string; identityObjectId?: string; identityAppId?: string; message?: string | null } | null
   resourceGroups: AzureResourceGroup[]
-  onSelected: (selected: string[], includeCosts: boolean) => void
+  onSelected: (selected: string[]) => void
   onBack: () => void
   onRefresh: () => void
   loading: boolean
@@ -879,7 +1051,8 @@ function ResourceGroupSelector({
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [includeCosts, setIncludeCosts] = useState(false)
+  const [exportingRg, setExportingRg] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   const toggleSelection = (rgName: string) => {
     setSelected(prev =>
@@ -906,19 +1079,32 @@ function ResourceGroupSelector({
           <div className="flex items-center space-x-3 mb-2">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Select Resource Groups</h2>
             {cached && (
-              <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">
-                Cached
+              <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full flex items-center space-x-1">
+                <span>📦</span>
+                <span>Cached</span>
               </span>
             )}
           </div>
+          <div>
           <p className="text-gray-600 dark:text-gray-300">Choose which resource groups to analyze for Temenos components</p>
+            {cached && (
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 flex items-center space-x-1">
+                <span>💡</span>
+                <span>Using cached data. If you don't see a newly created resource group, click "Refresh" to fetch the latest list from Azure.</span>
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex items-center space-x-3">
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="btn-secondary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Refresh resource groups from Azure"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              cached 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                : 'btn-secondary'
+            }`}
+            title={cached ? "Refresh to fetch latest resource groups from Azure (including newly created ones)" : "Refresh resource groups from Azure"}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -930,28 +1116,74 @@ function ResourceGroupSelector({
         </div>
       </div>
 
+      {azureHealth?.status === 'ok' && (
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-slate-700 dark:text-slate-300">
+          <p className="text-sm font-medium mb-1">Backend identity for IAM role assignment</p>
+          {azureHealth.identityObjectId ? (
+            <>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                Use this Object ID when assigning &quot;Azure Kubernetes Service Cluster User Role&quot; at subscription level.
+              </p>
+              <p className="text-xs font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded break-all">
+                {azureHealth.identityObjectId}
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+              Object ID not available. Call <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">GET /deployment/azure/health</code> to inspect the backend identity.
+            </p>
+          )}
+          {azureHealth.identityType && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              Type: {azureHealth.identityType === 'managed_identity' ? 'Managed Identity' : azureHealth.identityType === 'service_principal' ? 'Service Principal' : azureHealth.identityType}
+            </p>
+          )}
+        </div>
+      )}
+
       {error && (
         <div className="card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
-          {error}
+          <div className="font-semibold mb-2">Error</div>
+          <div className="whitespace-pre-line text-sm">{error}</div>
+        </div>
+      )}
+
+      {exportError && (
+        <div className={`card border-2 ${
+          exportError.includes('successfully') 
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300'
+        }`}>
+          <div className="flex items-start space-x-2">
+            {exportError.includes('successfully') ? (
+              <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            )}
+            <div className="flex-1">
+              <p className="font-semibold mb-1">ARM Template Export</p>
+              <p className="text-sm whitespace-pre-line">{exportError}</p>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Loading/Progress Indicator */}
       {loading && analysisProgress && (
-        <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30">
+        <div className="card bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-500/30">
           <div className="flex items-center space-x-4">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+              <p className="text-sm font-medium text-indigo-900 dark:text-indigo-100 mb-2">
                 {analysisProgress.message}
               </p>
-              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+              <div className="w-full bg-indigo-200 dark:bg-indigo-800 rounded-full h-2">
                 <div
-                  className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                  className="bg-indigo-600 dark:bg-indigo-400 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
                 ></div>
               </div>
-              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+              <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-1">
                 Step {analysisProgress.current} of {analysisProgress.total}
               </p>
             </div>
@@ -979,12 +1211,14 @@ function ResourceGroupSelector({
             {selected.length === filteredResourceGroups.length ? 'Deselect All' : 'Select All'}
           </button>
         </div>
-        <div className="mt-3 text-sm text-gray-600">
+        <div className="mt-3 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
           {selected.length > 0 && (
             <span className="font-medium text-purple-600">{selected.length} selected</span>
           )}
           {' '}
           {filteredResourceGroups.length} resource group{filteredResourceGroups.length !== 1 ? 's' : ''} found
+          </div>
         </div>
       </div>
 
@@ -998,6 +1232,8 @@ function ResourceGroupSelector({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredResourceGroups.map((rg) => {
           const isSelected = selected.includes(rg.name)
+          const isExporting = exportingRg === rg.name
+          
           return (
             <div
               key={rg.id}
@@ -1018,74 +1254,49 @@ function ResourceGroupSelector({
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation()
-                      try {
-                        const exportData = await apiService.exportResourceGroups(subscriptionId, [rg.name])
-                        if (exportData.data && exportData.data.data && exportData.data.data.length > 0) {
-                          const exportItem = exportData.data.data[0]
-                          if (exportItem.status === 'success' && exportItem.template) {
-                            const blob = new Blob([JSON.stringify(exportItem.template, null, 2)], { type: 'application/json' })
-                            const url = URL.createObjectURL(blob)
-                            const a = document.createElement('a')
-                            a.href = url
-                            a.download = `arm-template-${rg.name}-${new Date().toISOString().split('T')[0]}.json`
-                            document.body.appendChild(a)
-                            a.click()
-                            document.body.removeChild(a)
-                            URL.revokeObjectURL(url)
-                          } else {
-                            alert(`Failed to export ${rg.name}: ${exportItem.error || 'Unknown error'}`)
-                          }
-                        }
-                      } catch (error: any) {
-                        console.error('Export failed:', error)
-                        const errorMsg = error.response?.data?.detail || error.message || 'Failed to export resource group'
-                        alert(`Export failed: ${errorMsg}`)
-                      }
-                    }}
-                    className="p-1.5 text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded transition-colors"
-                    title={`Export ${rg.name} as ARM template`}
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
                   {isSelected && (
                     <div className="bg-purple-600 text-white rounded-full p-1">
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
                   )}
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      setExportingRg(rg.name)
+                      setExportError(null)
+                      try {
+                        const success = await handleExportArmTemplate(
+                          subscriptionId,
+                          rg.name,
+                          (error) => setExportError(error)
+                        )
+                        if (success) {
+                          setTimeout(() => setExportError(null), 3000)
+                        }
+                      } finally {
+                        setExportingRg(null)
+                      }
+                    }}
+                    disabled={isExporting}
+                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Export ARM Template (IaC)"
+                  >
+                    {isExporting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
+              {exportError && exportingRg === rg.name && (
+                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300">
+                  {exportError}
+                </div>
+              )}
             </div>
           )
         })}
-      </div>
-
-      {/* Include Costs Checkbox */}
-      {/* Include Costs Checkbox */}
-      <div className="card bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-100 dark:border-purple-500/30 transition-all hover:shadow-md">
-        <label className="flex items-center space-x-3 cursor-pointer group">
-          <div className="relative flex items-center justify-center">
-            <input
-              type="checkbox"
-              checked={includeCosts}
-              onChange={(e) => setIncludeCosts(e.target.checked)}
-              className="peer w-5 h-5 text-purple-600 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500 transition-all cursor-pointer"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-lg">
-              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <span className="text-base font-medium text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-              Include cost analysis for selected resource groups
-            </span>
-          </div>
-        </label>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 ml-11">
-          This will fetch cost data from Azure Cost Management API (may take a few moments)
-        </p>
       </div>
 
       <div className="flex justify-end space-x-4">
@@ -1093,7 +1304,7 @@ function ResourceGroupSelector({
           Cancel
         </button>
         <button
-          onClick={() => onSelected(selected, includeCosts)}
+          onClick={() => onSelected(selected)}
           disabled={selected.length === 0 || loading}
           className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
         >
@@ -1116,8 +1327,7 @@ function NamespaceSelector({
   clusterNamespaces,
   onSelected,
   onBack,
-  loading,
-  includeCosts
+  loading
 }: {
   clusterNamespaces: Array<{ 
     cluster_name: string
@@ -1132,10 +1342,9 @@ function NamespaceSelector({
       for_azure_app_service?: string[]
     }
   }>
-  onSelected: (selected: string[], includeCosts: boolean) => void
+  onSelected: (selected: string[]) => void
   onBack: () => void
   loading: boolean
-  includeCosts: boolean
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -1271,7 +1480,7 @@ function NamespaceSelector({
               Back
             </button>
             <button
-              onClick={() => onSelected(selected, includeCosts)}
+              onClick={() => onSelected(selected)}
               disabled={selected.length === 0 || loading}
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
@@ -1300,13 +1509,9 @@ function ServiceAnalysis({
   error,
   onBack,
   onRefresh,
-  costs,
-  costsLoading,
-  includeCosts,
-  onOpenLogAnalyzer,
   selectedResourceGroups,
   subscriptionId,
-  onUpdateAnalysisResults
+  onUpdateAnalysisResult
 }: {
   services: AzureResource[]
   analysisResults: AnalysisResult[]
@@ -1315,22 +1520,12 @@ function ServiceAnalysis({
   error: string | null
   onBack: () => void
   onRefresh: () => void
-  costs: Record<string, {
-    total_cost: number
-    projections?: {
-      full_month: number
-      annual: number
-    }
-    error?: string
-  }>
-  costsLoading: boolean
-  includeCosts: boolean
-  onOpenLogAnalyzer: (resourceGroup: string) => void
   selectedResourceGroups: string[]
   subscriptionId: string
-  onUpdateAnalysisResults?: (updatedResults: AnalysisResult[]) => void
+  onUpdateAnalysisResult: (updatedResult: AnalysisResult) => void
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
+  const [selectedAzureService, setSelectedAzureService] = useState<string | null>(null)
 
   const [analysisResultsState, setAnalysisResultsState] = useState(analysisResults)
   
@@ -1351,6 +1546,22 @@ function ServiceAnalysis({
 
   const selectedResult = identifiedComponents.find(r => r.service.id === selectedComponent) || identifiedComponents[0]
   
+
+  // Callback to handle component refresh
+  const handleComponentRefresh = useCallback((updatedResult: AnalysisResult) => {
+    try {
+      console.log('[Refresh] handleComponentRefresh called with:', updatedResult)
+      setAnalysisResultsState((prev) =>
+        prev.map((item) => (item.service.id === updatedResult.service.id ? updatedResult : item))
+      )
+      onUpdateAnalysisResult(updatedResult)
+      console.log('[Refresh] State update queued successfully')
+    } catch (err) {
+      console.error('[Refresh] Error updating state:', err)
+      console.error('[Refresh] Error stack:', err instanceof Error ? err.stack : 'No stack')
+      alert(`Failed to update component information: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+  }, [onUpdateAnalysisResult])
 
   // Show error if present
   if (error) {
@@ -1424,9 +1635,11 @@ function ServiceAnalysis({
                 onClick={async () => {
                   try {
                     const exportData = await apiService.exportResourceGroups(subscriptionId, selectedResourceGroups)
-                    if (exportData.data && exportData.data.data && exportData.data.data.length > 0) {
-                      const successfulExports = exportData.data.data.filter((item: any) => item.status === 'success' && item.template)
-                      const failedExports = exportData.data.data.filter((item: any) => item.status === 'error')
+                    const templates = exportData?.data ?? exportData
+                    const exportList = Array.isArray(templates) ? templates : (templates?.data ?? [])
+                    if (exportList.length > 0) {
+                      const successfulExports = exportList.filter((item: any) => item.status === 'success' && item.template)
+                      const failedExports = exportList.filter((item: any) => item.status === 'error')
 
                       if (failedExports.length > 0) {
                         const failedRGs = failedExports.map((item: any) => item.resource_group).join(', ')
@@ -1523,24 +1736,6 @@ function ServiceAnalysis({
                 <Download className="w-4 h-4" />
                 <span>Export ARM</span>
               </button>
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    // Open log analyzer with first resource group, or show dropdown if multiple
-                    if (selectedResourceGroups.length === 1) {
-                      onOpenLogAnalyzer(selectedResourceGroups[0])
-                    } else {
-                      // For multiple RGs, open with the first one (user can change in modal)
-                      onOpenLogAnalyzer(selectedResourceGroups[0])
-                    }
-                  }}
-                  className="btn-secondary flex items-center space-x-2"
-                  title="Analyze logs for Temenos components in this resource group"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Log Analyzer</span>
-                </button>
-              </div>
             </>
           )}
           <button onClick={onRefresh} disabled={loading} className="btn-secondary flex items-center space-x-2">
@@ -1556,13 +1751,13 @@ function ServiceAnalysis({
 
       {loading && (
         <div className="card text-center py-12 bg-white dark:bg-slate-800">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
           <p className="text-gray-700 font-medium mb-2">Analyzing Azure services and identifying Temenos components...</p>
           {analysisProgress && (
             <div className="mt-4">
               <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
                 <div
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                  className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
                   style={{ width: `${(analysisProgress.current / analysisProgress.total) * 100}%` }}
                 ></div>
               </div>
@@ -1575,7 +1770,7 @@ function ServiceAnalysis({
       )}
 
       {/* Summary Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-3 ${includeCosts ? 'lg:grid-cols-4' : ''} gap-6`}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <div className="flex items-center space-x-3">
             <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -1585,12 +1780,12 @@ function ServiceAnalysis({
             </div>
           </div>
         </div>
-        <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <div className="card bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800">
           <div className="flex items-center space-x-3">
-            <Cloud className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            <Cloud className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             <div>
-              <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Azure Services</p>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{services.length}</p>
+              <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">Azure Services</p>
+              <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{services.length}</p>
             </div>
           </div>
         </div>
@@ -1603,86 +1798,6 @@ function ServiceAnalysis({
             </div>
           </div>
         </div>
-        {includeCosts && (
-          <div className="card bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-200/50 dark:border-yellow-500/20">
-            <div className="flex items-center space-x-3">
-              <DollarSign className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
-              <div className="flex-1">
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">Total Cost</p>
-                {(() => {
-                  // Ensure all selected resource groups are accounted for in aggregation
-                  const allRGs = selectedResourceGroups || []
-                  const costEntries = allRGs.map(rgName => {
-                    // Get cost data for this RG, or create a default entry if not found
-                    return costs[rgName] || {
-                      resource_group: rgName,
-                      total_cost: 0,
-                      services: {},
-                      error: costsLoading ? undefined : 'No cost data available'
-                    }
-                  })
-
-                  const hasErrors = costEntries.some(c => c.error)
-                  const totalCost = costEntries.reduce((sum, cost) => {
-                    // Only include costs that don't have errors
-                    if (cost.error && !costsLoading) return sum
-                    return sum + (cost.total_cost || 0)
-                  }, 0)
-
-                  const hasProjections = costEntries.some(c => c.projections && !c.error)
-                  const monthlyProjection = hasProjections ? costEntries.reduce((sum, cost) => {
-                    if (cost.error || !cost.projections) return sum
-                    return sum + (cost.projections.full_month || 0)
-                  }, 0) : null
-
-                  const errorCount = costEntries.filter(c => c.error && !costsLoading).length
-                  const successCount = costEntries.length - errorCount
-
-                  if (hasErrors && costEntries.length > 0 && !costsLoading) {
-                    return (
-                      <>
-                        <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
-                        {errorCount > 0 && (
-                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                            {errorCount} of {costEntries.length} RG{costEntries.length !== 1 ? 's' : ''} failed to load
-                          </p>
-                        )}
-                        {successCount > 0 && (
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                            Aggregated from {successCount} resource group{successCount !== 1 ? 's' : ''}
-                          </p>
-                        )}
-                      </>
-                    )
-                  }
-
-                  return (
-                    <>
-                      <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">${totalCost.toFixed(2)}</p>
-                      {monthlyProjection !== null && monthlyProjection > 0 && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">~${monthlyProjection.toFixed(2)}/month</p>
-                      )}
-                      {costEntries.length > 1 && !costsLoading && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                          Aggregated from {costEntries.length} resource group{costEntries.length !== 1 ? 's' : ''}
-                        </p>
-                      )}
-                      {costsLoading && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 flex items-center space-x-1">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Loading costs for {allRGs.length} resource group{allRGs.length !== 1 ? 's' : ''}...</span>
-                        </p>
-                      )}
-                      {!costsLoading && costEntries.length === 0 && (
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">No cost data available</p>
-                      )}
-                    </>
-                  )
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Horizontal Panel Layout: Main Content + Sidebar */}
@@ -1696,18 +1811,8 @@ function ServiceAnalysis({
             </h3>
             {selectedResult && (
               <ComponentDetailPanel 
-                result={selectedResult}
-                onComponentUpdate={(updatedResult) => {
-                  // Update local state immediately for instant UI feedback
-                  const updatedResults = analysisResultsState.map(r => 
-                    r.service.id === updatedResult.service.id ? updatedResult : r
-                  )
-                  setAnalysisResultsState(updatedResults)
-                  // Also update parent state if callback provided
-                  if (onUpdateAnalysisResults) {
-                    onUpdateAnalysisResults(updatedResults)
-                  }
-                }}
+                result={selectedResult} 
+                onRefresh={handleComponentRefresh}
               />
             )}
           </div>
@@ -1752,23 +1857,146 @@ function ServiceAnalysis({
         </div>
       )}
 
+      {/* Empty State - No Results */}
+      {!loading && analysisResults.length === 0 && services.length > 0 && (
+        <div className="card text-center py-12 bg-white dark:bg-slate-800">
+          <AlertCircle className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Analysis Results</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            Analysis completed but no results were returned. This may indicate an issue with the analysis service.
+          </p>
+          <button onClick={onRefresh} className="btn-primary flex items-center space-x-2 mx-auto">
+            <RefreshCw className="w-4 h-4" />
+            <span>Retry Analysis</span>
+          </button>
+        </div>
+      )}
+
+      {/* Empty State - All Results Have Errors */}
+      {!loading && analysisResults.length > 0 && identifiedComponents.length === 0 && unidentifiedServices.length === 0 && (
+        <div className="card text-center py-12 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800">
+          <AlertCircle className="w-16 h-16 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Analysis Completed with Errors</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            All {analysisResults.length} service{analysisResults.length !== 1 ? 's' : ''} encountered errors during analysis.
+            Please check the backend logs or try refreshing the analysis.
+          </p>
+          <button onClick={onRefresh} className="btn-primary flex items-center space-x-2 mx-auto">
+            <RefreshCw className="w-4 h-4" />
+            <span>Retry Analysis</span>
+          </button>
+        </div>
+      )}
+
       {/* Other Services */}
       {unidentifiedServices.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Other Azure Services</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {unidentifiedServices.map((result, index) => (
-              <div key={result.service.id || index} className="card bg-white dark:bg-slate-800">
-                <h4 className="font-semibold text-gray-900 dark:text-white">{result.service.name}</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{result.service.type}</p>
-                {result.service.description && (
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
-                    {result.service.description}
-                  </p>
-                )}
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{result.service.location}</p>
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+            <Cloud className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <span>Azure Services ({unidentifiedServices.length})</span>
+          </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Azure Services List */}
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {unidentifiedServices.map((result, index) => {
+                  const isSelected = result.service.id === selectedAzureService
+                  const ServiceIcon = getServiceIcon(result.service.type)
+                  return (
+                    <div
+                      key={result.service.id || index}
+                      onClick={() => setSelectedAzureService(result.service.id || null)}
+                      className={`card cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-indigo-50 dark:bg-indigo-900/30 border-2 border-indigo-500 dark:border-indigo-400 shadow-lg'
+                          : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className={`p-2 rounded-lg ${isSelected ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <ServiceIcon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 dark:text-white truncate">{result.service.name}</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">{result.service.type}</p>
+                          {result.service.location && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{result.service.location}</p>
+                          )}
               </div>
-            ))}
+          </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            
+            {/* Azure Service Info Panel */}
+            {selectedAzureService && (() => {
+              const selectedService = unidentifiedServices.find(r => r.service.id === selectedAzureService)
+              if (!selectedService) return null
+              const ServiceIcon = getServiceIcon(selectedService.service.type)
+              const serviceDescription = getAzureServiceDescription(selectedService.service.type)
+              return (
+                <div className="lg:col-span-1">
+                  <div className="card bg-white dark:bg-slate-800 sticky top-4">
+                    <div className="flex items-center space-x-2 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-700">
+                        <ServiceIcon className="w-5 h-5 text-white" />
+                      </div>
+                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">Service Info</h4>
+                    </div>
+                    <div className="space-y-3">
+                      {/* Service Description */}
+                      {serviceDescription && (
+                        <div className="pb-3 border-b border-gray-200 dark:border-gray-700">
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Description</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{serviceDescription}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Name</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedService.service.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Type</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{selectedService.service.type}</p>
+                      </div>
+                      {selectedService.service.resourceGroup && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Resource Group</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{selectedService.service.resourceGroup}</p>
+                        </div>
+                      )}
+                      {selectedService.service.location && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Location</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{selectedService.service.location}</p>
+                        </div>
+                      )}
+                      {selectedService.service.id && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Resource ID</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 break-all font-mono">{selectedService.service.id}</p>
+                        </div>
+                      )}
+                      {selectedService.service.portalUrl && (
+                        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                          <a
+                            href={selectedService.service.portalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium w-full justify-center"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            <span>Open in Azure Portal</span>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -1776,7 +2004,101 @@ function ServiceAnalysis({
   )
 }
 
-// Format RAG text with better formatting (headings, bold, paragraphs, lists)
+// Icon mapping for services and technologies
+const getServiceIcon = (text: string): any => {
+  const lowerText = text.toLowerCase()
+  if (lowerText.includes('kubernetes') || lowerText.includes('aks') || lowerText.includes('container')) return Container
+  if (lowerText.includes('database') || lowerText.includes('sql') || lowerText.includes('postgresql') || lowerText.includes('mongodb') || lowerText.includes('cosmos')) return Database
+  if (lowerText.includes('event hub') || lowerText.includes('messaging') || lowerText.includes('activemq') || lowerText.includes('kinesis')) return MessageSquare
+  if (lowerText.includes('server') || lowerText.includes('compute') || lowerText.includes('vm')) return Server
+  if (lowerText.includes('storage') || lowerText.includes('blob') || lowerText.includes('file')) return HardDrive
+  if (lowerText.includes('network') || lowerText.includes('vnet') || lowerText.includes('load balancer')) return Network
+  if (lowerText.includes('security') || lowerText.includes('key vault') || lowerText.includes('identity')) return Shield
+  if (lowerText.includes('monitoring') || lowerText.includes('log') || lowerText.includes('insights')) return Activity
+  if (lowerText.includes('azure') || lowerText.includes('cloud')) return Cloud
+  if (lowerText.includes('microservice') || lowerText.includes('service')) return Box
+  return Layers
+}
+
+// Generate description for Azure services based on type
+const getAzureServiceDescription = (serviceType: string): string => {
+  const lowerType = serviceType.toLowerCase()
+  
+  // Kubernetes / AKS
+  if (lowerType.includes('kubernetes') || lowerType.includes('aks') || lowerType.includes('container')) {
+    return `Azure Kubernetes Service (AKS) provides a managed Kubernetes environment for deploying, managing, and scaling containerized applications. This cluster hosts containerized workloads and provides orchestration capabilities for microservices architectures.`
+  }
+  
+  // Event Hub
+  if (lowerType.includes('event hub') || lowerType.includes('eventhub')) {
+    return `Azure Event Hubs is a fully managed, real-time data ingestion service that can receive and process millions of events per second. It's commonly used for event streaming, real-time analytics, and building event-driven architectures.`
+  }
+  
+  // Database services
+  if (lowerType.includes('database') || lowerType.includes('sql') || lowerType.includes('postgresql') || lowerType.includes('mongodb') || lowerType.includes('cosmos')) {
+    if (lowerType.includes('cosmos')) {
+      return `Azure Cosmos DB is a globally distributed, multi-model database service designed for low-latency, high-availability applications. It supports multiple APIs including MongoDB, SQL, Cassandra, and Gremlin.`
+    } else if (lowerType.includes('postgresql')) {
+      return `Azure Database for PostgreSQL is a fully managed relational database service based on the open-source PostgreSQL database engine. It provides high availability, automated backups, and built-in security features.`
+    } else if (lowerType.includes('sql')) {
+      return `Azure SQL Database is a fully managed relational database service built on SQL Server. It provides high availability, automated backups, and intelligent performance optimization for cloud applications.`
+    } else {
+      return `This database service provides persistent storage and data management capabilities for applications. It supports structured data storage, querying, and transaction processing.`
+    }
+  }
+  
+  // Storage
+  if (lowerType.includes('storage') || lowerType.includes('blob') || lowerType.includes('file')) {
+    return `Azure Storage provides scalable, durable cloud storage for data, files, and application content. It includes Blob storage for unstructured data, File storage for file shares, and Queue storage for messaging.`
+  }
+  
+  // Virtual Machine / Compute
+  if (lowerType.includes('virtualmachine') || lowerType.includes('vm') || lowerType.includes('compute')) {
+    return `Azure Virtual Machines provide on-demand, scalable computing resources in the cloud. They enable you to deploy and run applications with full control over the operating system and configuration.`
+  }
+  
+  // Key Vault
+  if (lowerType.includes('key vault') || lowerType.includes('keyvault')) {
+    return `Azure Key Vault is a cloud service for securely storing and accessing secrets, keys, and certificates. It helps protect cryptographic keys and secrets used by cloud applications and services.`
+  }
+  
+  // App Service
+  if (lowerType.includes('app service') || lowerType.includes('appservice') || lowerType.includes('web')) {
+    return `Azure App Service is a fully managed platform for building, deploying, and scaling web apps and APIs. It supports multiple programming languages and provides built-in DevOps capabilities.`
+  }
+  
+  // Container Apps / Container Instances
+  if (lowerType.includes('container') && (lowerType.includes('app') || lowerType.includes('instance'))) {
+    return `Azure Container Apps or Container Instances provide serverless container hosting for running containerized applications without managing infrastructure. They're ideal for microservices and event-driven applications.`
+  }
+  
+  // Network services
+  if (lowerType.includes('network') || lowerType.includes('vnet') || lowerType.includes('load balancer')) {
+    return `Azure networking services provide connectivity, security, and traffic management capabilities. They enable secure communication between Azure resources and connect on-premises networks to Azure.`
+  }
+  
+  // Monitoring / Log Analytics
+  if (lowerType.includes('monitoring') || lowerType.includes('log') || lowerType.includes('insights') || lowerType.includes('application insights')) {
+    return `Azure monitoring and logging services provide observability for applications and infrastructure. They collect telemetry data, enable performance monitoring, and support troubleshooting and diagnostics.`
+  }
+  
+  // Service Bus
+  if (lowerType.includes('service bus') || lowerType.includes('servicebus')) {
+    return `Azure Service Bus is a fully managed enterprise message broker with message queues and publish-subscribe topics. It enables reliable messaging between distributed applications and services.`
+  }
+  
+  // Function Apps
+  if (lowerType.includes('function') || lowerType.includes('functionapp')) {
+    return `Azure Functions is a serverless compute service that lets you run event-driven code without managing infrastructure. It's ideal for building microservices, processing data, and integrating systems.`
+  }
+  
+  // Default description
+  return `This Azure service provides cloud infrastructure and capabilities for hosting and managing applications. It's part of the Azure cloud platform and integrates with other Azure services for comprehensive cloud solutions.`
+}
+
+// Format RAG text with better formatting (headings, bold, paragraphs, lists) and icons
+// NOTE: This function is currently unused but kept for potential future use
+// @ts-ignore - Unused function kept for future use
 function formatRAGText(text: string): JSX.Element | null {
   if (!text || !text.trim()) return null
 
@@ -1818,12 +2140,44 @@ function formatRAGText(text: string): JSX.Element | null {
   const flushParagraph = () => {
     if (currentParagraph.length > 0) {
       const paragraphText = currentParagraph.join(' ').trim()
-      if (paragraphText && paragraphText.length > 0) {
-        elements.push(
-          <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
-            {formatInlineText(paragraphText)}
-          </p>
-        )
+      if (paragraphText) {
+        // Check if paragraph mentions services/technologies
+        const serviceMatches = paragraphText.match(/\b(Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi)
+        if (serviceMatches && serviceMatches.length > 0) {
+          // Split paragraph and add icons for service mentions
+          const parts: React.ReactNode[] = []
+          let lastIndex = 0
+          serviceMatches.forEach((match, idx) => {
+            const matchIndex = paragraphText.toLowerCase().indexOf(match.toLowerCase(), lastIndex)
+            if (matchIndex > lastIndex) {
+              parts.push(paragraphText.substring(lastIndex, matchIndex))
+            }
+            const Icon = getServiceIcon(match)
+            parts.push(
+              <span key={`service-${idx}`} className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">
+                <Icon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span className="font-medium text-indigo-700 dark:text-indigo-300">{match}</span>
+              </span>
+            )
+            lastIndex = matchIndex + match.length
+          })
+          if (lastIndex < paragraphText.length) {
+            parts.push(paragraphText.substring(lastIndex))
+          }
+          elements.push(
+            <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3 flex flex-wrap items-center gap-1">
+              {parts.map((part, pidx) => (
+                <span key={pidx}>{typeof part === 'string' ? formatInlineText(part) : part}</span>
+              ))}
+            </p>
+          )
+        } else {
+          elements.push(
+            <p key={key++} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
+              {formatInlineText(paragraphText)}
+            </p>
+          )
+        }
       }
       currentParagraph = []
     }
@@ -1832,12 +2186,34 @@ function formatRAGText(text: string): JSX.Element | null {
   const flushList = () => {
     if (listItems.length > 0) {
       elements.push(
-        <ul key={key++} className="list-disc list-inside space-y-2 mb-4 ml-4">
-          {listItems.map((item, idx) => (
-            <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-              {formatInlineText(item)}
+        <ul key={key++} className="list-none space-y-2 mb-4">
+          {listItems.map((item, idx) => {
+            return (
+              <li key={idx} className="flex items-start space-x-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                <div className="mt-1.5 flex-shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-700"></div>
+                </div>
+                <div className="flex-1 flex flex-wrap items-center gap-1">
+                  {item.match(/\b(Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi) ? (
+                    item.split(/(\b(?:Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*)/gi).map((part, pidx) => {
+                      if (part.match(/\b(?:Azure|Kubernetes|AKS|Container|Database|SQL|PostgreSQL|MongoDB|Event Hub|Messaging|Server|Storage|Network|Security|Microservice)\w*/gi)) {
+                        const PartIcon = getServiceIcon(part)
+                        return (
+                          <span key={pidx} className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">
+                            <PartIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                            <span className="font-medium text-indigo-700 dark:text-indigo-300">{part}</span>
+                          </span>
+                        )
+                      }
+                      return <span key={pidx}>{formatInlineText(part)}</span>
+                    })
+                  ) : (
+                    formatInlineText(item)
+                  )}
+                </div>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )
       listItems = []
@@ -1859,13 +2235,17 @@ function formatRAGText(text: string): JSX.Element | null {
       flushParagraph()
       flushList()
       const headingText = trimmed.replace(/^(\*\*|##)\s*/, '').replace(/\*\*$/, '').replace(/:$/, '').trim()
-      if (headingText) {
-        elements.push(
-          <h6 key={key++} className="font-bold text-gray-900 dark:text-white text-base mt-4 mb-2 first:mt-0">
+      const HeadingIcon = getServiceIcon(headingText)
+      elements.push(
+        <div key={key++} className="flex items-center space-x-2 mt-4 mb-2 first:mt-0">
+          <div className="p-1.5 rounded-md bg-gradient-to-br from-indigo-600 to-blue-700">
+            <HeadingIcon className="w-4 h-4 text-white" />
+          </div>
+          <h6 className="font-bold text-gray-900 dark:text-white text-base">
             {formatInlineText(headingText)}
           </h6>
-        )
-      }
+        </div>
+      )
       continue
     }
 
@@ -1943,10 +2323,10 @@ function formatInlineText(text: string): JSX.Element | string | null {
 // Component Detail Panel - Horizontal layout with all information visible
 function ComponentDetailPanel({
   result,
-  onComponentUpdate
+  onRefresh: _onRefresh
 }: {
   result: AnalysisResult
-  onComponentUpdate?: (updatedResult: AnalysisResult) => void
+  onRefresh?: (updatedResult: AnalysisResult) => void
 
 
 
@@ -1958,19 +2338,7 @@ function ComponentDetailPanel({
 
 }) {
   const { service, componentInfo } = result
-  const [refreshing, setRefreshing] = useState(false)
-
-  // Debug logging
-  useEffect(() => {
-    if (componentInfo) {
-      console.log('Component Info:', componentInfo)
-      console.log('Architectural Overview:', componentInfo.architecturalOverview)
-      console.log('Functional Overview:', componentInfo.functionalOverview)
-      console.log('Capabilities:', componentInfo.capabilities)
-      console.log('Related Services:', componentInfo.relatedServices)
-    }
-  }, [componentInfo])
-
+  const componentLinkId = componentInfo?.componentName ? getComponentIdFromName(componentInfo.componentName) : null
 
   if (!componentInfo) {
     return (
@@ -2006,266 +2374,75 @@ function ComponentDetailPanel({
             href={service.portalUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
           >
             <ExternalLink className="w-4 h-4" />
             <span>Open in Azure Portal</span>
           </a>
         )}
-        <button
-          onClick={async () => {
-            if (refreshing) return // Prevent double-clicks
-            setRefreshing(true)
-            try {
-              console.log('[Refresh] Starting refresh for component:', componentInfo?.componentName)
-              console.log('[Refresh] Service:', service)
-              const response = await apiService.analyzeAzureServices(
-                [service],
-                undefined,
-                undefined,
-                true // forceRefresh
-              )
-              console.log('[Refresh] Response received:', response)
-              console.log('[Refresh] Response structure:', {
-                hasData: !!response.data,
-                dataType: typeof response.data,
-                isDataArray: Array.isArray(response.data),
-                hasDataData: !!response.data?.data,
-                isDataDataArray: Array.isArray(response.data?.data),
-                responseKeys: Object.keys(response || {}),
-                dataKeys: response.data ? Object.keys(response.data) : []
-              })
-              
-              // The API service returns response.data from axios
-              // Based on console logs, response is: {status: 'success', data: Array(1), ...}
-              // So response.data is the array of results
-              let resultsArray: any[] = []
-              
-              // First try: response.data (the array property)
-              if (response.data && Array.isArray(response.data)) {
-                resultsArray = response.data
-                console.log('[Refresh] Using response.data (direct array), length:', resultsArray.length)
-              } 
-              // Fallback: response.data.data (nested structure)
-              else if (response.data?.data && Array.isArray(response.data.data)) {
-                resultsArray = response.data.data
-                console.log('[Refresh] Using response.data.data (nested structure), length:', resultsArray.length)
-              }
-              // Last resort: response itself is an array
-              else if (Array.isArray(response)) {
-                resultsArray = response
-                console.log('[Refresh] Using response (direct array), length:', resultsArray.length)
-              }
-              else {
-                console.error('[Refresh] Could not find results array. Response structure:', {
-                  response,
-                  responseData: response.data,
-                  responseDataType: typeof response.data,
-                  isArray: Array.isArray(response.data),
-                  responseKeys: Object.keys(response || {})
-                })
-                alert('Invalid response structure from refresh. Please check console for details.')
-                return
-              }
-              
-              console.log('[Refresh] Results array:', resultsArray)
-              
-              if (resultsArray.length > 0) {
-                const firstResult = resultsArray[0]
-                console.log('[Refresh] First result:', firstResult)
-                console.log('[Refresh] First result keys:', Object.keys(firstResult || {}))
-                
-                // Try both camelCase and snake_case for componentInfo
-                const updatedComponentInfo = firstResult?.componentInfo || firstResult?.component_info
-                
-                if (updatedComponentInfo) {
-                  console.log('[Refresh] Updated component info found:', updatedComponentInfo)
-                  
-                  // Check if fresh RAG data was fetched
-                  const dataSource = updatedComponentInfo.dataSource || updatedComponentInfo.data_source
-                  const isFreshRAG = dataSource === 'rag_fresh'
-                  
-                  if (isFreshRAG) {
-                    // Show success message for fresh RAG data
-                    console.log('[Refresh] ✓ Successfully fetched fresh RAG data from API')
-                    // Use a more visible notification
-                    const notification = document.createElement('div')
-                    notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-2'
-                    notification.innerHTML = `
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span class="font-medium">Successfully refreshed from RAG API</span>
-                    `
-                    document.body.appendChild(notification)
-                    setTimeout(() => {
-                      notification.style.transition = 'opacity 0.5s'
-                      notification.style.opacity = '0'
-                      setTimeout(() => notification.remove(), 500)
-                    }, 3000)
-                  } else if (dataSource === 'rag_cached' || dataSource === 'cache') {
-                    console.log('[Refresh] Using cached RAG data')
-                    const notification = document.createElement('div')
-                    notification.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-2'
-                    notification.innerHTML = `
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
-                      </svg>
-                      <span class="font-medium">Using cached data</span>
-                    `
-                    document.body.appendChild(notification)
-                    setTimeout(() => {
-                      notification.style.transition = 'opacity 0.5s'
-                      notification.style.opacity = '0'
-                      setTimeout(() => notification.remove(), 500)
-                    }, 2000)
-                  }
-                  
-                  // Create updated result with new component info
-                  const updatedResult: AnalysisResult = {
-                    ...result,
-                    componentInfo: updatedComponentInfo
-                  }
-                  // Update parent state via callback
-                  if (onComponentUpdate) {
-                    onComponentUpdate(updatedResult)
-                    console.log('[Refresh] Component updated via callback successfully')
+      </div>
+
+      {/* Inline component info from Temenos Components catalog */}
+      {componentLinkId ? (
+        (() => {
+          const catalogComponent = getComponentById(componentLinkId)
+          if (!catalogComponent) {
+            return (
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                <p className="text-sm text-slate-600 dark:text-slate-400 italic">
+                  This component is not yet in the Temenos Components catalog. Azure service details shown above.
+                </p>
+              </div>
+            )
+          }
+          // Split description into paragraphs for readability (~2 sentences per paragraph)
+          const paragraphs = catalogComponent.description
+            .split(/(?<=[.!?])\s+/)
+            .reduce<string[]>((acc, sentence) => {
+              if (acc.length === 0) acc.push('')
+              const last = acc[acc.length - 1]
+              const sentencesInLast = (last.match(/[.!?]/g) || []).length
+              if (sentencesInLast >= 2 && last.trim().length > 0) {
+                acc.push(sentence)
                   } else {
-                    console.warn('[Refresh] No callback provided, reloading page')
-                    window.location.reload()
-                  }
-                } else {
-                  console.warn('[Refresh] No component info in response. First result:', firstResult)
-                  alert('No component information returned from refresh. The service may not be a Temenos component.')
-                }
-              } else {
-                console.warn('[Refresh] Empty results array. Full response:', response)
-                alert('No results returned from refresh. Please check console for details.')
+                acc[acc.length - 1] = last ? `${last} ${sentence}` : sentence
               }
-            } catch (error: any) {
-              console.error('[Refresh] Failed to refresh component info:', error)
-              console.error('[Refresh] Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-              })
-              const errorMsg = error.response?.data?.detail || error.message || 'Failed to refresh component information. Please try again.'
-              alert(`Failed to refresh: ${errorMsg}`)
-            } finally {
-              setRefreshing(false)
-            }
-          }}
-          disabled={refreshing}
-          className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span>{refreshing ? 'Refreshing...' : 'Refresh Info'}</span>
-        </button>
-      </div>
+              return acc
+            }, [])
+            .filter(p => p.trim())
+          if (paragraphs.length === 0) paragraphs.push(catalogComponent.description)
 
-
-      {/* Architecture Overview */}
-      <div className="space-y-6">
-        <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">ARCHITECTURE OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            {componentInfo.architecturalOverview && componentInfo.architecturalOverview.trim()
-              ? formatRAGText(componentInfo.architecturalOverview)
-              : <p className="text-gray-500 dark:text-gray-400 italic">No architectural overview available</p>}
+          return (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                  Component overview
+                </p>
+                <div className="space-y-3">
+                  {paragraphs.map((para, i) => (
+                    <p key={i} className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                      {para}
+                    </p>
+                  ))}
           </div>
-        </div>
-
-        {/* Deployment Architecture */}
-        {(componentInfo.architecturalOverview?.toLowerCase().includes('deployment') ||
-          componentInfo.architecturalOverview?.toLowerCase().includes('aks') ||
-          componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes') ||
-          componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
-          service.type?.toLowerCase().includes('containerservice') ||
-          service.type?.toLowerCase().includes('kubernetes')) ? (
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">DEPLOYMENT ARCHITECTURE</h5>
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('containerized') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('docker') ||
-                service.type?.toLowerCase().includes('containerservice')) && (
-                  <li>Containerized using Docker and deployed in Azure Kubernetes Service (AKS)</li>
-                )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('orchestrated') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('kubernetes')) && (
-                  <li>Orchestrated via Kubernetes for automated scaling, health management, and service discovery</li>
-                )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('scaling') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('scale')) && (
-                  <li>Supports horizontal scaling based on load and demand</li>
-                )}
-              {(componentInfo.architecturalOverview?.toLowerCase().includes('high-availability') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('availability') ||
-                componentInfo.architecturalOverview?.toLowerCase().includes('replica')) && (
-                  <li>Implements high-availability patterns with multiple replicas and health checks</li>
-                )}
-              {service.type && (
-                <li>Azure Service Type: {service.type}</li>
-              )}
-            </ul>
-          </div>
-        ) : null}
-
-        {/* Functional Overview */}
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-lg">FUNCTIONAL OVERVIEW</h5>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            {componentInfo.functionalOverview && componentInfo.functionalOverview.trim()
-              ? formatRAGText(componentInfo.functionalOverview)
-              : <p className="text-gray-500 dark:text-gray-400 italic">No functional overview available</p>}
-          </div>
-        </div>
-
-        {/* Key Capabilities */}
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">KEY CAPABILITIES</h5>
-          {componentInfo.capabilities && Array.isArray(componentInfo.capabilities) && componentInfo.capabilities.length > 0 ? (
-            <ul className="list-disc list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              {componentInfo.capabilities.map((cap, idx) => (
-                <li key={idx}>{cap}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No capabilities listed</p>
-          )}
-        </div>
-
-        {/* Related Services */}
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
-          <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">RELATED SERVICES</h5>
-          {componentInfo.relatedServices && Array.isArray(componentInfo.relatedServices) && componentInfo.relatedServices.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {componentInfo.relatedServices.map((svc, idx) => (
-                <span key={idx} className="px-3 py-1 bg-white dark:bg-slate-700 rounded-full text-sm text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
-                  {svc}
-                </span>
-              ))}
             </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No related services listed</p>
-          )}
-        </div>
-
-        {/* Relationships */}
-        {componentInfo.relationships && Array.isArray(componentInfo.relationships) && componentInfo.relationships.length > 0 && (
-          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">COMPONENT RELATIONSHIPS</h5>
-            <div className="space-y-3">
-              {componentInfo.relationships.map((rel, idx) => (
-                <div key={idx} className="bg-white dark:bg-slate-700 rounded p-3 border border-indigo-200 dark:border-indigo-500/30">
-                  <div className="font-medium text-gray-900 dark:text-white">{rel.targetComponent}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rel.relationshipType}</div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300 mt-2">{rel.description}</div>
+              {catalogComponent.group && (
+                <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-200 dark:border-slate-600">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Group: <span className="font-medium text-slate-600 dark:text-slate-300">{catalogComponent.group}</span>
+                  </span>
+              </div>
+            )}
+          </div>
+          )
+        })()
+      ) : (
+        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+          <p className="text-sm text-slate-600 dark:text-slate-400 italic">
+            This component is not yet in the Temenos Components catalog. Azure service details shown above.
+          </p>
                 </div>
-              ))}
-            </div>
-          </div>
         )}
-      </div>
     </div>
   )
 }

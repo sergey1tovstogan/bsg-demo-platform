@@ -1,0 +1,273 @@
+/**
+ * User Form Styles
+ */
+
+.user-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+  animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.user-form-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.user-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.user-form-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1a202c;
+}
+
+.user-form-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #718096;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.user-form-close:hover {
+  background: #f7fafc;
+  color: #2d3748;
+}
+
+.user-form {
+  padding: 1.5rem;
+}
+
+.user-form-error {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.user-form-group {
+  margin-bottom: 1.5rem;
+}
+
+.user-form-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.user-form-optional {
+  font-weight: normal;
+  color: #718096;
+  font-size: 0.85rem;
+}
+
+.user-form-group input[type="text"],
+.user-form-group input[type="email"],
+.user-form-group input[type="password"],
+.user-form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.user-form-group input:focus,
+.user-form-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.user-form-group input:disabled,
+.user-form-group select:disabled {
+  background: #f7fafc;
+  cursor: not-allowed;
+}
+
+.user-form-field-error {
+  display: block;
+  color: #e53e3e;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.user-form-checkbox {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.user-form-checkbox input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+.user-form-checkbox span {
+  font-size: 0.9rem;
+  color: #4a5568;
+}
+
+.user-form-password-strength {
+  margin-top: 0.75rem;
+}
+
+.user-form-password-strength-bar {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.user-form-password-strength-fill {
+  height: 100%;
+  transition: all 0.3s;
+}
+
+.user-form-password-strength-fill.weak {
+  background: #e53e3e;
+}
+
+.user-form-password-strength-fill.medium {
+  background: #ed8936;
+}
+
+.user-form-password-strength-fill.strong {
+  background: #38a169;
+}
+
+.user-form-password-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #718096;
+}
+
+.user-form-password-requirements div.met {
+  color: #38a169;
+}
+
+.user-form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.user-form-cancel,
+.user-form-submit {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.user-form-cancel {
+  background: #edf2f7;
+  color: #2d3748;
+}
+
+.user-form-cancel:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.user-form-submit {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.user-form-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.user-form-cancel:disabled,
+.user-form-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .user-form-overlay {
+    padding: 1rem;
+  }
+
+  .user-form-container {
+    max-height: 95vh;
+  }
+
+  .user-form-actions {
+    flex-direction: column;
+  }
+
+  .user-form-cancel,
+  .user-form-submit {
+    width: 100%;
+  }
+}

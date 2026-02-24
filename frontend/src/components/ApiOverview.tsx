@@ -236,7 +236,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
   useEffect(() => {
     const fetchJWTInfo = async () => {
       try {
-        const response = await apiService.getJWTInfo()
+        const response = await apiService.getRAGJWTInfo()
         const data = response.data
         setJwtInfo(data)
       } catch (err) {
@@ -532,7 +532,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                     onClick={async () => {
                       setJwtLoading(true)
                       try {
-                        const response = await apiService.getJWTInfo()
+                        const response = await apiService.getRAGJWTInfo()
                         setJwtInfo(response.data)
                       } catch (err) {
                         console.error('Failed to refresh JWT info:', err)
@@ -1536,7 +1536,7 @@ export function ApiOverview({ hideTitle = false, hideDemoSettings = false, onlyD
                   onClick={async () => {
                     setJwtLoading(true)
                     try {
-                      const response = await apiService.getJWTInfo()
+                      const response = await apiService.getRAGJWTInfo()
                       setJwtInfo(response.data)
                     } catch (err) {
                       console.error('Failed to refresh JWT info:', err)

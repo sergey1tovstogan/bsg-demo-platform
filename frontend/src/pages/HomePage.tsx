@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Network, Database, Cloud, Shield, Eye, Palette, Settings, Layout } from 'lucide-react'
+import { Network, Database, Cloud, Shield, Eye, GitBranch, Settings, Layout } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ComponentId } from '../types'
+import { useAuth } from '../contexts/AuthContext'
 
 interface ComponentCard {
   id: ComponentId
@@ -21,13 +22,22 @@ interface HomePageProps {
 
 const ALL_COMPONENTS: ComponentCard[] = [
   {
+    id: 'architecture',
+    name: 'Architecture',
+    description: 'Container orchestration and cloud deployments',
+    icon: Cloud,
+    color: 'text-violet-500',
+    gradient: 'from-violet-500/20 to-purple-400/20',
+    delay: 'animation-delay-0',
+  },
+  {
     id: 'integration',
-    name: 'Integration, APIs & Events',
+    name: 'Integration',
     description: 'Enterprise integration patterns and API design',
     icon: Network,
     color: 'text-blue-500',
     gradient: 'from-blue-500/20 to-cyan-400/20',
-    delay: 'animation-delay-0',
+    delay: 'animation-delay-100',
   },
   {
     id: 'data-architecture',
@@ -36,15 +46,6 @@ const ALL_COMPONENTS: ComponentCard[] = [
     icon: Database,
     color: 'text-emerald-500',
     gradient: 'from-emerald-500/20 to-teal-400/20',
-    delay: 'animation-delay-100',
-  },
-  {
-    id: 'deployment',
-    name: 'Deployment & Cloud',
-    description: 'Container orchestration and cloud deployments',
-    icon: Cloud,
-    color: 'text-violet-500',
-    gradient: 'from-violet-500/20 to-purple-400/20',
     delay: 'animation-delay-200',
   },
   {
@@ -66,10 +67,10 @@ const ALL_COMPONENTS: ComponentCard[] = [
     delay: 'animation-delay-400',
   },
   {
-    id: 'design-time',
-    name: 'Design Time',
-    description: 'Software design principles and architecture patterns',
-    icon: Palette,
+    id: 'devops',
+    name: 'DevOps',
+    description: 'CI/CD, automation, and continuous delivery',
+    icon: GitBranch,
     color: 'text-indigo-500',
     gradient: 'from-indigo-500/20 to-blue-400/20',
     delay: 'animation-delay-500',
@@ -80,7 +81,7 @@ const ALL_COMPONENTS: ComponentCard[] = [
     description: 'Comprehensive unified layout and component demonstrations',
     icon: Layout,
     color: 'text-purple-500',
-    gradient: 'from-purple-500/20 to-pink-400/20',
+    gradient: 'from-purple-500/20 to-violet-400/20',
     delay: 'animation-delay-600',
   },
 ]
@@ -89,14 +90,28 @@ const STORAGE_KEY = 'bsg_selected_categories'
 
 export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: HomePageProps) {
   const [selectedCategories, setSelectedCategories] = useState<Set<ComponentId>>(new Set())
+  const { user } = useAuth()
+  
+  // Display name: prefer context username (set at login), fallback to email local part; capitalize
+  const getDisplayName = (): string | null => {
+    const name = user?.username ?? (user?.email ? (user.email.split('@')[0] || '').split('.')[0]?.trim() || user.email.split('@')[0] : null)
+    if (!name) return null
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+  }
+
+  const displayName = getDisplayName()
 
   // Load selected categories from localStorage on mount and when storage changes
   const loadCategories = () => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
-        const parsed = JSON.parse(stored) as ComponentId[]
-        setSelectedCategories(new Set(parsed))
+        const parsed = JSON.parse(stored) as string[]
+        const migrated = parsed.map(id => id === 'deployment' ? 'architecture' : id)
+        if (migrated.some((id, i) => id !== parsed[i])) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+        }
+        setSelectedCategories(new Set(migrated as ComponentId[]))
       } else {
         // Default: show all categories
         setSelectedCategories(new Set(ALL_COMPONENTS.map(c => c.id)))
@@ -137,21 +152,27 @@ export function HomePage({ onSelectComponent, onSettingsClick, searchBar }: Home
               BSG Demo Platform
             </span>
           </h1>
-          {searchBar}
-          {onSettingsClick && (
-            <button
-              onClick={onSettingsClick}
-              className="ml-auto p-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
-              title="Customize Categories"
-            >
-              <Settings className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-            </button>
-          )}
+          <div className="flex items-center gap-4 ml-auto">
+            {displayName && (
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Welcome {displayName}
+              </div>
+            )}
+            {onSettingsClick && (
+              <button
+                onClick={onSettingsClick}
+                className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+                title="Customize Categories"
+              >
+                <Settings className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+              </button>
+            )}
+          </div>
         </div>
-        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
-          Explore interactive demonstrations across multiple technical domains.
-          Select a module below to get started.
+        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed whitespace-nowrap">
+          Explore interactive demonstrations across multiple technical domains. Select a module below to get started.
         </p>
+        {searchBar && <div className="mt-4">{searchBar}</div>}
       </div>
 
       {visibleComponents.length === 0 ? (

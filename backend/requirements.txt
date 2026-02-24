@@ -81,3 +81,4 @@ azure-eventhub==5.11.5
 
 # HTTP requests for Azure Cost Management API
 requests==2.31.0
+PyJWT==2.8.0

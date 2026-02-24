@@ -51,15 +51,11 @@ const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
       }
     } catch (error) {
       console.warn('[API] Error loading config.json:', error)
-      // If we're on Azure Static Web Apps, use relative URL (API is on same domain)
+      // If we're on Azure SWA or custom domain, use relative URL (API rewritten via staticwebapp config)
       if (typeof window !== 'undefined') {
         const hostname = window.location.hostname
-        if (hostname.includes('azurestaticapps.net')) {
-          console.log('[API] Detected Azure Static Web Apps, using relative API URL')
-          return {
-            apiUrl: '/api/v1',
-            environment: 'production'
-          }
+        if (hostname.includes('azurestaticapps.net') || hostname.includes('demo-platform.bsg.temenos.com')) {
+          return { apiUrl: '/api/v1', environment: 'production' }
         }
       }
     }
@@ -74,38 +70,33 @@ const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
   return configLoadPromise
 }
 
+const PRODUCTION_BACKEND_URL = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1'
+
 // Determine API base URL at runtime
-// Priority: 1. Runtime config.json, 2. Environment detection, 3. Default relative path
+// Priority: 1. Azure SWA/custom domain → direct backend, 2. localhost → production backend (BSG Guru full RAG), 3. Runtime config, 4. Default relative path
 const getApiBaseUrl = async (): Promise<string> => {
-  // Load runtime configuration
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : ''
+  // When on Azure SWA or custom domain, call backend directly so POST/PUT/DELETE work (SWA does not proxy them)
+  if (hostname.includes('azurestaticapps.net') || hostname.includes('demo-platform.bsg.temenos.com')) {
+    console.log('[API] Production host detected, using direct backend URL:', PRODUCTION_BACKEND_URL)
+    return PRODUCTION_BACKEND_URL
+  }
   const config = await loadRuntimeConfig()
-  
-  // If config has a full URL, use it
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
+  // Absolute URL in config always wins
   if (config.apiUrl && (config.apiUrl.startsWith('http://') || config.apiUrl.startsWith('https://'))) {
     console.log('[API] Using runtime config API URL:', config.apiUrl)
     return config.apiUrl
   }
-  
-  // If config has a relative path, use it
+  // On localhost: ignore relative config (e.g. /api/v1) and use production backend so BSG Guru RAG works
+  if (isLocal) {
+    console.log('[API] Local deployment: using production backend for full RAG and API support:', PRODUCTION_BACKEND_URL)
+    return PRODUCTION_BACKEND_URL
+  }
   if (config.apiUrl) {
     console.log('[API] Using runtime config relative API URL:', config.apiUrl)
     return config.apiUrl
   }
-  
-  // Fallback: Environment detection for Azure Static Web Apps
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname
-    // If on Azure Static Web Apps domain, construct backend URL
-    if (hostname.includes('azurestaticapps.net')) {
-      // Use the same origin for API if backend is proxied, or construct from hostname
-      // For now, default to relative path which works if backend is proxied
-      const defaultUrl = '/api/v1'
-      console.log('[API] Detected Azure Static Web Apps, using relative URL:', defaultUrl)
-      return defaultUrl
-    }
-  }
-  
-  // Default to relative path (for local development or when backend is proxied)
   const defaultUrl = '/api/v1'
   console.log('[API] Using default relative URL:', defaultUrl)
   return defaultUrl
@@ -114,6 +105,7 @@ const getApiBaseUrl = async (): Promise<string> => {
 class ApiService {
   private client: AxiosInstance
   private baseUrl: string
+  private configReadyPromise: Promise<void>
 
   constructor() {
     // Initialize with default, will be updated when config loads
@@ -123,16 +115,22 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
       },
+      timeout: 30000, // 30s - prevents indefinite hangs, Chatbot has its own retry logic
     })
     
     // Setup interceptors
     this.setupInterceptors()
     
-    // Load and apply runtime configuration
-    this.initializeConfig()
+    // Load and apply runtime configuration - store promise so callers can await readiness
+    this.configReadyPromise = this.initializeConfig()
+  }
+
+  /** Wait for API base URL to be resolved before making requests. Use before critical calls (e.g. Chatbot init). */
+  async ensureReady(): Promise<void> {
+    return this.configReadyPromise
   }
   
-  private async initializeConfig() {
+  private async initializeConfig(): Promise<void> {
     if (typeof window === 'undefined') {
       return // Server-side rendering, skip
     }
@@ -155,10 +153,10 @@ class ApiService {
   }
 
   private setupInterceptors() {
-    // Request interceptor for auth token
+    // Request interceptor for auth token (use same keys as AuthContext)
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('access_token')
+        const token = localStorage.getItem('auth_access_token') || localStorage.getItem('access_token')
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
         }
@@ -172,25 +170,32 @@ class ApiService {
       (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Try to refresh token
-          const refreshToken = localStorage.getItem('refresh_token')
+          // Try to refresh token (use same keys as AuthContext)
+          const refreshToken = localStorage.getItem('auth_refresh_token') || localStorage.getItem('refresh_token')
           if (refreshToken) {
             try {
               const response = await axios.post(`${this.baseUrl}/auth/refresh`, {
                 refresh_token: refreshToken,
               })
-              const { access_token } = response.data.data
-              localStorage.setItem('access_token', access_token)
+              const { access_token } = response.data?.data ?? response.data
+              const tokenToStore = access_token
+              localStorage.setItem('auth_access_token', tokenToStore)
+              localStorage.setItem('access_token', tokenToStore)
               // Retry original request
               if (error.config) {
-                error.config.headers.Authorization = `Bearer ${access_token}`
+                error.config.headers.Authorization = `Bearer ${tokenToStore}`
                 return this.client.request(error.config)
               }
             } catch (refreshError) {
-              // Refresh failed, redirect to login
-              localStorage.removeItem('access_token')
-              localStorage.removeItem('refresh_token')
-              window.location.href = '/login'
+              // Refresh failed - only redirect if token looks like real JWT (not mock)
+              const isMockToken = refreshToken.startsWith('mock_')
+              if (!isMockToken) {
+                localStorage.removeItem('auth_access_token')
+                localStorage.removeItem('auth_refresh_token')
+                localStorage.removeItem('access_token')
+                localStorage.removeItem('refresh_token')
+                window.location.href = '/login'
+              }
             }
           }
         }
@@ -504,16 +509,33 @@ class ApiService {
         url: error.config?.url,
         baseURL: error.config?.baseURL
       })
-      // Re-throw with better error handling
-      if (error.response?.data?.detail) {
-        throw error.response.data.detail
-      }
-      // Provide more detailed error message for network errors
+      // Do not throw detail alone - caller needs response.status and full structure
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
         throw new Error(`Network Error - Unable to reach the backend API at ${this.baseUrl}. Please check if the backend service is running and accessible.`)
       }
       throw error
     }
+  }
+
+  /** Proactive Azure connectivity check (backend identity / subscription access). Call before demo to avoid platform hanging. */
+  async getAzureHealth(subscriptionId?: string): Promise<{
+    status: string
+    identity_type?: string
+    identity_object_id?: string
+    identity_app_id?: string
+    subscription_check?: string
+    message?: string | null
+  }> {
+    const params = subscriptionId ? `?subscription_id=${encodeURIComponent(subscriptionId)}` : ''
+    const response = await this.client.get<{
+      status: string
+      identity_type?: string
+      identity_object_id?: string
+      identity_app_id?: string
+      subscription_check?: string
+      message?: string | null
+    }>(`/deployment/azure/health${params}`)
+    return response.data
   }
 
   async getAzureResourceGroups(subscriptionId: string, refresh: boolean = false) {
@@ -527,6 +549,48 @@ class ApiService {
       count: number
       cached?: boolean
     }>>(`/deployment/azure/resource-groups?subscriptionId=${subscriptionId}&refresh=${refresh}`)
+    return response.data
+  }
+
+  async exportArmTemplate(subscriptionId: string, resourceGroupName: string) {
+    const response = await this.client.post<ApiResponse<{
+      resource_group: string
+      subscription_id: string
+      template: any
+      template_json: string
+      parameters: any
+      exported_at: string
+    }>>(`/deployment/azure/export-arm-template?subscription_id=${encodeURIComponent(subscriptionId)}&resource_group_name=${encodeURIComponent(resourceGroupName)}`, {}, {
+      timeout: 120000 // 2 minutes timeout for ARM template export
+    })
+    return response.data
+  }
+
+  async exportArmTemplatesBulk(subscriptionId: string, resourceGroupNames: string[]) {
+    const response = await this.client.post<ApiResponse<{
+      subscription_id: string
+      total_requested: number
+      successful: number
+      failed: number
+      templates: Array<{
+        resource_group: string
+        subscription_id: string
+        template: any
+        template_json: string
+        parameters: any
+        exported_at: string
+        success: boolean
+      }>
+      errors: Array<{
+        resource_group: string
+        error: string
+        error_type?: string
+      }>
+      exported_at: string
+    }>>('/deployment/azure/export-arm-templates-bulk', {
+      subscription_id: subscriptionId,
+      resource_group_names: resourceGroupNames
+    })
     return response.data
   }
 
@@ -577,39 +641,6 @@ class ApiService {
     }
   }
 
-  async getResourceGroupCosts(
-    subscriptionId: string, 
-    resourceGroupNames: string[],
-    startDate?: string,
-    endDate?: string,
-    signal?: AbortSignal
-  ) {
-    const response = await this.client.post<ApiResponse<{
-      data: Array<{
-        resource_group: string
-        total_cost: number
-        services: Record<string, number>
-        error?: string
-        start_date?: string
-        end_date?: string
-        projections?: {
-          full_month: number
-          annual: number
-          month_progress: number
-          days_passed: number
-          days_in_month: number
-        }
-      }>
-      count: number
-    }>>('/deployment/azure/costs', {
-      subscription_id: subscriptionId,
-      resource_group_names: resourceGroupNames,
-      start_date: startDate,
-      end_date: endDate
-    }, { signal }) // Pass abort signal to axios for request cancellation
-    return response.data
-  }
-
   async analyzeAzureServices(services: any[], analysisId?: string, selectedNamespaces?: string[], forceRefresh?: boolean) {
     const endpoint = forceRefresh ? '/deployment/temenos/analyze/refresh' : '/deployment/temenos/analyze'
     const response = await this.client.post<ApiResponse<{
@@ -644,45 +675,6 @@ class ApiService {
 
   async getDeploymentContent() {
     const response = await this.client.get<ApiResponse<any>>('/components/deployment/content')
-    return response.data
-  }
-
-  async analyzeCloudLogs(params: {
-    platform: 'aks' | 'aca'
-    component_name: string
-    environment: string
-    log_snippet: string
-    symptoms?: string
-    recent_changes?: string
-    resource_group?: string
-    subscription_id?: string
-  }) {
-    const response = await this.client.post<ApiResponse<{
-      summary: string
-      classification: {
-        platform: 'aks' | 'aca'
-        layer: string[]
-        severity: 'Info' | 'Warning' | 'Major' | 'Critical'
-        category: string
-      }
-      root_causes: Array<{
-        hypothesis: string
-        log_evidence: string
-      }>
-      recommended_actions: {
-        checks: string[]
-        commands: {
-          aks?: string[]
-          aca?: string[]
-        }
-        configuration_fixes: string[]
-      }
-      impact_assessment: string
-      insufficient_info?: {
-        message: string
-        follow_up_questions: string[]
-      }
-    }>>('/deployment/cloud-logs/analyze', params)
     return response.data
   }
 
@@ -851,18 +843,28 @@ class ApiService {
     return response.data
   }
 
-  async updateRagJwtToken(token: string) {
-    const response = await this.client.post<ApiResponse<{ status: string; message: string }>>(
-      '/settings/rag/jwt-token',
-      { token }
-    )
+  async updateRAGToken(jwtToken: string) {
+    const response = await this.client.post<ApiResponse<{
+      message: string
+    }>>('/settings/rag/jwt-token', {
+      token: jwtToken
+    })
     return response.data
   }
 
-  async getRagJwtToken() {
-    const response = await this.client.get<ApiResponse<{ token: string | null }>>(
-      '/settings/rag/jwt-token'
-    )
+  async getRAGJWTInfo() {
+    const response = await this.client.get<ApiResponse<{
+      configured: boolean
+      has_expiration?: boolean
+      is_expired?: boolean
+      expires_at?: string
+      issued_at?: string
+      days_remaining?: number
+      user_id?: string
+      email?: string
+      issuer?: string
+      audience?: string
+    }>>('/deployment/temenos/jwt-info')
     return response.data
   }
 

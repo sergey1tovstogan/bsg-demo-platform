@@ -20,17 +20,17 @@ export function ModernAuthentication() {
         'ui-configuration': {
             id: 'ui-configuration',
             title: 'UI Configuration of Users, Roles',
-            description: 'Temenos UI Explorer application redirects a user\'s browser from the application to the Keycloak authentication server where they enter their credentials. This redirection is important because users are completely isolated from applications and applications never see a user\'s credentials.\n\nIdentity token or assertion (for SAML protocol) is cryptographically signed.\n\nThese tokens can have identity information like username, address, email, and other profile data.\n\nTemenos Security Management System (SMS) based on Role Based Access in which the ability to access or perform action is tied to the permission granted. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization. The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.'
+            description: 'Temenos UI Explorer application redirects a user\'s browser from the application to the Keycloak authentication server where they enter their credentials. This redirection is important because users are completely isolated from applications and applications never see a user\'s credentials.\nIdentity token or assertion (for SAML protocol) is cryptographically signed.\nThese tokens can have identity information like username, address, email, and other profile data.\nTemenos Security Management System (SMS) based on Role Based Access in which the ability to access or perform action is tied to the permission granted. The internal mechanism provides sufficient and granular access management to all applications as well as role/group facilities. When a user attempts to log in, they are authenticated via the bank\'s IAM. Upon successful authentication, the IAM generates a JSON Web Token (JWT) for authorization. The application exchanges the authorization code for an ID Token and a refresh token. The ID Token contains user information, while the access token allows access to resources.'
         },
         'keycloak': {
             id: 'keycloak',
             title: 'Keycloak',
-            description: 'Temenos solutions use Keycloak, an open-source Identity and Access Management (IAM) tool, to manage authentication. Keycloak enables Single Sign-On (SSO) based on federated security, letting users log in once to access multiple applications seamlessly.\n\nKeycloak integrates with the bank\'s existing Identity Provider (IdP), like Entra ID (AD), which manages users and passwords. This integration uses standard protocols such as SAML 2.0 or OpenID Connect. Keycloak acts here as an identity broker, redirecting authentication requests to Banks\' preferred IAM. After successful authentication, Bank\' IAM issues JSON Web Tokens (JWTs) that carry user identity and role information, which the solution uses to enforce authorization based on assigned permissions.'
+            description: 'Temenos solutions use Keycloak, an open-source Identity and Access Management (IAM) tool, to manage authentication. Keycloak enables Single Sign-On (SSO) based on federated security, letting users log in once to access multiple applications seamlessly.\nKeycloak integrates with the bank\'s existing Identity Provider (IdP), like Entra ID (AD), which manages users and passwords. This integration uses standard protocols such as SAML 2.0 or OpenID Connect. Keycloak acts here as an identity broker, redirecting authentication requests to Banks\' preferred IAM. After successful authentication, Bank\' IAM issues JSON Web Tokens (JWTs) that carry user identity and role information, which the solution uses to enforce authorization based on assigned permissions.'
         },
         'authentication-service': {
             id: 'authentication-service',
             title: 'Authentication Service',
-            description: '1. User Identity, authentication externalised and SSO with enterprise IAM e.g.,\n\n2. Entra ID Establish user identity and trust through security token oAuth 2.0 JWT,\n\n3. All products integrate and validate with KeyCloak IaM'
+            description: '1. User Identity, authentication externalised and SSO with enterprise IAM e.g.,\n2. Entra ID Establish user identity and trust through security token oAuth 2.0 JWT,\n3. All products integrate and validate with KeyCloak IaM'
         },
         'temenos-application': {
             id: 'temenos-application',
@@ -45,7 +45,7 @@ export function ModernAuthentication() {
     }
 
     return (
-        <div className="w-full h-[800px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-visible shadow-2xl border border-slate-200 dark:border-slate-700 dark:border-slate-800 pb-32">
+        <div className="w-full min-h-[700px] bg-slate-50 dark:bg-slate-700/50 dark:bg-slate-900 rounded-xl relative overflow-hidden shadow-2xl border-2 border-slate-200 dark:border-slate-700 dark:border-slate-800">
             {/* Background Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
                 style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
@@ -71,7 +71,7 @@ export function ModernAuthentication() {
             </div>
 
             {/* Main Content Container */}
-            <div className="relative w-full h-full p-8 pt-20">
+            <div className="relative w-full h-full p-8 pt-20 pb-24">
                 {/* Text Sections */}
                 <div className="grid grid-cols-2 gap-8 mb-6">
                     {/* Bank Staff Authentication */}
@@ -101,13 +101,9 @@ export function ModernAuthentication() {
                     </div>
                 </div>
 
-                {/* Diagram Container */}
-                <div className="relative w-full h-[672px] bg-white/50 dark:bg-slate-800/30 rounded-2xl border-2 border-slate-200 dark:border-slate-700 p-6 overflow-visible">
-                    <div
-                        className="w-full h-full"
-                        style={{ transform: 'scale(1.2)', transformOrigin: 'top left', marginLeft: '-50px', marginTop: '-100px' }}
-                    >
-                        <svg viewBox="0 0 1430 630" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                {/* Diagram Container - diagram fully contained within frame */}
+                <div className="relative w-full h-[420px] bg-gradient-to-br from-slate-100 to-slate-200/80 dark:from-slate-800/60 dark:to-slate-900/60 rounded-2xl border-2 border-slate-300 dark:border-slate-600 p-6 overflow-hidden shadow-inner">
+                    <svg viewBox="0 0 1280 420" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
                         {/* Arrow marker definition */}
                         <defs>
                             <marker id="arrowhead-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
@@ -241,7 +237,6 @@ export function ModernAuthentication() {
                         <line x1="950" y1="325" x2="850" y2="270" stroke="#ef4444" strokeWidth="2.5" fill="none" markerEnd="url(#arrowhead-red)" />
                         <text x="900" y="330" textAnchor="middle" className="text-xs fill-slate-900 dark:fill-slate-100">Identity & Attributes</text>
                     </svg>
-                    </div>
                 </div>
             </div>
 
@@ -271,7 +266,7 @@ export function ModernAuthentication() {
                                             <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                                         </button>
                                     </div>
-                                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-left whitespace-pre-line">
+                                    <p className="text-slate-600 dark:text-slate-300 leading-tight text-left whitespace-pre-line">
                                         {tooltips[activeTooltip].description}
                                     </p>
                                 </div>

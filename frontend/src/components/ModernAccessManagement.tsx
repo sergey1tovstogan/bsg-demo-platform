@@ -9,7 +9,9 @@ import {
     FileText,
     Lock,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    Info,
+    X
 } from 'lucide-react';
 
 const ModernAccessManagement = () => {
@@ -67,21 +69,33 @@ const ModernAccessManagement = () => {
 
 // --- Sub-components ---
 
+const heroTooltip = {
+    title: 'Secure Interfaces',
+    description: 'Interfaces used to integrate with third party services are provided in a secure manner using network controls, encrypted protocols, and modern authentication mechanisms, such as mTLS, SFTP, FTPS, IP whitelisting, VPN and similar. Administrative interfaces used for Temenos\' management of the service are protected by appropriate controls such as encrypted protocols, VPN, multi-factor authentication, source IP restriction, Temenos managed identities, and Privileged Access Management (PAM) systems as appropriate.\nTemenos utilises the principles of \'least privilege\', \'business justified requirement\' and \'segregation of duties\' when granting access to resources.'
+};
+
 const OverviewView = () => {
+    const [activeTooltip, setActiveTooltip] = useState(false);
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
             {/* Hero Section */}
-            <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 p-8 rounded-xl border border-red-100 dark:border-red-800 shadow-sm">
+            <div
+                className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 p-8 rounded-xl border border-red-100 dark:border-red-800 shadow-sm cursor-pointer transition-all duration-300 hover:border-red-400 dark:hover:border-red-600"
+                onClick={() => setActiveTooltip(prev => !prev)}
+                title="Click for additional information"
+            >
                 <div className="flex items-start gap-4">
                     <div className="p-3 bg-red-100 dark:bg-red-800 rounded-lg">
                         <ScanEye className="w-8 h-8 text-red-600" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                         <h2 className="text-2xl font-bold text-red-900 dark:text-red-100 mb-3">Access Management</h2>
                         <p className="text-red-800 dark:text-red-200 leading-relaxed">
                             Comprehensive privileged access monitoring and control ensuring secure access to critical systems and data.
                         </p>
                     </div>
+                    <Info className="w-5 h-5 text-red-500 opacity-70 flex-shrink-0" />
                 </div>
             </div>
 
@@ -143,6 +157,52 @@ const OverviewView = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Backdrop to close tooltip when clicking outside */}
+            {activeTooltip && (
+                <div
+                    className="fixed inset-0 z-40 cursor-default"
+                    onClick={() => setActiveTooltip(false)}
+                    aria-hidden
+                />
+            )}
+
+            {/* Tooltip Popup */}
+            <AnimatePresence>
+                {activeTooltip && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="fixed bottom-0 left-0 right-0 px-6 pb-4 z-50 pointer-events-auto"
+                    >
+                        <div className="w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-xl">
+                                    <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div className="flex-1 text-left">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h4 className="text-xl font-bold text-slate-900 dark:text-white text-left">
+                                            {heroTooltip.title}
+                                        </h4>
+                                        <button
+                                            onClick={() => setActiveTooltip(false)}
+                                            className="ml-4 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors shrink-0"
+                                            aria-label="Close"
+                                        >
+                                            <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                                        </button>
+                                    </div>
+                                    <p className="text-slate-600 dark:text-slate-300 leading-tight text-left whitespace-pre-line">
+                                        {heroTooltip.description}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

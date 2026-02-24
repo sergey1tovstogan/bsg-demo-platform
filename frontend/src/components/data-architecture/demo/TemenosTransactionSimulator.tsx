@@ -1,7 +1,7 @@
 // TemenosTransactionSimulator - Main transaction simulator container
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, TrendingUp, User, CreditCard, Send, CheckCircle2, Wrench, Globe, Cloud, Terminal, Zap } from 'lucide-react'
+import { RefreshCw, TrendingUp, User, CreditCard, Send, CheckCircle2, Wrench, Globe, Cloud, Terminal, Zap, Power } from 'lucide-react'
 import { useSimulation } from '../hooks/useSimulation'
 import { useCrossTabSync } from '../hooks/useCrossTabSync'
 import { StepCard } from './StepCard'
@@ -19,8 +19,10 @@ const EventSourceIndicator: React.FC<{
   mode: 'mock' | 'real'
   eventCount: number
   connectionStatus?: 'connected' | 'connecting' | 'disconnected' | 'error'
-  eventHubHealth?: { status: string; buffer_size?: number }
-}> = ({ mode, eventCount, connectionStatus, eventHubHealth }) => {
+  eventHubHealth?: { status: string; buffer_size?: number; message?: string; error?: string }
+  connectionError?: string | null
+  onManualReconnect?: () => void
+}> = ({ mode, eventCount, connectionStatus, eventHubHealth, connectionError, onManualReconnect }) => {
   const isMock = mode === 'mock'
 
   return (
@@ -48,21 +50,39 @@ const EventSourceIndicator: React.FC<{
 
       {/* Event Hub Connection Status */}
       {!isMock && connectionStatus && (
-        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-          <div
-            className={`w-2 h-2 rounded-full ${
-              connectionStatus === 'connected'
-                ? 'bg-emerald-500'
-                : connectionStatus === 'connecting'
-                ? 'bg-amber-500 animate-pulse'
-                : connectionStatus === 'error'
-                ? 'bg-red-500'
-                : 'bg-slate-400'
-            }`}
-          />
-          <span className="text-xs text-slate-700 dark:text-slate-300 capitalize font-medium">{connectionStatus}</span>
-          {eventHubHealth?.buffer_size !== undefined && (
-            <span className="text-xs text-slate-500 dark:text-slate-400">| Buffer: {eventHubHealth.buffer_size}</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                connectionStatus === 'connected'
+                  ? 'bg-emerald-500'
+                  : connectionStatus === 'connecting'
+                  ? 'bg-amber-500 animate-pulse'
+                  : connectionStatus === 'error'
+                  ? 'bg-red-500'
+                  : 'bg-slate-400'
+              }`}
+            />
+            <span className="text-xs text-slate-700 dark:text-slate-300 capitalize font-medium">{connectionStatus}</span>
+            {eventHubHealth?.buffer_size !== undefined && connectionStatus === 'connected' && (
+              <span className="text-xs text-slate-500 dark:text-slate-400">| Buffer: {eventHubHealth.buffer_size}</span>
+            )}
+          </div>
+          {connectionError && connectionStatus !== 'connected' && (
+            <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800 max-w-md">
+              <span className="flex-1">{connectionError}</span>
+              {onManualReconnect && (
+                <button
+                  onClick={onManualReconnect}
+                  disabled={connectionStatus === 'connecting'}
+                  className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 rounded text-red-700 dark:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Click to manually reconnect"
+                >
+                  <Power className="w-3 h-3" />
+                  <span>Reconnect</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -132,16 +152,49 @@ const StatsDisplay: React.FC<{ stats: any }> = ({ stats }) => {
 export const TemenosTransactionSimulator: React.FC = () => {
   const simulation = useSimulation()
   const [kafkaPaused, setKafkaPaused] = useState(false)
+  const [eventStreamResetTime, setEventStreamResetTime] = useState(() => Date.now())
   // Always use real mode - mock mode disabled
   const [apiMode] = useState<'mock' | 'real'>('real')
   const { sendTriggers } = useCrossTabSync()
 
   // Event Hub health state
-  const [eventHubHealth, setEventHubHealth] = useState<{ status: string; running?: boolean; buffer_size?: number } | null>(null)
+  const [eventHubHealth, setEventHubHealth] = useState<{ status: string; running?: boolean; buffer_size?: number; message?: string; error?: string } | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected' | 'error'>('connecting')
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+  
+  // Enable EventStore polling when component mounts and connection is established
+  useEffect(() => {
+    // Wait a bit for health check to complete, then enable EventStore if connected
+    const timer = setTimeout(() => {
+      if (connectionStatus === 'connected' && !simulation.isEventStoreEnabled()) {
+        console.log('[TemenosTransactionSimulator] Enabling EventStore polling')
+        simulation.enableEventStore()
+      }
+    }, 3000) // Wait 3 seconds after mount
+    
+    return () => clearTimeout(timer)
+  }, [connectionStatus, simulation])
+  
+  // Also enable EventStore when connection status changes to connected
+  useEffect(() => {
+    if (connectionStatus === 'connected' && !simulation.isEventStoreEnabled()) {
+      console.log('[TemenosTransactionSimulator] Connection established, enabling EventStore polling')
+      simulation.enableEventStore()
+    }
+  }, [connectionStatus, simulation])
+
+  // Define backend URLs - shared across health check and reconnect functions
+  const relativeBaseUrl = '/api/v1/components/data-architecture/events'
+  const directBackendUrl = 'https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io/api/v1/components/data-architecture/events'
 
   const stats = simulation.getStats()
   const isComplete = simulation.isSimulationComplete()
+
+  // Filter Kafka events to only show those after the last reset (don't display old ones)
+  const filteredKafkaEvents = React.useMemo(
+    () => simulation.state.kafkaEvents.filter((e) => e.timestamp >= eventStreamResetTime),
+    [simulation.state.kafkaEvents, eventStreamResetTime]
+  )
 
   // Send animation triggers to DataArchitectureContent when they are added
   useEffect(() => {
@@ -153,25 +206,231 @@ export const TemenosTransactionSimulator: React.FC = () => {
     }
   }, [simulation.state.animationTriggers, sendTriggers])
 
-  // Check Event Hub health periodically
+  // Check Event Hub health periodically and auto-reconnect if disconnected
   useEffect(() => {
+    let reconnectAttempts = 0
+    const maxReconnectAttempts = 3
+
     const checkEventHubHealth = async () => {
       try {
-        // Use direct backend URL in production since Azure Static Web Apps rewrite doesn't support POST
-        // CORS is already configured on the backend to allow Azure Static Web Apps domains
-        const healthUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-          ? 'http://localhost:8000/api/v1/components/data-architecture/events/health'
-          : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1/components/data-architecture/events/health'
-        const response = await fetch(healthUrl)
-        if (response.ok) {
+        // Use direct backend URL for localhost, relative URL for production (with direct fallback)
+        const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+          ? 'http://localhost:8000/api/v1/components/data-architecture/events'
+          : relativeBaseUrl
+        
+        const healthUrl = `${baseUrl}/health`
+        console.log('[EventHub] Checking health at:', healthUrl)
+        
+        let response = await fetch(healthUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        console.log('[EventHub] Health check response:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type'),
+          url: response.url,
+        })
+        
+        // Check if response is OK and is JSON
+        let contentType = response.headers.get('content-type') || ''
+        let isJson = contentType.includes('application/json')
+        
+        // If we got HTML response (rewrite failed), try direct Container App URL as fallback
+        if (!isJson && response.status === 200 && baseUrl === relativeBaseUrl) {
+          const text = await response.text()
+          if (text.includes('<!doctype') || text.includes('<html')) {
+            console.warn('[EventHub] Received HTML from Static Web Apps rewrite, trying direct Container App URL')
+            const directHealthUrl = `${directBackendUrl}/health`
+            response = await fetch(directHealthUrl, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+            })
+            contentType = response.headers.get('content-type') || ''
+            isJson = contentType.includes('application/json')
+            console.log('[EventHub] Direct backend response:', {
+              status: response.status,
+              contentType,
+              isJson,
+            })
+          }
+        }
+        
+        if (response.ok && isJson) {
           const health = await response.json()
           setEventHubHealth(health)
-          setConnectionStatus(health.running ? 'connected' : 'disconnected')
+          const isRunning = health.running || health.connected
+          
+          // Set connection status and error message
+          if (isRunning) {
+            setConnectionStatus('connected')
+            setConnectionError(null)
+            reconnectAttempts = 0 // Reset on success
+          } else {
+            setConnectionStatus('disconnected')
+            // Show helpful error message if available
+            if (health.message) {
+              setConnectionError(health.message)
+            } else if (health.error) {
+              setConnectionError(health.error)
+            } else if (!health.config_available) {
+              setConnectionError('EventHub configuration not found')
+            } else {
+              setConnectionError(null)
+            }
+            
+            // Auto-reconnect if disconnected and we haven't exceeded max attempts
+            if (reconnectAttempts < maxReconnectAttempts) {
+              console.log(`[EventHub] Auto-reconnecting (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})...`)
+              reconnectAttempts++
+              setConnectionStatus('connecting')
+              
+              try {
+                // Try relative URL first, then fallback to direct Container App URL
+                let startUrl = `${baseUrl}/start`
+                let startResponse = await fetch(startUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                })
+                
+                // Check content type before parsing JSON
+                let startContentType = startResponse.headers.get('content-type') || ''
+                let startIsJson = startContentType.includes('application/json')
+                
+                // If we got HTML response, try direct Container App URL as fallback
+                if (!startIsJson && startResponse.status === 200 && baseUrl === relativeBaseUrl) {
+                  const startText = await startResponse.text()
+                  if (startText.includes('<!doctype') || startText.includes('<html')) {
+                    console.warn('[EventHub] Reconnect: Received HTML from Static Web Apps rewrite, trying direct Container App URL')
+                    startUrl = `${directBackendUrl}/start`
+                    startResponse = await fetch(startUrl, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                    })
+                    startContentType = startResponse.headers.get('content-type') || ''
+                    startIsJson = startContentType.includes('application/json')
+                  }
+                }
+                
+                if (startResponse.ok && startIsJson) {
+                  const result = await startResponse.json()
+                  if (result.success) {
+                    console.log('[EventHub] Successfully reconnected')
+                    reconnectAttempts = 0 // Reset on success
+                    setConnectionError(null)
+                    // Re-check health after a short delay
+                    setTimeout(() => checkEventHubHealth(), 2000)
+                    return // Exit early to avoid setting status again
+                  } else {
+                    const errorMsg = result.error || result.message || 'Unknown error'
+                    console.warn('[EventHub] Reconnect attempt failed:', errorMsg)
+                    setConnectionError(errorMsg)
+                    setConnectionStatus('disconnected')
+                  }
+                } else {
+                  // Handle error response
+                  let errorMessage = `Failed to start: ${startResponse.status} ${startResponse.statusText}`
+                  
+                  try {
+                    const errorText = await startResponse.text()
+                    console.warn('[EventHub] Reconnect request failed:', startResponse.status, errorText)
+                    
+                    if (startResponse.status === 404) {
+                      errorMessage = 'Start endpoint not found (404). The backend may not be deployed yet with the latest changes, or the route may be incorrect.'
+                    } else if (startResponse.status === 405) {
+                      errorMessage = 'Method not allowed (405). The endpoint exists but POST method is not supported. Please check the backend configuration.'
+                    } else if (errorText) {
+                      // Check if response is HTML
+                      if (errorText.includes('<!doctype') || errorText.includes('<html')) {
+                        errorMessage = `Received HTML error page instead of JSON. Endpoint may not exist or routing is incorrect. (Status: ${startResponse.status})`
+                      } else {
+                        // Try to parse as JSON
+                        try {
+                          const errorJson = JSON.parse(errorText)
+                          errorMessage = errorJson.detail || errorJson.error || errorJson.message || errorMessage
+                        } catch {
+                          // Not JSON, use text as-is (truncated)
+                          errorMessage = `${errorMessage}: ${errorText.substring(0, 200)}`
+                        }
+                      }
+                    }
+                  } catch (textError) {
+                    errorMessage = `Failed to start: ${startResponse.status} ${startResponse.statusText} (Could not read response)`
+                  }
+                  
+                  setConnectionError(errorMessage)
+                  setConnectionStatus('disconnected')
+                }
+              } catch (reconnectError) {
+                const errorMsg = reconnectError instanceof Error ? reconnectError.message : 'Unknown error'
+                console.error('[EventHub] Error during reconnect:', reconnectError)
+                setConnectionError(`Reconnect error: ${errorMsg}`)
+                setConnectionStatus('error')
+              }
+            } else {
+              // Max attempts reached
+              if (!connectionError) {
+                setConnectionError('Auto-reconnect failed after multiple attempts')
+              }
+            }
+          }
         } else {
+          // Handle non-JSON or error responses
+          let errorMessage = `Health check failed: ${response.status} ${response.statusText}`
+          
+          if (!isJson) {
+            // Received HTML or other non-JSON response (likely an error page)
+            try {
+              const text = await response.text()
+              console.error('[EventHub] Received non-JSON response:', {
+                status: response.status,
+                contentType,
+                textPreview: text.substring(0, 200),
+                responseUrl: response.url,
+              })
+              
+              if (text.includes('<!doctype') || text.includes('<html')) {
+                // Check if it's the index.html fallback
+                if (text.includes('root') || text.includes('react') || text.includes('vite')) {
+                  errorMessage = `Backend endpoint not accessible. The request was rewritten but the backend Container App may not be responding. Please check if the backend is deployed and accessible at: https://bsg-demo-backend.jollydune-6bb98d42.eastus.azurecontainerapps.io (Status: ${response.status})`
+                } else {
+                  errorMessage = `Health endpoint returned HTML instead of JSON. The endpoint may not exist or the backend may not be properly deployed. (Status: ${response.status})`
+                }
+              } else {
+                errorMessage = `Health endpoint returned non-JSON response: ${text.substring(0, 100)}`
+              }
+            } catch (textError) {
+              errorMessage = `Health check failed: ${response.status} ${response.statusText} (Could not read response)`
+            }
+          } else {
+            // JSON response but status not OK
+            try {
+              const errorData = await response.json()
+              errorMessage = errorData.detail || errorData.error || errorData.message || errorMessage
+            } catch (jsonError) {
+              // Already have errorMessage from above
+            }
+          }
+          
           setConnectionStatus('error')
+          setConnectionError(errorMessage)
         }
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+        console.error('[EventHub] Health check error:', error)
         setConnectionStatus('error')
+        setConnectionError(`Health check failed: ${errorMsg}`)
       }
     }
 
@@ -201,8 +460,148 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
   // Handle reset
   const handleReset = () => {
+    setEventStreamResetTime(Date.now())
     simulation.resetSimulation()
     setKafkaPaused(false)
+  }
+
+  // Auto-reset event flow when user enters Data Architecture demo (prevents errors from stale state)
+  useEffect(() => {
+    setEventStreamResetTime(Date.now())
+    simulation.resetSimulation()
+    setKafkaPaused(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount when entering Data Architecture
+  }, [])
+
+  // Manual reconnect handler
+  const handleManualReconnect = async () => {
+    setConnectionStatus('connecting')
+    setConnectionError(null)
+    
+    try {
+      const baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+        ? 'http://localhost:8000/api/v1/components/data-architecture/events'
+        : relativeBaseUrl
+      
+      let startUrl = `${baseUrl}/start`
+      let startResponse = await fetch(startUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      // Check content type before parsing JSON
+      let startContentType = startResponse.headers.get('content-type') || ''
+      let startIsJson = startContentType.includes('application/json')
+      
+      // If we got HTML response, try direct Container App URL as fallback
+      if (!startIsJson && startResponse.status === 200 && baseUrl === relativeBaseUrl) {
+        const startText = await startResponse.text()
+        if (startText.includes('<!doctype') || startText.includes('<html')) {
+          console.warn('[EventHub] Manual reconnect: Received HTML from Static Web Apps rewrite, trying direct Container App URL')
+          startUrl = `${directBackendUrl}/start`
+          startResponse = await fetch(startUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+          startContentType = startResponse.headers.get('content-type') || ''
+          startIsJson = startContentType.includes('application/json')
+        }
+      }
+      
+      if (startResponse.ok && startIsJson) {
+        const result = await startResponse.json()
+        if (result.success) {
+          console.log('[EventHub] Manually reconnected successfully')
+          setConnectionError(null)
+          // Re-check health after a short delay
+          setTimeout(() => {
+            const healthUrl = `${baseUrl}/health`
+            fetch(healthUrl)
+              .then(async res => {
+                let contentType = res.headers.get('content-type') || ''
+                let isJson = contentType.includes('application/json')
+                
+                // Fallback to direct URL if needed
+                if (!isJson && res.status === 200 && baseUrl === relativeBaseUrl) {
+                  const text = await res.text()
+                  if (text.includes('<!doctype') || text.includes('<html')) {
+                    const directHealthUrl = `${directBackendUrl}/health`
+                    const fallbackRes = await fetch(directHealthUrl)
+                    contentType = fallbackRes.headers.get('content-type') || ''
+                    isJson = contentType.includes('application/json')
+                    if (fallbackRes.ok && isJson) {
+                      const health = await fallbackRes.json()
+                      setEventHubHealth(health)
+                      setConnectionStatus(health.running || health.connected ? 'connected' : 'disconnected')
+                      return
+                    }
+                  }
+                }
+                
+                if (res.ok && isJson) {
+                  const health = await res.json()
+                  setEventHubHealth(health)
+                  setConnectionStatus(health.running || health.connected ? 'connected' : 'disconnected')
+                } else {
+                  const text = await res.text()
+                  console.error('[EventHub] Health check after reconnect failed:', res.status, text.substring(0, 100))
+                  setConnectionStatus('error')
+                  setConnectionError(`Health check failed: ${res.status} ${text.includes('<!doctype') ? '(HTML response)' : text.substring(0, 50)}`)
+                }
+              })
+              .catch(err => {
+                console.error('[EventHub] Health check after reconnect failed:', err)
+                setConnectionStatus('error')
+                setConnectionError(`Health check error: ${err.message}`)
+              })
+          }, 2000)
+        } else {
+          const errorMsg = result.error || result.message || 'Unknown error'
+          setConnectionError(errorMsg)
+          setConnectionStatus('disconnected')
+        }
+      } else {
+        // Handle error response
+        let errorMessage = `Failed to start: ${startResponse.status} ${startResponse.statusText}`
+        
+        try {
+          const errorText = await startResponse.text()
+          
+          if (startResponse.status === 404) {
+            errorMessage = 'Start endpoint not found (404). The backend may not be deployed yet with the latest changes, or the route may be incorrect.'
+          } else if (startResponse.status === 405) {
+            errorMessage = 'Method not allowed (405). The endpoint exists but POST method is not supported. Please check the backend configuration.'
+          } else if (errorText) {
+            // Check if response is HTML
+            if (errorText.includes('<!doctype') || errorText.includes('<html')) {
+              errorMessage = `Received HTML error page instead of JSON. Endpoint may not exist or routing is incorrect. (Status: ${startResponse.status})`
+            } else {
+              // Try to parse as JSON
+              try {
+                const errorJson = JSON.parse(errorText)
+                errorMessage = errorJson.detail || errorJson.error || errorJson.message || errorMessage
+              } catch {
+                // Not JSON, use text as-is (truncated)
+                errorMessage = `${errorMessage}: ${errorText.substring(0, 200)}`
+              }
+            }
+          }
+        } catch (textError) {
+          errorMessage = `Failed to start: ${startResponse.status} ${startResponse.statusText} (Could not read response)`
+        }
+        
+        setConnectionError(errorMessage)
+        setConnectionStatus('disconnected')
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      setConnectionError(`Reconnect error: ${errorMsg}`)
+      setConnectionStatus('error')
+    }
   }
 
   // API mode toggle disabled - always use real mode
@@ -368,13 +767,15 @@ export const TemenosTransactionSimulator: React.FC = () => {
               <div className="mb-2">
                 <EventSourceIndicator
                   mode={apiMode}
-                  eventCount={simulation.state.kafkaEvents.length}
+                  eventCount={filteredKafkaEvents.length}
                   connectionStatus={connectionStatus}
                   eventHubHealth={eventHubHealth || undefined}
+                  connectionError={connectionError}
+                  onManualReconnect={handleManualReconnect}
                 />
               </div>
               <KafkaEventStream
-                events={simulation.state.kafkaEvents}
+                events={filteredKafkaEvents}
                 onClear={simulation.clearKafkaEvents}
                 onPause={() => setKafkaPaused(!kafkaPaused)}
                 isPaused={kafkaPaused}
@@ -385,7 +786,7 @@ export const TemenosTransactionSimulator: React.FC = () => {
 
         {/* Database Records Tile - Full width below grid */}
         <div className="mt-16">
-          <DatabaseRecordsTile eventCount={simulation.state.kafkaEvents.length} />
+          <DatabaseRecordsTile eventCount={filteredKafkaEvents.length} />
         </div>
 
         {/* Current stage indicator (for debugging) */}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Pause, SkipForward, SkipBack, ArrowRight, Circle, Square } from 'lucide-react'
+import { Play, Pause, SkipForward, SkipBack, Zap, Database } from 'lucide-react'
 import { useCrossTabSync } from './hooks/useCrossTabSync'
 import type { AnimationTrigger } from './demo/types'
 
@@ -55,12 +55,11 @@ export function DataArchitectureContent() {
   const diagramContainerRef = useRef<HTMLDivElement>(null)
   const diagramRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
-  
-  // Client name state with localStorage persistence
-  const [clientName, setClientName] = useState<string>(() => {
-    const saved = localStorage.getItem('dataArchitecture_clientName')
-    return saved || 'Client Name'
-  })
+  const [imageLoadErrors, setImageLoadErrors] = useState<Set<string>>(new Set())
+
+  const handleImageError = useCallback((componentId: string) => {
+    setImageLoadErrors((prev) => new Set(prev).add(componentId))
+  }, [])
 
   // Cross-tab sync - listen for animation triggers from Demo tab
   const handleAnimationTrigger = useCallback((trigger: AnimationTrigger) => {
@@ -688,29 +687,11 @@ export function DataArchitectureContent() {
     return () => window.removeEventListener('resize', updateScale)
   }, [])
 
-  // Handle client name change and save to localStorage
-  const handleClientNameChange = (value: string) => {
-    const trimmedValue = value.trim()
-    const finalValue = trimmedValue || 'Client Name'
-    setClientName(finalValue)
-    localStorage.setItem('dataArchitecture_clientName', finalValue)
-  }
-
-  const handleClientNameBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    handleClientNameChange(e.target.value)
-  }
-
-  const handleClientNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.currentTarget.blur()
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div className="h-[calc(100vh-8rem)] flex flex-col space-y-3">
           {/* Merged Controls Panel with Description */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 md:p-4 space-y-3 flex-shrink-0">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 md:p-4 space-y-3 flex-shrink-0">
         {/* Description at top */}
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-center text-sm md:text-base">
           Visualizing data flow patterns in Temenos architecture. Select a path and watch how data moves through the system.
@@ -730,7 +711,7 @@ export function DataArchitectureContent() {
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 1</div>
-              <div className="text-xs mt-1 opacity-90">Event Driven: Business Events (only)</div>
+              <div className="text-sm mt-1 font-medium">Event Driven: Business Events (only)</div>
             </button>
 
             <button
@@ -743,7 +724,7 @@ export function DataArchitectureContent() {
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 2</div>
-              <div className="text-xs mt-1 opacity-90">Event Driven: Data Events</div>
+              <div className="text-sm mt-1 font-medium">Event Driven: Data Events</div>
             </button>
 
             <button
@@ -756,7 +737,7 @@ export function DataArchitectureContent() {
               } ${playbackState === 'playing' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="text-sm font-semibold">Path 3</div>
-              <div className="text-xs mt-1 opacity-90">EOD Process: Flat Files</div>
+              <div className="text-sm mt-1 font-medium">EOD Process: Flat Files</div>
             </button>
           </div>
 
@@ -809,7 +790,7 @@ export function DataArchitectureContent() {
       </div>
 
       {/* Diagram Canvas - Dynamically expands to fill available space */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-2 md:p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-2 md:p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Responsive Container with specified styling - no scroll, scales to fit */}
         <div 
           ref={diagramContainerRef}
@@ -817,13 +798,10 @@ export function DataArchitectureContent() {
         >
           <div 
             ref={diagramRef}
-            className="relative rounded-lg border-2 p-2 md:p-4 transition-transform duration-300"
+            className="relative rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/90 p-2 md:p-4 shadow-inner transition-transform duration-300"
             style={{
               width: '1200px',
               height: '520px',
-              backgroundColor: '#F4F4F6',
-              borderColor: '#3CB5A6',
-              borderRadius: '8px',
               transform: `scale(${scale})`,
               transformOrigin: 'center center'
             }}
@@ -931,18 +909,29 @@ export function DataArchitectureContent() {
                     style={isGreyed ? { filter: 'grayscale(100%)' } : {}}
                     className={pathClassName}
                   />
-                  {arrow.label && (
-                    <text
-                      x={parseFloat(arrow.points.split(' ')[1])}
-                      y={parseFloat(arrow.points.split(' ')[2]) - 10}
-                      fill={arrow.color || '#3B82F6'}
-                      fontSize="12"
-                      fontWeight="600"
-                      opacity={isGreyed ? 0.3 : 1}
-                    >
-                      {arrow.label}
-                    </text>
-                  )}
+                  {arrow.label && (() => {
+                    const parts = arrow.points.split(' ')
+                    const startX = parseFloat(parts[1])
+                    const startY = parseFloat(parts[2])
+                    const endX = parseFloat(parts[4])
+                    const endY = parseFloat(parts[5])
+                    const midX = (startX + endX) / 2
+                    const midY = (startY + endY) / 2
+                    return (
+                      <text
+                        x={midX}
+                        y={midY - 10}
+                        fill={arrow.color || '#3B82F6'}
+                        fontSize="12"
+                        fontWeight="600"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        opacity={isGreyed ? 0.3 : 1}
+                      >
+                        {arrow.label}
+                      </text>
+                    )
+                  })()}
                 </g>
               )
             })}
@@ -1001,6 +990,11 @@ export function DataArchitectureContent() {
                                  dot.segment === 'pubsub-microservices') ||
                                  (selectedPath === 'path-b') // Grey out all dots when Path 3 is active
 
+              // Label dimensions for pill background (ensure enough width for "Business Event")
+              const labelWidth = Math.max(label.length * 8, 95)
+              const labelHeight = 18
+              const labelY = currentY - 22
+
               return (
                 <g key={dot.id}>
                   {/* Glow effect with smooth transition */}
@@ -1027,17 +1021,30 @@ export function DataArchitectureContent() {
                       transition: 'opacity 0.2s ease-out, filter 0.2s ease-out'
                     }}
                   />
-                  {/* Label */}
+                  {/* Label with pill background for visibility */}
+                  <rect
+                    x={currentX - labelWidth / 2}
+                    y={labelY - labelHeight / 2}
+                    width={labelWidth}
+                    height={labelHeight}
+                    rx="9"
+                    fill="white"
+                    stroke={dotColor}
+                    strokeWidth="2"
+                    opacity={isDotGreyed ? 0.3 : 1}
+                    style={{ filter: isDotGreyed ? 'grayscale(100%)' : 'none' }}
+                  />
                   <text
                     x={currentX}
-                    y={currentY - 15}
-                    fill="#1F2937"
-                    fontSize="11"
-                    fontWeight="600"
+                    y={labelY}
+                    fill={dotColor}
+                    fontSize="12"
+                    fontWeight="700"
                     textAnchor="middle"
+                    dominantBaseline="central"
                     opacity={isDotGreyed ? 0.3 : 1}
                     style={{
-                      textShadow: '0 0 3px white, 0 0 3px white'
+                      filter: isDotGreyed ? 'grayscale(100%)' : 'none'
                     }}
                   >
                     {label}
@@ -1111,6 +1118,8 @@ export function DataArchitectureContent() {
               opacity = 0.3 // Grey out components not in current path
             }
 
+            const usePlaceholder = imageLoadErrors.has(component.id) || component.id === 'spark_process' || component.id === 'azure_sql'
+
             return (
               <motion.div
                 key={component.id}
@@ -1137,13 +1146,25 @@ export function DataArchitectureContent() {
                 onMouseEnter={() => setHoveredComponent(component.id)}
                 onMouseLeave={() => setHoveredComponent(null)}
               >
-                {/* Component Image */}
+                {/* Component Image or fallback when image missing (Spark.png, Azure_SQL.png in local) */}
                 <div className="w-full h-full relative">
-                  <img
-                    src={`/images/data-architecture/components/${component.image}`}
-                    alt={component.label}
-                    className="w-full h-full object-contain"
-                  />
+                  {usePlaceholder ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600">
+                      {component.id === 'spark_process' ? (
+                        <Zap className="w-8 h-8 text-amber-600 dark:text-amber-400 mb-1" />
+                      ) : (
+                        <Database className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-1" />
+                      )}
+                      <span className="block w-full text-xs font-semibold text-slate-700 dark:text-slate-200 text-center px-1">{component.label}</span>
+                    </div>
+                  ) : (
+                    <img
+                      src={`/images/data-architecture/components/${component.image}`}
+                      alt={component.label}
+                      className="w-full h-full object-contain"
+                      onError={() => handleImageError(component.id)}
+                    />
+                  )}
 
                   {/* Tooltip */}
                   <AnimatePresence>
@@ -1163,8 +1184,8 @@ export function DataArchitectureContent() {
 
                   {/* Roadmap Badge for future features */}
                   {(component.id === 'spark_process' || component.id === 'azure_sql') && isVisible && (
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                      <div className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-lg border-2 border-yellow-600">
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none flex flex-col items-center justify-center">
+                      <div className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold shadow-lg border-2 border-yellow-600 text-center">
                         ROADMAP
                       </div>
                     </div>
@@ -1173,115 +1194,6 @@ export function DataArchitectureContent() {
               </motion.div>
             )
           })}
-
-          {/* Legend - Positioned to avoid component overlaps (top-right, below Microservices) */}
-          <div 
-            className="absolute" 
-            style={{ top: '200px', right: '8px', zIndex: 10 }}
-            role="region"
-            aria-label="Diagram legend"
-          >
-            <div className="bg-white p-3.5 rounded-lg shadow-lg border border-gray-200 text-xs max-w-[215px]">
-              {/* Arrows Section */}
-              <div className="mb-3.5">
-                <h4 className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide mb-2">
-                  Arrows
-                </h4>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2.5 group">
-                    <div className="relative">
-                      <div 
-                        className="rounded border-2 border-gray-300 shadow-sm group-hover:shadow-md transition-shadow" 
-                        style={{ backgroundColor: '#293276', width: '22px', height: '22px' }}
-                        aria-label="Temenos arrow color"
-                      ></div>
-                      <ArrowRight className="w-3 h-3 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700">temenos</span>
-                  </div>
-                  {/* Client Name Section - Unified Card with Input */}
-                  <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
-                    {/* Input Field */}
-                    <div className="mb-2.5">
-                      <input
-                        type="text"
-                        value={clientName}
-                        onChange={(e) => setClientName(e.target.value)}
-                        onBlur={handleClientNameBlur}
-                        onKeyDown={handleClientNameKeyDown}
-                        placeholder="Enter client name..."
-                        className="w-full px-2.5 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#283054] focus:border-[#283054] transition-colors"
-                        aria-label="Client name input"
-                      />
-                    </div>
-                    
-                    {/* Color Boxes Section */}
-                    <div className="flex items-center gap-3.5">
-                      {/* Cyan Arrow Box */}
-                      <div className="flex items-center space-x-2 group">
-                        <div className="relative">
-                          <div 
-                            className="rounded border-2 border-gray-300 shadow-sm group-hover:shadow-md transition-shadow" 
-                            style={{ backgroundColor: '#00B0F0', width: '22px', height: '22px' }}
-                            aria-label="Client arrow color - cyan arrows"
-                          ></div>
-                          <ArrowRight className="w-3 h-3 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-                        </div>
-                        <span className="text-[11px] font-medium text-gray-600">Arrows</span>
-                      </div>
-                      
-                      {/* Purple Component Box */}
-                      <div className="flex items-center space-x-2 group">
-                        <div className="relative">
-                          <div 
-                            className="rounded border-2 border-gray-300 shadow-sm group-hover:shadow-md transition-shadow" 
-                            style={{ backgroundColor: '#8B5CF6', width: '22px', height: '22px' }}
-                            aria-label="Client component color - purple ETL and DWH"
-                          ></div>
-                          <Square className="w-3 h-3 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 fill-current" />
-                        </div>
-                        <span className="text-[11px] font-medium text-gray-600">ETL, DWH</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Separator */}
-              <div className="border-t border-gray-200 mb-3.5"></div>
-
-              {/* Event Bubbles Section */}
-              <div>
-                <h4 className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide mb-2">
-                  Event Bubbles
-                </h4>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2.5 group">
-                    <div className="relative">
-                      <div 
-                        className="rounded-full border-2 border-gray-300 shadow-sm group-hover:shadow-md transition-shadow" 
-                        style={{ backgroundColor: '#5CB8B2', width: '22px', height: '22px' }}
-                        aria-label="Business Event bubble color"
-                      ></div>
-                      <Circle className="w-3.5 h-3.5 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 fill-current" />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700">Business Event</span>
-                  </div>
-                  <div className="flex items-center space-x-2.5 group">
-                    <div className="relative">
-                      <div 
-                        className="rounded-full border-2 border-gray-300 shadow-sm group-hover:shadow-md transition-shadow" 
-                        style={{ backgroundColor: '#8246AF', width: '22px', height: '22px' }}
-                        aria-label="Data Event bubble color"
-                      ></div>
-                      <Circle className="w-3.5 h-3.5 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 fill-current" />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700">Data Event</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
           </div>
         </div>

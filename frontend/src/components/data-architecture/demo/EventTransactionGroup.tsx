@@ -1,7 +1,8 @@
 // Event Transaction Group Component - Groups and displays events by transaction
+// Structure: API call (Customer/Account/Payment) > Business Events (expandable) | Data Events (expandable)
 import React, { useState, forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, ChevronRight, Clock, Activity } from 'lucide-react'
+import { ChevronDown, ChevronRight, Clock, Activity, Zap, Database } from 'lucide-react'
 import type { EventGroup, KafkaEvent } from './types'
 import { calculateTransactionMetrics, getGroupLabel } from '../services/eventAggregator'
 
@@ -116,12 +117,67 @@ function formatTime(timestamp: number): string {
 }
 
 /**
+ * Expandable sub-group for Business or Data events within an API call group
+ */
+const EventCategorySubGroup: React.FC<{
+  type: 'business' | 'data'
+  events: KafkaEvent[]
+  renderEvent: (event: KafkaEvent, index: number) => React.ReactNode
+  defaultExpanded?: boolean
+}> = ({ type, events, renderEvent, defaultExpanded = false }) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+  const isBusiness = type === 'business'
+  const label = isBusiness ? 'Business Events' : 'Data Events'
+  const Icon = isBusiness ? Zap : Database
+  const bgClass = isBusiness ? 'bg-[#003366]/5 dark:bg-[#003366]/10' : 'bg-[#00A3E0]/5 dark:bg-[#00A3E0]/10'
+  const borderClass = isBusiness ? 'border-[#003366]/20 dark:border-[#003366]/30' : 'border-[#00A3E0]/20 dark:border-[#00A3E0]/30'
+  const textClass = isBusiness ? 'text-[#003366] dark:text-[#00A3E0]' : 'text-[#00A3E0] dark:text-cyan-400'
+
+  if (events.length === 0) return null
+
+  return (
+    <div className={`rounded-lg border ${borderClass} ${bgClass} overflow-hidden`}>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-3 py-2 flex items-center justify-between hover:opacity-90 transition-opacity"
+      >
+        <div className="flex items-center gap-2">
+          {isExpanded ? <ChevronDown size={14} className={textClass} /> : <ChevronRight size={14} className={textClass} />}
+          <Icon size={14} className={textClass} />
+          <span className={`text-xs font-semibold ${textClass}`}>{label}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">({events.length})</span>
+        </div>
+      </button>
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3 pt-0 space-y-2">
+              {events.map((event, index) => (
+                <div key={event.id} className="pl-4 border-l-2 border-slate-200 dark:border-slate-600">
+                  {renderEvent(event, index)}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/**
  * Main EventTransactionGroup component
  * Uses forwardRef to support AnimatePresence exit animations
  */
 export const EventTransactionGroup = forwardRef<HTMLDivElement, EventTransactionGroupProps>(
   ({ group, renderEvent }, ref) => {
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const label = getGroupLabel(group)
   const startTime = formatTime(group.startTime)
@@ -155,7 +211,7 @@ export const EventTransactionGroup = forwardRef<HTMLDivElement, EventTransaction
         </div>
       </button>
 
-      {/* Event list (collapsible) */}
+      {/* Event list (collapsible) - grouped by Business Events | Data Events */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
@@ -166,38 +222,19 @@ export const EventTransactionGroup = forwardRef<HTMLDivElement, EventTransaction
             className="overflow-hidden"
           >
             <div className="border-t border-slate-200 dark:border-slate-700">
-              {/* Timeline connector */}
-              <div className="relative px-4 py-3 bg-slate-50 dark:bg-slate-900/50">
-                {/* Vertical line - using brand colors */}
-                <div
-                  className="absolute left-8 top-0 bottom-0 w-0.5"
-                  style={{
-                    background: `linear-gradient(to bottom, #00A3E0, #003366)`
-                  }}
+              <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+                <EventCategorySubGroup
+                  type="business"
+                  events={group.events.filter((e) => e.type === 'business')}
+                  renderEvent={renderEvent}
+                  defaultExpanded={false}
                 />
-
-                {/* Events */}
-                <div className="space-y-3 relative">
-                  {group.events.map((event, index) => (
-                    <div key={event.id} className="flex items-start gap-3 relative">
-                      {/* Timeline node - using distinct colors for accessibility */}
-                      <div
-                        className="w-3 h-3 rounded-full border-2 bg-white dark:bg-slate-800 z-10 mt-2 flex-shrink-0 shadow-sm"
-                        style={{
-                          borderColor:
-                            event.type === 'business'
-                              ? '#003366' // Temenos Navy for business events
-                              : '#00A3E0' // Temenos Cyan for data events
-                        }}
-                      />
-
-                      {/* Event content */}
-                      <div className="flex-1 -mt-0.5">
-                        {renderEvent(event, index)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <EventCategorySubGroup
+                  type="data"
+                  events={group.events.filter((e) => e.type === 'data')}
+                  renderEvent={renderEvent}
+                  defaultExpanded={false}
+                />
               </div>
             </div>
           </motion.div>

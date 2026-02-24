@@ -4,6 +4,8 @@ import type { EventBusinessContext as EventBusinessContextType } from './types'
 
 interface EventBusinessContextProps {
   context: EventBusinessContextType
+  /** When true, hides the category badge (e.g. when event is inside a group that already shows it) */
+  hideCategoryBadge?: boolean
 }
 
 /**
@@ -88,7 +90,7 @@ const Field: React.FC<{ label: string; value: any }> = ({ label, value }) => {
 /**
  * Main EventBusinessContext component
  */
-export const EventBusinessContext: React.FC<EventBusinessContextProps> = ({ context }) => {
+export const EventBusinessContext: React.FC<EventBusinessContextProps> = ({ context, hideCategoryBadge = false }) => {
   const { category, formattedSummary, primaryFields } = context
 
   // Only show primary fields (excluding summary info)
@@ -99,12 +101,14 @@ export const EventBusinessContext: React.FC<EventBusinessContextProps> = ({ cont
 
   return (
     <div className="space-y-3 px-4 py-3.5 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700/60 shadow-sm">
-      {/* Category badge and summary */}
+      {/* Category badge and summary (badge hidden when inside grouped view to avoid duplication) */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 space-y-2.5">
-          <div className="flex items-center gap-2">
-            <CategoryBadge category={category} />
-          </div>
+          {!hideCategoryBadge && (
+            <div className="flex items-center gap-2">
+              <CategoryBadge category={category} />
+            </div>
+          )}
           <p className="text-sm text-slate-700 dark:text-slate-200 font-semibold leading-relaxed">
             {formattedSummary}
           </p>

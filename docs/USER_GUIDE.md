@@ -1,126 +1,161 @@
-BSG Demo Platform — USER GUIDE
+# BSG Demo Platform — User Guide
 
-Purpose
--------
-This guide provides a **conceptual and functional overview** of the BSG Demo Platform
-for users, demo presenters, and solution engineers.
+This guide explains **how to use** the BSG Demo Platform: navigation, components, and common tasks.
 
-It explains:
-- What the platform is
-- What each component does
-- How the platform is typically used in demos
-
-It does NOT:
-- Document architecture rules (see ARCHITECTURE.md)
-- Explain local setup steps (see LOCAL_DEV.md)
-- Define configuration contracts (see CONFIGURATION.md)
-
-_Last updated: 2025-12-18_
+For architecture, Azure services, and technical details, see **[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)**.
 
 ---
 
-Overview
---------
-The BSG Demo Platform is a unified environment for showcasing Temenos products,
-architectures, and deployment patterns.
+## 1. Accessing the Platform
 
-It consolidates:
-- technical documentation
-- demos and visualizations
-- architecture explanations
-- AI-assisted knowledge access
+**Cloud (production):**
 
-The platform is designed for **demo stability**, **reusability**, and **clarity**.
+- **Frontend**: `https://demo-platform.bsg.temenos.com`
+- Open the URL in a browser. No login required for basic use.
 
----
+**Local development:**
 
-Platform Components
--------------------
-Each platform area is modeled as a component.
+- **Frontend**: `http://localhost:3000`
+- **Backend API**: `http://localhost:8000`
+- **API docs**: `http://localhost:8000/docs`
 
-Current components include:
-- Integration
-- Data Architecture
-- Deployment
-- Security
-- Observability
-- Design Time
+Start locally with:
 
-Each component provides:
-- curated content
-- optional interactive demos
-- a dedicated BSG‑Guru chatbot
-
-Component rules and ownership:
-- COMPONENTS.md
+- Windows: `scripts\start-all.bat`
+- Or run frontend (`npm run dev` in `frontend/`) and backend (`uvicorn app.main:app --host 0.0.0.0 --port 8000` in `backend/`) separately. See `docs/CUSTOM_DOMAIN.md` for production URL.
 
 ---
 
-Typical Demo Flow
------------------
-A common demo sequence:
-1. Start with Integration or Data Architecture
-2. Explore documentation and diagrams
-3. Run interactive demos (where available)
-4. Use BSG‑Guru to answer deep-dive questions
-5. Switch to Deployment for Azure analysis
+## 2. Navigation
 
-This flow is flexible and adapts to audience needs.
+- **Left sidebar**: Collapsible. Use it to switch between **components** (Integration, Data Architecture, Deployment, Security, Observability, Design Time, etc.).
+- **Top bar**: **Settings** (gear icon), **Reset Demo**, theme toggle (light/dark).
+- **Main area**: Content, demos, or tools for the selected component.
 
 ---
 
-BSG‑Guru Chatbot
-----------------
-BSG‑Guru is an AI-powered assistant scoped to the active component.
+## 3. Components and How to Use Them
 
-Capabilities:
-- answers component-specific questions
-- uses curated Temenos knowledge
-- avoids cross-component confusion
+Each component groups **content**, **demos**, and **BSG Guru** (chatbot).
 
-If responses appear incorrect:
-- verify configuration
-- consult TROUBLESHOOTING.md
+### 3.1 Content
 
----
+- **Content** tabs/pages: Documentation, architecture, slides.
+- Use the **table of contents** or **breadcrumbs** to move between sections.
+- Content can include markdown, code blocks, images, and links.
 
-Azure Deployment Analyzer
--------------------------
-The Deployment component can analyze Azure subscriptions to identify Temenos-related resources.
+### 3.2 Demos
 
-Key concepts:
-- read-only analysis
-- Managed Identity authentication
-- no resource modification
+- **Demos** are interactive flows (e.g. Transaction Simulator, Deployment Analyzer).
+- Open the **Demo** tab or section for the component.
+- Follow the on-screen steps (e.g. “Create Customer”, “Open Account”, “Send Payment”).
+- Use **Reset Demo** (top bar) to clear state and start over.
 
-Azure setup details:
-- AZURE_CONFIGURATION.md
+### 3.3 BSG Guru (Chatbot)
 
-Known runtime differences:
-- Some discovery features behave differently in cloud vs local
+- **BSG Guru** is an AI assistant backed by the Temenos RAG API.
+- It is **component-aware**: answers depend on the component you’re in (e.g. Data Architecture, Deployment, Security).
+- **How to use:**
+  1. Open the **BSG Guru** / chat panel for the component.
+  2. Type your question and send.
+  3. You get an answer plus optional source references.
 
----
+**RAG JWT token (required for BSG Guru):**
 
-Security & Data Handling
------------------------
-The platform:
-- uses JWT-based authentication
-- does not expose secrets to the frontend
-- follows least-privilege access principles
-
-Authoritative security rules:
-- SECURITY.md
+- Go to **Settings** (gear) → **RAG API JWT Token**.
+- Paste your token and click **Update RAG Token**.
+- Without a valid token, BSG Guru will report that the RAG API is not configured.
 
 ---
 
-Getting More Detail
-------------------
-For deeper or technical information:
-- Architecture: ARCHITECTURE.md
-- APIs: API_CONVENTIONS.md
-- Data model: DATABASE.md
-- Troubleshooting: TROUBLESHOOTING.md
+## 4. Data Architecture — Event‑Driven Data Flow
+
+This component demonstrates **event‑driven data flow** with a transaction simulator and live event stream.
+
+### 4.1 User Journey (Transaction Simulator)
+
+1. **Create Customer**  
+   - Click **Execute Action**.  
+   - The app calls the Temenos Party API, creates a customer, and shows the response (e.g. `customerId`).
+
+2. **Open Account**  
+   - Click **Execute Action** for “Open Account”.  
+   - Uses the customer from step 1 to open an account.  
+   - Response includes e.g. `accountId`.
+
+3. **Send Instant Payment**  
+   - Click **Execute Action** for “Send Instant Payment”.  
+   - Uses the account to send a payment.  
+   - You’ll need a valid **credit account** configured; otherwise you may see “CREDIT ACCOUNT IS MANDATORY”.
+
+### 4.2 Kafka Event Stream
+
+- **Kafka Event Stream** shows events produced by your transactions (e.g. from Azure EventHub).
+- **Status**: “Connected” / “Live” when the event source is healthy.
+- **Controls**: **Grouped**, **Pause**, **Clear** to organise or pause updates.
+- Only **events for the current transaction** are shown (historical events are filtered out).
+- If you see “No events emitted yet”, run a transaction (Create Customer, Open Account, etc.) and wait a few seconds.
+
+### 4.3 API Inspector
+
+- Lists **API calls** made by the simulator (method, URL, status, duration).
+- Expand a request to see **request** and **response** bodies.
+- Use **Clear** to reset the log.
 
 ---
-Last updated: 2025-12-18
-Maintained by the BSG Team
+
+## 5. Deployment Component
+
+- **Deployment Analyzer**: Connect to **Azure** (choose subscription), select **resource groups**, and analyze Temenos components.
+- **Export ARM**: Export selected resource groups as ARM template JSON for Infrastructure as Code.
+- **Azure permissions** (e.g. Reader) are required.
+
+---
+
+## 6. Settings
+
+Open **Settings** (gear icon) to:
+
+- **RAG API JWT Token**: Set or update the token for BSG Guru (see above).
+- **EventHub** (if available): Configuration for the event stream; usually managed by admins.
+
+---
+
+## 7. Reset Demo
+
+- **Reset Demo** (top bar) clears **simulation state**, **event stream**, and **API inspector** for the Data Architecture demo.
+- Use it to start a new user journey (Create Customer → Open Account → Send Payment) from scratch.
+
+---
+
+## 8. Common Tasks
+
+| Task | How |
+|------|-----|
+| Switch component | Use the left sidebar and select a component. |
+| Use BSG Guru | Open the chatbot for the component, enter a question, send. |
+| Run Data Architecture demo | Go to Data Architecture → Demo → execute each step (Create Customer, Open Account, Send Payment). |
+| View events | Use the **Kafka Event Stream** panel; ensure you’re “Connected” and have run at least one transaction. |
+| Clear demo state | Click **Reset Demo** in the top bar. |
+| Configure RAG token | **Settings** → RAG API JWT Token → paste token → **Update RAG Token**. |
+| Toggle light/dark theme | Use the theme control in the top bar. |
+
+---
+
+## 9. Troubleshooting
+
+- **“No events emitted yet”**  
+  Run a transaction (Create Customer, etc.), wait a few seconds, and check that the stream shows “Connected” / “Live”.
+
+- **“RAG API token not configured” / “expired”**  
+  Update the token under **Settings** → RAG API JWT Token.
+
+- **“CREDIT ACCOUNT IS MANDATORY”** (Send Payment)  
+  The payment step requires a valid credit account in the Temenos setup; this is an API/configuration constraint.
+
+- **API or event stream errors**  
+  Check that the backend and EventHub are running and reachable. For deployment details and health checks, see **PROJECT_DOCUMENTATION.md**.
+
+---
+
+*For technical architecture, Azure services, database, and APIs, see **[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)**.*
