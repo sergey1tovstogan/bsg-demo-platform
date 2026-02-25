@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { createPortal } from 'react-dom'
+import { motion } from 'framer-motion'
 import { Play, Pause, SkipForward, SkipBack, Zap, Database } from 'lucide-react'
 import { useCrossTabSync } from './hooks/useCrossTabSync'
 import type { AnimationTrigger } from './demo/types'
@@ -45,20 +46,32 @@ export function DataArchitectureContent() {
   const [currentStep, setCurrentStep] = useState(0)
   const [visibleComponents, setVisibleComponents] = useState<Set<string>>(new Set())
   const [allAnimatedComponents, setAllAnimatedComponents] = useState<Set<string>>(new Set())
-  const [hoveredComponent, setHoveredComponent] = useState<string | null>(null)
+
   const [activeDataFlows, setActiveDataFlows] = useState<DataFlowDot[]>([])
   const [spawningTrigger, setSpawningTrigger] = useState(0) // Increment to restart spawning
   const [greyedComponents, setGreyedComponents] = useState<Set<string>>(new Set()) // Components to grey out
   const [completedPaths, setCompletedPaths] = useState<Set<AnimationPath>>(new Set()) // Track which paths have been completed
   const [shouldSpawnPath1And2, setShouldSpawnPath1And2] = useState(false) // Track if Path 1/2 bubbles should continue spawning
   const spawningIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const dataEventTimeoutsRef = useRef<NodeJS.Timeout[]>([])
   const diagramContainerRef = useRef<HTMLDivElement>(null)
   const diagramRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
   const [imageLoadErrors, setImageLoadErrors] = useState<Set<string>>(new Set())
+  const [tooltipInfo, setTooltipInfo] = useState<{ text: string; rect: DOMRect } | null>(null)
 
   const handleImageError = useCallback((componentId: string) => {
     setImageLoadErrors((prev) => new Set(prev).add(componentId))
+  }, [])
+
+  const handleComponentMouseEnter = useCallback((_componentId: string, tooltip: string | undefined, e: React.MouseEvent) => {
+    if (tooltip) {
+      setTooltipInfo({ text: tooltip, rect: e.currentTarget.getBoundingClientRect() })
+    }
+  }, [])
+
+  const handleComponentMouseLeave = useCallback(() => {
+    setTooltipInfo(null)
   }, [])
 
   // Cross-tab sync - listen for animation triggers from Demo tab
@@ -285,17 +298,20 @@ export function DataArchitectureContent() {
     // If switching to Path 3, preserve the spawning state if Path 1/2 were previously active
     // If switching to Path 1 or Path 2, we'll enable spawning below
     if (path === 'path-b') {
-      // Keep shouldSpawnPath1And2 as is when going to Path 3 (don't reset it)
+      // Always enable Path 1/2 dot spawning for Path 3 (shown greyed out as context)
+      setShouldSpawnPath1And2(true)
     } else {
       // Reset spawning flag when switching to Path 1 or Path 2 (will be set to true below)
       setShouldSpawnPath1And2(false)
     }
     
-    // Clear spawning interval
+    // Clear spawning interval and pending data event timeouts
     if (spawningIntervalRef.current) {
       clearInterval(spawningIntervalRef.current)
       spawningIntervalRef.current = null
     }
+    dataEventTimeoutsRef.current.forEach(clearTimeout)
+    dataEventTimeoutsRef.current = []
 
     // Set new path
     setSelectedPath(path)
@@ -331,8 +347,9 @@ export function DataArchitectureContent() {
     if (path === 'path-c' || path === 'path-a') {
       setShouldSpawnPath1And2(true) // Enable spawning when Path 1 or Path 2 is selected
       setSpawningTrigger(prev => prev + 1)
-    } else if (path === 'path-b' && shouldSpawnPath1And2) {
-      // If switching to Path 3 and Path 1/2 were active, trigger spawning to continue
+    } else if (path === 'path-b') {
+      // Always trigger spawning for Path 3 (greyed-out background dots)
+      setShouldSpawnPath1And2(true)
       setSpawningTrigger(prev => prev + 1)
     }
 
@@ -415,11 +432,13 @@ export function DataArchitectureContent() {
     setActiveDataFlows([])
     setGreyedComponents(new Set())
     setCompletedPaths(new Set()) // Reset completed paths tracking
-    // Clear spawning interval
+    // Clear spawning interval and pending data event timeouts
     if (spawningIntervalRef.current) {
       clearInterval(spawningIntervalRef.current)
       spawningIntervalRef.current = null
     }
+    dataEventTimeoutsRef.current.forEach(clearTimeout)
+    dataEventTimeoutsRef.current = []
   }
 
   const handleStepForward = () => {
@@ -493,7 +512,7 @@ export function DataArchitectureContent() {
       }])
 
       // Spawn first Data Event 1.5s after first Business Event
-      setTimeout(() => {
+      const firstDataTimeout = setTimeout(() => {
         console.log('[Spawning] Spawning first Data Event')
         const now = Date.now()
         setActiveDataFlows((prev) => [
@@ -507,6 +526,7 @@ export function DataArchitectureContent() {
           }
         ])
       }, 1500)
+      dataEventTimeoutsRef.current.push(firstDataTimeout)
 
       console.log('[Spawning] Setting up interval for Business Events (every 3.5s)')
       // Then spawn a new Business Event every 3.5 seconds
@@ -525,7 +545,7 @@ export function DataArchitectureContent() {
         ])
 
         // Spawn Data Event 1.5s after each Business Event
-        setTimeout(() => {
+        const dataTimeout = setTimeout(() => {
           console.log('[Spawning] Spawning Data Event')
           const dataNow = Date.now()
           setActiveDataFlows((prev) => [
@@ -539,6 +559,7 @@ export function DataArchitectureContent() {
             }
           ])
         }, 1500)
+        dataEventTimeoutsRef.current.push(dataTimeout)
       }, 3500)
       console.log('[Spawning] Interval set up')
     }, 1300) // Start after arrows appear (animation starts at 100ms, arrows at 1100ms, spawn at 1300ms)
@@ -550,6 +571,8 @@ export function DataArchitectureContent() {
         clearInterval(spawningIntervalRef.current)
         spawningIntervalRef.current = null
       }
+      dataEventTimeoutsRef.current.forEach(clearTimeout)
+      dataEventTimeoutsRef.current = []
     }
   }, [selectedPath, spawningTrigger, shouldSpawnPath1And2]) // Depend on path, trigger, and shouldSpawn flag
 
@@ -575,8 +598,8 @@ export function DataArchitectureContent() {
                   pathId: 'arrow-pubsub-microservices',
                   startTime: now
                 })
-              } else if (dot.type === 'data' && selectedPath === 'path-a') {
-                // Data events in Path 2 transition to fork vertical segment
+              } else if (dot.type === 'data' && (selectedPath === 'path-a' || selectedPath === 'path-b')) {
+                // Data events in Path 2 (and greyed in Path 3) transition to fork vertical segment
                 updated.push({
                   ...dot,
                   segment: 'pubsub-fork-main',
@@ -1055,10 +1078,7 @@ export function DataArchitectureContent() {
           </svg>
 
           {/* Render static components (always visible) */}
-          {staticComponents.map((component) => {
-            const isHovered = hoveredComponent === component.id
-
-            return (
+          {staticComponents.map((component) => (
               <div
                 key={component.id}
                 className="absolute"
@@ -1069,40 +1089,21 @@ export function DataArchitectureContent() {
                   height: `${component.position.height}px`,
                   zIndex: 2,
                 }}
-                onMouseEnter={() => setHoveredComponent(component.id)}
-                onMouseLeave={() => setHoveredComponent(null)}
+                onMouseEnter={(e) => handleComponentMouseEnter(component.id, component.tooltip, e)}
+                onMouseLeave={handleComponentMouseLeave}
               >
-                {/* Component Image */}
                 <div className="w-full h-full relative">
                   <img
                     src={`/images/data-architecture/components/${component.image}`}
                     alt={component.label}
                     className="w-full h-full object-contain"
                   />
-
-                  {/* Tooltip */}
-                  <AnimatePresence>
-                    {isHovered && component.tooltip && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap z-50"
-                        style={{ pointerEvents: 'none' }}
-                      >
-                        {component.tooltip}
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
               </div>
-            )
-          })}
+          ))}
 
           {/* Render animated components */}
           {animatedComponents.map((component) => {
-            const isHovered = hoveredComponent === component.id
             const isVisible = visibleComponents.has(component.id)
             const wasAnimated = allAnimatedComponents.has(component.id)
             const isInCurrentPath = isComponentInPath(component.id)
@@ -1143,8 +1144,8 @@ export function DataArchitectureContent() {
                   opacity: { duration: 0.6 },
                   scale: { duration: 0.7 }
                 }}
-                onMouseEnter={() => setHoveredComponent(component.id)}
-                onMouseLeave={() => setHoveredComponent(null)}
+                onMouseEnter={(e) => handleComponentMouseEnter(component.id, component.tooltip, e)}
+                onMouseLeave={handleComponentMouseLeave}
               >
                 {/* Component Image or fallback when image missing (Spark.png, Azure_SQL.png in local) */}
                 <div className="w-full h-full relative">
@@ -1166,22 +1167,6 @@ export function DataArchitectureContent() {
                     />
                   )}
 
-                  {/* Tooltip */}
-                  <AnimatePresence>
-                    {isHovered && component.tooltip && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap z-50"
-                        style={{ pointerEvents: 'none' }}
-                      >
-                        {component.tooltip}
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
                   {/* Roadmap Badge for future features */}
                   {(component.id === 'spark_process' || component.id === 'azure_sql') && isVisible && (
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none flex flex-col items-center justify-center">
@@ -1199,6 +1184,43 @@ export function DataArchitectureContent() {
         </div>
       </div>
       </div>
+
+      {/* Tooltip rendered via portal to escape overflow-hidden containers */}
+      {tooltipInfo && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            left: (() => {
+              const centerX = tooltipInfo.rect.left + tooltipInfo.rect.width / 2
+              // Clamp so tooltip doesn't overflow viewport edges (assume ~200px max tooltip width)
+              return Math.max(100, Math.min(centerX, window.innerWidth - 100))
+            })(),
+            top: (() => {
+              const below = tooltipInfo.rect.bottom + 2
+              const above = tooltipInfo.rect.top - 34
+              // If tooltip would go below viewport, show above instead
+              return below + 32 > window.innerHeight ? above : below
+            })(),
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div className="px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+            {tooltipInfo.text}
+            <div
+              className="absolute left-1/2 transform -translate-x-1/2 border-4 border-transparent"
+              style={{
+                // Arrow points toward the component: bottom arrow if tooltip is above, top arrow if below
+                ...(tooltipInfo.rect.bottom + 40 > window.innerHeight
+                  ? { top: '100%', borderTopColor: '#111827' }
+                  : { bottom: '100%', borderBottomColor: '#111827' })
+              }}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

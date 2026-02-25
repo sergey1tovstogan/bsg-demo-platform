@@ -245,28 +245,48 @@ export const DATABASE_RECORDS_CONFIG = {
   // Enable/disable database records tile
   ENABLED: true,
 
-  // SQL query to execute - fetches customer records from ODS
-  // Shows most recent records first (newest customers appear at top)
-  SQL_QUERY: `SELECT TOP 20 c.[RECID]
-      ,c.[MNEMONIC]
-	  ,cml.[SHORT_NAME]
-      ,cml.[NAME_1]
-      ,cml.[STREET]
-      ,cml.[TOWN_COUNTRY]
-      ,cml.[POST_CODE]
-      ,cml.[COUNTRY]
-      ,c.[SECTOR]
-      ,c.[ACCOUNT_OFFICER]
-      ,c.[INDUSTRY]
-      ,c.[TARGET]
-      ,c.[NATIONALITY]
-      ,c.[CUSTOMER_STATUS]
-      ,c.[RESIDENCE]
-      ,c.[CREATION_TIME_DL]
-      ,c.[BANKING_DATE_DL]
+  // Default SQL query - fetches most recent customer records from ODS (used when no demo is running)
+  SQL_QUERY: `SELECT TOP 20 c.[RECID] as [Customer Number]
+      ,c.[MNEMONIC] as [Customer Mnemonic]
+      ,cml.[NAME_1] as [Customer Full Name]
+      ,c.[NATIONALITY] as [Nationality]
+      ,c.[DATE_OF_BIRTH] as [Date of Birth]
+      ,cml.[STREET] as [Street]
+      ,cml.[POST_CODE] as [Post Code]
+      ,cml.[TOWN_COUNTRY] as [City]
+      ,cml.[COUNTRY] as [Country]
+      ,c.[SECTOR] as [Sector]
+      ,c.[INDUSTRY] as [Industry]
+      ,c.[RESIDENCE] as [Residence]
+      ,DATEADD(MILLISECOND, CAST(c.[CREATION_TIME_DL] AS BIGINT) % 1000,
+        DATEADD(SECOND, CAST(c.[CREATION_TIME_DL] AS BIGINT) / 1000, '1970-01-01')
+      ) as [Record Creation Time]
+      ,c.[BANKING_DATE_DL] as [Banking Date]
   FROM [ODS].[FBNK_CUSTOMER] c
   LEFT JOIN [ODS].[FBNK_CUSTOMER_ML] cml ON c.RECID = cml.RECID
   ORDER BY c.[CREATION_TIME_DL] DESC`,
+
+  // Filtered SQL query - used after a customer is created to show that specific record
+  // The {{RECID}} placeholder is replaced with the actual customer RECID at runtime
+  SQL_QUERY_FILTERED: `SELECT c.[RECID] as [Customer Number]
+      ,c.[MNEMONIC] as [Customer Mnemonic]
+      ,cml.[NAME_1] as [Customer Full Name]
+      ,c.[NATIONALITY] as [Nationality]
+      ,c.[DATE_OF_BIRTH] as [Date of Birth]
+      ,cml.[STREET] as [Street]
+      ,cml.[POST_CODE] as [Post Code]
+      ,cml.[TOWN_COUNTRY] as [City]
+      ,cml.[COUNTRY] as [Country]
+      ,c.[SECTOR] as [Sector]
+      ,c.[INDUSTRY] as [Industry]
+      ,c.[RESIDENCE] as [Residence]
+      ,DATEADD(MILLISECOND, CAST(c.[CREATION_TIME_DL] AS BIGINT) % 1000,
+        DATEADD(SECOND, CAST(c.[CREATION_TIME_DL] AS BIGINT) / 1000, '1970-01-01')
+      ) as [Record Creation Time]
+      ,c.[BANKING_DATE_DL] as [Banking Date]
+  FROM [ODS].[FBNK_CUSTOMER] c
+  LEFT JOIN [ODS].[FBNK_CUSTOMER_ML] cml ON c.RECID = cml.RECID
+  WHERE c.[RECID] = '{{RECID}}'`,
 
   // Description shown in tile header
   DESCRIPTION: 'Database records synced from Temenos events',
@@ -279,6 +299,68 @@ export const DATABASE_RECORDS_CONFIG = {
 
   // Debounce delay for auto-refresh (ms) - prevents too many requests
   REFRESH_DEBOUNCE_MS: 2000
+}
+
+/**
+ * Arrangement Records Configuration
+ */
+export const ARRANGEMENT_RECORDS_CONFIG = {
+  // Enable/disable arrangement records tile
+  ENABLED: true,
+
+  // Title shown in tile header
+  TITLE: 'TDH (ODS/SDS Arrangement Records)',
+
+  // Description shown in tile header
+  DESCRIPTION: 'Arrangement records synced from Temenos events',
+
+  // Maximum rows to display
+  MAX_ROWS: 20,
+
+  // Auto-refresh when Kafka events are received
+  AUTO_REFRESH: true,
+
+  // Debounce delay for auto-refresh (ms)
+  REFRESH_DEBOUNCE_MS: 2000,
+
+  // Default SQL query - fetches most recent arrangement records from ODS (used when no demo is running)
+  SQL_QUERY: `SELECT TOP 20 aa.RECID as [Arrangement ID]
+      , aml.SHORT_TITLE as [Customer Full Name]
+      , aac.CUSTOMER as [Customer Number]
+      , aa.active_product as [Active Product]
+      , aa.Product_Line as [Product Line]
+      , aac.Customer_Role as [Customer Role]
+      , a.Limit_REF as [Limit Reference]
+      , a.Category as [Category]
+      , DATEADD(MILLISECOND, CAST(aa.[CREATION_TIME_DL] AS BIGINT) % 1000,
+          DATEADD(SECOND, CAST(aa.[CREATION_TIME_DL] AS BIGINT) / 1000, '1970-01-01')
+      ) as [Record Creation Time]
+      , aa.Banking_Date_dl as [Banking Date]
+  FROM ods.FBNK_AA_ARRANGEMENT aa
+  LEFT JOIN ods.FBNK_AA_ARRANGEMENT_CUSTOMER aac ON aa.RECID = aac.RECID
+  LEFT JOIN ods.FBNK_ACCOUNT a ON aa.recid = a.arrangement_id
+  LEFT JOIN ods.FBNK_ACCOUNT_ML aml ON a.recid = aml.recid
+  ORDER BY aa.[CREATION_TIME_DL] DESC`,
+
+  // Filtered SQL query - used after an account is opened to show that specific arrangement
+  // The {{RECID}} placeholder is replaced with the actual arrangement RECID at runtime
+  SQL_QUERY_FILTERED: `SELECT aa.RECID as [Arrangement ID]
+      , aml.SHORT_TITLE as [Customer Full Name]
+      , aac.CUSTOMER as [Customer Number]
+      , aa.active_product as [Active Product]
+      , aa.Product_Line as [Product Line]
+      , aac.Customer_Role as [Customer Role]
+      , a.Limit_REF as [Limit Reference]
+      , a.Category as [Category]
+      , DATEADD(MILLISECOND, CAST(aa.[CREATION_TIME_DL] AS BIGINT) % 1000,
+          DATEADD(SECOND, CAST(aa.[CREATION_TIME_DL] AS BIGINT) / 1000, '1970-01-01')
+      ) as [Record Creation Time]
+      , aa.Banking_Date_dl as [Banking Date]
+  FROM ods.FBNK_AA_ARRANGEMENT aa
+  LEFT JOIN ods.FBNK_AA_ARRANGEMENT_CUSTOMER aac ON aa.RECID = aac.RECID
+  LEFT JOIN ods.FBNK_ACCOUNT a ON aa.recid = a.arrangement_id
+  LEFT JOIN ods.FBNK_ACCOUNT_ML aml ON a.recid = aml.recid
+  WHERE aa.[RECID] = '{{RECID}}'`,
 }
 
 /**

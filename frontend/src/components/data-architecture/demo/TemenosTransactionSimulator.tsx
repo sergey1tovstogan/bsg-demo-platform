@@ -8,7 +8,7 @@ import { StepCard } from './StepCard'
 import { ApiInspector } from './ApiInspector'
 import { KafkaEventStream } from './KafkaEventStream'
 import { DatabaseRecordsTile } from './DatabaseRecordsTile'
-import { TRANSACTION_STEPS, API_CONFIG } from '../config/simulation.config'
+import { TRANSACTION_STEPS, API_CONFIG, ARRANGEMENT_RECORDS_CONFIG } from '../config/simulation.config'
 // import { apiService } from '../services/apiServiceAdapter' // Unused import
 
 /**
@@ -784,9 +784,24 @@ export const TemenosTransactionSimulator: React.FC = () => {
           </div>
         </div>
 
-        {/* Database Records Tile - Full width below grid */}
-        <div className="mt-16">
-          <DatabaseRecordsTile eventCount={filteredKafkaEvents.length} />
+        {/* Database Records Tiles - Full width below grid */}
+        <div className="mt-16 space-y-6">
+          {/* Customer Records */}
+          <DatabaseRecordsTile
+            eventCount={filteredKafkaEvents.length}
+            activeRecId={simulation.state.transactions.customerId || null}
+          />
+
+          {/* Arrangement Records */}
+          <DatabaseRecordsTile
+            eventCount={filteredKafkaEvents.length}
+            activeRecId={simulation.state.transactions.accountId || null}
+            title={ARRANGEMENT_RECORDS_CONFIG.TITLE}
+            description={ARRANGEMENT_RECORDS_CONFIG.DESCRIPTION}
+            sqlQuery={ARRANGEMENT_RECORDS_CONFIG.SQL_QUERY}
+            sqlQueryFiltered={ARRANGEMENT_RECORDS_CONFIG.SQL_QUERY_FILTERED}
+            maxRows={ARRANGEMENT_RECORDS_CONFIG.MAX_ROWS}
+          />
         </div>
 
         {/* Current stage indicator (for debugging) */}

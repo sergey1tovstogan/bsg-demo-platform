@@ -11,6 +11,22 @@ interface DatabaseRecordsTileProps {
   apiBaseUrl?: string
   /** Database connection name: 'tdh_ods' or 'tdh_sds' */
   connection?: string
+  /** Active RECID - when set, filters query to show only this record */
+  activeRecId?: string | null
+  /** Override tile title */
+  title?: string
+  /** Override tile description */
+  description?: string
+  /** Override default SQL query (unfiltered) */
+  sqlQuery?: string
+  /** Override filtered SQL query (must contain {{RECID}} placeholder) */
+  sqlQueryFiltered?: string
+  /** Override max rows */
+  maxRows?: number
+  /** Override auto-refresh behavior */
+  autoRefresh?: boolean
+  /** Override refresh debounce delay in ms */
+  refreshDebounceMs?: number
 }
 
 interface QueryResponse {
@@ -39,8 +55,24 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
   apiBaseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:8000/api/v1'
     : 'https://bsg-demo-platform-app.azurewebsites.net/api/v1',
-  connection = 'tdh_ods'
+  connection = 'tdh_ods',
+  activeRecId = null,
+  title,
+  description,
+  sqlQuery,
+  sqlQueryFiltered,
+  maxRows,
+  autoRefresh,
+  refreshDebounceMs
 }) => {
+  // Resolve config values: props override DATABASE_RECORDS_CONFIG defaults
+  const resolvedSqlQuery = sqlQuery ?? DATABASE_RECORDS_CONFIG.SQL_QUERY
+  const resolvedSqlQueryFiltered = sqlQueryFiltered ?? DATABASE_RECORDS_CONFIG.SQL_QUERY_FILTERED
+  const resolvedMaxRows = maxRows ?? DATABASE_RECORDS_CONFIG.MAX_ROWS
+  const resolvedAutoRefresh = autoRefresh ?? DATABASE_RECORDS_CONFIG.AUTO_REFRESH
+  const resolvedRefreshDebounceMs = refreshDebounceMs ?? DATABASE_RECORDS_CONFIG.REFRESH_DEBOUNCE_MS
+  const resolvedTitle = title ?? 'TDH (ODS/SDS Records)'
+  const resolvedDescription = description ?? DATABASE_RECORDS_CONFIG.DESCRIPTION ?? 'Database records synced from Temenos events'
   const [records, setRecords] = useState<QueryResponse | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>({
     status: 'checking',
@@ -77,11 +109,17 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
 
   /**
    * Load database records using configured SQL query
+   * When activeRecId is set, uses filtered query to show only that customer record
    */
   const loadRecords = useCallback(async () => {
-    if (!DATABASE_RECORDS_CONFIG.ENABLED || !DATABASE_RECORDS_CONFIG.SQL_QUERY) {
+    if (!DATABASE_RECORDS_CONFIG.ENABLED || !resolvedSqlQuery) {
       return
     }
+
+    // Use filtered query when an active RECID is provided (demo is running)
+    const query = activeRecId && resolvedSqlQueryFiltered
+      ? resolvedSqlQueryFiltered.replace('{{RECID}}', activeRecId)
+      : resolvedSqlQuery
 
     try {
       setLoading(true)
@@ -93,8 +131,8 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          query: DATABASE_RECORDS_CONFIG.SQL_QUERY,
-          limit: DATABASE_RECORDS_CONFIG.MAX_ROWS,
+          query: query,
+          limit: resolvedMaxRows,
           connection: connection
         })
       })
@@ -114,7 +152,7 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
       setLoading(false)
       setIsRefreshing(false)
     }
-  }, [apiBaseUrl, connection])
+  }, [apiBaseUrl, connection, activeRecId, resolvedSqlQuery, resolvedSqlQueryFiltered, resolvedMaxRows])
 
   /**
    * Manual refresh handler
@@ -153,7 +191,7 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
   // Event-driven refresh: watch for Kafka event count changes
   useEffect(() => {
     // Only refresh if event count increased (new events received)
-    if (eventCount > lastEventCountRef.current && DATABASE_RECORDS_CONFIG.AUTO_REFRESH) {
+    if (eventCount > lastEventCountRef.current && resolvedAutoRefresh) {
       // Clear any pending refresh
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current)
@@ -164,7 +202,7 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
         setIsRefreshing(true)
         loadRecords()
         lastEventCountRef.current = eventCount
-      }, DATABASE_RECORDS_CONFIG.REFRESH_DEBOUNCE_MS)
+      }, resolvedRefreshDebounceMs)
     } else {
       lastEventCountRef.current = eventCount
     }
@@ -191,10 +229,10 @@ export const DatabaseRecordsTile: React.FC<DatabaseRecordsTileProps> = ({
           </div>
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-              TDH (ODS/SDS Records)
+              {resolvedTitle}
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              {DATABASE_RECORDS_CONFIG.DESCRIPTION || 'Database records synced from Temenos events'}
+              {resolvedDescription}
             </p>
           </div>
         </div>

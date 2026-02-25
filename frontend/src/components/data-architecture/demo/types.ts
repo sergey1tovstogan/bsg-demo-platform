@@ -96,6 +96,7 @@ export interface TemenosCustomerPayload {
     addresses?: Array<{ address?: string }> // Max 35 chars
     addressCities?: Array<{ addressCity?: string }> // Max 35 chars
     countries?: Array<{ country?: string }> // Max 35 chars
+    postCode?: number // Postal/ZIP code (Temenos type: number, max 35)
 
     // Personal details (optional)
     gender?: string // Max 35 chars

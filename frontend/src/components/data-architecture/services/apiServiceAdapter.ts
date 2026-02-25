@@ -13,28 +13,64 @@ import type {
 import { MockApiService } from './mockApiService'
 
 /**
+ * European character transliteration map for SWIFT compliance.
+ * German umlauts use proper German transliteration (ue, oe, ae, ss).
+ * Other European accented characters use simplified transliteration.
+ */
+const TRANSLITERATION_MAP: Record<string, string> = {
+  // German (proper German transliteration rules)
+  'ü': 'ue', 'Ü': 'Ue', 'ö': 'oe', 'Ö': 'Oe', 'ä': 'ae', 'Ä': 'Ae', 'ß': 'ss',
+  // French
+  'é': 'e', 'É': 'E', 'è': 'e', 'È': 'E', 'ê': 'e', 'Ê': 'E', 'ë': 'e', 'Ë': 'E',
+  'à': 'a', 'À': 'A', 'â': 'a', 'Â': 'A', 'ç': 'c', 'Ç': 'C',
+  'ô': 'o', 'Ô': 'O', 'î': 'i', 'Î': 'I', 'ï': 'i', 'Ï': 'I',
+  'û': 'u', 'Û': 'U', 'ù': 'u', 'Ù': 'U',
+  // Spanish
+  'ñ': 'n', 'Ñ': 'N', 'á': 'a', 'Á': 'A', 'í': 'i', 'Í': 'I',
+  'ó': 'o', 'Ó': 'O', 'ú': 'u', 'Ú': 'U',
+  // Scandinavian
+  'å': 'a', 'Å': 'A', 'ø': 'o', 'Ø': 'O', 'æ': 'ae', 'Æ': 'Ae',
+}
+
+/**
+ * Transliterate European accented characters to SWIFT-safe ASCII.
+ * German umlauts use proper German rules (ü → ue, ö → oe, ä → ae, ß → ss).
+ * Must be called BEFORE toUpperCase() to distinguish ü (→ ue) from regular u.
+ */
+export function transliterateEuropean(text: string): string {
+  return text.replace(
+    /[üöäßéèêëàâçôîïûùñáíóúåøæÜÖÄÉÈÊËÀÂÇÔÎÏÛÙÑÁÍÓÚÅØÆ]/g,
+    (char) => TRANSLITERATION_MAP[char] || char
+  )
+}
+
+/**
  * Sanitize customer name to only include valid SWIFT characters
  * SWIFT allows: A-Z, 0-9, and special chars: / - ? : ( ) . , ' + Space
  */
 function sanitizeSwiftName(name: string): string {
-  // Convert to uppercase first
-  let sanitized = name.toUpperCase()
-  
+  // Transliterate European accented characters BEFORE uppercasing
+  // This ensures ü→UE (not stripped), ö→OE, ä→AE, ß→SS
+  let sanitized = transliterateEuropean(name)
+
+  // Convert to uppercase
+  sanitized = sanitized.toUpperCase()
+
   // Remove any characters that are not valid SWIFT characters
   // Valid: A-Z, 0-9, / - ? : ( ) . , ' + Space
-  sanitized = sanitized.replace(/[^A-Z0-9/\-?().,'\\s+]/g, '')
-  
+  sanitized = sanitized.replace(/[^A-Z0-9/\-?:(). ,' +]/g, '')
+
   // Replace multiple spaces with single space
   sanitized = sanitized.replace(/\s+/g, ' ')
-  
+
   // Trim leading/trailing spaces
   sanitized = sanitized.trim()
-  
+
   // Ensure it's not empty (fallback to "CUSTOMER" if empty after sanitization)
   if (!sanitized) {
     sanitized = 'CUSTOMER'
   }
-  
+
   return sanitized
 }
 
@@ -147,18 +183,20 @@ class RealApiService implements ITransactionApiService {
         })
       }
       
-      // Sanitize address/street to ensure SWIFT compliance
-      let sanitizedAddress: string | undefined
-      if (payload.address) {
-        sanitizedAddress = sanitizeSwiftName(payload.address)
-        if (sanitizedAddress !== payload.address.toUpperCase()) {
-          console.warn('[RealApiService] Address sanitized:', {
-            original: payload.address,
-            sanitized: sanitizedAddress
-          })
-        }
-        // Ensure it doesn't exceed max length (70 chars)
-        sanitizedAddress = sanitizedAddress.substring(0, 70)
+      // Sanitize individual address components for SWIFT compliance
+      // Use structured fields (street, city, postalCode, country) when available
+      let sanitizedStreet: string | undefined
+      let sanitizedCity: string | undefined
+
+      if (payload.street) {
+        sanitizedStreet = sanitizeSwiftName(payload.street).substring(0, 70)
+      } else if (payload.address) {
+        // Fallback: use full address in street field (legacy behavior)
+        sanitizedStreet = sanitizeSwiftName(payload.address).substring(0, 70)
+      }
+
+      if (payload.city) {
+        sanitizedCity = sanitizeSwiftName(payload.city).substring(0, 35)
       }
       
       // Generate customer mnemonic (required by Temenos)
@@ -198,13 +236,13 @@ class RealApiService implements ITransactionApiService {
         body: {
           customerMnemonic: customerMnemonic,
           sectorId: payload.sectorId || 1001, // Default to Individual (1001) if not provided
-          language: '1', // Default to English (1 = English in Temenos)
-          customerStatus: '1', // Default to Active (1 = Active in Temenos)
-          industryId: industryId.toString(), // Random value from available Industry IDs
-          accountOfficerId: accountOfficerId.toString(), // Random value from 1-9
+          language: 1, // Default to English (1 = English in Temenos)
+          customerStatus: 1, // Default to Active (1 = Active in Temenos)
+          industryId: industryId, // Random value from available Industry IDs
+          accountOfficerId: accountOfficerId, // Random value from 1-9
           nationalityId: nationalityId, // Use from payload or default to 'US'
           residenceId: residenceId, // Use from payload or default to 'US'
-          target: targetId.toString(), // Random value from available Target IDs
+          target: targetId, // Random value from available Target IDs
           dateOfBirth: birthdate, // Random birthdate (over 25 years old) in YYYY-MM-DD format
           customerNames: [
             {
@@ -225,8 +263,17 @@ class RealApiService implements ITransactionApiService {
               }
             ]
           } : {}),
-          ...(sanitizedAddress ? {
-            streets: [{ street: sanitizedAddress }]
+          ...(sanitizedStreet ? {
+            streets: [{ street: sanitizedStreet }]
+          } : {}),
+          ...(sanitizedCity ? {
+            addressCities: [{ addressCity: sanitizedCity }]
+          } : {}),
+          ...(payload.postalCode ? {
+            postCode: parseInt(payload.postalCode, 10) || 0
+          } : {}),
+          ...(payload.country ? {
+            countries: [{ country: payload.country }]
           } : {})
         }
       }
@@ -356,7 +403,12 @@ class RealApiService implements ITransactionApiService {
         name: customerName,
         email: email || payload.email,
         phone: phone || payload.phone,
-        address: responseBody?.streets?.[0]?.street || sanitizedAddress || payload.address,
+        address: [
+          responseBody?.streets?.[0]?.street || sanitizedStreet,
+          responseBody?.addressCities?.[0]?.addressCity || sanitizedCity,
+          responseBody?.postCode || payload.postalCode,
+          responseBody?.countries?.[0]?.country || payload.country
+        ].filter(Boolean).join(', ') || payload.address,
         status: responseData.header?.status || responseData.status || 'ACTIVE',
         createdAt: responseData.header?.audit?.timestamp || responseData.createdAt || responseData.created_at || responseData.created || new Date().toISOString(),
         lastModified: responseData.header?.audit?.timestamp || responseData.lastModified || responseData.last_modified || responseData.modified || new Date().toISOString()

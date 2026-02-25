@@ -7,6 +7,7 @@ import type {
   AccountPayload,
   PaymentPayload
 } from '../demo/types'
+import { transliterateEuropean } from './apiServiceAdapter'
 
 /**
  * Generate a unique customer ID in Temenos format
@@ -221,7 +222,7 @@ export const generateSampleCustomerPayload = (): CustomerPayload => {
 
   return {
     name: fullName,
-    email: `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/[üöäÜÖÄ]/g, (m) => ({ ü: 'u', ö: 'o', ä: 'a', Ü: 'u', Ö: 'o', Ä: 'a' })[m] || m)}@example.${countryData.country.code.toLowerCase()}`,
+    email: `${transliterateEuropean(firstName).toLowerCase()}.${transliterateEuropean(lastName).toLowerCase()}@example.${countryData.country.code.toLowerCase()}`,
     phone: `${countryData.country.phonePrefix} ${Math.floor(100 + Math.random() * 900)} ${Math.floor(1000000 + Math.random() * 9000000)}`,
     address: fullAddress,
     // Extended fields for Temenos API
