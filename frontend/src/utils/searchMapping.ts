@@ -88,6 +88,10 @@ const searchMappings: Array<{
   {
     keywords: ['temenos components', 'active components', 'future components', 'temenos active', 'temenos future', 'components roadmap'],
     result: { componentId: 'temenos-components' }
+  },
+  {
+    keywords: ['bian', 'bian landscape', 'bian service landscape', 'service domains', 'value chain'],
+    result: { componentId: 'bian-landscape' }
   }
 ]
 

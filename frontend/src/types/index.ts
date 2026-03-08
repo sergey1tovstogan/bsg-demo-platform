@@ -29,6 +29,7 @@ export type ComponentId =
   | 'observability'
   | 'devops'
   | 'temenos-components'
+  | 'bian-landscape'
   | 'layout-showcase'
   | 'gallery'
   | 'editor'

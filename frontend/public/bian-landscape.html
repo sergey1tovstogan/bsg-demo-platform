@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BIAN Service Landscape V14.0</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;min-height:100vh}
+.hdr{background:#0d1f35;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:200}
+.hdr-sub{font-size:9px;letter-spacing:3px;color:#f0b429;font-weight:700}
+.hdr-title{font-size:18px;font-weight:800}
+.hdr-hint{font-size:10px;color:#aaa}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab-btn{background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:11px;font-weight:700}
+.tab-btn.active{background:#f0b429;color:#000}
+.content{padding:14px 10px}
+.toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.toolbar input{padding:6px 12px;border-radius:6px;border:1px solid #ccc;font-size:12px;flex:1;min-width:200px}
+.expand-btn{background:#2e86c1;color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px}
+.area-card{border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.area-hdr{color:#fff;padding:9px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.area-num{background:rgba(255,255,255,.2);border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.area-body{padding:8px 6px}
+.dom-card{margin-bottom:7px;border-radius:7px;overflow:hidden}
+.dom-hdr{color:#fff;padding:6px 10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.dom-body{padding:7px 5px;background:#fff}
+.sd-card{margin-bottom:5px;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden}
+.sd-hdr{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#f8f9fa;cursor:pointer;user-select:none}
+.sd-c{color:#fff;border-radius:3px;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0}
+.sd-name{font-size:12px;font-weight:600;color:#222;margin-left:6px}
+.pat-badge{color:#fff;font-size:9px;border-radius:4px;padding:1px 6px;font-weight:700}
+.sd-body{padding:8px 10px;border-top:1px solid #eee;background:#fefefe}
+.sd-desc{border-left:3px solid #2e86c1;border-radius:0 5px 5px 0;padding:6px 10px;margin-bottom:8px;font-size:11px;color:#1a3a5c;line-height:1.5}
+.label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}
+.bq-tag{background:#eaf2ff;color:#1a5276;border:1px solid #aed6f1;border-radius:4px;font-size:10px;padding:1px 7px}
+.api-tag{background:#0d1f35;color:#f0b429;border-radius:4px;font-size:10px;padding:1px 8px;font-family:monospace}
+.api-url{margin-top:4px;font-size:10px;color:#888;font-family:monospace}
+/* tooltip */
+.tip-wrap{position:relative;display:inline-flex;align-items:center;cursor:help}
+.tip-box{display:none;position:fixed;z-index:9999;width:270px;background:#0d1f35;color:#f0f4f8;font-size:11px;line-height:1.55;border-radius:8px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.35);border:1px solid #2e86c1;pointer-events:none;white-space:normal}
+.tip-wrap:hover .tip-box{display:block}
+.hidden{display:none}
+/* scenario */
+.sc-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.sc-btn{border-radius:8px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;border-width:2px;border-style:solid}
+.sc-flow{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.08);max-width:640px}
+.step-row{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.step-num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;border-width:2px;border-style:solid}
+/* legend */
+.leg-section{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid #e0e0e0}
+.pat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.pat-card{border-radius:7px;padding:8px 10px}
+.core-principle{margin-top:10px;background:#f0f7ff;border-radius:6px;padding:7px 12px;font-size:11px;color:#1a5276;font-weight:600;border-left:3px solid #2980b9}
+/* version badge */
+.v-badge{background:#f0b429;color:#0d1f35;font-size:10px;font-weight:800;border-radius:4px;padding:2px 8px;margin-left:8px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-sub">BANKING INDUSTRY ARCHITECTURE NETWORK</div>
+    <div class="hdr-title">BIAN Service Landscape <span class="v-badge">V14.0</span></div>
+    <div class="hdr-hint">Value Chain View · 8 Business Areas · 325+ Service Domains · Hover ℹ for descriptions</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('landscape')">🗺 Landscape</button>
+    <button class="tab-btn" onclick="showTab('scenarios')">🔄 Scenarios</button>
+    <button class="tab-btn" onclick="showTab('legend')">📖 Legend</button>
+  </div>
+</div>
+
+<div id="tab-landscape" class="content">
+  <div class="toolbar">
+    <input type="text" id="searchBox" placeholder="🔍 Search Service Domain..." oninput="filterSDs(this.value)"/>
+    <button class="expand-btn" onclick="toggleAll()">▼ Expand All</button>
+  </div>
+  <div class="grid" id="areaGrid"></div>
+  <div style="text-align:center;margin-top:16px;font-size:10px;color:#888">BIAN V14.0 Value Chain View · Source: James email March 2026 · Hover ℹ for descriptions</div>
+</div>
+
+<div id="tab-scenarios" class="content hidden">
+  <div style="font-size:15px;font-weight:700;color:#0d1f35;margin-bottom:4px">Business Scenarios – End-to-End Flows</div>
+  <div style="font-size:11px;color:#666;margin-bottom:14px">Click each step for details and API pattern.</div>
+  <div class="sc-tabs" id="scTabs"></div>
+  <div id="scFlow"></div>
+</div>
+
+<div id="tab-legend" class="content hidden">
+  <div style="font-size:15px;font-weight:700;color:#0d1f35;margin-bottom:14px">📖 BIAN V14.0 Reference Legend</div>
+  <div class="leg-section">
+    <div style="font-size:12px;font-weight:700;color:#0d1f35;margin-bottom:10px">🏗️ Hierarchy</div>
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px"><span style="font-weight:800;font-size:17px;width:22px;text-align:center;color:#0d1f35">■</span><div><b>Business Area</b><br><span style="font-size:11px;color:#555">Top level — 8 Areas in V14.0 covering the entire bank. Renamed from earlier versions to better reflect the value chain view.</span></div></div>
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px"><span style="font-weight:800;font-size:17px;width:22px;text-align:center;color:#2e86c1">◆</span><div><b>Business Domain</b><br><span style="font-size:11px;color:#555">~30 domains grouping related Service Domains. New domains added in V14.0: Clearing & Settlement, Market Operations, Market Trading, Corporate Finance, Trade Banking, Consumer Banking, Cards, Advisory Services.</span></div></div>
+    <div style="display:flex;align-items:flex-start;gap:10px"><span style="font-weight:800;font-size:17px;width:22px;text-align:center;color:#27ae60">C</span><div><b>Service Domain</b><br><span style="font-size:11px;color:#555">325+ atomic capabilities. Each manages one Control Pattern applied to one Asset Type across its full lifecycle.</span></div></div>
+  </div>
+  <div class="leg-section">
+    <div style="font-size:12px;font-weight:700;color:#0d1f35;margin-bottom:10px">⚙️ Functional Patterns</div>
+    <div class="pat-grid" id="patGrid"></div>
+  </div>
+  <div class="leg-section">
+    <div style="font-size:12px;font-weight:700;color:#0d1f35;margin-bottom:8px">🔑 Data Trinity</div>
+    <div id="trinity"></div>
+    <div class="core-principle">💡 "An Account is not directly related to a Party; Agreement links the two." — BIAN Core Principle</div>
+  </div>
+  <div class="leg-section">
+    <div style="font-size:12px;font-weight:700;color:#0d1f35;margin-bottom:8px">📋 V14.0 Key Changes vs Previous Versions</div>
+    <div style="font-size:11px;color:#444;line-height:1.8">
+      <b>Renamed Business Areas:</b> "Business Direction" → <b>Business Management</b> · "Finance & Risk" → <b>Finance and Risk Management</b><br>
+      <b>New Domains in Operations:</b> Clearing and Settlement · Custody, Collateral and Documents · Accounting Services · Operational Services · External Agency<br>
+      <b>New Domains in Products:</b> Market Operations · Market Trading · Corporate Finance · Loans and Deposits · Cards · Trade Banking · Consumer Banking · Advisory Services<br>
+      <b>New Domains in Customers:</b> Party Reference (renamed) · Investment Services · Relationship Management · Sales<br>
+      <b>New Domains in Channels:</b> Intermediaries/Providers · Cross Channel · Channel Specific · Customer Care · Distribution<br>
+      <b>New top-level areas in Business Management:</b> Corporate Relations · Corporate Services · Business Direction (sub-area)<br>
+      <b>Resource Management expanded:</b> Unit Management · Human Resources · Platform Operations · Buildings and Equipment<br>
+      <b>Business Development expanded:</b> Intellectual Property & Knowledge · Models and Analytics · Solution Development · Product Management · Marketing and Development · Channel Management
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   BIAN V14.0 DATA — from Value Chain View
+   ══════════════════════════════════════ */
+const PATTERNS = {
+  Catalog:    {color:"#8e44ad",short:"CAT",desc:"Maintains and provides access to a structured reference list. The 'menu' others consult. Example: Product Directory."},
+  Process:    {color:"#2980b9",short:"PRC",desc:"Executes a multi-step workflow end-to-end. Manages state transitions across a transaction lifecycle. Example: Payment Execution."},
+  Assess:     {color:"#16a085",short:"ASS",desc:"Evaluates a subject and produces a judgment or score. Does not own assets. Example: Credit Risk Operations."},
+  Fulfill:    {color:"#d35400",short:"FUL",desc:"Creates and manages a facility or agreement across its full lifecycle (open→active→closed). Example: Current Account."},
+  Analyze:    {color:"#c0392b",short:"ANL",desc:"Processes data to produce insights or forecasts. Outputs inform strategy. Example: Channel Activity Analysis."},
+  Monitor:    {color:"#7f8c8d",short:"MON",desc:"Continuously observes a condition and raises alerts when thresholds are breached. Example: Market Risk."},
+  Administer: {color:"#27ae60",short:"ADM",desc:"Manages operational or administrative tasks: configuration, compliance tracking. Example: Document Management."},
+  Maintain:   {color:"#f39c12",short:"MNT",desc:"Keeps reference or relationship data current over time. Example: Customer Profile."},
+};
+
+const SD_DESC = {
+  // Business Management
+  "Investor Relations":"Manages communication and relationships with the bank's investors and shareholders, including reporting, AGMs, and investor queries.",
+  "Corporate Relationship":"Manages strategic relationships with key external corporate stakeholders, regulators, and government bodies.",
+  "Corp Alliance and Stakeholder":"Manages alliances, joint ventures, and broader stakeholder engagement programmes.",
+  "Corporate Communications":"Controls all external and internal communications: press releases, media relations, and brand messaging.",
+  "Corporate Policies":"Maintains the bank's policy framework: creates, publishes, and monitors adherence to corporate-level policies.",
+  "Corporate Strategy":"Defines and tracks the bank's long-term strategic direction, competitive positioning, and transformation agenda.",
+  "Organizational Direction":"Manages organisational design, change programmes, and structural decisions across the enterprise.",
+  "Product and Service Direction":"Governs the overall product and service portfolio strategy, ensuring alignment with corporate objectives.",
+  "HR Direction":"Sets human capital strategy: workforce planning, talent management, and culture programmes.",
+  "IT Systems Direction":"Governs the IT strategy, technology roadmap, and major system investment decisions.",
+  "Asset and Liability Mgmt":"Manages the bank's balance sheet to optimise the risk/return profile of assets and liabilities.",
+  "Property Portfolio":"Manages the bank's real estate portfolio: acquisitions, disposals, and property strategy.",
+  "Legal Compliance":"Ensures all bank activities comply with applicable laws. Manages legal risk and external counsel relationships.",
+  "Internal Audit":"Independently assesses the effectiveness of internal controls, producing findings and recommendations.",
+  "Security Advisory":"Provides expert advice on physical and cyber security threats, vulnerabilities, and countermeasures.",
+  "Security Assurance":"Assures that security controls are operating effectively through testing, red-teaming, and certification.",
+  "Continuity Planning":"Designs and tests business continuity and disaster recovery plans to ensure operational resilience.",
+  // Resource Management
+  "Business Unit Direction":"Sets strategy and performance targets for individual business units within the bank.",
+  "Business Unit Financial Ops":"Manages financial operations (budgeting, cost control, P&L) at business unit level.",
+  "Business Unit Management":"Provides general management services to business units: governance, reporting, and administration.",
+  "Business Unit Fin Analysis":"Provides financial analysis and management information to support business unit decision-making.",
+  "Recruitment":"Manages the full recruitment lifecycle: job definition, candidate sourcing, interviewing, and offers.",
+  "Employee Assignment":"Manages workforce deployment: assigning employees to roles, projects, and locations.",
+  "Employee Evaluation":"Manages performance appraisal processes and produces employee performance records.",
+  "Employee Certification":"Tracks and manages professional certifications and regulatory qualifications for staff.",
+  "Empl and Contractor Contract":"Manages employment and contractor agreements: terms, conditions, and contract lifecycle.",
+  "Employee Data Mgmt":"Maintains the master employee record: personal data, employment history, and HR information.",
+  "Empl Payroll and Incentives":"Processes payroll, manages incentive schemes, and administers employee benefits.",
+  "Employee Benefits":"Administers employee benefit programmes: health insurance, pensions, and perks.",
+  "Workforce Training":"Plans and delivers training programmes to develop employee skills and meet regulatory requirements.",
+  "Travel and Expenses":"Manages employee travel booking, expense submission, approval workflows, and reimbursement.",
+  "Employee Access":"Controls employee access to physical premises and IT systems through identity and access management.",
+  "Systems Assurance":"Ensures IT systems meet quality, performance, and security standards through testing and certification.",
+  "Internal Network Operation":"Manages the bank's internal network infrastructure: LAN, WAN, and connectivity services.",
+  "System Deployment":"Controls the deployment pipeline for software releases into production environments.",
+  "Platform Operations":"Manages the runtime platform (cloud, on-premise servers) and ensures availability and performance.",
+  "Systems Operations":"Day-to-day management of IT systems: monitoring, incident response, and maintenance.",
+  "Systems Help Desk":"Provides first and second-line IT support to bank employees.",
+  "Operational Gateway":"Manages gateway services that connect internal systems to external networks and partners.",
+  "Fixed Asset Register":"Maintains the register of the bank's fixed assets: acquisition, depreciation, and disposal records.",
+  "Utilities Administration":"Manages utility services (power, water, telecoms) for the bank's premises.",
+  "Site Operations":"Manages day-to-day operations of physical sites: facilities management and site services.",
+  "Procurement":"Manages the procurement lifecycle: supplier selection, purchasing, and contract management.",
+  "Equipment Administration":"Administers office and operational equipment: provisioning, maintenance, and disposal.",
+  "Equipment Maintenance":"Schedules and tracks maintenance activities for physical equipment to ensure operational availability.",
+  "Site Administration":"Manages administrative functions for physical sites: visitor management, post, and facilities.",
+  "Building Maintenance":"Manages the maintenance and upkeep of the bank's buildings and physical infrastructure.",
+  // Finance and Risk Management
+  "Financial Control":"Maintains financial controls, manages the control environment, and ensures integrity of financial reporting.",
+  "Company Billing and Payments":"Manages the bank's own billing processes and outgoing payments to suppliers and counterparties.",
+  "Financial Compliance":"Monitors compliance with accounting standards (IFRS, GAAP) and financial regulations.",
+  "Approved Supplier Directory":"Maintains the register of approved suppliers, managing onboarding, due diligence, and performance.",
+  "Financial Statements":"Produces statutory financial statements: balance sheet, income statement, and cash flow.",
+  "Enterprise Tax Admin":"Manages the bank's tax obligations: calculations, submissions, and tax planning.",
+  "Business Risk Models":"Develops and maintains quantitative risk models used across the enterprise for risk measurement.",
+  "Operational Risk Models":"Builds and validates models specifically for operational risk measurement and capital calculation.",
+  "Production Risk Models":"Manages risk models in production: validation, monitoring, and version control.",
+  "Corporate Treasury":"Manages the bank's own treasury activities: funding, liquidity, and balance sheet optimisation.",
+  "Corporate Treasury Analysis":"Provides analytical support to treasury: scenario analysis, forecasting, and reporting.",
+  "Bank Portfolio Admin":"Administers the bank's own investment portfolio: reporting, reconciliation, and performance tracking.",
+  "Bank Portfolio Analysis":"Analyses the bank's investment portfolio performance, risk characteristics, and attribution.",
+  "Asset Securitization":"Manages the creation and administration of asset-backed securities from the bank's own balance sheet.",
+  "Credit/Margin Management":"Manages credit exposure and margin requirements across trading and lending books.",
+  "Gap Analysis":"Analyses interest rate and liquidity gaps in the bank's balance sheet to manage repricing risk.",
+  "Limited and Exposure Mgmt":"Controls credit limits and manages overall exposure to individual counterparties and sectors.",
+  "Position Management":"Tracks and manages trading positions in real time across all asset classes.",
+  "Credit Management":"Processes credit applications, runs scoring models, and produces credit decisions.",
+  "Counterparty Risk":"Measures and manages the risk of counterparty default on OTC derivatives and other bilateral contracts.",
+  "Fraud Resolution":"Manages the investigation and resolution of confirmed fraud cases, including customer remediation.",
+  "Regulatory and Legal Authority":"Manages relationships with regulators and legal authorities, including supervisory submissions.",
+  "Regulatory Compliance":"Tracks regulatory obligations, maps them to controls, and monitors compliance status.",
+  "Regulatory Reporting":"Prepares and submits mandatory regulatory returns (COREP, FINREP, BCBS239) to supervisory authorities.",
+  "Guideline Compliance":"Ensures internal policies and procedures are followed. Raises exceptions when deviations are detected.",
+  "Compliance Reporting":"Produces compliance management reports for the Board, senior management, and regulators.",
+  // Operations
+  "Order Allocation":"Allocates incoming orders to the appropriate processing queues or trading books.",
+  "Cheque Processing":"Manages the full lifecycle of cheque instruments: issuance, clearing, and reconciliation.",
+  "Corresp Bank Directory":"Maintains a directory of correspondent banking relationships, nostro accounts, and routing details.",
+  "Transaction Engine":"The core transaction processing engine that routes and executes financial transactions.",
+  "Counterparty Administration":"Manages counterparty master data: onboarding, KYC, limits, and relationship records.",
+  "Payment Orchestration":"Orchestrates complex multi-step payment flows across multiple payment schemes and systems.",
+  "Card Clearing":"Manages the clearing of card transactions between the acquiring bank and issuing bank via card schemes.",
+  "Payment Confirmation":"Generates and distributes payment confirmation messages to all parties in a transaction.",
+  "Card Financial Settlement":"Settles net card transaction obligations between the bank and card schemes on a daily basis.",
+  "Payment Settlement":"Settles inter-bank payment obligations through central bank or designated settlement systems.",
+  "Card eCommerce Gateway":"Manages the gateway for online card transactions: authentication, authorisation, and routing.",
+  "Payment Rail":"Manages connectivity to specific payment rails (SWIFT, SEPA, CHAPS, FedWire, ACH).",
+  "Custody Administration":"Provides safekeeping and administration of securities on behalf of clients.",
+  "Collections":"Manages debt collection activities for overdue accounts: outreach, negotiation, and recovery.",
+  "Collateral Allocation Mgmt":"Optimises the allocation of collateral assets across exposures to minimise funding costs.",
+  "Document Directory":"Maintains a directory of all documents held in custody or managed on behalf of clients.",
+  "Collateral Asset Admin":"Administers collateral assets: registration, valuation, substitution, and return.",
+  "Archive Services":"Manages long-term archiving of documents and records in compliance with retention policies.",
+  "Account Recovery":"Manages the recovery process for defaulted loan accounts: restructuring, legal action, and write-off.",
+  "Investment Account":"Manages investment accounts held by the bank on behalf of clients.",
+  "Document Services":"Provides document management services: creation, storage, retrieval, and distribution.",
+  "Party Asset Directory":"Maintains a directory of assets held by or on behalf of parties.",
+  "Position Keeping":"Maintains real-time records of positions held across all products and asset classes.",
+  "Customer Tax Handling":"Manages tax withholding, reporting, and documentation for customer accounts (e.g. FATCA, CRS).",
+  "Customer Position":"Aggregates and presents a customer's overall position across all products and accounts.",
+  "Commissions":"Calculates, tracks, and pays commissions to intermediaries and sales staff.",
+  "Accounts Receivable":"Manages amounts owed to the bank: invoicing, collection, and reconciliation.",
+  "Fraud Evaluation":"Evaluates potential fraud alerts and transactions using rules and machine learning models.",
+  "Financial Accounting":"Maintains the general ledger, manages period close, and produces statutory financial statements.",
+  "Account Reconciliation":"Reconciles accounts and positions between internal systems and external statements.",
+  "Reward Points Account":"Manages loyalty and reward point balances for customers enrolled in reward programmes.",
+  "Securities Position Keeping":"Maintains real-time securities position records for both the bank and its clients.",
+  "Fraud Diagnosis":"Performs deep investigation of fraud patterns to improve detection models and controls.",
+  "Financial Statement Asses":"Analyses financial statements of corporate clients or counterparties for credit and risk assessment.",
+  "Customer Billing":"Manages billing for bank services: fee calculation, invoice generation, and collection.",
+  "Product Combination":"Manages bundled product offerings: pricing, eligibility, and administration of product bundles.",
+  "Disbursement":"Manages the disbursement of funds for approved loans and other credit facilities.",
+  "Rwd Points Awards and Red":"Manages the award and redemption of loyalty points in customer reward programmes.",
+  "Open Item Management":"Manages open (unmatched or unreconciled) items across accounts and transaction records.",
+  "Issued Device Admin":"Administers devices issued to customers (cards, tokens, authenticators): provisioning and lifecycle.",
+  "Delinquent Account Handling":"Manages accounts in arrears: outreach, payment plans, and escalation to collections.",
+  "Device Usage Tracking":"Tracks the usage of issued devices to detect anomalies and support fraud prevention.",
+  "Card Collections":"Manages recovery activities specifically for delinquent card accounts.",
+  "Card Transaction Switch":"Routes card transaction authorisation requests to the appropriate issuing bank or processor.",
+  "Term Deposit Float Agmt":"Manages float agreements associated with term deposits.",
+  "Internal Bank Account":"Manages internal bank accounts used for inter-departmental settlements and nostro management.",
+  "Incentive Account":"Manages incentive scheme accounts: tracking earned incentives and processing payouts.",
+  "Incentive Program Directory":"Maintains a catalogue of all active incentive programmes offered by the bank.",
+  "Rewards Inventory":"Manages the inventory of physical rewards available for redemption in loyalty programmes.",
+  "Rewards Menu":"Maintains the catalogue of rewards available to customers in loyalty programmes.",
+  "Rewards Delivery":"Manages the fulfilment and delivery of rewards to customers upon redemption.",
+  "Issued Certificate Directory":"Maintains a directory of certificates (e.g. deposit certificates, securities) issued by the bank.",
+  "Interbank Relationship Mgmt":"Manages bilateral relationships with correspondent banks including limits, nostro accounts, and settlement.",
+  "Partner Agreement":"Manages agreements with external business partners: terms, SLAs, and performance monitoring.",
+  "Syndicate Bank Mgmt":"Manages the bank's participation in syndicated loan facilities as agent or participant.",
+  "Sub Custodian Management":"Manages relationships with sub-custodians used for securities settlement in foreign markets.",
+  "Syndicate Management":"Manages the formation and administration of syndicates for loan origination or capital markets.",
+  "Commission Agreement":"Manages commission agreements with intermediaries: rates, calculation, and payment terms.",
+  "Product Service Agency":"Manages agency relationships where the bank acts as agent for product or service delivery.",
+  "Contractor and Supplier Agmt":"Manages contracts with external contractors and suppliers: terms, performance, and renewal.",
+  "Service Provider Ops":"Manages the operational relationship with key service providers and outsourced functions.",
+  "Operations Log":"Maintains an operational log of system and process events for audit and troubleshooting purposes.",
+  "Partner Management":"Manages the broader portfolio of partner relationships: onboarding, governance, and performance.",
+  "Partner Administration":"Handles administrative tasks for partner relationships: documentation, reporting, and data management.",
+  // Products — Market Operations
+  "Trading Book Oversight":"Provides oversight of all trading book positions, limits, and P&L across the bank's trading operations.",
+  "Credit Risk Operations":"Calculates credit exposure for each counterparty, monitors limits, and manages provisions for expected credit losses.",
+  "Trade Confirmation/Matching":"Confirms and matches trade details between counterparties to ensure agreement before settlement.",
+  "Securities Fails Processing":"Manages securities settlement failures: identification, reporting, and resolution.",
+  "Trade Clearing":"Manages the clearing of trades through central counterparties (CCPs) or bilateral netting.",
+  "Financial Inst Valuation":"Provides independent valuation of financial instruments for reporting and risk management.",
+  "Trade Settlement":"Manages the settlement of traded securities: delivery vs payment and reconciliation.",
+  "Corporate Events":"Manages corporate action events (dividends, rights issues, mergers) affecting securities positions.",
+  "Trade and Price Reporting":"Reports trade and price data to regulators and market data providers (MiFID II, EMIR).",
+  // Products — Market Trading
+  "Trader Position Mgmt":"Manages individual trader positions, limits, and P&L attribution in real time.",
+  "Quote Management":"Manages the creation, distribution, and lifecycle of market quotes for trading.",
+  "Market Order":"Manages the lifecycle of market orders: entry, routing, execution, and confirmation.",
+  "Market Making":"Manages the bank's market-making activities: quoting two-way prices and managing inventory.",
+  "Market Order Execution":"Executes market orders through electronic trading platforms or voice broking.",
+  "Program Trading":"Manages automated, algorithmic, or programme-driven trading strategies.",
+  "Dealer Workbench":"Provides the front-office dealer desktop: order management, position view, and pricing tools.",
+  "Stock Lending and Repos":"Manages securities lending and repo agreements: collateral, rates, and lifecycle management.",
+  "Suitability Checking":"Ensures that investment products recommended or sold to clients meet suitability requirements.",
+  // Products — Corporate Finance
+  "ECM and DCM":"Manages equity and debt capital markets activities: IPOs, bond issuances, and follow-on offerings.",
+  "Unit Trust Administration":"Administers unit trust and collective investment schemes on behalf of clients.",
+  "Private Placement":"Manages private placements of equity and debt with institutional investors.",
+  "Hedge Fund Administration":"Provides fund administration services for hedge fund clients: NAV, reporting, and investor services.",
+  "Public Offering":"Manages public offering processes: prospectus preparation, bookbuilding, and allocation.",
+  "Mutual Fund Administration":"Administers mutual funds: NAV calculation, distribution, and regulatory reporting.",
+  // Products — Advisory Services
+  "M&A Advisory":"Provides mergers and acquisitions advisory services: valuation, deal structuring, and execution support.",
+  "Corporate Tax Advisory":"Advises corporate clients on tax planning, structuring, and compliance.",
+  "Corporate Finance":"Provides corporate finance advisory: capital structure, fundraising, and financial modelling.",
+  "Consumer Advisory Services":"Provides financial planning and advisory services to retail and mass-affluent customers.",
+  "Legal Advisory":"Provides legal advisory services to corporate clients on transactions and regulatory matters.",
+  // Products — Loans and Deposits
+  "Loan":"Manages bilateral loan facilities across their full lifecycle: origination, drawdown, repayment, and closure.",
+  "Consumer Loan":"Originates and services personal loans: disbursement, repayment schedules, interest accrual, and arrears management.",
+  "Corporate Loan":"Services bilateral and syndicated corporate credit facilities: drawing management, covenant monitoring, and repayment.",
+  "Mortgage Loan":"Manages residential and commercial mortgage facilities including collateral registration and LTV monitoring.",
+  "Corporate Lease":"Manages leasing facilities for corporate clients: asset finance, fleet leasing, and operating leases.",
+  "Merchandising Loan":"Manages short-term trade and merchandise financing for corporate and SME clients.",
+  "Leasing Item Administration":"Administers individual leased assets: provisioning, maintenance scheduling, and return processing.",
+  "Leasing":"Manages the full lifecycle of leasing agreements for both finance and operating leases.",
+  "Syndicated Loan":"Manages the bank's participation in syndicated lending: agent bank role, drawdown, and distribution.",
+  "Savings Account":"Manages interest-bearing savings facilities, including tiered rates and withdrawal restrictions.",
+  "Fiduciary Agreement":"Manages fiduciary arrangements where the bank acts in a trustee or fiduciary capacity.",
+  "Term Deposits":"Administers fixed-term deposits from placement through interest accrual to maturity.",
+  "Underwriting":"Manages the underwriting process for loans and insurance: risk assessment and commitment.",
+  "Standing Order":"Manages recurring payment instructions set up by customers for regular transfers.",
+  // Products — Cards
+  "Credit Card":"Full lifecycle management of revolving credit card accounts: limit, spending, statement, and rewards.",
+  "Merchant Relations":"Manages relationships with merchants in the acquiring network: onboarding, support, and performance.",
+  "Card Authorization":"Processes card authorisation requests in real time, applying fraud, limit, and velocity checks.",
+  "Card Network Participant Fac":"Manages the bank's participation in card networks (Visa, Mastercard): scheme rules and obligations.",
+  "Card Capture":"Captures card transaction data at point of sale and routes to authorisation systems.",
+  "Merchant Acquiring Fac":"Manages the merchant acquiring facility: terminal provisioning, settlement, and dispute handling.",
+  "Corporate Card Service":"Manages corporate card programmes for business customers: limits, reporting, and expense integration.",
+  "Card Transaction Tracking":"Tracks card transactions through the authorisation, clearing, and settlement lifecycle.",
+  // Products — Trade Banking
+  "Letter of Credit":"Manages letter of credit instruments: issuance, amendment, presentation, and payment.",
+  "Bank Guarantee":"Issues and manages bank guarantee instruments on behalf of corporate clients.",
+  "Bank Drafts":"Issues and manages bank drafts as payment instruments for trade transactions.",
+  "Corporate Current Account":"Manages current accounts for corporate clients: balance, transactions, and cash management services.",
+  "Cash Mgmt and Account Svs":"Provides cash management services: pooling, sweeping, and account reporting for corporates.",
+  "Corporate Trust Services":"Provides trustee and agency services for corporate bond and structured finance transactions.",
+  "Credit Facility":"Manages revolving and committed credit facilities for corporate clients.",
+  "Project Finance":"Manages project finance structures: SPV administration, drawdown schedules, and covenant monitoring.",
+  "Cash Concentration":"Manages cash concentration and notional pooling for corporate treasury clients.",
+  "Virtual Account":"Manages virtual account structures for corporate clients to simplify reconciliation.",
+  "Direct Debit Mandate":"Manages the lifecycle of direct debit mandates for corporate and retail clients.",
+  "Direct Debit":"Manages direct debit collections: initiation, processing, and failure handling.",
+  "Cheque Lock Box":"Manages cheque lockbox services for corporate clients: receipt, scanning, and posting.",
+  "Factoring":"Manages receivables factoring: purchase of invoices, funding, and collection.",
+  "Notional Pooling":"Manages notional pooling structures for corporate treasury: interest offset and reporting.",
+  "Corporate Payroll Services":"Provides payroll processing services to corporate clients.",
+  // Products — Consumer Banking
+  "Current Account":"The primary transactional account — manages balance, interest, overdraft, statements, and payment linkages.",
+  "Trust Services":"Provides personal trust and estate services: trustee, executor, and personal representative roles.",
+  "Brokered Product Proxy":"Manages the bank's role as broker or intermediary for third-party financial products.",
+  "Payment Order Initiation":"Initiates payment orders on behalf of customers through the bank's payment infrastructure.",
+  "Sales Product":"Manages the sales process for retail banking products: lead tracking, application, and conversion.",
+  "Currency Exchange":"Manages foreign currency exchange transactions for retail and corporate customers.",
+  "Funeral Policy":"Manages funeral policy products: premium collection, benefit administration, and claims.",
+  "Claim Administration":"Manages insurance and benefit claims: intake, assessment, and settlement.",
+  "Claim Assessment":"Assesses the validity and value of insurance claims using underwriting criteria.",
+  // Customers
+  "Legal Entity Directory":"Maintains a registry of legal entities with which the bank has relationships.",
+  "Party Reference Data Dir":"The bank's golden record for all parties. Stores demographic, relationship, and reference data consumed by all other domains.",
+  "Location Data Management":"Manages location and address data for parties and bank facilities.",
+  "Payee Management":"Manages payee records for payment processing: validation, de-duplication, and maintenance.",
+  "Consumer Investments":"Manages retail investment products: savings, ISAs, and investment accounts.",
+  "e-Trading Workbench":"Provides the electronic trading interface for retail and wealth management customers.",
+  "Investment Portfolio Planning":"Supports the planning and optimisation of client investment portfolios.",
+  "Investment Portfolio Analysis":"Analyses investment portfolio performance, risk, and attribution for clients.",
+  "Investment Portfolio Mgmt":"Manages client investment portfolios across their full lifecycle.",
+  "Customer Relationship Mgmt":"Tracks the holistic relationship with each customer: interactions, opportunities, and lifetime value.",
+  "Customer Behavioral Insight":"Analyses customer behaviour to generate insights for personalisation and next-best-action.",
+  "Customer Credit Rating":"Maintains the bank's internal credit score for each customer, updated continuously.",
+  "Customer Agreement":"The master contractual framework governing the bank-customer relationship.",
+  "Sales Product Agreement":"Formalises contractual terms when a customer accepts a product offer.",
+  "Customer Proposition":"Manages the design and delivery of tailored propositions to specific customer segments.",
+  "Customer Event History":"An immutable log of all significant events in a customer's history.",
+  "Customer Products and Svs":"Manages the catalogue of products and services available to each customer.",
+  "Customer Financial Ins":"Manages financial instructions provided by customers: standing instructions and mandates.",
+  "Loan Syndication":"Manages the syndication of loan participations to other banks or institutional investors.",
+  "Customer Consent":"Manages customer consents: data sharing, marketing preferences, and regulatory consents.",
+  "Lead and Opportunity Mgmt":"Manages sales leads and opportunities through the pipeline from identification to conversion.",
+  "Product Sales Support":"Provides sales support materials, pricing tools, and product knowledge for front-office staff.",
+  "Product Expert Sales Support":"Provides specialist product expertise to support complex sales to high-value clients.",
+  "Product Matching":"Matches customer needs and profiles to appropriate products using eligibility and preference rules.",
+  "Customer Offer":"Generates personalised product offers with tailored pricing and tracks acceptance.",
+  "Special Pricing Conditions":"Manages special pricing and rate exceptions for high-value or strategic customers.",
+  "Servicing Mandate":"Manages mandates authorising the bank or third parties to act on a customer's behalf.",
+  "Servicing Order":"Receives, routes, and fulfils customer service requests across all channels.",
+  "Customer Case Mgmt":"Manages complex customer cases requiring multi-step resolution across departments.",
+  "Customer Workbench":"The agent desktop aggregating customer data, tasks, offers, and history for front-office staff.",
+  "Card Case":"Manages card-related cases: disputes, chargebacks, and fraud investigations.",
+  // Channels
+  "Public Reference Data Mgmt":"Manages publicly available reference data published by the bank for customers and partners.",
+  "Financial Inst Ref Data Mgmt":"Manages reference data about financial institutions for use in payments and correspondent banking.",
+  "Financial Market Research":"Provides research and analysis on financial markets for distribution to clients.",
+  "Financial Market Analysis":"Analyses financial market conditions and trends to support trading and investment decisions.",
+  "Market Data Switch Ops":"Manages market data feeds and distribution infrastructure.",
+  "Information Provider Ops":"Manages relationships with information providers and data vendors.",
+  "Contact Handler":"Manages inbound customer contacts across all channels: routing, queuing, and assignment.",
+  "Contact Routing":"Routes customer contacts to the most appropriate agent or automated service.",
+  "Session Dialogue":"Manages interactive customer sessions: web, mobile, and IVR dialogue flows.",
+  "Customer Behavioral Profile":"Maintains behavioural profiles derived from customer interaction and transaction data.",
+  "Transaction Authorization":"Authorises transactions initiated through digital and physical channels.",
+  "Party Routing Profile":"Maintains routing preferences and instructions for directing communications to parties.",
+  "Customer Access Entitlement":"Controls what each customer is authorised to do in each channel.",
+  "ATM Network Operations":"Manages ATM network operations: cash management, terminal monitoring, and fault resolution.",
+  "Branch Location Operations":"Manages branch operational functions: staffing, cash, and service delivery.",
+  "Advanced Voice Svs Ops":"Manages advanced voice services: IVR, speech analytics, and voice authentication.",
+  "Customer Financial Ins":"Manages financial instructions from customers: mandates, standing orders, and preferences.",
+  "Financial Gateway":"Manages gateway connections to external financial networks and payment systems.",
+  "Card Terminal Admin":"Manages POS terminal provisioning, configuration, and maintenance.",
+  "Card Terminal Operation":"Manages the operational aspects of card terminals: transaction processing and reconciliation.",
+  "Service Directory":"Maintains a directory of services available through each channel.",
+  "Contact Center Operations":"Manages day-to-day contact centre operations: staffing, quality, and performance.",
+  "Point of Service":"Manages point-of-service interactions in branch and other physical channels.",
+  "Interactive Help":"Provides contextual help and guidance to customers through digital interfaces.",
+  "Special Offers and Conditions":"Manages special promotional offers and pricing conditions delivered through channels.",
+  "Servicing Event History":"Maintains a history of servicing events across all channels for a customer.",
+  "Product Inventory Management":"Manages the inventory and availability of physical products distributed through channels.",
+  "Branch Currency Distribution":"Manages the distribution of currency to branch networks.",
+  "Branch Currency Mgmt":"Manages foreign currency holdings and exchange services in branches.",
+  "Correspondence":"Manages all outbound customer communications and inbound response tracking.",
+  "Prospect Campaign Exec":"Executes targeted marketing campaigns to prospects using digital and physical channels.",
+  "Party Lifecycle Management":"Manages the end-to-end party journey: onboarding, KYC, status changes, and offboarding.",
+  "Lead and Opportunity Exec":"Executes lead generation and opportunity management activities through channel campaigns.",
+  "Customer Campaign Design":"Designs targeted customer campaigns: segmentation, messaging, and channel selection.",
+  "Prospect Campaign Design":"Designs prospect acquisition campaigns with targeting criteria and creative content.",
+  "Customer Survey":"Designs and executes customer satisfaction and feedback surveys.",
+  "ATM Network Mgmt":"Manages the strategic ATM network: site selection, vendor management, and network optimisation.",
+  "Branch Portfolio":"Manages the bank's branch network portfolio: rationalisation, investment, and performance.",
+  "Branch Network Mgmt":"Manages branch network operations, staffing models, and service standards.",
+  "Contact Center Management":"Manages the contact centre: capacity planning, technology, and quality frameworks.",
+  "Servicing Activity Analysis":"Measures the volume, quality, and cost of servicing interactions.",
+  "Advanced Voice Svs Mgmt":"Manages advanced voice service platforms and capabilities.",
+  "E-Branch Management":"Manages digital self-service banking capabilities and the e-branch platform.",
+  "Financial Message Analysis":"Analyses financial messaging flows for compliance, performance, and anomaly detection.",
+  "Channel Activity Analysis":"Analyses traffic and conversion across all channels to optimise customer journeys.",
+  "Information Provider Admin":"Manages administrative relationships with data and information providers.",
+  "Central Cash Handling":"Manages the bank's aggregate cash position, forecasting and optimising funding.",
+  "Branch Currency Mgmt2":"Manages cash and foreign currency within branches.",
+};
+
+/* ══ V14.0 FULL DATA STRUCTURE ══ */
+const BIANDATA = [
+  {id:1, area:"Business Management", color:"#1a3a5c", light:"#eaf2ff", border:"#2e86c1",
+   desc:"Covers strategic direction, corporate governance, legal compliance, and security. Sets the rules and policies that all other areas follow.",
+   domains:[
+    {name:"Corporate Relations", desc:"Manages external corporate relationships: investors, strategic partners, regulators, and public communications.", services:[
+      {name:"Investor Relations",pattern:"Maintain",bqs:["Shareholder","Reporting","AGM"],apis:["retrieve","update"]},
+      {name:"Corporate Relationship",pattern:"Maintain",bqs:["Stakeholder","Engagement","Record"],apis:["retrieve","update"]},
+      {name:"Corp Alliance and Stakeholder",pattern:"Administer",bqs:["Alliance","JV","Engagement"],apis:["initiate","retrieve","update"]},
+      {name:"Corporate Communications",pattern:"Process",bqs:["Release","Media","Brand"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Business Direction", desc:"Defines corporate strategy, organisational design, and product/service portfolio direction.", services:[
+      {name:"Corporate Policies",pattern:"Catalog",bqs:["Policy","Version","Compliance"],apis:["retrieve","update"]},
+      {name:"Corporate Strategy",pattern:"Analyze",bqs:["Objective","Initiative","Progress"],apis:["retrieve","evaluate","update"]},
+      {name:"Organizational Direction",pattern:"Administer",bqs:["Structure","Change","Design"],apis:["initiate","retrieve","update"]},
+      {name:"Product and Service Direction",pattern:"Administer",bqs:["Portfolio","Roadmap","Governance"],apis:["retrieve","update"]},
+      {name:"HR Direction",pattern:"Administer",bqs:["Workforce","Talent","Culture"],apis:["retrieve","update"]},
+      {name:"IT Systems Direction",pattern:"Administer",bqs:["Strategy","Roadmap","Investment"],apis:["retrieve","update"]},
+      {name:"Asset and Liability Mgmt",pattern:"Analyze",bqs:["Position","Gap","Hedge"],apis:["retrieve","evaluate","update"]},
+      {name:"Property Portfolio",pattern:"Administer",bqs:["Property","Lease","Valuation"],apis:["retrieve","update"]},
+    ]},
+    {name:"Corporate Services", desc:"Provides internal legal, audit, security, and continuity services across the enterprise.", services:[
+      {name:"Legal Compliance",pattern:"Administer",bqs:["Obligation","Risk","Counsel"],apis:["retrieve","update","report"]},
+      {name:"Internal Audit",pattern:"Assess",bqs:["AuditPlan","Finding","Recommendation"],apis:["initiate","retrieve","update"]},
+      {name:"Security Advisory",pattern:"Assess",bqs:["Threat","Vulnerability","Countermeasure"],apis:["evaluate","retrieve","update"]},
+      {name:"Security Assurance",pattern:"Assess",bqs:["Control","Test","Certification"],apis:["evaluate","retrieve","report"]},
+      {name:"Continuity Planning",pattern:"Administer",bqs:["BCP","Recovery","Test"],apis:["initiate","retrieve","update"]},
+    ]},
+  ]},
+
+  {id:2, area:"Resource Management", color:"#0e6655", light:"#e8f8f5", border:"#1abc9c",
+   desc:"Manages the bank's internal assets: people, technology, facilities, and equipment. The operational engine room of the enterprise.",
+   domains:[
+    {name:"Unit Management", desc:"Manages business unit strategy, financial performance, and governance.", services:[
+      {name:"Business Unit Direction",pattern:"Administer",bqs:["Strategy","Performance","Governance"],apis:["retrieve","update"]},
+      {name:"Business Unit Financial Ops",pattern:"Administer",bqs:["Budget","CostControl","PL"],apis:["retrieve","update","report"]},
+      {name:"Business Unit Management",pattern:"Administer",bqs:["Governance","Reporting","Admin"],apis:["retrieve","update"]},
+      {name:"Business Unit Fin Analysis",pattern:"Analyze",bqs:["MI","Variance","Forecast"],apis:["retrieve","evaluate","report"]},
+    ]},
+    {name:"Human Resources", desc:"Manages the full employee and contractor lifecycle from recruitment to departure.", services:[
+      {name:"Recruitment",pattern:"Process",bqs:["JobReq","Candidate","Offer"],apis:["initiate","retrieve","update"]},
+      {name:"Employee Assignment",pattern:"Administer",bqs:["Role","Location","Project"],apis:["initiate","retrieve","update"]},
+      {name:"Employee Evaluation",pattern:"Assess",bqs:["Appraisal","Rating","Development"],apis:["initiate","retrieve","update"]},
+      {name:"Employee Certification",pattern:"Maintain",bqs:["Qualification","Expiry","Renewal"],apis:["retrieve","update","notify"]},
+      {name:"Empl and Contractor Contract",pattern:"Fulfill",bqs:["Terms","Conditions","Renewal"],apis:["initiate","retrieve","update"]},
+      {name:"Employee Data Mgmt",pattern:"Maintain",bqs:["PersonalData","Employment","HR"],apis:["retrieve","update"]},
+      {name:"Empl Payroll and Incentives",pattern:"Process",bqs:["Payroll","Bonus","Incentive"],apis:["initiate","retrieve","execute"]},
+      {name:"Employee Benefits",pattern:"Administer",bqs:["Health","Pension","Perk"],apis:["retrieve","update"]},
+      {name:"Workforce Training",pattern:"Process",bqs:["Programme","Enrolment","Completion"],apis:["initiate","retrieve","update"]},
+      {name:"Travel and Expenses",pattern:"Process",bqs:["Booking","Expense","Approval"],apis:["initiate","retrieve","execute"]},
+      {name:"Employee Access",pattern:"Administer",bqs:["Physical","IT","Role"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Platform Operations", desc:"Manages IT systems, networks, and platform infrastructure.", services:[
+      {name:"Systems Assurance",pattern:"Assess",bqs:["Quality","Performance","Security"],apis:["evaluate","retrieve","report"]},
+      {name:"Internal Network Operation",pattern:"Administer",bqs:["LAN","WAN","Connectivity"],apis:["retrieve","update","notify"]},
+      {name:"System Deployment",pattern:"Process",bqs:["Release","Pipeline","Rollback"],apis:["initiate","retrieve","update"]},
+      {name:"Platform Operations",pattern:"Administer",bqs:["Availability","Capacity","Incident"],apis:["retrieve","update","notify"]},
+      {name:"Systems Operations",pattern:"Administer",bqs:["Monitoring","Incident","Maintenance"],apis:["retrieve","update","notify"]},
+      {name:"Systems Help Desk",pattern:"Process",bqs:["Ticket","Resolution","Escalation"],apis:["initiate","retrieve","update"]},
+      {name:"Operational Gateway",pattern:"Administer",bqs:["Connection","Protocol","Security"],apis:["retrieve","update"]},
+    ]},
+    {name:"Buildings and Equipment", desc:"Manages physical premises, equipment, and building maintenance.", services:[
+      {name:"Fixed Asset Register",pattern:"Maintain",bqs:["Asset","Depreciation","Disposal"],apis:["retrieve","update","report"]},
+      {name:"Utilities Administration",pattern:"Administer",bqs:["Power","Water","Telecoms"],apis:["retrieve","update"]},
+      {name:"Site Operations",pattern:"Administer",bqs:["Facilities","Services","Security"],apis:["retrieve","update"]},
+      {name:"Procurement",pattern:"Process",bqs:["Requisition","Supplier","PO"],apis:["initiate","retrieve","update","execute"]},
+      {name:"Equipment Administration",pattern:"Administer",bqs:["Asset","Provision","Disposal"],apis:["retrieve","update"]},
+      {name:"Equipment Maintenance",pattern:"Administer",bqs:["Schedule","Work","Record"],apis:["retrieve","update","notify"]},
+      {name:"Site Administration",pattern:"Administer",bqs:["Visitor","Post","Facilities"],apis:["retrieve","update"]},
+      {name:"Building Maintenance",pattern:"Administer",bqs:["Inspection","Repair","Contract"],apis:["retrieve","update"]},
+    ]},
+  ]},
+
+  {id:3, area:"Finance and Risk Management", color:"#922b21", light:"#fdedec", border:"#e74c3c",
+   desc:"Encompasses financial control, risk management, treasury, and regulatory compliance. Includes credit, market, operational, and liquidity risk alongside financial reporting.",
+   domains:[
+    {name:"Financial Control", desc:"Manages the bank's financial controls, billing, reporting, and tax obligations.", services:[
+      {name:"Financial Control",pattern:"Administer",bqs:["Control","Environment","Integrity"],apis:["retrieve","update","report"]},
+      {name:"Company Billing and Payments",pattern:"Process",bqs:["Invoice","Payment","Reconciliation"],apis:["initiate","retrieve","execute"]},
+      {name:"Financial Compliance",pattern:"Administer",bqs:["Standard","Monitoring","Exception"],apis:["retrieve","update","report"]},
+      {name:"Approved Supplier Directory",pattern:"Catalog",bqs:["Supplier","DueDiligence","Performance"],apis:["retrieve","update"]},
+      {name:"Financial Statements",pattern:"Process",bqs:["BalanceSheet","IncomeStatement","CashFlow"],apis:["retrieve","report"]},
+      {name:"Enterprise Tax Admin",pattern:"Administer",bqs:["Obligation","Calculation","Submission"],apis:["retrieve","update","report"]},
+    ]},
+    {name:"Operational Risk", desc:"Manages operational risk models and production risk frameworks.", services:[
+      {name:"Business Risk Models",pattern:"Analyze",bqs:["Model","Validation","Output"],apis:["evaluate","retrieve","update"]},
+      {name:"Operational Risk Models",pattern:"Analyze",bqs:["Model","Capital","Scenario"],apis:["evaluate","retrieve","update"]},
+      {name:"Production Risk Models",pattern:"Administer",bqs:["Version","Validation","Monitoring"],apis:["retrieve","update","report"]},
+    ]},
+    {name:"Group Treasury", desc:"Manages the bank's corporate treasury, portfolio, and securitisation activities.", services:[
+      {name:"Corporate Treasury",pattern:"Process",bqs:["Funding","Liquidity","Optimisation"],apis:["initiate","retrieve","update"]},
+      {name:"Corporate Treasury Analysis",pattern:"Analyze",bqs:["Scenario","Forecast","Report"],apis:["retrieve","evaluate","report"]},
+      {name:"Bank Portfolio Admin",pattern:"Administer",bqs:["Position","Report","Reconciliation"],apis:["retrieve","update","report"]},
+      {name:"Bank Portfolio Analysis",pattern:"Analyze",bqs:["Performance","Risk","Attribution"],apis:["retrieve","evaluate","report"]},
+      {name:"Asset Securitization",pattern:"Process",bqs:["Structure","SPV","Issuance"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Market Risk", desc:"Measures and monitors market, credit, and counterparty risk across trading and banking books.", services:[
+      {name:"Credit/Margin Management",pattern:"Administer",bqs:["Exposure","Margin","Limit"],apis:["retrieve","update","notify"]},
+      {name:"Gap Analysis",pattern:"Analyze",bqs:["IRGap","LiquidityGap","Repricing"],apis:["retrieve","evaluate","report"]},
+      {name:"Limited and Exposure Mgmt",pattern:"Monitor",bqs:["Limit","Exposure","Breach"],apis:["retrieve","evaluate","notify"]},
+      {name:"Position Management",pattern:"Monitor",bqs:["Position","PnL","Limit"],apis:["retrieve","evaluate","notify"]},
+      {name:"Credit Management",pattern:"Assess",bqs:["Application","Score","Decision"],apis:["evaluate","retrieve","update"]},
+      {name:"Counterparty Risk",pattern:"Monitor",bqs:["CVA","Exposure","Limit"],apis:["evaluate","retrieve","notify"]},
+      {name:"Fraud Resolution",pattern:"Process",bqs:["Case","Investigation","Remediation"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Credit Risk", desc:"Manages credit risk and fraud detection and resolution.", services:[
+      {name:"Credit Management",pattern:"Assess",bqs:["Application","Score","Decision"],apis:["evaluate","retrieve","update"]},
+      {name:"Counterparty Risk",pattern:"Monitor",bqs:["CVA","Exposure","Limit"],apis:["evaluate","retrieve","notify"]},
+      {name:"Fraud Resolution",pattern:"Process",bqs:["Case","Investigation","Remediation"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Regulatory Compliance", desc:"Manages all regulatory obligations, reporting, and compliance monitoring.", services:[
+      {name:"Regulatory and Legal Authority",pattern:"Administer",bqs:["Regulator","Submission","Relationship"],apis:["retrieve","update","report"]},
+      {name:"Regulatory Compliance",pattern:"Administer",bqs:["Obligation","Control","Status"],apis:["retrieve","update","report"]},
+      {name:"Regulatory Reporting",pattern:"Process",bqs:["Return","Submission","Validation"],apis:["retrieve","report"]},
+      {name:"Guideline Compliance",pattern:"Monitor",bqs:["Policy","Exception","Audit"],apis:["retrieve","evaluate","notify"]},
+      {name:"Compliance Reporting",pattern:"Process",bqs:["Board","Management","Regulator"],apis:["retrieve","report"]},
+    ]},
+  ]},
+
+  {id:4, area:"Operations", color:"#1a5276", light:"#d6eaf8", border:"#2980b9",
+   desc:"The transactional backbone: clearing, settlement, custody, payments, card processing, and servicing operations.",
+   domains:[
+    {name:"Clearing and Settlement", desc:"Manages order allocation, payment clearing, settlement, and card processing infrastructure.", services:[
+      {name:"Order Allocation",pattern:"Process",bqs:["Order","Queue","Routing"],apis:["initiate","retrieve","execute"]},
+      {name:"Cheque Processing",pattern:"Process",bqs:["Instrument","Clearing","Reconciliation"],apis:["initiate","retrieve","update"]},
+      {name:"Corresp Bank Directory",pattern:"Catalog",bqs:["Correspondent","Nostro","Routing"],apis:["retrieve","update"]},
+      {name:"Transaction Engine",pattern:"Process",bqs:["Transaction","Routing","Status"],apis:["execute","retrieve","notify"]},
+      {name:"Counterparty Administration",pattern:"Administer",bqs:["Master","KYC","Limit"],apis:["initiate","retrieve","update"]},
+      {name:"Payment Orchestration",pattern:"Process",bqs:["Flow","Step","Exception"],apis:["initiate","execute","retrieve"]},
+      {name:"Card Clearing",pattern:"Process",bqs:["Transaction","Scheme","Net"],apis:["execute","retrieve","update"]},
+      {name:"Payment Confirmation",pattern:"Process",bqs:["Message","Delivery","Status"],apis:["initiate","retrieve","update"]},
+      {name:"Card Financial Settlement",pattern:"Process",bqs:["Net","Settlement","Reconciliation"],apis:["execute","retrieve","report"]},
+      {name:"Payment Settlement",pattern:"Process",bqs:["Obligation","Settlement","Confirmation"],apis:["execute","retrieve","report"]},
+      {name:"Card eCommerce Gateway",pattern:"Administer",bqs:["Authentication","Routing","Security"],apis:["execute","retrieve","update"]},
+      {name:"Payment Rail",pattern:"Administer",bqs:["Scheme","Connectivity","Protocol"],apis:["retrieve","update"]},
+    ]},
+    {name:"Custody, Collateral and Documents", desc:"Manages custody of securities, collateral administration, and document services.", services:[
+      {name:"Custody Administration",pattern:"Administer",bqs:["Holding","Instruction","Corporate Action"],apis:["initiate","retrieve","update"]},
+      {name:"Collections",pattern:"Process",bqs:["Debt","Outreach","Recovery"],apis:["initiate","retrieve","update"]},
+      {name:"Collateral Allocation Mgmt",pattern:"Administer",bqs:["Asset","Allocation","Optimisation"],apis:["initiate","retrieve","update"]},
+      {name:"Document Directory",pattern:"Catalog",bqs:["Document","Category","Location"],apis:["retrieve","update"]},
+      {name:"Collateral Asset Admin",pattern:"Administer",bqs:["Asset","Valuation","Substitution"],apis:["initiate","retrieve","update"]},
+      {name:"Archive Services",pattern:"Administer",bqs:["Record","Retention","Retrieval"],apis:["initiate","retrieve","update"]},
+      {name:"Account Recovery",pattern:"Process",bqs:["Default","Restructure","WriteOff"],apis:["initiate","retrieve","update"]},
+      {name:"Investment Account",pattern:"Fulfill",bqs:["Account","Holding","Performance"],apis:["initiate","retrieve","update"]},
+      {name:"Document Services",pattern:"Administer",bqs:["Document","Version","Distribution"],apis:["initiate","retrieve","update"]},
+      {name:"Party Asset Directory",pattern:"Catalog",bqs:["Asset","Party","Valuation"],apis:["retrieve","update"]},
+    ]},
+    {name:"Accounting Services", desc:"Provides position keeping, customer tax handling, fraud detection, and financial accounting services.", services:[
+      {name:"Position Keeping",pattern:"Maintain",bqs:["Position","Asset","Reconciliation"],apis:["retrieve","update","report"]},
+      {name:"Customer Tax Handling",pattern:"Administer",bqs:["Withholding","FATCA","CRS"],apis:["retrieve","update","report"]},
+      {name:"Customer Position",pattern:"Maintain",bqs:["Aggregate","Product","Balance"],apis:["retrieve","update"]},
+      {name:"Commissions",pattern:"Administer",bqs:["Calculation","Payment","Reconciliation"],apis:["retrieve","update","execute"]},
+      {name:"Accounts Receivable",pattern:"Administer",bqs:["Invoice","Collection","Reconciliation"],apis:["retrieve","update","report"]},
+      {name:"Fraud Evaluation",pattern:"Assess",bqs:["Alert","Score","Decision"],apis:["evaluate","retrieve","update"]},
+      {name:"Financial Accounting",pattern:"Administer",bqs:["Ledger","Period","Reconciliation"],apis:["retrieve","update","report"]},
+      {name:"Account Reconciliation",pattern:"Process",bqs:["Break","Resolution","Sign-off"],apis:["initiate","retrieve","update"]},
+      {name:"Reward Points Account",pattern:"Fulfill",bqs:["Balance","Award","Redemption"],apis:["retrieve","update","execute"]},
+      {name:"Securities Position Keeping",pattern:"Maintain",bqs:["Position","Settlement","Reconciliation"],apis:["retrieve","update","report"]},
+      {name:"Fraud Diagnosis",pattern:"Analyze",bqs:["Pattern","Model","Alert"],apis:["retrieve","evaluate","report"]},
+      {name:"Financial Statement Asses",pattern:"Assess",bqs:["Financials","Ratios","Rating"],apis:["evaluate","retrieve","report"]},
+    ]},
+    {name:"Operational Services", desc:"Provides customer-facing and back-office operational services including device management and collections.", services:[
+      {name:"Customer Billing",pattern:"Process",bqs:["Fee","Invoice","Collection"],apis:["initiate","retrieve","execute"]},
+      {name:"Product Combination",pattern:"Catalog",bqs:["Bundle","Pricing","Eligibility"],apis:["retrieve","update"]},
+      {name:"Disbursement",pattern:"Process",bqs:["Instruction","Payment","Confirmation"],apis:["initiate","execute","retrieve"]},
+      {name:"Rwd Points Awards and Red",pattern:"Process",bqs:["Award","Redemption","Balance"],apis:["execute","retrieve","update"]},
+      {name:"Open Item Management",pattern:"Administer",bqs:["Item","Status","Resolution"],apis:["retrieve","update"]},
+      {name:"Issued Device Admin",pattern:"Administer",bqs:["Device","Status","Lifecycle"],apis:["initiate","retrieve","update"]},
+      {name:"Delinquent Account Handling",pattern:"Process",bqs:["Arrears","OutReach","Plan"],apis:["initiate","retrieve","update"]},
+      {name:"Device Usage Tracking",pattern:"Monitor",bqs:["Usage","Anomaly","Alert"],apis:["retrieve","evaluate","notify"]},
+      {name:"Card Collections",pattern:"Process",bqs:["Arrears","Recovery","Legal"],apis:["initiate","retrieve","update"]},
+      {name:"Card Transaction Switch",pattern:"Process",bqs:["Routing","Auth","Response"],apis:["execute","retrieve"]},
+      {name:"Term Deposit Float Agmt",pattern:"Fulfill",bqs:["Agreement","Rate","Maturity"],apis:["initiate","retrieve","update"]},
+      {name:"Internal Bank Account",pattern:"Administer",bqs:["Nostro","Vostro","Reconciliation"],apis:["retrieve","update","report"]},
+      {name:"Incentive Account",pattern:"Fulfill",bqs:["Balance","Earned","Paid"],apis:["retrieve","update","execute"]},
+      {name:"Incentive Program Directory",pattern:"Catalog",bqs:["Programme","Rules","Eligibility"],apis:["retrieve","update"]},
+      {name:"Rewards Inventory",pattern:"Administer",bqs:["Stock","Category","Value"],apis:["retrieve","update"]},
+      {name:"Rewards Menu",pattern:"Catalog",bqs:["Reward","Category","Points"],apis:["retrieve","update"]},
+      {name:"Rewards Delivery",pattern:"Process",bqs:["Fulfilment","Delivery","Confirmation"],apis:["initiate","retrieve","update"]},
+      {name:"Issued Certificate Directory",pattern:"Catalog",bqs:["Certificate","Status","Holder"],apis:["retrieve","update"]},
+    ]},
+    {name:"External Agency", desc:"Manages external agency relationships including correspondent banks, syndications, and partner agreements.", services:[
+      {name:"Interbank Relationship Mgmt",pattern:"Maintain",bqs:["Counterparty","Limit","Settlement"],apis:["initiate","retrieve","update"]},
+      {name:"Partner Agreement",pattern:"Fulfill",bqs:["Terms","SLA","Performance"],apis:["initiate","retrieve","update"]},
+      {name:"Syndicate Bank Mgmt",pattern:"Administer",bqs:["Participant","Share","Agency"],apis:["initiate","retrieve","update"]},
+      {name:"Sub Custodian Management",pattern:"Administer",bqs:["Relationship","SLA","Settlement"],apis:["initiate","retrieve","update"]},
+      {name:"Syndicate Management",pattern:"Administer",bqs:["Formation","Participant","Distribution"],apis:["initiate","retrieve","update"]},
+      {name:"Commission Agreement",pattern:"Fulfill",bqs:["Rate","Calculation","Payment"],apis:["initiate","retrieve","update"]},
+      {name:"Product Service Agency",pattern:"Administer",bqs:["Agency","Product","Reporting"],apis:["retrieve","update"]},
+      {name:"Contractor and Supplier Agmt",pattern:"Fulfill",bqs:["Contract","Terms","Renewal"],apis:["initiate","retrieve","update"]},
+      {name:"Service Provider Ops",pattern:"Administer",bqs:["Provider","SLA","Performance"],apis:["retrieve","update","notify"]},
+      {name:"Operations Log",pattern:"Maintain",bqs:["Event","System","Audit"],apis:["retrieve","report"]},
+      {name:"Partner Management",pattern:"Maintain",bqs:["Partner","Performance","Governance"],apis:["retrieve","update"]},
+      {name:"Partner Administration",pattern:"Administer",bqs:["Documentation","Reporting","Data"],apis:["retrieve","update"]},
+    ]},
+  ]},
+
+  {id:5, area:"Products", color:"#6c3483", light:"#f5eef8", border:"#9b59b6",
+   desc:"Manages the full lifecycle of all banking products. IMPORTANT: Core processing capabilities sit here, not in Operations.",
+   domains:[
+    {name:"Market Operations", desc:"Manages trading book oversight, trade confirmation, clearing, and price reporting.", services:[
+      {name:"Trading Book Oversight",pattern:"Monitor",bqs:["Position","Limit","PnL"],apis:["retrieve","evaluate","notify"]},
+      {name:"Credit Risk Operations",pattern:"Assess",bqs:["Exposure","Limit","Provision"],apis:["evaluate","retrieve","update"]},
+      {name:"Trade Confirmation/Matching",pattern:"Process",bqs:["Confirmation","Matching","Exception"],apis:["execute","retrieve","update"]},
+      {name:"Securities Fails Processing",pattern:"Process",bqs:["Fail","Resolution","Reporting"],apis:["retrieve","update","report"]},
+      {name:"Trade Clearing",pattern:"Process",bqs:["CCP","Netting","Settlement"],apis:["execute","retrieve","report"]},
+      {name:"Financial Inst Valuation",pattern:"Assess",bqs:["Price","Model","Override"],apis:["evaluate","retrieve","update"]},
+      {name:"Trade Settlement",pattern:"Process",bqs:["DVP","FOP","Confirmation"],apis:["execute","retrieve","report"]},
+      {name:"Corporate Events",pattern:"Process",bqs:["Action","Entitlement","Election"],apis:["initiate","retrieve","update"]},
+      {name:"Trade and Price Reporting",pattern:"Process",bqs:["Report","Venue","Timing"],apis:["retrieve","report"]},
+    ]},
+    {name:"Market Trading", desc:"Manages trader positions, market orders, market making, and algorithmic trading.", services:[
+      {name:"Trader Position Mgmt",pattern:"Monitor",bqs:["Position","Limit","PnL"],apis:["retrieve","evaluate","notify"]},
+      {name:"Quote Management",pattern:"Process",bqs:["Quote","Spread","Validity"],apis:["initiate","retrieve","execute"]},
+      {name:"Market Order",pattern:"Process",bqs:["Order","Status","Execution"],apis:["initiate","retrieve","execute"]},
+      {name:"Market Making",pattern:"Fulfill",bqs:["Inventory","Quote","Risk"],apis:["initiate","retrieve","update"]},
+      {name:"Market Order Execution",pattern:"Process",bqs:["Routing","Fill","Confirmation"],apis:["execute","retrieve","update"]},
+      {name:"Program Trading",pattern:"Process",bqs:["Strategy","Order","Performance"],apis:["initiate","retrieve","execute"]},
+      {name:"Dealer Workbench",pattern:"Process",bqs:["Order","Position","Pricing"],apis:["retrieve","execute","update"]},
+      {name:"Stock Lending and Repos",pattern:"Fulfill",bqs:["Agreement","Collateral","Rate"],apis:["initiate","retrieve","update"]},
+      {name:"Suitability Checking",pattern:"Assess",bqs:["Profile","Product","Decision"],apis:["evaluate","retrieve","report"]},
+    ]},
+    {name:"Corporate Finance", desc:"Manages capital markets, fund administration, and investment banking activities.", services:[
+      {name:"ECM and DCM",pattern:"Process",bqs:["Mandate","Structure","Execution"],apis:["initiate","retrieve","update"]},
+      {name:"Unit Trust Administration",pattern:"Administer",bqs:["Fund","NAV","Investor"],apis:["retrieve","update","report"]},
+      {name:"Private Placement",pattern:"Process",bqs:["Mandate","Investor","Allocation"],apis:["initiate","retrieve","update"]},
+      {name:"Hedge Fund Administration",pattern:"Administer",bqs:["Fund","NAV","Reporting"],apis:["retrieve","update","report"]},
+      {name:"Public Offering",pattern:"Process",bqs:["Prospectus","Bookbuild","Allocation"],apis:["initiate","retrieve","update"]},
+      {name:"Mutual Fund Administration",pattern:"Administer",bqs:["Fund","NAV","Distribution"],apis:["retrieve","update","report"]},
+    ]},
+    {name:"Advisory Services", desc:"Provides M&A, corporate finance, tax advisory, and consumer advisory services.", services:[
+      {name:"M&A Advisory",pattern:"Process",bqs:["Mandate","Valuation","Execution"],apis:["initiate","retrieve","update"]},
+      {name:"Corporate Tax Advisory",pattern:"Assess",bqs:["Structure","Planning","Compliance"],apis:["evaluate","retrieve","update"]},
+      {name:"Corporate Finance",pattern:"Process",bqs:["Advisory","Modelling","Execution"],apis:["initiate","retrieve","update"]},
+      {name:"Consumer Advisory Services",pattern:"Fulfill",bqs:["Profile","Plan","Review"],apis:["initiate","retrieve","update"]},
+      {name:"Legal Advisory",pattern:"Assess",bqs:["Issue","Opinion","Risk"],apis:["evaluate","retrieve","update"]},
+    ]},
+    {name:"Loans and Deposits", desc:"Manages the full lifecycle of all loan and deposit products.", services:[
+      {name:"Loan",pattern:"Fulfill",bqs:["Facility","Drawdown","Repayment","Interest"],apis:["initiate","retrieve","update","execute"]},
+      {name:"Consumer Loan",pattern:"Fulfill",bqs:["LoanFacility","Repayment","Interest","Arrears"],apis:["initiate","retrieve","update","execute"]},
+      {name:"Corporate Loan",pattern:"Fulfill",bqs:["Facility","Covenant","Drawing","Repayment"],apis:["initiate","retrieve","update","execute"]},
+      {name:"Mortgage Loan",pattern:"Fulfill",bqs:["Facility","LTV","Collateral","Repayment"],apis:["initiate","retrieve","update"]},
+      {name:"Corporate Lease",pattern:"Fulfill",bqs:["Asset","Rental","Maintenance"],apis:["initiate","retrieve","update"]},
+      {name:"Merchandising Loan",pattern:"Fulfill",bqs:["Invoice","Advance","Repayment"],apis:["initiate","retrieve","update"]},
+      {name:"Leasing Item Administration",pattern:"Administer",bqs:["Asset","Schedule","Return"],apis:["retrieve","update"]},
+      {name:"Leasing",pattern:"Fulfill",bqs:["Agreement","Asset","Rental"],apis:["initiate","retrieve","update"]},
+      {name:"Syndicated Loan",pattern:"Fulfill",bqs:["Facility","Participant","Drawdown"],apis:["initiate","retrieve","update"]},
+      {name:"Savings Account",pattern:"Fulfill",bqs:["Account","Interest","Withdrawal"],apis:["initiate","retrieve","update"]},
+      {name:"Fiduciary Agreement",pattern:"Fulfill",bqs:["Agreement","Asset","Reporting"],apis:["initiate","retrieve","update"]},
+      {name:"Term Deposits",pattern:"Fulfill",bqs:["Deposit","Interest","Maturity"],apis:["initiate","retrieve","update"]},
+      {name:"Underwriting",pattern:"Assess",bqs:["Risk","Decision","Terms"],apis:["evaluate","retrieve","update"]},
+      {name:"Standing Order",pattern:"Fulfill",bqs:["Instruction","Frequency","Amount"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Cards", desc:"Manages card product lifecycles, authorisation, merchant acquiring, and network participation.", services:[
+      {name:"Credit Card",pattern:"Fulfill",bqs:["Account","CreditLimit","Statement","Reward"],apis:["initiate","retrieve","update","execute"]},
+      {name:"Merchant Relations",pattern:"Maintain",bqs:["Merchant","Contract","Performance"],apis:["initiate","retrieve","update"]},
+      {name:"Card Authorization",pattern:"Process",bqs:["Request","Score","Decision"],apis:["execute","retrieve","update"]},
+      {name:"Card Network Participant Fac",pattern:"Administer",bqs:["Scheme","Rules","Reporting"],apis:["retrieve","update","report"]},
+      {name:"Card Capture",pattern:"Process",bqs:["Transaction","POS","Routing"],apis:["execute","retrieve"]},
+      {name:"Merchant Acquiring Fac",pattern:"Fulfill",bqs:["Terminal","Settlement","Dispute"],apis:["initiate","retrieve","update"]},
+      {name:"Corporate Card Service",pattern:"Fulfill",bqs:["Programme","Limit","Reporting"],apis:["initiate","retrieve","update"]},
+      {name:"Card Transaction Tracking",pattern:"Monitor",bqs:["Auth","Clearing","Settlement"],apis:["retrieve","notify","update"]},
+    ]},
+    {name:"Trade Banking", desc:"Manages trade finance, corporate banking, and cash management products.", services:[
+      {name:"Letter of Credit",pattern:"Fulfill",bqs:["Instrument","Presentation","Payment"],apis:["initiate","retrieve","update"]},
+      {name:"Bank Guarantee",pattern:"Fulfill",bqs:["Instrument","Terms","Claim"],apis:["initiate","retrieve","update"]},
+      {name:"Bank Drafts",pattern:"Process",bqs:["Issuance","Payment","Reconciliation"],apis:["initiate","retrieve","execute"]},
+      {name:"Corporate Current Account",pattern:"Fulfill",bqs:["Account","Balance","Services"],apis:["initiate","retrieve","update","execute"]},
+      {name:"Cash Mgmt and Account Svs",pattern:"Fulfill",bqs:["Pool","Sweep","Report"],apis:["initiate","retrieve","update"]},
+      {name:"Corporate Trust Services",pattern:"Administer",bqs:["Trustee","Agency","Reporting"],apis:["retrieve","update","report"]},
+      {name:"Credit Facility",pattern:"Fulfill",bqs:["Limit","Utilisation","Covenant"],apis:["initiate","retrieve","update"]},
+      {name:"Project Finance",pattern:"Fulfill",bqs:["SPV","Drawdown","Covenant"],apis:["initiate","retrieve","update"]},
+      {name:"Cash Concentration",pattern:"Fulfill",bqs:["Pool","Target","Sweep"],apis:["initiate","retrieve","update"]},
+      {name:"Virtual Account",pattern:"Fulfill",bqs:["Account","Reconciliation","Reporting"],apis:["initiate","retrieve","update"]},
+      {name:"Direct Debit Mandate",pattern:"Fulfill",bqs:["Mandate","Collection","Return"],apis:["initiate","retrieve","update"]},
+      {name:"Direct Debit",pattern:"Process",bqs:["Collection","Failure","Return"],apis:["initiate","execute","retrieve"]},
+      {name:"Cheque Lock Box",pattern:"Process",bqs:["Receipt","Scan","Post"],apis:["initiate","retrieve","update"]},
+      {name:"Factoring",pattern:"Fulfill",bqs:["Invoice","Advance","Collection"],apis:["initiate","retrieve","update"]},
+      {name:"Notional Pooling",pattern:"Fulfill",bqs:["Pool","Offset","Report"],apis:["initiate","retrieve","update"]},
+      {name:"Corporate Payroll Services",pattern:"Process",bqs:["Payroll","Payment","Reporting"],apis:["initiate","execute","retrieve"]},
+    ]},
+    {name:"Consumer Banking", desc:"Manages retail banking products: current accounts, consumer credit, and related services.", services:[
+      {name:"Current Account",pattern:"Fulfill",bqs:["AccountFacility","Interest","Payments","Fees"],apis:["initiate","retrieve","update","execute"]},
+      {name:"Trust Services",pattern:"Administer",bqs:["Trust","Beneficiary","Reporting"],apis:["initiate","retrieve","update"]},
+      {name:"Brokered Product Proxy",pattern:"Administer",bqs:["Product","Broker","Commission"],apis:["retrieve","update"]},
+      {name:"Payment Order Initiation",pattern:"Process",bqs:["Instruction","Routing","Status"],apis:["initiate","execute","retrieve"]},
+      {name:"Sales Product",pattern:"Process",bqs:["Lead","Application","Conversion"],apis:["initiate","retrieve","update"]},
+      {name:"Currency Exchange",pattern:"Process",bqs:["Rate","Transaction","Settlement"],apis:["execute","retrieve","update"]},
+      {name:"Funeral Policy",pattern:"Fulfill",bqs:["Policy","Premium","Claim"],apis:["initiate","retrieve","update"]},
+      {name:"Claim Administration",pattern:"Process",bqs:["Claim","Assessment","Settlement"],apis:["initiate","retrieve","update"]},
+      {name:"Claim Assessment",pattern:"Assess",bqs:["Validity","Value","Decision"],apis:["evaluate","retrieve","update"]},
+    ]},
+  ]},
+
+  {id:6, area:"Customers", color:"#1e8449", light:"#d5f5e3", border:"#27ae60",
+   desc:"Everything about knowing, onboarding, authenticating, and retaining the bank's parties. Central repository of customer data consumed across all areas.",
+   domains:[
+    {name:"Party Reference", desc:"Maintains the golden record of all parties and manages location and payee data.", services:[
+      {name:"Legal Entity Directory",pattern:"Catalog",bqs:["Entity","Registration","Status"],apis:["retrieve","update"]},
+      {name:"Party Reference Data Dir",pattern:"Catalog",bqs:["Profile","Demographics","Associations","BankRelations"],apis:["initiate","retrieve","update"]},
+      {name:"Location Data Management",pattern:"Maintain",bqs:["Address","Geolocation","Verification"],apis:["retrieve","update"]},
+      {name:"Payee Management",pattern:"Maintain",bqs:["Payee","Validation","Deduplication"],apis:["retrieve","update"]},
+    ]},
+    {name:"Investment Services", desc:"Manages retail investment products and portfolio services for customers.", services:[
+      {name:"Consumer Investments",pattern:"Fulfill",bqs:["Account","Product","Performance"],apis:["initiate","retrieve","update"]},
+      {name:"e-Trading Workbench",pattern:"Process",bqs:["Order","Portfolio","Research"],apis:["initiate","retrieve","execute"]},
+      {name:"Investment Portfolio Planning",pattern:"Analyze",bqs:["Objective","Allocation","Risk"],apis:["evaluate","retrieve","update"]},
+      {name:"Investment Portfolio Analysis",pattern:"Analyze",bqs:["Performance","Risk","Attribution"],apis:["retrieve","evaluate","report"]},
+      {name:"Investment Portfolio Mgmt",pattern:"Fulfill",bqs:["Portfolio","Holding","Rebalancing"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Relationship Management", desc:"Manages customer relationships, profiles, agreements, and behavioural insights.", services:[
+      {name:"Customer Relationship Mgmt",pattern:"Maintain",bqs:["Profile","Interaction","Opportunity","Segment"],apis:["initiate","retrieve","update"]},
+      {name:"Customer Behavioral Insight",pattern:"Analyze",bqs:["Behaviour","Segment","Propensity"],apis:["retrieve","evaluate","report"]},
+      {name:"Customer Credit Rating",pattern:"Assess",bqs:["Score","Model","History"],apis:["evaluate","retrieve","update"]},
+      {name:"Customer Agreement",pattern:"Fulfill",bqs:["MasterAgreement","Terms","Mandate"],apis:["initiate","retrieve","update"]},
+      {name:"Sales Product Agreement",pattern:"Fulfill",bqs:["Terms","Conditions","Signing"],apis:["initiate","retrieve","update"]},
+      {name:"Customer Proposition",pattern:"Maintain",bqs:["Segment","Offer","Value"],apis:["retrieve","update"]},
+      {name:"Customer Event History",pattern:"Maintain",bqs:["Event","Interaction","Transaction","Alert"],apis:["retrieve","update","notify"]},
+      {name:"Customer Products and Svs",pattern:"Catalog",bqs:["Holding","Eligibility","Status"],apis:["retrieve","update"]},
+      {name:"Customer Financial Ins",pattern:"Fulfill",bqs:["Mandate","Standing","Authority"],apis:["initiate","retrieve","update"]},
+      {name:"Loan Syndication",pattern:"Process",bqs:["Participation","Allocation","Transfer"],apis:["initiate","retrieve","update"]},
+      {name:"Customer Consent",pattern:"Administer",bqs:["Consent","Preference","Audit"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Sales", desc:"Manages the sales pipeline, product matching, offers, and special pricing.", services:[
+      {name:"Lead and Opportunity Mgmt",pattern:"Process",bqs:["Lead","Stage","Conversion"],apis:["initiate","retrieve","update"]},
+      {name:"Product Sales Support",pattern:"Maintain",bqs:["Material","Pricing","Knowledge"],apis:["retrieve","update"]},
+      {name:"Product Expert Sales Support",pattern:"Assess",bqs:["Specialist","Complex","Advice"],apis:["evaluate","retrieve","update"]},
+      {name:"Product Matching",pattern:"Assess",bqs:["Eligibility","Preference","Match"],apis:["evaluate","retrieve","update"]},
+      {name:"Customer Offer",pattern:"Fulfill",bqs:["Offer","Pricing","Acceptance"],apis:["initiate","retrieve","execute"]},
+      {name:"Special Pricing Conditions",pattern:"Administer",bqs:["Rate","Exception","Approval"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Customer Care", desc:"Manages customer servicing, case management, and the agent workbench.", services:[
+      {name:"Servicing Mandate",pattern:"Fulfill",bqs:["Authority","Scope","Expiry"],apis:["initiate","retrieve","update"]},
+      {name:"Servicing Order",pattern:"Process",bqs:["Request","Fulfilment","Closure"],apis:["initiate","retrieve","update"]},
+      {name:"Customer Case Mgmt",pattern:"Process",bqs:["Case","Routing","Resolution"],apis:["initiate","retrieve","update"]},
+      {name:"Customer Workbench",pattern:"Process",bqs:["Interaction","Task","Offer","History"],apis:["initiate","retrieve","update","execute"]},
+      {name:"Card Case",pattern:"Process",bqs:["Dispute","Chargeback","Fraud"],apis:["initiate","retrieve","update"]},
+    ]},
+  ]},
+
+  {id:7, area:"Channels", color:"#6e2f1a", light:"#fdf0e8", border:"#e67e22",
+   desc:"Manages all customer interaction channels — digital and physical — plus analytics and distribution.",
+   domains:[
+    {name:"Intermediaries/Providers", desc:"Manages reference data, financial market research, and information provider relationships.", services:[
+      {name:"Public Reference Data Mgmt",pattern:"Maintain",bqs:["Data","Publication","Version"],apis:["retrieve","update"]},
+      {name:"Financial Inst Ref Data Mgmt",pattern:"Maintain",bqs:["Institution","BIC","LEI"],apis:["retrieve","update"]},
+      {name:"Financial Market Research",pattern:"Analyze",bqs:["Research","Distribution","Archive"],apis:["retrieve","evaluate","report"]},
+      {name:"Financial Market Analysis",pattern:"Analyze",bqs:["Market","Trend","Forecast"],apis:["retrieve","evaluate","report"]},
+      {name:"Market Data Switch Ops",pattern:"Administer",bqs:["Feed","Distribution","Latency"],apis:["retrieve","update","notify"]},
+      {name:"Information Provider Ops",pattern:"Administer",bqs:["Vendor","Feed","Contract"],apis:["retrieve","update"]},
+    ]},
+    {name:"Cross Channel", desc:"Manages cross-channel contact handling, routing, authentication, and transaction authorisation.", services:[
+      {name:"Contact Handler",pattern:"Process",bqs:["Contact","Routing","Assignment"],apis:["initiate","retrieve","update"]},
+      {name:"Contact Routing",pattern:"Process",bqs:["Queue","Skill","Priority"],apis:["execute","retrieve","update"]},
+      {name:"Session Dialogue",pattern:"Process",bqs:["Session","Flow","Completion"],apis:["initiate","retrieve","update"]},
+      {name:"Customer Behavioral Profile",pattern:"Maintain",bqs:["Behaviour","Pattern","Preference"],apis:["retrieve","update","evaluate"]},
+      {name:"Transaction Authorization",pattern:"Process",bqs:["Request","Factor","Decision"],apis:["execute","retrieve","update"]},
+      {name:"Party Routing Profile",pattern:"Maintain",bqs:["Channel","Preference","Instruction"],apis:["retrieve","update"]},
+      {name:"Customer Access Entitlement",pattern:"Administer",bqs:["Role","Permission","Channel","Delegation"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Channel Specific", desc:"Manages specific physical channels: ATM, branch, voice, card terminals, and financial gateway.", services:[
+      {name:"ATM Network Operations",pattern:"Administer",bqs:["Terminal","Cash","Fault"],apis:["retrieve","update","notify"]},
+      {name:"Branch Location Operations",pattern:"Administer",bqs:["Staffing","Cash","Service"],apis:["retrieve","update"]},
+      {name:"Advanced Voice Svs Ops",pattern:"Administer",bqs:["IVR","Speech","Auth"],apis:["retrieve","update"]},
+      {name:"Customer Financial Ins",pattern:"Fulfill",bqs:["Mandate","Standing","Authority"],apis:["initiate","retrieve","update"]},
+      {name:"Financial Gateway",pattern:"Administer",bqs:["Network","Protocol","Security"],apis:["retrieve","update"]},
+      {name:"Card Terminal Admin",pattern:"Administer",bqs:["Terminal","Config","Maintenance"],apis:["initiate","retrieve","update"]},
+      {name:"Card Terminal Operation",pattern:"Process",bqs:["Transaction","Reconciliation","Fault"],apis:["execute","retrieve","update"]},
+    ]},
+    {name:"Distribution", desc:"Manages product distribution, inventory, currency distribution, and correspondence.", services:[
+      {name:"Service Directory",pattern:"Catalog",bqs:["Service","Channel","Availability"],apis:["retrieve","update"]},
+      {name:"Contact Center Operations",pattern:"Administer",bqs:["Staffing","Quality","KPI"],apis:["retrieve","update","report"]},
+      {name:"Point of Service",pattern:"Process",bqs:["Interaction","Transaction","Completion"],apis:["initiate","retrieve","update"]},
+      {name:"Interactive Help",pattern:"Process",bqs:["Query","Guidance","Resolution"],apis:["initiate","retrieve","update"]},
+      {name:"Special Offers and Conditions",pattern:"Maintain",bqs:["Offer","Eligibility","Period"],apis:["retrieve","update"]},
+      {name:"Servicing Event History",pattern:"Maintain",bqs:["Event","Channel","Resolution"],apis:["retrieve","update"]},
+      {name:"Product Inventory Management",pattern:"Administer",bqs:["Stock","Distribution","Replenishment"],apis:["retrieve","update"]},
+      {name:"Branch Currency Distribution",pattern:"Process",bqs:["Order","Delivery","Reconciliation"],apis:["initiate","retrieve","update"]},
+      {name:"Branch Currency Mgmt",pattern:"Administer",bqs:["Stock","Exchange","Reporting"],apis:["retrieve","update","report"]},
+      {name:"Correspondence",pattern:"Process",bqs:["Message","Delivery","Response"],apis:["initiate","retrieve","update"]},
+    ]},
+  ]},
+
+  {id:8, area:"Business Development", color:"#7d6608", light:"#fef9e7", border:"#d4ac0d",
+   desc:"Drives growth through product management, marketing, channel management, analytics models, and solution development.",
+   domains:[
+    {name:"Intellectual Property and Knowledge", desc:"Manages the bank's intellectual assets, management manuals, and knowledge base.", services:[
+      {name:"Intellectual Property Port",pattern:"Administer",bqs:["IP","Patent","Licence"],apis:["retrieve","update"]},
+      {name:"Management Manual",pattern:"Catalog",bqs:["Manual","Version","Distribution"],apis:["retrieve","update"]},
+      {name:"Business Architecture",pattern:"Analyze",bqs:["Capability","Roadmap","Model"],apis:["retrieve","evaluate","update"]},
+      {name:"Knowledge Exchange",pattern:"Maintain",bqs:["Knowledge","Article","Rating"],apis:["retrieve","update"]},
+    ]},
+    {name:"Models and Analytics", desc:"Develops and maintains quantitative models for risk, customer behaviour, and financial analysis.", services:[
+      {name:"Contribution Models",pattern:"Analyze",bqs:["Model","Output","Validation"],apis:["evaluate","retrieve","update"]},
+      {name:"Customer Behavior Models",pattern:"Analyze",bqs:["Model","Segment","Prediction"],apis:["evaluate","retrieve","report"]},
+      {name:"Credit Risk Models",pattern:"Analyze",bqs:["Model","PD","LGD"],apis:["evaluate","retrieve","update"]},
+      {name:"Fraud Models",pattern:"Analyze",bqs:["Model","Score","Alert"],apis:["evaluate","retrieve","update"]},
+      {name:"Quant Model",pattern:"Analyze",bqs:["Model","Pricing","Risk"],apis:["evaluate","retrieve","update"]},
+      {name:"Trading Models",pattern:"Analyze",bqs:["Strategy","Backtest","Performance"],apis:["evaluate","retrieve","update"]},
+      {name:"Fin Inst Valuation Models",pattern:"Analyze",bqs:["Model","Price","Sensitivity"],apis:["evaluate","retrieve","update"]},
+      {name:"Market Risk Models",pattern:"Analyze",bqs:["VaR","Stress","Sensitivity"],apis:["evaluate","retrieve","update"]},
+      {name:"Liquidity Risk Models",pattern:"Analyze",bqs:["LCR","NSFR","Forecast"],apis:["evaluate","retrieve","update"]},
+    ]},
+    {name:"Solution Development", desc:"Manages IT systems guidelines, development environments, and system deployment.", services:[
+      {name:"IT Stds and Guidelines",pattern:"Catalog",bqs:["Standard","Policy","Version"],apis:["retrieve","update"]},
+      {name:"Systems Administration",pattern:"Administer",bqs:["Config","Access","Audit"],apis:["retrieve","update"]},
+      {name:"Development Environment",pattern:"Administer",bqs:["Tool","Pipeline","Config"],apis:["retrieve","update"]},
+      {name:"System Development",pattern:"Process",bqs:["Requirement","Build","Test","Release"],apis:["initiate","retrieve","update"]},
+    ]},
+    {name:"Product Management", desc:"Manages the product portfolio from design through launch to discontinuation.", services:[
+      {name:"Product Portfolio",pattern:"Catalog",bqs:["Product","Status","Performance"],apis:["retrieve","update"]},
+      {name:"Product Quality Assurance",pattern:"Assess",bqs:["Quality","Test","Approval"],apis:["evaluate","retrieve","report"]},
+      {name:"Product Design",pattern:"Process",bqs:["Concept","Design","Approval"],apis:["initiate","retrieve","update"]},
+      {name:"Product Training",pattern:"Process",bqs:["Programme","Delivery","Assessment"],apis:["initiate","retrieve","update"]},
+      {name:"Production Release",pattern:"Process",bqs:["Release","Rollout","Communication"],apis:["initiate","retrieve","update"]},
+      {name:"Case Root Cause Analysis",pattern:"Analyze",bqs:["Issue","Cause","Fix"],apis:["retrieve","evaluate","report"]},
+      {name:"Product Directory",pattern:"Catalog",bqs:["Product","Feature","Pricing"],apis:["retrieve","update"]},
+      {name:"Discount Pricing",pattern:"Administer",bqs:["Discount","Eligibility","Approval"],apis:["retrieve","update"]},
+    ]},
+    {name:"Marketing and Development", desc:"Manages business development, customer and competitor analysis, and campaign planning.", services:[
+      {name:"Business Development",pattern:"Process",bqs:["Opportunity","Pipeline","Closure"],apis:["initiate","retrieve","update"]},
+      {name:"Market Research",pattern:"Analyze",bqs:["Survey","Segment","Trend"],apis:["initiate","retrieve","evaluate"]},
+      {name:"Contribution Analysis",pattern:"Analyze",bqs:["Product","Segment","Channel"],apis:["retrieve","evaluate","report"]},
+      {name:"Competitor Analysis",pattern:"Analyze",bqs:["Profile","Benchmark","Strategy"],apis:["retrieve","evaluate","update"]},
+      {name:"Segment Direction",pattern:"Administer",bqs:["Segment","Strategy","Target"],apis:["retrieve","update"]},
+      {name:"Market Analysis",pattern:"Analyze",bqs:["Market","Share","Opportunity"],apis:["retrieve","evaluate","report"]},
+      {name:"Customer Campaign Mgmt",pattern:"Process",bqs:["Campaign","Target","Response"],apis:["initiate","retrieve","update"]},
+      {name:"Customer Campaign Design",pattern:"Process",bqs:["Segment","Message","Channel"],apis:["initiate","retrieve","update"]},
+      {name:"Sales Planning",pattern:"Process",bqs:["Target","Territory","Forecast"],apis:["initiate","retrieve","update"]},
+      {name:"Prospect Campaign Mgmt",pattern:"Process",bqs:["Campaign","Prospect","Conversion"],apis:["initiate","retrieve","update"]},
+      {name:"Advertising",pattern:"Process",bqs:["Campaign","Channel","Measurement"],apis:["initiate","retrieve","update"]},
+      {name:"Prospect Campaign Design",pattern:"Process",bqs:["Audience","Message","Creative"],apis:["initiate","retrieve","update"]},
+      {name:"Promotional Events",pattern:"Process",bqs:["Event","Invitation","Feedback"],apis:["initiate","retrieve","update"]},
+      {name:"Customer Survey",pattern:"Process",bqs:["Survey","Response","Analysis"],apis:["initiate","retrieve","evaluate"]},
+    ]},
+    {name:"Channel Management", desc:"Manages channel portfolio strategy, network management, and digital channel development.", services:[
+      {name:"Channel Portfolio",pattern:"Administer",bqs:["Channel","Strategy","Performance"],apis:["retrieve","update"]},
+      {name:"Branch Portfolio",pattern:"Administer",bqs:["Network","Performance","Investment"],apis:["retrieve","update"]},
+      {name:"ATM Network Mgmt",pattern:"Administer",bqs:["Network","Site","Vendor"],apis:["retrieve","update"]},
+      {name:"Contact Center Management",pattern:"Administer",bqs:["Capacity","Technology","Quality"],apis:["retrieve","update","report"]},
+      {name:"Servicing Activity Analysis",pattern:"Analyze",bqs:["Volume","Cost","Quality"],apis:["retrieve","evaluate","report"]},
+      {name:"Advanced Voice Svs Mgmt",pattern:"Administer",bqs:["Platform","Capability","Performance"],apis:["retrieve","update"]},
+      {name:"E-Branch Management",pattern:"Administer",bqs:["Platform","Feature","Performance"],apis:["retrieve","update"]},
+      {name:"Financial Message Analysis",pattern:"Analyze",bqs:["Message","Flow","Anomaly"],apis:["retrieve","evaluate","report"]},
+      {name:"Channel Activity Analysis",pattern:"Analyze",bqs:["Traffic","Conversion","Abandonment"],apis:["retrieve","evaluate","report"]},
+      {name:"Branch Network Mgmt",pattern:"Administer",bqs:["Staffing","Standards","Performance"],apis:["retrieve","update","report"]},
+      {name:"Information Provider Admin",pattern:"Administer",bqs:["Vendor","Contract","Data"],apis:["retrieve","update"]},
+      {name:"Central Cash Handling",pattern:"Process",bqs:["CashPosition","Forecast","Transfer"],apis:["initiate","retrieve","update"]},
+      {name:"Branch Currency Mgmt",pattern:"Administer",bqs:["Stock","Exchange","Reporting"],apis:["retrieve","update","report"]},
+    ]},
+  ]},
+];
+
+const SCENARIOS=[
+  {name:"Customer Onboarding",icon:"👤",color:"#2980b9",steps:[
+    {sd:"Party Reference Data Dir",action:"Initiate – Create party record",pattern:"Catalog"},
+    {sd:"Party Lifecycle Management",action:"Initiate – Start KYC/onboarding workflow",pattern:"Process"},
+    {sd:"AML/KYC — via Customer Credit Rating",action:"Evaluate – Due diligence & screening",pattern:"Assess"},
+    {sd:"Customer Credit Rating",action:"Evaluate – Assess creditworthiness",pattern:"Assess"},
+    {sd:"Product Directory",action:"Retrieve – Check eligible products",pattern:"Catalog"},
+    {sd:"Customer Offer",action:"Initiate – Generate personalised offer",pattern:"Fulfill"},
+    {sd:"Sales Product Agreement",action:"Initiate – Formalise product agreement",pattern:"Fulfill"},
+    {sd:"Current Account",action:"Initiate – Open account facility",pattern:"Fulfill"},
+  ]},
+  {name:"Payment Processing",icon:"💳",color:"#27ae60",steps:[
+    {sd:"Customer Access Entitlement",action:"Evaluate – Verify channel permission",pattern:"Administer"},
+    {sd:"Transaction Authorization",action:"Execute – Authenticate & authorise",pattern:"Process"},
+    {sd:"Current Account",action:"Retrieve – Check balance & limits",pattern:"Fulfill"},
+    {sd:"Payment Orchestration",action:"Initiate – Orchestrate payment flow",pattern:"Process"},
+    {sd:"Payment Rail",action:"Execute – Route to payment scheme",pattern:"Administer"},
+    {sd:"Payment Settlement",action:"Execute – Settle inter-bank obligation",pattern:"Process"},
+    {sd:"Customer Event History",action:"Update – Record transaction event",pattern:"Maintain"},
+  ]},
+  {name:"Trade Finance",icon:"🌍",color:"#e74c3c",steps:[
+    {sd:"Party Reference Data Dir",action:"Retrieve – Verify corporate party record",pattern:"Catalog"},
+    {sd:"Credit Management",action:"Evaluate – Assess credit limit availability",pattern:"Assess"},
+    {sd:"Letter of Credit",action:"Initiate – Issue LC instrument",pattern:"Fulfill"},
+    {sd:"Trade Confirmation/Matching",action:"Execute – Confirm trade details",pattern:"Process"},
+    {sd:"Trade Clearing",action:"Execute – Clear via CCP",pattern:"Process"},
+    {sd:"Trade Settlement",action:"Execute – Settle DVP",pattern:"Process"},
+    {sd:"Regulatory Reporting",action:"Report – Submit trade report (MiFID/EMIR)",pattern:"Process"},
+  ]},
+];
+
+/* ═══ STATE & UTILS ═══ */
+let eA={},eD={},eS={},allExp=false,actSc=0,actSt=null;
+
+function tip(text,content,w=270){
+  return `<span class="tip-wrap">${content}<span class="tip-box" style="width:${w}px">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></span>`;
+}
+function showTab(t){
+  ['landscape','scenarios','legend'].forEach(id=>document.getElementById('tab-'+id).classList.toggle('hidden',id!==t));
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['landscape','scenarios','legend'][i]===t));
+  if(t==='scenarios')renderScenarios();
+  if(t==='legend')renderLegend();
+}
+
+/* ═══ LANDSCAPE ═══ */
+function renderLandscape(f=''){
+  const g=document.getElementById('areaGrid');
+  let h='';
+  BIANDATA.forEach(area=>{
+    const fDoms=f?area.domains.map(d=>({...d,services:d.services.filter(s=>s.name.toLowerCase().includes(f))})).filter(d=>d.services.length):area.domains;
+    if(f&&!fDoms.length)return;
+    const aO=eA[area.id];
+    const tot=area.domains.reduce((a,d)=>a+d.services.length,0);
+    h+=`<div class="area-card" style="border:2px solid ${area.border}">
+      <div class="area-hdr" style="background:${area.color}" onclick="tA(${area.id})">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="area-num">${area.id}</div>
+          <div>
+            ${tip(area.desc,`<span style="font-size:13px;font-weight:700">${area.area} <span style="font-size:10px;opacity:.7">ℹ</span></span>`)}
+            <div style="font-size:9px;opacity:.7;margin-top:1px">${tot} Service Domains · ${area.domains.length} Business Domains</div>
+          </div>
+        </div>
+        <span style="font-size:13px">${aO?'▲':'▼'}</span>
+      </div>`;
+    if(aO||f){
+      h+=`<div class="area-body" style="background:${area.light}">`;
+      fDoms.forEach((dom,di)=>{
+        const dk=`${area.id}-${di}`,dO=eD[dk];
+        h+=`<div class="dom-card" style="border:1px solid ${area.border}">
+          <div class="dom-hdr" style="background:${area.border}" onclick="tD('${dk}')">
+            ${tip(dom.desc||dom.name,`<span style="font-size:12px;font-weight:700">◆ ${dom.name} <span style="font-size:10px;opacity:.7">ℹ</span></span>`)}
+            <div style="display:flex;gap:5px;align-items:center">
+              <span style="font-size:10px;background:rgba(255,255,255,.2);border-radius:10px;padding:1px 6px">${dom.services.length} SDs</span>
+              <span style="font-size:11px">${dO?'▲':'▼'}</span>
+            </div>
+          </div>`;
+        if(dO||f){
+          h+=`<div class="dom-body">`;
+          dom.services.forEach((svc,si)=>{
+            const sk=`${dk}-${si}`,sO=eS[sk];
+            const pat=PATTERNS[svc.pattern]||PATTERNS.Process;
+            const desc=SD_DESC[svc.name]||`${svc.name} — part of the ${area.area} Business Area, ${dom.name} domain.`;
+            h+=`<div class="sd-card">
+              <div class="sd-hdr" onclick="tS('${sk}')">
+                <div style="display:flex;align-items:center">
+                  <span class="sd-c" style="background:${area.color}">C</span>
+                  ${tip(desc,`<span class="sd-name">${svc.name} <span style="font-size:10px;color:#bbb">ℹ</span></span>`,290)}
+                </div>
+                <div style="display:flex;gap:4px;align-items:center">
+                  ${tip(pat.desc,`<span class="pat-badge" style="background:${pat.color}">${pat.short}</span>`)}
+                  <span style="font-size:11px;color:#888">${sO?'▲':'▼'}</span>
+                </div>
+              </div>`;
+            if(sO){
+              h+=`<div class="sd-body">
+                <div class="sd-desc" style="background:#f0f7ff;border-left-color:${area.border}">${desc}</div>
+                <div class="label">Functional Pattern</div>
+                <div style="margin-bottom:6px">${tip(pat.desc,`<span class="pat-badge" style="background:${pat.color}">${svc.pattern} ℹ</span>`)}</div>
+                <div class="label">Behavior Qualifiers</div>
+                <div class="tags" style="margin-bottom:6px">
+                  ${svc.bqs.map(bq=>tip(`BQ: ${bq} — aspect-specific sub-record of ${svc.name}. API: /${bq.toLowerCase()}/retrieve`,`<span class="bq-tag">${bq} ℹ</span>`)).join('')}
+                </div>
+                <div class="label">API Operations</div>
+                <div class="tags">
+                  ${svc.apis.map(api=>tip(
+                    api==='initiate'?'POST — Creates a new Control Record instance.':
+                    api==='retrieve'?'GET — Returns the current state of the Control Record.':
+                    api==='update'?'PUT — Modifies an existing record.':
+                    api==='execute'?'POST — Triggers a specific action on an existing record.':
+                    api==='evaluate'?'POST — Requests an assessment or decision.':
+                    api==='notify'?'POST — Publishes an event/alert to subscribers.':
+                    api==='report'?'GET — Produces a regulatory or management report.':
+                    `API action: ${api}`,
+                    `<span class="api-tag">${api}</span>`
+                  )).join('')}
+                </div>
+                <div class="api-url">/${svc.name.replace(/[\s&\/\-]/g,'').charAt(0).toLowerCase()+svc.name.replace(/[\s&\/\-]/g,'').slice(1)}/v1/{id}/${svc.apis[0]}</div>
+              </div>`;
+            }
+            h+=`</div>`;
+          });
+          h+=`</div>`;
+        }
+        h+=`</div>`;
+      });
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  });
+  g.innerHTML=h||'<div style="padding:20px;color:#888;font-size:13px">No results found.</div>';
+}
+function tA(id){eA[id]=!eA[id];renderLandscape(document.getElementById('searchBox').value.toLowerCase());}
+function tD(k){eD[k]=!eD[k];renderLandscape(document.getElementById('searchBox').value.toLowerCase());}
+function tS(k){eS[k]=!eS[k];renderLandscape(document.getElementById('searchBox').value.toLowerCase());}
+function filterSDs(v){renderLandscape(v.toLowerCase());}
+function toggleAll(){
+  allExp=!allExp;
+  BIANDATA.forEach(a=>{eA[a.id]=allExp;a.domains.forEach((_,di)=>{eD[`${a.id}-${di}`]=allExp;});});
+  document.querySelector('.expand-btn').textContent=allExp?'▲ Collapse All':'▼ Expand All';
+  renderLandscape(document.getElementById('searchBox').value.toLowerCase());
+}
+
+/* ═══ SCENARIOS ═══ */
+function renderScenarios(){
+  document.getElementById('scTabs').innerHTML=SCENARIOS.map((sc,i)=>`<button class="sc-btn" style="background:${actSc===i?sc.color:'#fff'};color:${actSc===i?'#fff':'#333'};border-color:${sc.color}" onclick="selSc(${i})">${sc.icon} ${sc.name}</button>`).join('');
+  const sc=SCENARIOS[actSc];
+  let h=`<div class="sc-flow" style="border-color:${sc.color}"><div style="background:${sc.color};color:#fff;padding:10px 14px;font-size:15px;font-weight:700">${sc.icon} ${sc.name}</div><div style="padding:14px">`;
+  sc.steps.forEach((step,si)=>{
+    const pat=PATTERNS[step.pattern]||PATTERNS.Process;
+    const isA=actSt===si;
+    const desc=SD_DESC[step.sd]||'See Landscape tab for full description.';
+    h+=`<div class="step-row" onclick="selSt(${si})">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div class="step-num" style="background:${isA?sc.color:'#e8eaf0'};color:${isA?'#fff':'#333'};border-color:${sc.color}">${si+1}</div>
+        ${si<sc.steps.length-1?`<div style="width:2px;height:${isA?44:18}px;background:${sc.color}44;margin:0 auto"></div>`:''}
+      </div>
+      <div style="flex:1;padding-bottom:${si<sc.steps.length-1?4:0}px">
+        <div style="background:${isA?'#f0f7ff':'#f8f9fa'};border:1px solid ${isA?sc.color:'#e0e0e0'};border-radius:7px;padding:7px 10px;margin-bottom:2px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="sd-c" style="background:#0d1f35;width:16px;height:16px;font-size:8px">C</span>
+              <span style="font-size:12px;font-weight:700;color:#0d1f35">${step.sd}</span>
+            </div>
+            <span class="pat-badge" style="background:${pat.color}">${step.pattern}</span>
+          </div>
+          ${isA?`<div style="margin-top:7px;padding-top:7px;border-top:1px solid #e0e0e0">
+            <div style="font-size:11px;color:#444;margin-bottom:4px"><span style="font-weight:700;color:${sc.color}">Action: </span>${step.action}</div>
+            <div style="background:#f0f4f8;border-radius:5px;padding:5px 8px;font-size:11px;color:#1a3a5c;line-height:1.5;margin-bottom:4px">${desc}</div>
+            <div style="font-family:monospace;font-size:10px;color:#666">POST /${step.sd.replace(/\s+/g,'').charAt(0).toLowerCase()+step.sd.replace(/\s+/g,'').slice(1)}/v1/.../${step.action.split('–')[0].trim().toLowerCase()}</div>
+          </div>`:''}
+        </div>
+      </div>
+    </div>`;
+  });
+  h+=`</div></div>`;
+  document.getElementById('scFlow').innerHTML=h;
+}
+function selSc(i){actSc=i;actSt=null;renderScenarios();}
+function selSt(i){actSt=actSt===i?null:i;renderScenarios();}
+
+/* ═══ LEGEND ═══ */
+function renderLegend(){
+  document.getElementById('patGrid').innerHTML=Object.entries(PATTERNS).map(([n,p])=>`
+    <div class="pat-card" style="border:1px solid ${p.color}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span class="pat-badge" style="background:${p.color}">${p.short}</span>
+        <span style="font-weight:700;font-size:12px;color:${p.color}">${n}</span>
+      </div>
+      <div style="font-size:11px;color:#444;line-height:1.5">${p.desc}</div>
+    </div>`).join('');
+  document.getElementById('trinity').innerHTML=[
+    {term:"Party",color:"#2980b9",desc:"Any individual or organisation meaningful to the bank: Customer, Prospect, Employee, Vendor, Regulator. Stored in Party Reference Data Directory. All other data references a Party."},
+    {term:"Product",color:"#8e44ad",desc:"What the bank CAN offer — a template in the Product Directory. Defines features, eligibility, and pricing. Not specific to any customer until an Agreement is made."},
+    {term:"Agreement",color:"#e67e22",desc:"The contract BETWEEN a Party and the bank for a specific Product. The central linking concept in BIAN. An Account is not directly linked to a Party — the Agreement is the bridge."},
+    {term:"Arrangement",color:"#27ae60",desc:"HOW the Agreement is configured: specific rates, limits, fees. Arrangement lives ONLY within an Agreement context."},
+    {term:"Account",color:"#c0392b",desc:"WHERE transactions are recorded. Linked to the Agreement (not the Party directly). Managed by Fulfill-pattern Service Domains like Current Account."},
+  ].map(i=>`<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">
+    <span style="background:${i.color};color:#fff;border-radius:5px;padding:2px 9px;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px">${i.term}</span>
+    <span style="font-size:11px;color:#444;line-height:1.55">${i.desc}</span>
+  </div>`).join('');
+}
+
+renderLandscape();
+</script>
+</body>
+</html>

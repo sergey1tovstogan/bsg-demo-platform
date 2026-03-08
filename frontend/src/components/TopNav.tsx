@@ -166,6 +166,12 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
             >
               Temenos Components
             </button>
+            <button
+              onClick={() => navigate('/platform/bian-landscape')}
+              className={`text-sm font-medium ${location.pathname === '/platform/bian-landscape' ? 'text-blue-500' : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              BIAN Landscape
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -253,6 +259,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
             </div>
             <a href="https://developer.bsg.temenos.com/" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="block w-full text-left py-2">API Developer portal</a>
             <button onClick={() => { navigate('/platform/temenos-components'); setMobileMenuOpen(false) }} className="block w-full text-left py-2">Temenos Components</button>
+            <button onClick={() => { navigate('/platform/bian-landscape'); setMobileMenuOpen(false) }} className="block w-full text-left py-2">BIAN Landscape</button>
           </div>
         </div>
       )}

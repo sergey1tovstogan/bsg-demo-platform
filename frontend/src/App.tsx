@@ -16,7 +16,7 @@ import type { ComponentId } from './types'
 
 const VALID_COMPONENT_IDS: ComponentId[] = [
   'integration', 'extensibility', 'data-architecture', 'architecture', 'security',
-  'observability', 'devops', 'temenos-components', 'layout-showcase', 'gallery', 'editor'
+  'observability', 'devops', 'temenos-components', 'bian-landscape', 'layout-showcase', 'gallery', 'editor'
 ]
 
 function isValidComponentId(id: string | undefined): id is ComponentId {

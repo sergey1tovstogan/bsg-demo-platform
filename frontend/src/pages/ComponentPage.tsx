@@ -100,6 +100,19 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
     return <TemenosComponentsContent />;
   }
 
+  // === BIAN Landscape View ===
+  if (componentId === 'bian-landscape') {
+    return (
+      <div className="h-[calc(100vh-8rem)] min-h-[500px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+        <iframe
+          src="/bian-landscape.html"
+          title="BIAN Service Landscape V14.0"
+          className="w-full h-full border-0"
+        />
+      </div>
+    );
+  }
+
   const contentBack = useContentBack()
 
   // Hide Content tab on main Security page (card grid); show it on subpages for back navigation
