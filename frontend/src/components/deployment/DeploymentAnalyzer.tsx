@@ -707,7 +707,6 @@ export function DeploymentAnalyzer() {
 
       {currentStep === 'resourceGroups' && (
         <ResourceGroupSelector
-          azureHealth={azureHealth}
           resourceGroups={resourceGroups}
           onSelected={handleResourceGroupsSelected}
           onBack={handleBack}
@@ -1027,7 +1026,6 @@ async function handleExportArmTemplate(
 
 // Resource Group Selector Component
 function ResourceGroupSelector({
-  azureHealth,
   resourceGroups,
   onSelected,
   onBack,
@@ -1038,7 +1036,6 @@ function ResourceGroupSelector({
   analysisProgress,
   subscriptionId
 }: {
-  azureHealth: { status: string; identityType?: string; identityObjectId?: string; identityAppId?: string; message?: string | null } | null
   resourceGroups: AzureResourceGroup[]
   onSelected: (selected: string[]) => void
   onBack: () => void
@@ -1501,6 +1498,7 @@ function ServiceAnalysis({
 }) {
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
   const [selectedAzureService, setSelectedAzureService] = useState<string | null>(null)
+  const [activeView, setActiveView] = useState<'temenos' | 'other'>('temenos')
 
   const [analysisResultsState, setAnalysisResultsState] = useState(analysisResults)
   
@@ -1600,7 +1598,7 @@ function ServiceAnalysis({
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Deployment Analysis</h2>
           <p className="text-gray-600 dark:text-gray-300">
-            {services.length} Azure service{services.length !== 1 ? 's' : ''} found • {identifiedComponents.length} Temenos component{identifiedComponents.length !== 1 ? 's' : ''} identified
+            {services.length} Azure service{services.length !== 1 ? 's' : ''} total • {identifiedComponents.length} mapped to Temenos • {unidentifiedServices.length} infrastructure/other
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -1744,6 +1742,32 @@ function ServiceAnalysis({
         </div>
       )}
 
+      {/* View Tabs - switch between Temenos Components and Infrastructure/Other */}
+      {identifiedComponents.length > 0 && unidentifiedServices.length > 0 && (
+        <div className="flex gap-2 p-1 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 w-fit">
+          <button
+            onClick={() => setActiveView('temenos')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeView === 'temenos'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            Temenos Components ({identifiedComponents.length})
+          </button>
+          <button
+            onClick={() => setActiveView('other')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeView === 'other'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            Infrastructure & Other ({unidentifiedServices.length})
+          </button>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
@@ -1759,30 +1783,30 @@ function ServiceAnalysis({
           <div className="flex items-center space-x-3">
             <Cloud className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             <div>
-              <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">Azure Services</p>
+              <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">Total Azure Services</p>
               <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{services.length}</p>
             </div>
           </div>
         </div>
-        <div className="card bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+        <div className="card bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
           <div className="flex items-center space-x-3">
-            <AlertCircle className="w-8 h-8 text-gray-600 dark:text-gray-400" />
+            <Layers className="w-8 h-8 text-amber-600 dark:text-amber-400" />
             <div>
-              <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">Unclassified Services</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{unidentifiedServices.length}</p>
+              <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">Infrastructure / Other</p>
+              <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{unidentifiedServices.length}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Horizontal Panel Layout: Main Content + Sidebar */}
-      {identifiedComponents.length > 0 && !loading && (
+      {/* Horizontal Panel Layout: Main Content + Sidebar - Temenos Components */}
+      {identifiedComponents.length > 0 && !loading && (activeView === 'temenos' || unidentifiedServices.length === 0) && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content Area - Selected Component Details */}
           <div className="lg:col-span-2">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
               <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-              <span>Temenos Components</span>
+              <span>Temenos Components ({identifiedComponents.length})</span>
             </h3>
             {selectedResult && (
               <ComponentDetailPanel 
@@ -1863,13 +1887,18 @@ function ServiceAnalysis({
         </div>
       )}
 
-      {/* Other Services */}
-      {unidentifiedServices.length > 0 && (
+      {/* Other Services - Infrastructure & not mapped to Temenos */}
+      {unidentifiedServices.length > 0 && (activeView === 'other' || identifiedComponents.length === 0) && (
         <div className="space-y-4">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
-            <Cloud className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-            <span>Azure Services ({unidentifiedServices.length})</span>
-          </h3>
+          <div className="border-l-4 border-amber-500 dark:border-amber-400 pl-4">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+              <Layers className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <span>Infrastructure & Other Azure Services ({unidentifiedServices.length})</span>
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Azure resources not mapped to Temenos components (e.g. storage, networking, Event Hubs, managed environments).
+            </p>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Azure Services List */}
             <div className="lg:col-span-2">
