@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import packageJson from './package.json'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -9,6 +10,8 @@ export default defineConfig({
   base: '/', // Ensure base path is root for Azure Static Web Apps
   define: {
     'global': 'globalThis',
+    '__APP_VERSION__': JSON.stringify(packageJson.version),
+    '__GITHUB_REPO__': JSON.stringify('georgasa/bsg-demo-platform'),
   },
   resolve: {
     alias: {

@@ -1116,31 +1116,6 @@ function ResourceGroupSelector({
         </div>
       </div>
 
-      {azureHealth?.status === 'ok' && (
-        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-slate-700 dark:text-slate-300">
-          <p className="text-sm font-medium mb-1">Backend identity for IAM role assignment</p>
-          {azureHealth.identityObjectId ? (
-            <>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-                Use this Object ID when assigning &quot;Azure Kubernetes Service Cluster User Role&quot; at subscription level.
-              </p>
-              <p className="text-xs font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded break-all">
-                {azureHealth.identityObjectId}
-              </p>
-            </>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-              Object ID not available. Call <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">GET /deployment/azure/health</code> to inspect the backend identity.
-            </p>
-          )}
-          {azureHealth.identityType && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              Type: {azureHealth.identityType === 'managed_identity' ? 'Managed Identity' : azureHealth.identityType === 'service_principal' ? 'Service Principal' : azureHealth.identityType}
-            </p>
-          )}
-        </div>
-      )}
-
       {error && (
         <div className="card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
           <div className="font-semibold mb-2">Error</div>

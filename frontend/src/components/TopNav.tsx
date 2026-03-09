@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ChevronDown, LogOut, Menu, Settings } from 'lucide-react'
+import { ChevronDown, LogOut, Menu, MessageSquare, Settings } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { ThemeToggle } from './ThemeToggle'
 import type { ComponentId } from '../types'
@@ -98,6 +98,25 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
     setMobileMenuOpen(false)
   }
 
+  const feedbackUrl = (() => {
+    const repo = typeof __GITHUB_REPO__ !== 'undefined' ? __GITHUB_REPO__ : 'georgasa/bsg-demo-platform'
+    const body = [
+      '**Describe the issue or suggestion:**',
+      '[Please describe what you encountered - bug, misbehaviour, or feature idea]',
+      '',
+      '**Current URL:** ' + (typeof window !== 'undefined' ? window.location.href : ''),
+      '**Browser:** ' + (typeof navigator !== 'undefined' ? navigator.userAgent : ''),
+    ].join('\n')
+    const params = new URLSearchParams({
+      title: 'Feedback: Bug report or suggestion',
+      body,
+      labels: 'feedback',
+    })
+    return `https://github.com/${repo}/issues/new?${params.toString()}`
+  })()
+
+  const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0'
+
   return (
     <nav className={`sticky top-0 z-40 w-full border-b ${isDark ? 'border-white/10 bg-[#0a0e1a]/95 backdrop-blur' : 'border-slate-200 bg-white/95 backdrop-blur'}`}>
       <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-16 flex items-center justify-between h-14">
@@ -180,10 +199,27 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
               <div className="flex items-center">
                 <ThemeToggle theme={theme} onThemeChange={onThemeChange} className="shrink-0" />
               </div>
-              {isAuthenticated && (
-                <div className={`w-px h-6 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`} />
-              )}
+              <div className={`w-px h-6 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`} />
             </>
+          )}
+          <span
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold shrink-0 ${isDark ? 'bg-slate-700/80 text-slate-300 border border-slate-600/50' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}
+            title="Software version"
+          >
+            v{appVersion}
+          </span>
+          <a
+            href={feedbackUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-500 text-white transition-colors shrink-0"
+            title="Report a bug or suggest an improvement"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Feedback
+          </a>
+          {isAuthenticated && (
+            <div className={`w-px h-6 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`} />
           )}
           {isAuthenticated ? (
             <div className="relative flex items-center">
@@ -260,6 +296,13 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
             <a href="https://developer.bsg.temenos.com/" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="block w-full text-left py-2">API Developer portal</a>
             <button onClick={() => { navigate('/platform/temenos-components'); setMobileMenuOpen(false) }} className="block w-full text-left py-2">Temenos Components</button>
             <button onClick={() => { navigate('/platform/bian-landscape'); setMobileMenuOpen(false) }} className="block w-full text-left py-2">BIAN Landscape</button>
+            <div className="pt-2 border-t border-white/10 flex items-center gap-2">
+              <span className="text-xs text-slate-500">v{appVersion}</span>
+              <a href={feedbackUrl} target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 py-2 text-red-400 hover:text-red-300 font-medium">
+                <MessageSquare className="w-4 h-4" />
+                Feedback
+              </a>
+            </div>
           </div>
         </div>
       )}
