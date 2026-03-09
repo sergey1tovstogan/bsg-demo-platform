@@ -2,26 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Package, CheckCircle2, MapPin, Layers, ChevronDown, ChevronRight, ArrowLeft, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { temenosComponentsData, type TemenosComponentItem } from './temenosComponentsData'
-
-// Group display order for Active components
-const ACTIVE_GROUP_ORDER = [
-  'Runtime',
-  'Core Services',
-  'Service Architecture',
-  'Core Modules',
-  'Data & Analytics',
-  'Payments',
-  'Payments Microservices',
-  'Wealth',
-  'Core Microservices',
-  'Product Management',
-  'Microservices',
-  'Modules',
-  'Integration - Messaging',
-  'Integration - APIs',
-  'Event Framework',
-]
+import { temenosComponentsData, ACTIVE_GROUP_ORDER, type TemenosComponentItem } from './temenosComponentsData'
 
 function filterBySearch(items: TemenosComponentItem[], query: string): TemenosComponentItem[] {
   if (!query.trim()) return items
