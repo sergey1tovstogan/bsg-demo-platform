@@ -10,9 +10,8 @@ The **BSG Demo Platform** is a component-based demonstration platform for the Bu
 
 | Document | Description |
 |----------|-------------|
-| [Deployment Guide](./docs/DEPLOYMENT.md) | How to deploy and run locally or on Azure |
 | [User Guide](./docs/USER_GUIDE.md) | How to use the platform (navigation, components, demos) |
-| [Project Documentation](./docs/PROJECT_DOCUMENTATION.md) | Architecture, Azure services, technical reference |
+| [Platform Deployment](./docs/PLATFORM_DEPLOYMENT.md) | Deployment, Azure services, infrastructure |
 
 ---
 
@@ -72,4 +71,4 @@ bsg-demo-platform/
 - Python 3.11+
 - MongoDB (Cosmos DB or local)
 
-See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for full deployment instructions.
+See [docs/PLATFORM_DEPLOYMENT.md](./docs/PLATFORM_DEPLOYMENT.md) for full deployment instructions.

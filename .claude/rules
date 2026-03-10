@@ -146,13 +146,29 @@ If behavior differs from existing patterns:
 
 ---
 
+## Documentation Update Rule (MANDATORY)
+
+The project has exactly **two** documentation files in `docs/`:
+
+1. **`docs/USER_GUIDE.md`** — How to use the platform (navigation, components, demos, settings, troubleshooting)
+2. **`docs/PLATFORM_DEPLOYMENT.md`** — Deployment, Azure services, infrastructure, CI/CD, environment variables
+
+When you change any of the following, you MUST update the relevant doc:
+
+- **USER_GUIDE.md**: New components, new UI features, navigation changes, new demos, Settings changes, new top-level links (e.g. Temenos Components, BIAN Landscape, Feedback)
+- **PLATFORM_DEPLOYMENT.md**: Deployment flow, Azure services, URLs, environment variables, CI/CD workflows, database/EventHub/RAG configuration
+
+Update docs **in the same change** as the code. Do not leave documentation stale.
+
+---
+
 ## Definition of Done (MANDATORY)
 
 A task is only considered complete when ALL are true:
 
 - Builds and runs locally using documented steps
 - External connectivity uses adapters only
-- Documentation is updated if behavior, configuration, or setup changed
+- Documentation is updated if behavior, configuration, or setup changed (see Documentation Update Rule above)
 - File placement follows `PROJECT_STRUCTURE.md`
 - UX rules are respected where applicable
 
