@@ -1,1 +1,1 @@
-# bsg-demo-platform
+# temenos-nexus
