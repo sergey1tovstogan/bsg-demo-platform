@@ -1485,10 +1485,20 @@ function NamespaceSelector({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end items-center gap-3 flex-wrap">
             <button onClick={onBack} className="btn-secondary">
               Back
             </button>
+            {clusterNamespaces.some((c) => !c.error && c.namespaces.length === 0) && (
+              <button
+                type="button"
+                onClick={() => onSelected([])}
+                disabled={loading}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50"
+              >
+                Continue without namespaces (analyze RG resources only)
+              </button>
+            )}
             <button
               onClick={() => onSelected(selected)}
               disabled={selected.length === 0 || loading}
