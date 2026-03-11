@@ -28,24 +28,25 @@ interface ComponentPageProps {
 type Tab = 'content' | 'video' | 'demo'
 
 export function ComponentPage({ componentId, initialSelectedCard, initialTab, onOpenSettings }: ComponentPageProps) {
-  const tabs = componentId === 'layout-showcase' || componentId === 'security' || componentId === 'devops'
+  // Hide Video tab when component has no video content (avoids orphaned "Video coming soon")
+  const hasVideoContent = componentId === 'integration'
+  const tabs = componentId === 'layout-showcase' || componentId === 'devops'
     ? [{ id: 'content' as Tab, label: 'Content', icon: BookOpen }]
     : componentId === 'architecture' || componentId === 'data-architecture' || componentId === 'extensibility'
       ? [
           { id: 'content' as Tab, label: 'Content', icon: BookOpen },
           { id: 'demo' as Tab, label: 'Demo', icon: Play },
         ]
-      : componentId === 'integration'
+      : hasVideoContent
         ? [
             { id: 'content' as Tab, label: 'Content', icon: BookOpen },
             { id: 'video' as Tab, label: 'Videos', icon: Video },
             { id: 'demo' as Tab, label: 'Demo', icon: Play },
           ]
-      : [
-          { id: 'content' as Tab, label: 'Content', icon: BookOpen },
-          { id: 'video' as Tab, label: 'Videos', icon: Video },
-          { id: 'demo' as Tab, label: 'Demo', icon: Play },
-        ]
+        : [
+            { id: 'content' as Tab, label: 'Content', icon: BookOpen },
+            { id: 'demo' as Tab, label: 'Demo', icon: Play },
+          ]
   const validInitialTab = initialTab && tabs.some(t => t.id === initialTab) ? initialTab : 'content'
   const [activeTab, setActiveTab] = useState<Tab>(validInitialTab)
   // Local state for navigation within gallery
@@ -115,9 +116,8 @@ export function ComponentPage({ componentId, initialSelectedCard, initialTab, on
 
   const contentBack = useContentBack()
 
-  // Hide Content tab on main Security page (card grid); show it on subpages for back navigation
-  const showSecurityContentTab = componentId !== 'security' || (contentBack?.showBack ?? false)
-  const visibleTabs = componentId === 'security' && !showSecurityContentTab ? [] : tabs
+  // Always show tabs on Security for consistent navigation (fixes confusing transition from demo→security)
+  const visibleTabs = tabs
 
   return (
     <div className="space-y-6">

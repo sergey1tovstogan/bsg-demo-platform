@@ -8,7 +8,6 @@ import type { ComponentId } from '../types'
 const PLATFORM_MODULES: Array<{ id: ComponentId; name: string }> = [
   { id: 'architecture', name: 'Architecture' },
   { id: 'integration', name: 'Integration' },
-  { id: 'extensibility', name: 'Extensibility' },
   { id: 'data-architecture', name: 'Data Architecture' },
   { id: 'security', name: 'Security' },
   { id: 'observability', name: 'Observability' },
@@ -56,6 +55,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
   }, [])
 
   const adminModules: Array<{ id: ComponentId; name: string }> = [
+    { id: 'extensibility', name: 'Extensibility' },
     { id: 'layout-showcase', name: 'Design System Showcase' },
     { id: 'gallery', name: 'Card Gallery' },
     { id: 'editor', name: 'Visual Editor' },
@@ -243,6 +243,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
                       <p className="text-sm font-medium text-gray-900 dark:text-white">{displayName || 'User'}</p>
                       {user?.email && <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{user.email}</p>}
                     </div>
+                    {hasRole('admin') && (
                     <button
                       onClick={() => { onSettingsClick(); setUserMenuOpen(false) }}
                       className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition-colors ${isDark ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-slate-100 text-slate-700'}`}
@@ -250,6 +251,7 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
                       <Settings className="w-4 h-4" />
                       Settings & Keys
                     </button>
+                    )}
                     <button
                       onClick={() => { logout(); navigate('/login'); setUserMenuOpen(false) }}
                       className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition-colors ${isDark ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-slate-100 text-slate-700'}`}
@@ -272,10 +274,12 @@ export function TopNav({ theme, onThemeChange, onSettingsClick }: TopNavProps) {
         <div className={`md:hidden border-t ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
           <div className="px-4 py-4 space-y-2">
             <button onClick={() => { navigate('/'); setMobileMenuOpen(false) }} className="block w-full text-left py-2">Home</button>
+            {hasRole('admin') && (
             <button onClick={() => { onSettingsClick(); setMobileMenuOpen(false) }} className="block w-full text-left py-2 flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Settings (API token, categories)
             </button>
+            )}
             <div className="pt-2 border-t border-white/10">
               <p className="text-xs uppercase text-slate-500 mb-2">Technology Pillars</p>
               {allModules.map((m) => {

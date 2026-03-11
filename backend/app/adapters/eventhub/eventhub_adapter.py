@@ -469,7 +469,14 @@ class AzureEventHubAdapter(EventHubAdapter):
             return "business"
         
         # Fallback: check event_type keywords if subject not recognized
+        # Check data_keywords FIRST to avoid misclassifying data events as business (#49)
         event_type_lower = event_type.lower()
+
+        # Data events - sync/replication (check first to avoid false business match)
+        data_keywords = ["sync", "replicated", "data.", "cdc", "change", "data_event", "dataevent"]
+        for keyword in data_keywords:
+            if keyword in event_type_lower:
+                return "data"
 
         # Business events - domain/business logic events
         business_keywords = [
@@ -478,16 +485,9 @@ class AzureEventHubAdapter(EventHubAdapter):
             "payment.initiated", "payment.completed", "payment.failed",
             "transaction.completed", "order", "kyc", "compliance"
         ]
-
         for keyword in business_keywords:
             if keyword in event_type_lower:
                 return "business"
-
-        # Data events - sync/replication events (fallback check on event_type)
-        data_keywords = ["sync", "replicated", "data.", "cdc", "change", "data_event"]
-        for keyword in data_keywords:
-            if keyword in event_type_lower:
-                return "data"
 
         # Default to data for unknown types (most Temenos events are data events)
         return "data"
