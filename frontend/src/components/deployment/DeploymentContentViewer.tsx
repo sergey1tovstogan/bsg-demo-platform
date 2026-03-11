@@ -17,7 +17,6 @@ import {
   ChevronRight,
   ChevronDown,
   Zap,
-  TrendingUp,
   Code2,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
