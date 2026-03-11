@@ -186,16 +186,24 @@ class TemenosService:
         # Must match Temenos pattern
         has_temenos_name = any(re.search(pattern, name) for pattern in temenos_patterns)
         
-        # Focus on these resource types that can be Temenos components
+        # Focus on: Kubernetes (AKS), non-K8s RG resources, and ACA so all are discoverable
         relevant_types = [
-            "microsoft.containerservice/managedclusters",  # AKS
+            # Kubernetes (AKS)
+            "microsoft.containerservice/managedclusters",  # AKS cluster
             "microsoft.containerservice/managedclusters/pods",  # AKS Pods
+            # Azure Container Apps (ACA)
             "microsoft.app/containerapps",  # Container Apps
+            "microsoft.app/managedenvironments",  # ACA environment
+            # Non-K8s (RG-level) resources commonly used in Temenos deployments
+            "microsoft.eventhub/namespaces",  # Event Hubs
+            "microsoft.containerregistry/registries",  # Container Registry
             "microsoft.sql/servers",  # SQL Servers
-            "microsoft.sql/databases",  # SQL Databases
+            "microsoft.sql/servers/databases",  # SQL Databases (nested type)
             "microsoft.documentdb/databaseaccounts",  # Cosmos DB
             "microsoft.compute/virtualmachines",  # VMs
             "microsoft.compute/virtualmachinescalesets",  # VMSS
+            "microsoft.insights/datacollectionrules",  # Data collection rules (monitoring)
+            "microsoft.network/routetables",  # Route tables
         ]
         
         is_relevant_type = any(rel_type in resource_type for rel_type in relevant_types)
@@ -3300,6 +3308,18 @@ It provides externalized, versioned, document based configuration management, al
         
         if "eventhub" in resource_type:
             return "Azure Event Hub"
+        
+        if "managedenvironments" in resource_type:
+            return "Azure Container Apps Environment (ACA)"
+        
+        if "containerregistry" in resource_type:
+            return "Azure Container Registry"
+        
+        if "routetables" in resource_type or "routetable" in resource_type:
+            return "Azure Route Table (Networking)"
+        
+        if "datacollectionrules" in resource_type:
+            return "Azure Data Collection Rule (Monitoring)"
         
         # Try to extract from resource type
         parts = service.type.split("/")

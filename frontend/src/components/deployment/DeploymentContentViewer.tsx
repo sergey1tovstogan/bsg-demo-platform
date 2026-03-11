@@ -27,123 +27,7 @@ import { apiService } from '../../services/api'
 const AZURE_BLUE = '#0078D4'
 const AWS_ORANGE = '#FF9900'
 
-/** Composable Banking Modules – Platform Overview content per module */
-const COMPOSABLE_MODULES: Array<{
-  id: string
-  title: string
-  description: string
-  platformOverview: string
-  icon: typeof Box
-  iconBg: string
-  platformOverviewDetail?: {
-    intro: string
-    productName?: string
-    features: Array<{ title: string; description: string; icon: typeof Layers }>
-    targetMarkets: string
-    targetMarketsTags: string[]
-  }
-}> = [
-  {
-    id: 'core-banking',
-    title: 'Core Banking',
-    description: 'Complete banking operations platform for deposits, loans, and accounting.',
-    platformOverview: 'Temenos Transact provides the core banking engine with embedded, event-driven architecture. It supports deposits, lending, and accounting with real-time processing and cloud-native deployment.',
-    icon: Layers,
-    iconBg: 'bg-blue-500',
-    platformOverviewDetail: {
-      intro: 'Temenos Core Banking, known as **Temenos Transact**, is a foundational software platform for financial institutions. Since 2018, Temenos has shifted towards a modular architecture that enables banks to modernize incrementally.',
-      productName: 'Temenos Transact',
-      features: [
-        { title: 'Modular Architecture', description: 'Market-leading modular platform breaking down core banking capabilities into discrete, reusable modules for gradual modernization.', icon: Layers },
-        { title: 'Flexible Deployment', description: 'Deploy on-premises, private cloud, public cloud (**Azure**, **AWS**), or SaaS with a single code base protecting business logic.', icon: Cloud },
-        { title: 'API-First Design', description: 'All functionalities exposed via RESTful APIs supporting open banking, ecosystem integration, and third-party services.', icon: Code2 },
-        { title: 'Operational Resilience', description: 'Built-in operational resilience with security, compliance, and audit capabilities ensuring regulatory adherence.', icon: Shield },
-      ],
-      targetMarkets: 'Temenos Core Banking serves Tier 1 and Tier 2 banks, wealth managers, and challenger banks worldwide. It supports a comprehensive product range.',
-      targetMarketsTags: ['Deposits', 'Retail Lending', 'Accounts', 'Trade Finance', 'Payments', 'Wealth Management'],
-    },
-  },
-  {
-    id: 'digital-banking',
-    title: 'Digital Banking',
-    description: 'Modern omni-channel customer experiences.',
-    platformOverview: 'Temenos Infinity delivers digital banking across web, mobile, and third-party channels. Pre-integrated with Transact, it enables banks to offer consistent experiences and rapid product rollout.',
-    icon: Globe,
-    iconBg: 'bg-violet-500',
-    platformOverviewDetail: {
-      intro: '**Temenos Infinity** delivers digital banking and omni-channel customer experiences. Pre-integrated with Transact, it enables banks to offer consistent experiences across web, mobile, and third-party channels.',
-      productName: 'Temenos Infinity',
-      features: [
-        { title: 'Omni-Channel', description: 'Unified experience across web, mobile, and third-party channels with a single codebase.', icon: Globe },
-        { title: 'Pre-Integrated', description: 'Seamless integration with Temenos Transact for real-time data and transaction processing.', icon: Layers },
-        { title: 'Rapid Deployment', description: 'Low-code configuration and pre-built components accelerate time to market and product rollout.', icon: Code2 },
-        { title: 'Customer-Centric', description: 'Built for digital-first engagement with personalization and compliance built in.', icon: Shield },
-      ],
-      targetMarkets: 'Temenos Infinity serves retail, corporate, and wealth segments with modern digital experiences.',
-      targetMarketsTags: ['Retail', 'Corporate', 'Mobile', 'Web', 'API', 'Integration'],
-    },
-  },
-  {
-    id: 'payments-hub',
-    title: 'Payments Hub',
-    description: 'Real-time payment processing for all major schemes.',
-    platformOverview: 'Temenos Payments provides a unified hub for real-time and batch payments. It supports major schemes (SEPA, SWIFT, domestic) and ISO 20022, with orchestration and compliance built in.',
-    icon: Zap,
-    iconBg: 'bg-amber-500',
-    platformOverviewDetail: {
-      intro: '**Temenos Payments** provides a unified hub for real-time and batch payments. It supports major schemes (SEPA, SWIFT, domestic) and ISO 20022, with orchestration and compliance built in.',
-      productName: 'Temenos Payments',
-      features: [
-        { title: 'Real-Time', description: 'High-throughput real-time payment processing for instant and domestic schemes.', icon: Zap },
-        { title: 'Multi-Scheme', description: 'Support for SEPA, SWIFT, ISO 20022, and domestic schemes across regions.', icon: Layers },
-        { title: 'Orchestration', description: 'Unified orchestration layer for all payment types and routing logic.', icon: Cloud },
-        { title: 'Compliance', description: 'Built-in AML, sanctions screening, and regulatory reporting for payments.', icon: Shield },
-      ],
-      targetMarkets: 'Temenos Payments serves banks and payment processors globally with real-time and batch capabilities.',
-      targetMarketsTags: ['SEPA', 'SWIFT', 'ISO 20022', 'Real-Time', 'Batch', 'Domestic'],
-    },
-  },
-  {
-    id: 'wealth-investment',
-    title: 'Wealth & Investment',
-    description: 'Wealth management and investment lifecycle on a single platform.',
-    platformOverview: 'Temenos Wealth covers advisory, discretionary, and execution-only services. It unifies portfolio management, order management, and compliance with pre-built integrations to Transact and markets.',
-    icon: TrendingUp,
-    iconBg: 'bg-emerald-500',
-    platformOverviewDetail: {
-      intro: '**Temenos Wealth** covers advisory, discretionary, and execution-only services. It unifies portfolio management, order management, and compliance with pre-built integrations to Transact and markets.',
-      productName: 'Temenos Wealth',
-      features: [
-        { title: 'Wealth Lifecycle', description: 'End-to-end lifecycle from onboarding to portfolio management and reporting.', icon: TrendingUp },
-        { title: 'Order Management', description: 'Order management, execution, and settlement across multiple asset classes.', icon: Layers },
-        { title: 'Compliance', description: 'Built-in suitability, MiFID II, and regulatory reporting for wealth management.', icon: Shield },
-        { title: 'Integration', description: 'Pre-built integrations with Transact and market data providers.', icon: Cloud },
-      ],
-      targetMarkets: 'Temenos Wealth serves private banks, wealth managers, and asset managers globally.',
-      targetMarketsTags: ['Advisory', 'Discretionary', 'Execution', 'Portfolio', 'Reporting', 'Compliance'],
-    },
-  },
-  {
-    id: 'financial-crime',
-    title: 'Financial Crime',
-    description: 'AML, KYC, and fraud prevention integrated into the platform.',
-    platformOverview: 'Temenos Financial Crime Mitigation provides AML, KYC, sanctions screening, and fraud detection. It is pre-integrated with Transact and Infinity to support compliance and risk controls across the bank.',
-    icon: Shield,
-    iconBg: 'bg-rose-500',
-    platformOverviewDetail: {
-      intro: '**Temenos Financial Crime Mitigation** provides AML, KYC, sanctions screening, and fraud detection. Pre-integrated with Transact and Infinity to support compliance across the bank.',
-      productName: 'Temenos Financial Crime Mitigation',
-      features: [
-        { title: 'AML & KYC', description: 'Customer due diligence, AML monitoring, and transaction screening.', icon: Shield },
-        { title: 'Sanctions Screening', description: 'Real-time and batch sanctions screening for payments and transactions.', icon: Zap },
-        { title: 'Fraud Detection', description: 'Real-time fraud detection and prevention across channels.', icon: Layers },
-        { title: 'Integration', description: 'Pre-integrated with Transact and Infinity for unified risk and compliance.', icon: Cloud },
-      ],
-      targetMarkets: 'Temenos Financial Crime Mitigation serves banks and financial institutions globally.',
-      targetMarketsTags: ['AML', 'KYC', 'Sanctions', 'Fraud', 'Screening', 'Compliance'],
-    },
-  },
-]
+// (Composable Banking Modules card removed from UI – content no longer rendered)
 
 const CACHE_KEY = 'deployment_rag_content_cache_v2'
 const CACHE_TIMESTAMP_KEY = 'deployment_rag_content_cache_timestamp_v2'
@@ -510,7 +394,6 @@ export function DeploymentContentViewer() {
   const [ragError, setRagError] = useState<string | null>(null)
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null) // 'Azure' or 'AWS'
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null) // Category like 'Databases', 'Infrastructure', etc.
-  const [selectedModuleDetail, setSelectedModuleDetail] = useState<string | null>(null) // Composable module ID for View Details
   const [expandedPrinciples, setExpandedPrinciples] = useState<Set<string>>(new Set()) // Architecture Principles expand state
   // Fixed category order for sub-cards (same for Azure and AWS)
   const CATEGORY_ORDER = ['Container Orchestration', 'Infrastructure', 'Databases', 'Messaging']
@@ -768,124 +651,11 @@ export function DeploymentContentViewer() {
 
   return (
     <div className="space-y-6">
-      {/* Composable Banking Modules – Platform Overview */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="p-6 md:p-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            <span className="text-gray-900 dark:text-white">Composable </span>
-            <span style={{ color: AZURE_BLUE }}>Banking </span>
-            <span className="bg-gradient-to-r from-blue-400 via-violet-500 to-purple-600 dark:from-blue-300 dark:via-violet-400 dark:to-purple-500 bg-clip-text text-transparent">
-              Modules
-            </span>
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mb-8">
-            Temenos offers a range of pre-integrated business modules that allow banks to build, test, and deploy new financial products at speed.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {COMPOSABLE_MODULES.map((mod) => {
-              const Icon = mod.icon
-              const isExpanded = selectedModuleDetail === mod.id
-              const hasDetail = !!mod.platformOverviewDetail
-              return (
-                <div
-                  key={mod.id}
-                  onClick={() => setSelectedModuleDetail(isExpanded ? null : mod.id)}
-                  className={`rounded-xl border cursor-pointer transition-all duration-200 p-6 ${isExpanded ? 'sm:col-span-2 lg:col-span-3' : ''} ${
-                    isExpanded
-                      ? 'border-[#283054] dark:border-blue-500 shadow-lg shadow-blue-500/10 dark:shadow-blue-500/20 bg-gray-50 dark:bg-gray-800/80'
-                      : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-500'
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`${mod.iconBg} w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0`}>
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-bold text-gray-900 dark:text-white">{mod.title}</h3>
-                        <ChevronDown
-                          className={`w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                        />
-                      </div>
-                      {isExpanded && (
-                        <div className="mt-6 space-y-6" onClick={(e) => e.stopPropagation()}>
-                          <p className="text-base text-gray-600 dark:text-gray-300 leading-relaxed">{mod.description}</p>
-                          <div className="space-y-2">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Platform Overview</p>
-                            <p className="text-base text-gray-600 dark:text-gray-300 leading-relaxed">{mod.platformOverview}</p>
-                          </div>
-                      {hasDetail && mod.platformOverviewDetail && (
-                        <>
-                      <div className="prose prose-base dark:prose-invert max-w-none">
-                        <ReactMarkdown
-                          components={{
-                            strong: ({ ...props }) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
-                          }}
-                        >
-                          {mod.platformOverviewDetail.intro}
-                        </ReactMarkdown>
-                      </div>
-                      <div className="space-y-4">
-                        {mod.platformOverviewDetail.features.map((f, i) => {
-                          const FIcon = f.icon
-                          return (
-                            <div
-                              key={i}
-                              className="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-5"
-                            >
-                              <div className="flex items-start gap-4">
-                                <div className="w-11 h-11 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                                  <FIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <h4 className="font-bold text-gray-900 dark:text-white mb-2 text-base">{f.title}</h4>
-                                  <div className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:first:mt-0 prose-p:last:mb-0">
-                                    <ReactMarkdown
-                                      components={{
-                                        strong: ({ ...props }) => <strong className="font-semibold" {...props} />,
-                                      }}
-                                    >
-                                      {f.description}
-                                    </ReactMarkdown>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <div className="pt-2">
-                        <h4 className="text-base font-bold text-gray-900 dark:text-white mb-2">Target Markets</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4">{mod.platformOverviewDetail.targetMarkets}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {mod.platformOverviewDetail.targetMarketsTags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-medium"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                        </>
-                      )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
       {/* Architecture Principles */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="p-6 md:p-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            <span className="text-gray-900 dark:text-white">Architecture </span>
+            <span className="text-gray-900 dark:text-white">Cloud Architecture </span>
             <span className="bg-gradient-to-r from-blue-400 via-violet-500 to-purple-600 dark:from-blue-300 dark:via-violet-400 dark:to-purple-500 bg-clip-text text-transparent">
               Principles
             </span>
