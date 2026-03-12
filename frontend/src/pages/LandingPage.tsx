@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 import { SettingsModal } from '../components/SettingsModal'
 import { Footer } from '../components/Footer'
 import { TopNav } from '../components/TopNav'
@@ -161,6 +162,7 @@ interface LandingPageProps {
 
 export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
   const navigate = useNavigate()
+  const { hasRole } = useAuth()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(loadSelectedCategories)
@@ -169,7 +171,8 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
   const isDark = theme === 'dark'
 
   const visiblePillars = TECHNOLOGY_PILLARS.filter((p) =>
-    selectedCategories.has(pillarToCategoryId(p.id))
+    selectedCategories.has(pillarToCategoryId(p.id)) &&
+    (pillarToCategoryId(p.id) !== 'extensibility' || hasRole('admin'))
   )
 
   useEffect(() => {
@@ -333,14 +336,16 @@ export function LandingPage({ theme, onThemeChange }: LandingPageProps) {
               ) : (
                 <div className={`w-full rounded-3xl border p-8 md:p-12 lg:p-16 h-[400px] flex flex-col items-center justify-center ${isDark ? 'bg-white/[0.04] border-white/15' : 'bg-white border-slate-200'}`}>
                   <p className={`text-lg ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    No categories selected. Open Settings to choose which categories to display.
+                    No categories selected.{hasRole('admin') ? ' Open Settings to choose which categories to display.' : ''}
                   </p>
+                  {hasRole('admin') && (
                   <button
                     onClick={() => setSettingsOpen(true)}
                     className={`mt-4 px-6 py-2 rounded-lg font-medium ${isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}
                   >
                     Open Settings
                   </button>
+                  )}
                 </div>
               )}
             </div>

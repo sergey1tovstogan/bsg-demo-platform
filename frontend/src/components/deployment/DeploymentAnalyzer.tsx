@@ -1048,6 +1048,8 @@ function ResourceGroupSelector({
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [showWorkingOnly, setShowWorkingOnly] = useState(false)
+  const [displayLimit, setDisplayLimit] = useState(50)
   const [exportingRg, setExportingRg] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
 
@@ -1064,10 +1066,19 @@ function ResourceGroupSelector({
     setSelected(selected.length === filtered.length ? [] : filtered)
   }
 
-  const filteredResourceGroups = resourceGroups.filter(rg =>
+  const searchFiltered = resourceGroups.filter(rg =>
     rg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rg.location.toLowerCase().includes(searchTerm.toLowerCase())
   )
+  // Filter to likely working RGs: name contains temenos, deploy, bsg, demo, rg- (#46)
+  const filteredResourceGroups = showWorkingOnly
+    ? searchFiltered.filter(rg => {
+        const n = rg.name.toLowerCase()
+        return n.includes('temenos') || n.includes('deploy') || n.includes('bsg') || n.includes('demo') || n.includes('rg-')
+      })
+    : searchFiltered
+  const displayedRgs = filteredResourceGroups.slice(0, displayLimit)
+  const hasMore = filteredResourceGroups.length > displayLimit
 
   return (
     <div className="space-y-6">
@@ -1163,10 +1174,10 @@ function ResourceGroupSelector({
         </div>
       )}
 
-      {/* Search Box */}
+      {/* Search Box & Filters */}
       <div className="card mb-4 bg-white dark:bg-slate-800">
-        <div className="flex items-center space-x-4">
-          <div className="flex-1 relative">
+        <div className="flex items-center space-x-4 flex-wrap gap-2">
+          <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
@@ -1177,6 +1188,15 @@ function ResourceGroupSelector({
             />
           </div>
           <button
+            onClick={() => setShowWorkingOnly(!showWorkingOnly)}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              showWorkingOnly ? 'bg-purple-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+            title="Filter to resource groups with temenos, deploy, bsg, demo in name"
+          >
+            {showWorkingOnly ? '✓ Likely working' : 'Filter likely working'}
+          </button>
+          <button
             onClick={handleSelectAll}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
@@ -1184,25 +1204,43 @@ function ResourceGroupSelector({
           </button>
         </div>
         <div className="mt-3 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
           {selected.length > 0 && (
             <span className="font-medium text-purple-600">{selected.length} selected</span>
           )}
           {' '}
           {filteredResourceGroups.length} resource group{filteredResourceGroups.length !== 1 ? 's' : ''} found
+          {resourceGroups.length > 50 && !showWorkingOnly && (
+            <span className="ml-2 text-gray-500">(showing first {displayLimit})</span>
+          )}
           </div>
         </div>
       </div>
 
-      {filteredResourceGroups.length === 0 && searchTerm && (
+      {filteredResourceGroups.length === 0 && (
         <div className="card text-center py-8 bg-white dark:bg-slate-800">
           <FolderOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-300">No resource groups found matching "{searchTerm}"</p>
+          <p className="text-gray-600 dark:text-gray-300">
+            {searchTerm || showWorkingOnly
+              ? `No resource groups found${searchTerm ? ` matching "${searchTerm}"` : ''}${showWorkingOnly ? ' (try turning off "Filter likely working")' : ''}`
+              : 'No resource groups in this subscription'}
+          </p>
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={() => setDisplayLimit(prev => prev + 50)}
+            className="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium"
+          >
+            Show more ({filteredResourceGroups.length - displayLimit} remaining)
+          </button>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredResourceGroups.map((rg) => {
+        {displayedRgs.map((rg) => {
           const isSelected = selected.includes(rg.name)
           const isExporting = exportingRg === rg.name
           
@@ -1447,10 +1485,20 @@ function NamespaceSelector({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end items-center gap-3 flex-wrap">
             <button onClick={onBack} className="btn-secondary">
               Back
             </button>
+            {clusterNamespaces.some((c) => !c.error && c.namespaces.length === 0) && (
+              <button
+                type="button"
+                onClick={() => onSelected([])}
+                disabled={loading}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50"
+              >
+                Continue without namespaces (analyze RG resources only)
+              </button>
+            )}
             <button
               onClick={() => onSelected(selected)}
               disabled={selected.length === 0 || loading}

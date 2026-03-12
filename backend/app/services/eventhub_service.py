@@ -275,6 +275,12 @@ class EventHubService:
         """Categorize event as 'business' or 'data' based on type and content."""
         event_type_lower = event_type.lower()
         
+        # Data events - check first to avoid misclassifying (#49)
+        data_keywords = ["sync", "replicated", "data.", "cdc", "change", "data_event", "dataevent"]
+        for keyword in data_keywords:
+            if keyword in event_type_lower:
+                return "data"
+        
         # Business events - domain/business logic events
         business_keywords = [
             "customer.created", "customer.updated", "customer.deleted",
@@ -282,19 +288,12 @@ class EventHubService:
             "payment.initiated", "payment.completed", "payment.failed",
             "transaction.completed", "order", "kyc", "compliance"
         ]
-        
         for keyword in business_keywords:
             if keyword in event_type_lower:
                 return "business"
         
-        # Data events - sync/replication events
-        data_keywords = ["sync", "replicated", "data.", "cdc", "change", "data_event"]
-        for keyword in data_keywords:
-            if keyword in event_type_lower:
-                return "data"
-        
-        # Default to business for unknown types
-        return "business"
+        # Default to data for unknown types (most Temenos events are data events)
+        return "data"
     
     def _extract_transaction_type(self, event_type: str, data: Any) -> Optional[str]:
         """Extract transaction type from event for UI display."""

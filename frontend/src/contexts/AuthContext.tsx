@@ -165,12 +165,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const localPart = userEmail.split('@')[0] || ''
       const displayName = (localPart.split('.')[0] || localPart).trim()
 
+      // Admin: apostolos.georgas@temenos.com can see/change Settings and API keys
+      const adminEmails = ['apostolos.georgas@temenos.com']
+      const isAdmin = adminEmails.includes(userEmail.toLowerCase())
+
       // Create mock user data
       const mockUser: User = {
         user_id: `usr_${displayName.toLowerCase()}_001`,
         email: userEmail,
         username: displayName,
-        role: 'viewer', // Default role
+        role: isAdmin ? 'admin' : 'viewer',
         profile: {
           first_name: displayName,
         },

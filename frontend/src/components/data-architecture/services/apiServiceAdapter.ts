@@ -172,13 +172,22 @@ class RealApiService implements ITransactionApiService {
 
   async createCustomer(payload: CustomerPayload): Promise<ApiResponse<Customer>> {
     try {
+      // Validate required name (#47 - default payload must have valid name)
+      const rawName = payload?.name?.trim()
+      if (!rawName) {
+        return {
+          success: false,
+          data: {} as Customer,
+          error: 'Customer name is required. The default payload must include a valid name.'
+        }
+      }
       // Sanitize customer name to ensure SWIFT compliance
-      const sanitizedName = sanitizeSwiftName(payload.name)
+      const sanitizedName = sanitizeSwiftName(rawName)
       
       // Log if name was changed
-      if (sanitizedName !== payload.name.toUpperCase()) {
+      if (sanitizedName !== rawName.toUpperCase()) {
         console.warn('[RealApiService] Customer name sanitized:', {
-          original: payload.name,
+          original: rawName,
           sanitized: sanitizedName
         })
       }

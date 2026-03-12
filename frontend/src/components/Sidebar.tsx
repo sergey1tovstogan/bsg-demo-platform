@@ -265,7 +265,7 @@ export function Sidebar({
             </p>
           )}
           {components.filter(component => {
-            const adminOnlyIds = ['layout-showcase', 'gallery', 'editor'];
+            const adminOnlyIds = ['extensibility', 'layout-showcase', 'gallery', 'editor'];
             if (adminOnlyIds.includes(component.id)) {
               return hasRole('admin');
             }
@@ -386,6 +386,7 @@ export function Sidebar({
           {isExpanded && <span className="text-sm font-medium">{isAuthenticated ? "Log Out" : "Log In"}</span>}
         </button>
 
+        {hasRole('admin') && (
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -401,6 +402,7 @@ export function Sidebar({
           <Settings className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="text-sm font-medium">Settings</span>}
         </button>
+        )}
       </div>
     </aside>
   )

@@ -40,42 +40,32 @@ export function DesignTimeContentViewer(_props: DesignTimeContentViewerProps = {
         </div>
       </div>
 
-      {/* DevOps & Automation - Capabilities overview */}
+      {/* DevOps & Automation - Capabilities overview (concise, max 2 lines per section) */}
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">DevOps & Automation</h2>
-          <p className="text-slate-600 dark:text-slate-400">
-            Temenos Banking Cloud offers robust DevOps, CI/CD, and automation capabilities designed to streamline development, deployment, and operational processes.
+          <p className="text-slate-600 dark:text-slate-400 text-sm">
+            CI/CD, IaC, and observability for streamlined deployment and operations.
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 p-6">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Infrastructure as Code</h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-4 text-sm">
-              Helm charts for Kubernetes automate deployment and management of applications, ensuring consistent and repeatable deployments across environments.
+            <p className="text-slate-600 dark:text-slate-400 text-sm">
+              Helm charts for Kubernetes. Consistent, repeatable deployments.
             </p>
-            <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
-              <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">•</span>Define infrastructure through code templates</li>
-              <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">•</span>Reduce manual errors and enforce consistency</li>
-              <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">•</span>Accelerate environment setup and deployment</li>
-            </ul>
           </div>
           <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 p-6">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">CI/CD Pipelines</h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-4 text-sm">
-              Automated testing and source control management support continuous integration and deployment with minimal manual intervention.
+            <p className="text-slate-600 dark:text-slate-400 text-sm">
+              Automated testing and source control. Minimal manual intervention.
             </p>
-            <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
-              <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">•</span>Frequent, reliable code integration</li>
-              <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">•</span>Continuous delivery of updates and fixes</li>
-              <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">•</span>Reduced time-to-market and improved quality</li>
-            </ul>
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 p-6">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Observability & Monitoring</h3>
-          <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm">
-            Industry-standard instrumentation and pre-configured dashboards provide comprehensive observability across all product components. This visibility supports proactive monitoring, rapid issue detection, and efficient troubleshooting.
+          <p className="text-slate-600 dark:text-slate-400 text-sm">
+            Pre-configured dashboards. Proactive monitoring and rapid issue detection.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex gap-4">
@@ -84,7 +74,7 @@ export function DesignTimeContentViewer(_props: DesignTimeContentViewerProps = {
               </div>
               <div>
                 <h4 className="font-semibold text-slate-900 dark:text-white mb-1">Dynamic Scaling</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Kubernetes orchestration enables automatic scaling and self-healing capabilities.</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Kubernetes auto-scaling and self-healing.</p>
               </div>
             </div>
             <div className="flex gap-4">
@@ -100,7 +90,7 @@ export function DesignTimeContentViewer(_props: DesignTimeContentViewerProps = {
                   SecDevOps
                   <Info className="w-4 h-4 text-emerald-500 opacity-70" />
                 </h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Security embedded throughout development lifecycle with continuous compliance. Under the management of Temenos Head of Product Security, the PSA team is responsible for security assurance across all Temenos Products. Product&apos;s Security is assessed through applying industry standards such as OWASP and SANS. The PSA team works closely with security vendors, consultants, and the wider security research community also, with the objective of ensuring that our security testing programs remain up to date, relevant and comprehensive.</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Security embedded in SDLC. OWASP, SANS, SAST, DAST.</p>
               </div>
             </div>
           </div>
@@ -155,23 +145,20 @@ export function DesignTimeContentViewer(_props: DesignTimeContentViewerProps = {
 
       {/* Temenos Transact DevOps Framework - Packager focus */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 pb-3 border-b-2 border-emerald-500/50 dark:border-emerald-400/50">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 pb-3 border-b-2 border-emerald-500/50 dark:border-emerald-400/50">
           Temenos Transact DevOps Framework
         </h2>
-        <div className="space-y-6 text-gray-700 dark:text-gray-300 leading-relaxed">
+        <div className="space-y-4 text-gray-700 dark:text-gray-300 text-sm">
           <p>
-            Temenos Transact implements these capabilities through a comprehensive DevOps framework centered around <strong className="text-emerald-700 dark:text-emerald-400">Temenos Packager</strong>, which manages the business configuration software development lifecycle (SDLC) across Temenos products. This framework enables consistent promotion of business configurations from development through to production environments, ensuring reliable and repeatable deployments. It covers all business configurations requiring SDLC management, excluding routine business activities like payment creation.
+            <strong className="text-emerald-700 dark:text-emerald-400">Temenos Packager</strong> manages business configuration SDLC. Promotes configs from dev to production.
           </p>
           <p>
-            Temenos Packager includes a data packager that stores business configurations in a readable format suitable for source control. It also provides scripted deployment capabilities through APIs, facilitating automated promotion of configurations across environments such as SIT, UAT, and production. This approach minimizes manual errors and enhances deployment consistency.
+            Data packager for source control. Scripted deployment APIs for SIT, UAT, production.
           </p>
-          <p>
-            This DevOps support ensures that banks can maintain operational excellence, achieve rapid issue resolution, and optimize system performance while leveraging familiar tools and automated deployment pipelines.
-          </p>
-          <div className="mt-8 p-6 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700/50">
-            <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-200 mb-3">Business Benefit</h3>
-            <p className="text-emerald-900/90 dark:text-emerald-100/90">
-              This DevOps framework streamlines configuration management and deployment, reducing errors and accelerating delivery. It empowers banks to maintain high system reliability and quickly respond to issues, supporting continuous innovation and operational efficiency.
+          <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700/50">
+            <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-200 mb-2">Business Benefit</h3>
+            <p className="text-emerald-900/90 dark:text-emerald-100/90 text-sm">
+              Streamlines config management. Reduces errors, accelerates delivery, supports operational excellence.
             </p>
           </div>
         </div>
