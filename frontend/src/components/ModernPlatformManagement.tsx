@@ -383,19 +383,20 @@ const MonitoringView = () => {
                     <Activity className="w-5 h-5 text-green-600 dark:text-green-400" />
                     Platform Monitoring & Alerting
                 </h3>
-                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Comprehensive monitoring and alerting across all infrastructure layers to ensure availability, performance, and security.
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Comprehensive monitoring and alerting across all infrastructure layers to ensure availability, performance, and security. Temenos primary tools in SaaS are Dynatrace and Temenos Monitor. These tools have been selected as a balance between having a mature comprehensive tool with a wide range of capabilities and having something more cost-effective and able to provide key information in Product context. In Production (Class A), we use Dynatrace in Full Stack mode, whilst in UAT/Pre Prod (Class B) we deploy it in Infrastructure only mode. As Temenos Monitor was developed internally, with collaboration from the Product teams, it can present logs, metrics and tracers and display them into Product team designed dashboards, which can be consumed by our Operations and Projects teams.
                 </p>
             </div>
 
             {/* Monitoring Layers */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col">
                     <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-4">
                         <Activity className="w-6 h-6 text-green-600 dark:text-green-400" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Infrastructure Monitoring</h3>
-                    <ul className="space-y-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">We deploy Temenos Monitor across all classes, although. due to Dynatrace monitoring Infrastructure for Classes A & B, we do not duplicate the Infra metric collection there. Dynatrace is strictly only for Temenos use due to license and security considerations.</p>
+                    <ul className="space-y-2 mt-auto">
                         {[
                             'Server health and uptime',
                             'CPU, memory, disk usage',
@@ -411,12 +412,13 @@ const MonitoringView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col">
                     <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
                         <Server className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Application Monitoring</h3>
-                    <ul className="space-y-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">Depending on the Class of environments, logs are either pushed into Dynatrace Grail for Production (Class A), or into Temenos Monitor (OpenSearch). In SaaS, we migrated the stack over to OpenSearch, to avoid any licensing restrictions as we have the capaility for Banks and Partners to access Grafana dashboards.</p>
+                    <ul className="space-y-2 mt-auto">
                         {[
                             'Application performance (APM)',
                             'Response times and latency',
@@ -432,12 +434,13 @@ const MonitoringView = () => {
                     </ul>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col">
                     <div className="w-12 h-12 bg-orange-100 dark:bg-orange-800 dark:bg-orange-900/30 rounded-lg flex items-center justify-center mb-4">
                         <Shield className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Security Monitoring</h3>
-                    <ul className="space-y-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">For security monitoring, Temenos has a SOC to support the undertaking of security monitoring of the service, including the underlying infrastructure and platform component. The SOC team will be monitoring and detecting anomalies, any violation of information security policy using security tools, utilising the cyber threat intelligence data, plus security events and trends from different sources.</p>
+                    <ul className="space-y-2 mt-auto">
                         {[
                             'Security events and alerts',
                             'Intrusion detection',
@@ -485,9 +488,9 @@ const MonitoringView = () => {
             <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Monitoring Stack</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {['Azure Monitor', 'Application Insights', 'Log Analytics', 'Azure Sentinel', 'Prometheus', 'Grafana', 'ELK Stack', 'PagerDuty'].map((tool, idx) => (
+                    {['Azure Monitor', 'Application Insights', 'Log Analytics', 'Azure Sentinel', 'Prometheus', 'Grafana', 'OpenSearch', 'PagerDuty'].map((tool, idx) => (
                         <div key={idx} className="px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-center">
-                            <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{tool}</span>
+                            <span className="font-bold text-red-600 dark:text-red-500 text-sm">{tool}</span>
                         </div>
                     ))}
                 </div>
